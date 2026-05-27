@@ -1,0 +1,26 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx}'],
+  theme: {
+    extend: {
+      colors: {
+        bg: '#f5f1e8',
+        paper: '#fdfbf5',
+        ink: '#2c2c2a',
+        muted: '#6b6862',
+        border: '#d4cfbf',
+        francais: '#3b82f6',
+        maths: '#8b5cf6',
+        histoire: '#b45309',
+        geographie: '#16a34a',
+        svt: '#0e9488',
+        anglais: '#dc2626',
+        multi: '#f59e0b',
+        depart: '#14532d',
+        arrivee: '#7c2d12',
+        jonction: '#6b7280',
+      },
+    },
+  },
+  plugins: [],
+};
