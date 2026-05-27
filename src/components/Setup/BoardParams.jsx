@@ -57,7 +57,7 @@ export default function BoardParams() {
 
       <div>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
-          {"\u00c9v\u00e9nements / couloir : "}<strong>{params.eventsPerCouloir}</strong>
+          {"\u00c9v\u00e9nements / section : "}<strong>{params.eventsPerCouloir}</strong>
         </div>
         <input
           type="range" min={0} max={2} value={params.eventsPerCouloir}

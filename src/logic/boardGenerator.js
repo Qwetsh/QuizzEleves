@@ -13,6 +13,10 @@ function shuffleArray(arr) {
   return p;
 }
 
+function randomSubject() {
+  return SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
+}
+
 /**
  * Genere le plateau sous forme de graphe de noeuds.
  *
@@ -45,14 +49,7 @@ export function generateBoard(params) {
   // --- Couloir d'echauffement (mix) ---
   for (let i = 0; i < couloirsMix; i++) {
     const id = `mixWarm_${i}`;
-    nodes[id] = { x, y: Y_C, type: 'subject', subject: 'multi', next: [] };
-    nodes[prevId].next.push(id);
-    prevId = id;
-    x += SX;
-  }
-  for (let i = 0; i < eventsPerCouloir; i++) {
-    const id = `evWarm_${i}`;
-    nodes[id] = { x, y: Y_C, type: 'event', next: [] };
+    nodes[id] = { x, y: Y_C, type: 'subject', subject: randomSubject(), next: [] };
     nodes[prevId].next.push(id);
     prevId = id;
     x += SX;
@@ -110,14 +107,7 @@ export function generateBoard(params) {
     if (s < nbSections - 1) {
       for (let i = 0; i < couloirsMix; i++) {
         const id = `mixInter_${s}_${i}`;
-        nodes[id] = { x, y: Y_C, type: 'subject', subject: 'multi', next: [] };
-        nodes[prevId].next.push(id);
-        prevId = id;
-        x += SX;
-      }
-      for (let i = 0; i < eventsPerCouloir; i++) {
-        const id = `evInter_${s}_${i}`;
-        nodes[id] = { x, y: Y_C, type: 'event', next: [] };
+        nodes[id] = { x, y: Y_C, type: 'subject', subject: randomSubject(), next: [] };
         nodes[prevId].next.push(id);
         prevId = id;
         x += SX;
@@ -136,7 +126,7 @@ export function generateBoard(params) {
     let cx = x;
     for (let i = 0; i < 3; i++) {
       const id = `court_${i}`;
-      nodes[id] = { x: cx, y: Y_C - 110, type: 'subject', subject: 'multi', next: [] };
+      nodes[id] = { x: cx, y: Y_C - 110, type: 'subject', subject: randomSubject(), next: [] };
       courtIds.push(id);
       cx += SX;
     }
@@ -144,7 +134,7 @@ export function generateBoard(params) {
     let lx = x;
     for (let i = 0; i < 5; i++) {
       const id = `long_${i}`;
-      nodes[id] = { x: lx, y: Y_C + 110, type: 'subject', subject: 'multi', next: [] };
+      nodes[id] = { x: lx, y: Y_C + 110, type: 'subject', subject: randomSubject(), next: [] };
       longIds.push(id);
       lx += SX;
     }
@@ -160,7 +150,7 @@ export function generateBoard(params) {
   } else if (voieFinale === 'unique') {
     for (let i = 0; i < 3; i++) {
       const id = `final_${i}`;
-      nodes[id] = { x, y: Y_C, type: 'subject', subject: 'multi', next: [] };
+      nodes[id] = { x, y: Y_C, type: 'subject', subject: randomSubject(), next: [] };
       nodes[prevId].next.push(id);
       prevId = id;
       x += SX;
@@ -172,6 +162,19 @@ export function generateBoard(params) {
     // 'aucune'
     nodes.arrivee = { x, y: Y_C, type: 'arrivee', label: 'ARRIV\u00c9E', next: [] };
     nodes[prevId].next.push('arrivee');
+  }
+
+  // --- Distribution aleatoire des evenements sur les cases subject ---
+  const totalCorridors = 1 + Math.max(0, nbSections - 1); // warm + inter-sections
+  const totalEvents = eventsPerCouloir * totalCorridors;
+  if (totalEvents > 0) {
+    const subjectIds = Object.keys(nodes).filter(
+      (id) => nodes[id].type === 'subject'
+    );
+    const picked = shuffleArray(subjectIds).slice(0, totalEvents);
+    picked.forEach((id) => {
+      nodes[id].type = 'event';
+    });
   }
 
   const viewBox = { w: nodes.arrivee.x + 60, h: 620 };

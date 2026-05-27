@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { EVENTS } from '../data/events.js';
-import { SUBJECTS } from '../data/subjects.js';
+import { SUBJECTS, SUBJECT_KEYS } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { moveForward, moveBack, findNextJunction, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
@@ -246,7 +246,7 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    // Event square
+    // Event square (events are now placed on subject nodes)
     if (node.type === 'event') {
       const picked = pickRandomEvent(enabledEvents);
       if (picked) {
@@ -254,16 +254,15 @@ export const useGameStore = create((set, get) => ({
         get().triggerEvent(picked);
         return;
       }
+      // Fallback: treat as subject question
+      const fallbackSubject = node.subject || SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
+      get().askQuestion(fallbackSubject);
+      return;
     }
 
     // Subject square → question
     if (node.type === 'subject') {
-      let subject = node.subject;
-      if (subject === 'multi') {
-        const keys = ['francais', 'maths', 'histoire', 'geographie', 'svt', 'anglais'];
-        subject = keys[Math.floor(Math.random() * keys.length)];
-      }
-      get().askQuestion(subject);
+      get().askQuestion(node.subject);
       return;
     }
 
