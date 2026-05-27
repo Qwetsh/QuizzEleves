@@ -22,33 +22,35 @@ export default function PowerButtons() {
   if (powerEntries.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1 justify-center">
+    <div className="flex flex-wrap gap-2 justify-center mt-3">
       {powerEntries.map(({ key, icon, name, charges, category }) => {
-        // Determine if this power can be used right now
         let canUse = false;
-        if (key === 'relance') {
-          canUse = !!diceValue && !showQuestion && !rolling && !showEvent;
-        } else if (key === 'indice') {
-          canUse = !!showQuestion && !rolling;
-        } else if (key === 'bouclier') {
-          canUse = false; // auto-activated
-        } else if (category === 'off') {
-          canUse = !diceValue && !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished;
-        }
+        if (key === 'relance') canUse = !!diceValue && !showQuestion && !rolling && !showEvent;
+        else if (key === 'indice') canUse = !!showQuestion && !rolling;
+        else if (key === 'bouclier') canUse = false;
+        else if (category === 'off') canUse = !diceValue && !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished;
 
         return (
           <button
             key={key}
             onClick={() => usePower(key)}
             disabled={!canUse}
-            className={`text-xs px-2 py-1 rounded-lg border font-semibold transition ${
-              canUse
-                ? 'border-yellow-400 bg-yellow-50 hover:bg-yellow-100 shadow-sm cursor-pointer'
-                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-            }`}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px',
+              borderRadius: 999,
+              background: canUse ? '#fffefb' : 'var(--parch-100)',
+              border: `1px solid ${canUse ? 'var(--gold-500)' : 'rgba(122, 94, 58, 0.22)'}`,
+              fontSize: 13, color: canUse ? 'var(--ink-700)' : 'var(--ink-400)',
+              cursor: canUse ? 'pointer' : 'not-allowed',
+              fontWeight: 500,
+              fontFamily: 'var(--font-ui)',
+              opacity: canUse ? 1 : 0.4,
+              transition: 'all 100ms ease',
+            }}
             title={`${name} (${charges} charge${charges > 1 ? 's' : ''})`}
           >
-            {icon} {name} <span className="opacity-60">x{charges}</span>
+            {icon} {name} <span style={{ opacity: 0.6 }}>x{charges}</span>
           </button>
         );
       })}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { soundCorrect, soundWrong, soundTimer } from '../../logic/sounds';
@@ -29,10 +29,8 @@ export default function QuestionModal() {
   const subjectInfo = SUBJECTS[subject] || {};
   const duration = timerHalved ? TIMER_HALVED : TIMER_DURATION;
 
-  // Can use indice?
   const canUseIndice = !indiceUsed && !revealed && team?.powers?.indice?.charges > 0;
 
-  // Reset on new question
   useEffect(() => {
     if (showQuestion) {
       setSelected(null);
@@ -41,7 +39,6 @@ export default function QuestionModal() {
     }
   }, [showQuestion, timerHalved]);
 
-  // Timer
   useEffect(() => {
     if (!showQuestion || revealed) return;
     if (timeLeft <= 0) {
@@ -66,63 +63,99 @@ export default function QuestionModal() {
   }, [revealed, answerQuestion, question, timeLeft]);
 
   const timerRatio = timeLeft / duration;
-  const timerColor = timerRatio > 0.5 ? '#16a34a' : timerRatio > 0.2 ? '#f59e0b' : '#dc2626';
-
+  const timerColor = timerRatio > 0.5 ? '#fff' : timerRatio > 0.2 ? '#f3c969' : '#e85d6b';
   const isOpen = !!(showQuestion && question);
+  const bgColor = subjectInfo.color || '#888';
 
   return (
     <AnimatePresence>
       {isOpen && (
-      <ModalOverlay>
-        {/* Header */}
-        <div className="p-4 flex items-center gap-3" style={{ background: subjectInfo.color || '#888' }}>
-          <span className="text-2xl">{subjectInfo.icon}</span>
-          <div className="flex-1 text-white">
-            <div className="font-bold">{subjectInfo.name}</div>
-            <div className="text-xs opacity-80">{question.t}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{team?.emoji}</span>
-            <div
-              className="w-12 h-12 rounded-full border-4 flex items-center justify-center text-white font-bold text-lg"
-              style={{ borderColor: timerColor }}
-            >
-              {timeLeft}
-            </div>
-          </div>
-        </div>
-
-        {/* Timer bar */}
-        <div className="h-1 bg-gray-200">
+        <ModalOverlay className="max-w-[640px]">
+          {/* Quiz Header */}
           <div
-            className="h-full transition-all duration-1000 ease-linear"
-            style={{ width: `${timerRatio * 100}%`, background: timerColor }}
-          />
-        </div>
+            className="relative overflow-hidden text-center text-white"
+            style={{
+              padding: 28,
+              background: `linear-gradient(180deg, ${bgColor} 0%, ${bgColor}dd 100%)`,
+            }}
+          >
+            {/* Shine sweep */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                top: '-40%', left: '-10%', width: '60%', height: '200%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)',
+                transform: 'rotate(20deg)',
+              }}
+            />
 
-        {/* Sablier warning */}
-        {timerHalved && (
-          <div className="px-4 pt-2">
-            <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded font-bold">
-              {"\u23F1\uFE0F Sablier actif \u2014 15 secondes !"}
-            </span>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <span className="text-xl">{team?.emoji}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, opacity: 0.85 }}>{team?.name}</span>
+            </div>
+
+            <div
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px', borderRadius: 999,
+                background: 'rgba(255,255,255,0.18)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.08em',
+                marginBottom: 14,
+              }}
+            >
+              <span>{subjectInfo.icon}</span>
+              <span>{subjectInfo.name} {subjectInfo.biome ? `\u00b7 ${subjectInfo.biome}` : ''}</span>
+            </div>
+
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: 1.3, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)' }}>
+              {question.q}
+            </div>
+
+            {/* Timer bar */}
+            <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden', marginTop: 18 }}>
+              <div
+                style={{
+                  height: '100%',
+                  background: `linear-gradient(90deg, #fff, ${timerColor})`,
+                  borderRadius: 3,
+                  width: `${timerRatio * 100}%`,
+                  transition: 'width 1s linear',
+                }}
+              />
+            </div>
+            <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{timeLeft}s</div>
+
+            {timerHalved && (
+              <div style={{ fontSize: 12, marginTop: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>
+                {"\u23F1\uFE0F Sablier actif \u2014 15s"}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Question */}
-        <div className="p-4">
-          <p className="font-semibold text-lg mb-4">{question.q}</p>
-
-          <div className="space-y-2">
+          {/* Choices - 2x2 grid */}
+          <div className="grid gap-3 p-5" style={{ gridTemplateColumns: question.a.length > 2 ? '1fr 1fr' : '1fr' }}>
             {question.a.map((answer, idx) => {
-              // Hidden by indice
               if (indiceHidden.includes(idx)) {
                 return (
                   <div
                     key={idx}
-                    className="w-full p-3 rounded-lg border-2 border-gray-200 bg-gray-100 opacity-30 line-through text-sm"
+                    style={{
+                      padding: '16px 18px', borderRadius: 14,
+                      border: '2px solid rgba(122,94,58,0.12)',
+                      background: 'var(--parch-100)',
+                      opacity: 0.25, textDecoration: 'line-through',
+                      fontSize: 16, color: 'var(--ink-500)',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                    }}
                   >
-                    <span className="font-mono text-sm text-[var(--muted)] mr-2">
+                    <span style={{
+                      width: 30, height: 30, borderRadius: 8,
+                      background: 'var(--parch-200)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-400)',
+                      flexShrink: 0,
+                    }}>
                       {String.fromCharCode(65 + idx)}
                     </span>
                     {answer}
@@ -130,17 +163,23 @@ export default function QuestionModal() {
                 );
               }
 
-              let btnClass = 'border-[var(--border)] bg-white hover:border-blue-400';
+              let choiceStyle = {
+                border: '2px solid rgba(122,94,58,0.22)',
+                background: 'var(--parch-50)',
+                color: 'var(--ink-800)',
+              };
+              let letterStyle = { background: 'var(--parch-200)', color: 'var(--ink-700)' };
+
               if (revealed) {
                 if (idx === question.c) {
-                  btnClass = 'border-green-500 bg-green-50 ring-2 ring-green-400';
+                  choiceStyle = { border: '2px solid #5b8c3a', background: 'linear-gradient(180deg, #d1f0b8, #a8d889)', color: '#1f3d10' };
+                  letterStyle = { background: '#5b8c3a', color: '#fff' };
                 } else if (idx === selected && idx !== question.c) {
-                  btnClass = 'border-red-500 bg-red-50';
+                  choiceStyle = { border: '2px solid #c9472f', background: 'linear-gradient(180deg, #f7c8c8, #e89898)', color: '#5f1a10' };
+                  letterStyle = { background: '#c9472f', color: '#fff' };
                 } else {
-                  btnClass = 'border-gray-200 bg-gray-50 opacity-50';
+                  choiceStyle = { ...choiceStyle, opacity: 0.4 };
                 }
-              } else if (idx === selected) {
-                btnClass = 'border-blue-500 bg-blue-50';
               }
 
               return (
@@ -148,35 +187,86 @@ export default function QuestionModal() {
                   key={idx}
                   onClick={() => handleAnswer(idx)}
                   disabled={revealed}
-                  className={`w-full text-left p-3 rounded-lg border-2 transition ${btnClass}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '16px 18px', borderRadius: 14,
+                    fontFamily: 'var(--font-ui)', fontSize: 16, fontWeight: 500,
+                    cursor: revealed ? 'not-allowed' : 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 100ms ease',
+                    boxShadow: '0 2px 0 rgba(46,31,16,0.08)',
+                    ...choiceStyle,
+                  }}
                 >
-                  <span className="font-mono text-sm text-[var(--muted)] mr-2">
+                  <span style={{
+                    width: 30, height: 30, borderRadius: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--font-display)', fontSize: 16,
+                    flexShrink: 0,
+                    ...letterStyle,
+                  }}>
                     {String.fromCharCode(65 + idx)}
                   </span>
-                  {answer}
+                  <span>{answer}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Power: Indice button */}
-          {canUseIndice && !revealed && (
-            <button
-              onClick={() => usePower('indice')}
-              className="mt-3 w-full text-sm px-3 py-2 rounded-lg border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 font-semibold transition"
-            >
-              {"\u{1F4A1} Utiliser Indice"} <span className="opacity-60">(x{team.powers.indice.charges})</span>
-            </button>
-          )}
+          {/* Actions bar */}
+          <div
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '16px 22px 22px',
+              borderTop: '1px solid rgba(122,94,58,0.16)',
+              background: 'var(--parch-50)',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 8 }}>
+              {canUseIndice && !revealed && (
+                <button
+                  onClick={() => usePower('indice')}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px', borderRadius: 999,
+                    background: '#fffefb',
+                    border: '1px solid rgba(122,94,58,0.22)',
+                    fontSize: 13, color: 'var(--ink-700)',
+                    cursor: 'pointer', fontWeight: 500,
+                    fontFamily: 'var(--font-ui)',
+                  }}
+                >
+                  {"\u{1F4A1} Indice"} <span style={{ opacity: 0.6 }}>(x{team.powers.indice.charges})</span>
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
+              {revealed && selected != null && selected === question.c ? (
+                <strong style={{ color: '#2f9d5a' }}>{"Bonne r\u00e9ponse !"}</strong>
+              ) : revealed && selected != null ? (
+                <strong style={{ color: '#c9472f' }}>{"Mauvaise r\u00e9ponse"}</strong>
+              ) : revealed ? (
+                <strong style={{ color: '#c9472f' }}>{"Temps \u00e9coul\u00e9 !"}</strong>
+              ) : (
+                <span>{"Choisis ta r\u00e9ponse"}</span>
+              )}
+            </div>
+          </div>
 
           {/* Explanation */}
-          {revealed && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
-              <strong>Explication :</strong> {question.e}
+          {revealed && question.e && (
+            <div style={{ padding: '0 22px 22px' }}>
+              <div style={{
+                padding: 14, borderRadius: 14,
+                background: 'var(--parch-50)',
+                border: '1px solid rgba(122,94,58,0.16)',
+                fontSize: 14, lineHeight: 1.5, color: 'var(--ink-700)',
+              }}>
+                <strong>Explication :</strong> {question.e}
+              </div>
             </div>
           )}
-        </div>
-      </ModalOverlay>
+        </ModalOverlay>
       )}
     </AnimatePresence>
   );

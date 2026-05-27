@@ -18,20 +18,33 @@ export default function ShopModal() {
     <AnimatePresence>
       {showShop && team && (
         <ModalOverlay onClose={closeShop} className="max-w-md">
-          <div className="p-6">
-            <div className="text-center mb-4">
-              <div className="text-4xl mb-1">{"\u{1F6D2}"}</div>
-              <h2 className="text-xl font-bold">Boutique</h2>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <span className="text-lg">{team.emoji}</span>
-                <span className="font-semibold" style={{ color: team.color }}>{team.name}</span>
-                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-sm font-bold rounded">
-                  {team.money} {"\u{1F4B0}"}
-                </span>
-              </div>
+          {/* Gold header */}
+          <div
+            style={{
+              padding: '24px 26px 16px', textAlign: 'center',
+              background: 'linear-gradient(180deg, #fff3d4 0%, #f0e0b2 100%)',
+            }}
+          >
+            <div style={{ fontSize: 42, marginBottom: 6 }}>{"\u{1F6D2}"}</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26 }}>Boutique des pouvoirs</h2>
+            <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span className="text-lg">{team.emoji}</span>
+              <strong style={{ color: team.color, fontFamily: 'var(--font-display)' }}>{team.name}</strong>
+              <span
+                style={{
+                  padding: '3px 10px', borderRadius: 999,
+                  background: 'linear-gradient(180deg, #f3c969, #b8862c)',
+                  color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 0 rgba(110,78,16,0.4)',
+                }}
+              >
+                {team.money} <span className="coin" style={{ filter: 'brightness(1.2)' }} />
+              </span>
             </div>
+          </div>
 
-            <div className="space-y-2">
+          <div style={{ padding: '16px 22px 22px' }}>
+            <div className="flex flex-col gap-2.5">
               {allPowers.map(([key, power]) => {
                 const currentCharges = team.powers?.[key]?.charges || 0;
                 const canBuy = team.money >= power.price;
@@ -39,25 +52,51 @@ export default function ShopModal() {
                 return (
                   <div
                     key={key}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-[var(--border)] bg-white"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: 12, borderRadius: 14,
+                      background: 'var(--parch-50)',
+                      border: '1px solid rgba(122, 94, 58, 0.18)',
+                    }}
                   >
-                    <span className="text-2xl">{power.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm">{power.name}</div>
-                      <div className="text-xs text-[var(--muted)] truncate">{power.desc}</div>
-                      <div className="text-xs mt-0.5">
-                        {"Charges : "}<span className="font-bold">{currentCharges}</span>
-                        {" \u2022 Prix : "}<span className="font-bold">{power.price} {"\u{1F4B0}"}</span>
+                    <div
+                      style={{
+                        width: 48, height: 48, borderRadius: 12,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 24,
+                        background: power.color
+                          ? `linear-gradient(180deg, ${power.color}cc, ${power.color})`
+                          : 'var(--parch-200)',
+                        boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.12)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {power.icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-900)' }}>
+                        {power.name}
+                        <span
+                          style={{
+                            fontSize: 11, padding: '2px 6px', borderRadius: 4, marginLeft: 6,
+                            background: power.category === 'def' ? 'rgba(59,108,179,0.15)' : 'rgba(201,71,47,0.15)',
+                            color: power.category === 'def' ? 'var(--m-maths-deep)' : 'var(--m-francais-deep)',
+                            fontFamily: 'var(--font-ui)', fontWeight: 600,
+                          }}
+                        >
+                          {power.category === 'def' ? 'D\u00c9F' : 'OFF'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.4 }}>{power.desc}</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-600)', marginTop: 4 }}>
+                        {"Charges : "}<strong>{currentCharges}</strong>{" \u00b7 Prix : "}<strong>{power.price}</strong> <span className="coin" />
                       </div>
                     </div>
                     <button
                       onClick={() => { soundClick(); buyPowerCharge(key); }}
                       disabled={!canBuy}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-bold transition ${
-                        canBuy
-                          ? 'bg-green-600 text-white hover:bg-green-700'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      }`}
+                      className={`btn btn--sm ${canBuy ? '' : ''}`}
+                      style={canBuy ? {} : { opacity: 0.4, cursor: 'not-allowed', filter: 'saturate(0.6)' }}
                     >
                       Acheter
                     </button>
@@ -67,8 +106,9 @@ export default function ShopModal() {
             </div>
 
             <button
+              className="btn btn--ghost"
               onClick={closeShop}
-              className="mt-4 w-full py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition"
+              style={{ width: '100%', marginTop: 16 }}
             >
               Fermer
             </button>

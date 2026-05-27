@@ -2,29 +2,252 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   QUÊTE DES MATIÈRES — Design Tokens
+   Aventure / parchemin × jutosité jeu mobile
+   ============================================ */
+
 :root {
-  --bg: #f5f1e8;
-  --paper: #fdfbf5;
-  --ink: #2c2c2a;
-  --muted: #6b6862;
-  --border: #d4cfbf;
-  --francais: #3b82f6;
-  --maths: #8b5cf6;
-  --histoire: #b45309;
-  --geographie: #16a34a;
-  --svt: #0e9488;
-  --anglais: #dc2626;
-  --multi: #f59e0b;
-  --depart: #14532d;
-  --arrivee: #7c2d12;
-  --jonction: #6b7280;
+  /* --- Surfaces parchemin --- */
+  --parch-50: #fbf3df;
+  --parch-100: #f4ead5;
+  --parch-200: #ead9b2;
+  --parch-300: #d7bf85;
+  --parch-400: #b89858;
+  --parch-500: #8a6d3a;
+
+  /* --- Encre / texte --- */
+  --ink-900: #1f140a;
+  --ink-800: #2e1f10;
+  --ink-700: #3d2f1f;
+  --ink-600: #5a4628;
+  --ink-500: #7a5e3a;
+  --ink-400: #a48a5e;
+  --ink-300: #c9b48a;
+
+  /* --- Accents universels --- */
+  --gold-400: #f3c969;
+  --gold-500: #e0a458;
+  --gold-600: #b8862c;
+  --gold-700: #8a5f1a;
+  --gold-shine: #fff0c2;
+
+  --rose-400: #e85d6b;
+  --rose-500: #c9472f;
+  --rose-700: #8a2820;
+
+  --leaf-400: #7fb262;
+  --leaf-500: #5b8c3a;
+  --leaf-700: #355e1d;
+
+  /* --- Matières (biomes) --- */
+  --m-francais: #c9472f;
+  --m-francais-soft: #f3d4cb;
+  --m-francais-deep: #6b1f12;
+
+  --m-maths: #3b6cb3;
+  --m-maths-soft: #cfdcf0;
+  --m-maths-deep: #1c3d6e;
+
+  --m-histoire: #b8862c;
+  --m-histoire-soft: #f0e0b2;
+  --m-histoire-deep: #6e4e10;
+
+  --m-geo: #2d8c6e;
+  --m-geo-soft: #c5e3d6;
+  --m-geo-deep: #14513e;
+
+  --m-svt: #5b8c3a;
+  --m-svt-soft: #d5e7c1;
+  --m-svt-deep: #2f5a18;
+
+  --m-anglais: #a83e7f;
+  --m-anglais-soft: #ecccdf;
+  --m-anglais-deep: #5e1d44;
+
+  /* --- Équipes --- */
+  --t-red: #d63a3a;
+  --t-blue: #2f6fd8;
+  --t-green: #2f9d5a;
+  --t-yellow: #e8b117;
+  --t-purple: #8745d4;
+  --t-teal: #129fb0;
+
+  /* --- Legacy compat aliases --- */
+  --bg: var(--parch-100);
+  --paper: #fffaf0;
+  --ink: var(--ink-800);
+  --muted: var(--ink-500);
+  --border: rgba(122, 94, 58, 0.22);
+
+  /* --- Shadows juteuses --- */
+  --sh-sm: 0 1px 0 rgba(46, 31, 16, 0.08), 0 2px 6px rgba(46, 31, 16, 0.06);
+  --sh-md: 0 2px 0 rgba(46, 31, 16, 0.12), 0 8px 18px rgba(46, 31, 16, 0.10);
+  --sh-lg: 0 4px 0 rgba(46, 31, 16, 0.15), 0 14px 38px rgba(46, 31, 16, 0.18);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --font-display: "Lilita One", "Fredoka", system-ui, sans-serif;
+  --font-ui: "Fredoka", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--ink);
-  min-height: 100vh;
+html, body {
+  height: 100%;
+  font-family: var(--font-ui);
+  color: var(--ink-800);
+  overflow: hidden;
 }
+
+body {
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.18  0 0 0 0 0.12  0 0 0 0 0.06  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    radial-gradient(ellipse at 20% 0%, rgba(232, 169, 88, 0.18), transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(201, 71, 47, 0.10), transparent 55%),
+    linear-gradient(180deg, #fbf3df, #f0e3bf);
+}
+
+#root { width: 100vw; height: 100vh; position: relative; }
+
+/* Typography */
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.01em; color: var(--ink-900); margin: 0; }
+
+/* Juicy Button (Clash-royale-style) */
+.btn {
+  --btn-bg: var(--gold-500);
+  --btn-bg-2: var(--gold-600);
+  --btn-text: #fff;
+  --btn-shadow: rgba(138, 95, 26, 0.65);
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--btn-text);
+  background: linear-gradient(180deg, var(--btn-bg) 0%, var(--btn-bg-2) 100%);
+  border: none;
+  padding: 14px 26px;
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.22),
+    0 6px 0 var(--btn-shadow),
+    0 12px 22px rgba(46, 31, 16, 0.25);
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  user-select: none;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    0 2px 0 var(--btn-shadow),
+    0 4px 10px rgba(46, 31, 16, 0.25);
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; filter: saturate(0.6); }
+
+.btn--red { --btn-bg: #e85d6b; --btn-bg-2: #c9472f; --btn-shadow: rgba(110, 30, 18, 0.6); }
+.btn--blue { --btn-bg: #4d8aea; --btn-bg-2: #2f6fd8; --btn-shadow: rgba(28, 61, 110, 0.6); }
+.btn--green { --btn-bg: #6dc77d; --btn-bg-2: #2f9d5a; --btn-shadow: rgba(20, 81, 62, 0.6); }
+.btn--purple { --btn-bg: #a371e0; --btn-bg-2: #7c3aed; --btn-shadow: rgba(60, 25, 110, 0.6); }
+.btn--ghost {
+  --btn-bg: transparent; --btn-bg-2: transparent;
+  --btn-text: var(--ink-700);
+  background: #fffefb;
+  box-shadow: inset 0 0 0 2px var(--ink-300), 0 3px 0 rgba(46, 31, 16, 0.10);
+  text-shadow: none;
+}
+.btn--ghost:hover { background: var(--parch-50); }
+.btn--ghost:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 0 0 2px var(--ink-400), 0 1px 0 rgba(46, 31, 16, 0.12);
+}
+
+.btn--sm { font-size: 14px; padding: 10px 18px; border-radius: 12px; }
+.btn--lg { font-size: 22px; padding: 18px 36px; border-radius: 18px; }
+
+/* Panel / Card */
+.panel {
+  background: #fffefb;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(122, 94, 58, 0.18);
+  box-shadow: var(--sh-md);
+  padding: 24px;
+}
+.panel--parchment {
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.32  0 0 0 0 0.22  0 0 0 0 0.10  0 0 0 0.045 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, #fffaee, #f7ebcf);
+}
+
+/* Coin */
+.coin {
+  display: inline-block;
+  width: 1em; height: 1em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--gold-shine), var(--gold-500) 55%, var(--gold-700) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+  vertical-align: -0.12em;
+}
+
+/* Chip (selection toggle) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: #fffefb;
+  border: 2px solid rgba(122, 94, 58, 0.22);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  color: var(--ink-700);
+  transition: transform 100ms ease, border-color 100ms ease, box-shadow 100ms ease;
+  box-shadow: 0 2px 0 rgba(46, 31, 16, 0.06);
+  user-select: none;
+}
+.chip:hover { transform: translateY(-1px); border-color: var(--gold-500); }
+.chip.is-active {
+  border-color: var(--gold-600);
+  background: linear-gradient(180deg, #fff7e2, #f3d997);
+  color: var(--ink-900);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 0 rgba(110, 78, 16, 0.4);
+}
+
+/* Field label */
+.field-label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-600);
+  margin-bottom: 10px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.03); }
+::-webkit-scrollbar-thumb { background: var(--parch-300); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-400); }
+
+/* Focus rings */
+:focus-visible {
+  outline: 3px solid rgba(184, 134, 44, 0.65);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* No select on game UI */
+.no-select { user-select: none; }

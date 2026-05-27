@@ -1,39 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { soundVictory } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
 
-const CONFETTI_COLORS = [
-  '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#F7DC6F',
-  '#BB8FCE', '#FF8C00', '#00CED1', '#FF69B4', '#7FFF00',
-];
-
-function ConfettiPiece({ index }) {
-  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
-  const left = `${(index * 7.3 + 3) % 100}%`;
-  const delay = `${(index * 0.17) % 2.5}s`;
-  const duration = `${2.2 + (index % 5) * 0.4}s`;
-  const size = 6 + (index % 4) * 3;
-
-  return (
-    <div
-      className="confetti-piece"
-      style={{
-        position: 'absolute',
-        bottom: '-10px',
-        left,
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: index % 3 === 0 ? '50%' : '2px',
-        backgroundColor: color,
-        animationDelay: delay,
-        animationDuration: duration,
-        opacity: 0,
-      }}
-    />
-  );
-}
+const CONFETTI_COLORS = ['#f3c969', '#e85d6b', '#2f9d5a', '#2f6fd8', '#8745d4', '#129fb0'];
 
 export default function VictoryModal() {
   const finished = useGameStore((s) => s.finished);
@@ -42,7 +13,6 @@ export default function VictoryModal() {
   const reset = useGameStore((s) => s.reset);
 
   const [dismissed, setDismissed] = useState(false);
-
   const winner = teams[currentTeam];
 
   useEffect(() => {
@@ -51,12 +21,17 @@ export default function VictoryModal() {
 
   const isOpen = finished && !dismissed && !!winner;
 
-  const stats = isOpen
-    ? teams.map((t) => {
-        const total = t.correct + t.wrong;
-        const accuracy = total > 0 ? Math.round((t.correct / total) * 100) : 0;
-        return { ...t, total, accuracy };
-      })
+  const confetti = useMemo(() => {
+    return Array.from({ length: 60 }, (_, i) => ({
+      left: Math.random() * 100,
+      delay: Math.random() * 4,
+      color: CONFETTI_COLORS[i % 6],
+      duration: 2.5 + Math.random() * 2,
+    }));
+  }, []);
+
+  const sorted = isOpen
+    ? [...teams].sort((a, b) => (b.correct - a.correct) || (b.money - a.money))
     : [];
 
   return (
@@ -65,139 +40,109 @@ export default function VictoryModal() {
         <ModalOverlay className="max-w-lg">
           {/* Confetti layer */}
           <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-            {Array.from({ length: 30 }, (_, i) => (
-              <ConfettiPiece key={i} index={i} />
+            {confetti.map((c, i) => (
+              <div
+                key={i}
+                className="confetti"
+                style={{
+                  position: 'absolute',
+                  left: c.left + '%',
+                  top: -20,
+                  width: 12, height: 16,
+                  borderRadius: 2,
+                  background: c.color,
+                  animationDelay: c.delay + 's',
+                  animationDuration: c.duration + 's',
+                }}
+              />
             ))}
           </div>
 
+          {/* Victory content */}
           <div
-            className="relative overflow-hidden"
-            style={{ border: '3px solid #FFD700', borderRadius: '1rem' }}
+            className="text-center"
+            style={{
+              padding: 40,
+              background: 'radial-gradient(ellipse at center, rgba(243,201,105,0.3), transparent 60%)',
+            }}
           >
-            {/* Gold header */}
+            <div className="text-6xl mb-4">{winner.emoji}</div>
             <div
-              className="text-center py-6 px-4"
               style={{
-                background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 72,
+                background: 'linear-gradient(180deg, #f3c969 0%, #b8862c 60%, #6e4e10 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+                marginBottom: 8,
+                lineHeight: 1,
               }}
             >
-              <div className="text-5xl mb-2">
-                {"\uD83C\uDFC6"}
-              </div>
-              <h2 className="text-3xl font-extrabold text-white drop-shadow-lg tracking-wide">
-                {"VICTOIRE !"}
-              </h2>
-              <div className="mt-3 flex items-center justify-center gap-3">
-                <span className="text-4xl">{winner.emoji}</span>
-                <span
-                  className="text-2xl font-bold drop-shadow"
-                  style={{ color: 'white' }}
-                >
-                  {winner.name}
-                </span>
-              </div>
-              <div
-                className="mt-1 inline-block px-3 py-1 rounded-full text-sm font-semibold"
-                style={{ backgroundColor: winner.color, color: 'white' }}
-              >
-                {"remporte la partie !"}
-              </div>
+              VICTOIRE !
+            </div>
+            <div style={{ fontSize: 22, color: 'var(--ink-700)', marginBottom: 32 }}>
+              <strong style={{ color: winner.color }}>{winner.name}</strong> remportent la qu\u00eate
             </div>
 
-            {/* Stats table */}
-            <div className="px-5 py-4 bg-gradient-to-b from-yellow-50 via-white to-yellow-50">
-              <h3 className="text-center text-lg font-bold text-gray-700 mb-3">
-                {"\uD83D\uDCCA R\u00e9sultats"}
-              </h3>
-              <div className="overflow-hidden rounded-lg border border-yellow-200">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-yellow-100 text-gray-600">
-                      <th className="text-left py-2 px-3 font-semibold">
-                        {"\u00C9quipe"}
-                      </th>
-                      <th className="text-center py-2 px-2 font-semibold">
-                        {"\u2705"}
-                      </th>
-                      <th className="text-center py-2 px-2 font-semibold">
-                        {"\u274C"}
-                      </th>
-                      <th className="text-center py-2 px-2 font-semibold">
-                        {"\uD83C\uDFAF %"}
-                      </th>
-                      <th className="text-center py-2 px-2 font-semibold">
-                        {"\u{1F4B0}"}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.map((t, i) => (
-                      <tr
-                        key={i}
-                        className={`border-t border-yellow-100 ${
-                          i === currentTeam ? 'bg-yellow-50 font-bold' : ''
-                        }`}
-                      >
-                        <td className="py-2 px-3 flex items-center gap-2">
-                          <span className="text-lg">{t.emoji}</span>
-                          <span style={{ color: t.color }}>{t.name}</span>
-                          {i === currentTeam && (
-                            <span className="text-xs">{"\uD83C\uDFC6"}</span>
-                          )}
-                        </td>
-                        <td className="text-center py-2 px-2 text-green-600">
-                          {t.correct}
-                        </td>
-                        <td className="text-center py-2 px-2 text-red-500">
-                          {t.wrong}
-                        </td>
-                        <td className="text-center py-2 px-2">
-                          <span
-                            className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                            style={{
-                              backgroundColor:
-                                t.accuracy >= 75
-                                  ? '#d4edda'
-                                  : t.accuracy >= 50
-                                  ? '#fff3cd'
-                                  : '#f8d7da',
-                              color:
-                                t.accuracy >= 75
-                                  ? '#155724'
-                                  : t.accuracy >= 50
-                                  ? '#856404'
-                                  : '#721c24',
-                            }}
-                          >
-                            {`${t.accuracy}%`}
-                          </span>
-                        </td>
-                        <td className="text-center py-2 px-2 text-yellow-600 font-semibold">
-                          {t.money}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* Rankings */}
+            <div
+              style={{
+                background: 'rgba(255,250,240,0.85)',
+                borderRadius: 20, padding: 22,
+                boxShadow: 'var(--sh-md)',
+                marginBottom: 24, textAlign: 'left',
+              }}
+            >
+              <div style={{
+                fontFamily: 'var(--font-display)', letterSpacing: 1, color: 'var(--ink-500)',
+                fontSize: 12, marginBottom: 10, textTransform: 'uppercase', textAlign: 'center',
+              }}>
+                Classement final
               </div>
+              {sorted.map((t, i) => {
+                const total = t.correct + t.wrong;
+                const accuracy = total > 0 ? Math.round((t.correct / total) * 100) : 0;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '8px 0',
+                      borderBottom: '1px dashed rgba(122, 94, 58, 0.2)',
+                    }}
+                  >
+                    <div style={{
+                      width: 24, textAlign: 'center',
+                      fontFamily: 'var(--font-display)', fontSize: 18,
+                      color: i === 0 ? 'var(--gold-600)' : 'var(--ink-500)',
+                    }}>
+                      {i + 1}
+                    </div>
+                    <span className="text-xl">{t.emoji}</span>
+                    <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontSize: 16 }}>{t.name}</div>
+                    <div style={{ display: 'flex', gap: 12, fontSize: 14, color: 'var(--ink-600)' }}>
+                      <span>{"\u2713"} {t.correct}</span>
+                      <span>{"\u2717"} {t.wrong}</span>
+                      <span>{t.money} <span className="coin" /></span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Buttons */}
-            <div className="flex gap-3 px-5 pb-5 bg-yellow-50">
+            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setDismissed(true)}
-                className="flex-1 py-2.5 px-4 rounded-lg border-2 border-yellow-400 text-yellow-700 font-semibold hover:bg-yellow-50 transition"
+                className="btn btn--ghost"
               >
-                {"Revoir le plateau"}
+                Revoir le plateau
               </button>
               <button
                 onClick={reset}
-                className="flex-1 py-2.5 px-4 rounded-lg font-semibold text-white transition hover:brightness-110"
-                style={{
-                  background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                }}
+                className="btn btn--lg"
               >
-                {"Nouvelle partie"}
+                {"\u{1F501} Nouvelle partie"}
               </button>
             </div>
           </div>

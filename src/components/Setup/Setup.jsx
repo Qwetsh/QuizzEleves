@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { loadGame } from '../../store/persistence';
+import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import LevelSelect from './LevelSelect';
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
@@ -18,35 +19,108 @@ export default function Setup() {
   }, []);
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold text-center mb-2">
-        {"\u{1F3B2} Qu\u00eate des Mati\u00e8res"}
-      </h1>
-      <p className="text-center text-sm text-[var(--muted)] mb-8">
-        {"Jeu de plateau p\u00e9dagogique"}
-      </p>
+    <div className="absolute inset-0 overflow-y-auto" style={{ padding: '36px 24px 80px' }}>
+      <div className="max-w-[1180px] mx-auto grid gap-7" style={{ gridTemplateColumns: '1.1fr 0.9fr' }}>
+        {/* Hero */}
+        <div className="col-span-2 flex items-center gap-6 flex-wrap mb-2">
+          <div
+            className="flex items-center justify-center text-5xl"
+            style={{
+              width: 96, height: 96, borderRadius: 24,
+              background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+              boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.6), inset 0 -6px 0 rgba(0,0,0,0.18), 0 8px 0 rgba(110,78,16,0.55), 0 16px 30px rgba(0,0,0,0.25)',
+              transform: 'rotate(-6deg)',
+            }}
+          >
+            {"\u{1F3B2}"}
+          </div>
+          <div>
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 48,
+                lineHeight: 1.05,
+                background: 'linear-gradient(180deg, #b8862c 0%, #6e4e10 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+                textShadow: 'none',
+              }}
+            >
+              {"Qu\u00eate des Mati\u00e8res"}
+            </div>
+            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 16, fontWeight: 500, color: 'var(--ink-500)', marginTop: 4 }}>
+              {"Jeu de plateau p\u00e9dagogique \u00b7 Cycle 4"}
+            </div>
+          </div>
+        </div>
 
-      {hasSave && (
-        <button
-          onClick={resumeGame}
-          className="w-full py-3 mb-6 bg-blue-600 text-white text-lg font-bold rounded-xl hover:bg-blue-700 transition shadow-md"
-        >
-          {"\u25B6\uFE0F Reprendre la partie"}
-        </button>
-      )}
+        {hasSave && (
+          <div className="col-span-2">
+            <button
+              onClick={resumeGame}
+              className="btn btn--blue btn--lg"
+              style={{ width: '100%' }}
+            >
+              {"\u25B6\uFE0F Reprendre la partie"}
+            </button>
+          </div>
+        )}
 
-      <LevelSelect />
-      <TeamCount />
-      <TeamCustomization />
-      <BoardParams />
-      <EventsChecklist />
+        {/* Left column */}
+        <div className="flex flex-col gap-4">
+          <div className="panel">
+            <LevelSelect />
+          </div>
+          <div className="panel">
+            <TeamCount />
+            <TeamCustomization />
+          </div>
+          <div className="panel">
+            <EventsChecklist />
+          </div>
+        </div>
 
-      <button
-        onClick={startGame}
-        className="w-full py-3 bg-green-600 text-white text-lg font-bold rounded-xl hover:bg-green-700 transition shadow-md"
-      >
-        {"\u{1F680} Lancer la partie"}
-      </button>
+        {/* Right column */}
+        <div className="flex flex-col gap-4">
+          <div className="panel">
+            <BoardParams />
+          </div>
+          <div className="panel panel--parchment">
+            <div className="field-label" style={{ color: 'var(--ink-700)' }}>Les 6 royaumes</div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {SUBJECT_KEYS.map((key) => {
+                const s = SUBJECTS[key];
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center gap-2.5"
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 12,
+                      background: 'rgba(255, 250, 240, 0.7)',
+                      borderLeft: `4px solid ${s.color}`,
+                    }}
+                  >
+                    <span className="text-xl">{s.icon}</span>
+                    <div className="min-w-0">
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--ink-900)' }}>{s.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>{s.biome}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <button
+            onClick={startGame}
+            className="btn btn--green btn--lg"
+            style={{ width: '100%', marginTop: 8 }}
+          >
+            {"\u{1F680} Lancer la partie"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -10,14 +10,29 @@ export default function GameLog() {
   }, [log.length]);
 
   return (
-    <div className="mt-3">
-      <h3 className="text-xs font-bold uppercase text-[var(--muted)] mb-1">Journal</h3>
-      <div className="bg-white rounded-lg border border-[var(--border)] p-2 h-40 overflow-y-auto text-xs space-y-0.5">
-        {log.map((msg, i) => (
-          <div key={i} className="text-[var(--ink)]">{msg}</div>
-        ))}
-        <div ref={endRef} />
-      </div>
+    <div
+      style={{
+        fontSize: 13, color: 'var(--ink-700)',
+        flex: 1, minHeight: 0,
+        overflowY: 'auto',
+        paddingRight: 4,
+      }}
+    >
+      {log.length === 0 && <div style={{ color: 'var(--ink-400)' }}>{"La partie d\u00e9marre\u2026"}</div>}
+      {log.map((msg, i) => (
+        <div
+          key={i}
+          style={{
+            padding: '5px 0',
+            borderBottom: '1px dashed rgba(122, 94, 58, 0.18)',
+            lineHeight: 1.4,
+            fontSize: 13,
+          }}
+        >
+          {msg}
+        </div>
+      ))}
+      <div ref={endRef} />
     </div>
   );
 }

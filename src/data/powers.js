@@ -6,6 +6,7 @@ export const POWERS = {
     type: 'passive',
     category: 'def',
     price: 15,
+    color: '#3b6cb3',
   },
   indice: {
     name: 'Indice',
@@ -14,6 +15,7 @@ export const POWERS = {
     type: 'passive',
     category: 'def',
     price: 15,
+    color: '#e8b117',
   },
   relance: {
     name: 'Relance',
@@ -22,6 +24,7 @@ export const POWERS = {
     type: 'instant',
     category: 'def',
     price: 15,
+    color: '#8745d4',
   },
   foudre: {
     name: 'Foudre',
@@ -30,6 +33,7 @@ export const POWERS = {
     type: 'target',
     category: 'off',
     price: 15,
+    color: '#e85d6b',
   },
   sablier: {
     name: 'Sablier',
@@ -38,6 +42,7 @@ export const POWERS = {
     type: 'target',
     category: 'off',
     price: 15,
+    color: '#a83e7f',
   },
   double: {
     name: 'Double question',
@@ -46,5 +51,6 @@ export const POWERS = {
     type: 'target',
     category: 'off',
     price: 15,
+    color: '#c9472f',
   },
 };

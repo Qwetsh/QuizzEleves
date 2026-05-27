@@ -4,16 +4,16 @@ import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 
 const NODE_COLORS = {
-  depart: '#14532d',
-  arrivee: '#7c2d12',
-  jonction: '#6b7280',
-  event: '#ec4899',
+  depart: '#5a4628',
+  arrivee: '#b8862c',
+  jonction: '#7a5e3a',
+  event: '#a83e7f',
 };
 
 const NODE_ICONS = {
-  depart: '\u{1F6A9}',
-  arrivee: '\u{1F3C1}',
-  jonction: '?',
+  depart: '\u{1F3C1}',
+  arrivee: '\u{1F3C6}',
+  jonction: '\u2726',
   event: '\u{1F381}',
 };
 
@@ -34,7 +34,6 @@ function Pawn({ team, idx, px, py, isActive }) {
       transition={pawnTransition}
       style={{ x: px, y: py }}
     >
-      {/* Active team glow */}
       {isActive && (
         <motion.circle
           cx={0} cy={0} r={20}
@@ -74,6 +73,24 @@ function ChoiceHighlight({ cx, cy, r }) {
   );
 }
 
+function lightenHex(hex, amount) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h, 16);
+  const r = Math.min(255, ((n >> 16) & 255) + Math.round((255 - ((n >> 16) & 255)) * amount));
+  const g = Math.min(255, ((n >> 8) & 255) + Math.round((255 - ((n >> 8) & 255)) * amount));
+  const b = Math.min(255, (n & 255) + Math.round((255 - (n & 255)) * amount));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function darkenHex(hex, amount) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h, 16);
+  const r = Math.round(((n >> 16) & 255) * (1 - amount));
+  const g = Math.round(((n >> 8) & 255) * (1 - amount));
+  const b = Math.round((n & 255) * (1 - amount));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
 export default function BoardSVG() {
   const board = useGameStore((s) => s.board);
   const viewBox = useGameStore((s) => s.viewBox);
@@ -82,16 +99,13 @@ export default function BoardSVG() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const chooseJunction = useGameStore((s) => s.chooseJunction);
 
-  // Compute pawn positions
   const pawnPositions = useMemo(() => {
     if (!board || !teams.length) return [];
-    // Group by position
     const groups = {};
     teams.forEach((t, i) => {
       if (!groups[t.pos]) groups[t.pos] = [];
       groups[t.pos].push(i);
     });
-
     return teams.map((t, i) => {
       const node = board[t.pos];
       if (!node) return { px: 0, py: 0 };
@@ -111,7 +125,6 @@ export default function BoardSVG() {
 
   const entries = Object.entries(board);
 
-  // Choice nodes for junction
   const choiceNodes = new Set();
   if (awaitingChoice) {
     const team = teams[currentTeam];
@@ -120,7 +133,12 @@ export default function BoardSVG() {
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-[var(--bg)]">
+    <div
+      className="absolute inset-0 overflow-auto"
+      style={{
+        background: 'radial-gradient(ellipse at 50% 30%, rgba(255,240,194,0.55), transparent 55%), radial-gradient(ellipse at 20% 80%, rgba(91,140,58,0.10), transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(45,140,110,0.10), transparent 50%)',
+      }}
+    >
       <svg
         viewBox={`0 0 ${viewBox.w} ${viewBox.h}`}
         className="block"
@@ -134,6 +152,9 @@ export default function BoardSVG() {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <filter id="hex-shadow" x="-20%" y="-10%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000" floodOpacity="0.28" />
+          </filter>
         </defs>
 
         {/* Paths */}
@@ -143,15 +164,15 @@ export default function BoardSVG() {
             if (!target) return null;
             const dx = target.x - node.x;
             const cx1 = node.x + dx * 0.5;
-            const cx2 = node.x + dx * 0.5;
             return (
               <path
                 key={`${id}-${toId}`}
-                d={`M ${node.x} ${node.y} C ${cx1} ${node.y}, ${cx2} ${target.y}, ${target.x} ${target.y}`}
+                d={`M ${node.x} ${node.y} C ${cx1} ${node.y}, ${cx1} ${target.y}, ${target.x} ${target.y}`}
                 fill="none"
-                stroke="#d4cfbf"
-                strokeWidth={3}
-                strokeDasharray={node.type === 'jonction' ? '8 4' : 'none'}
+                stroke="rgba(122, 94, 58, 0.35)"
+                strokeWidth={6}
+                strokeLinecap="round"
+                strokeDasharray={node.type === 'jonction' ? '8 12' : '1 12'}
               />
             );
           })
@@ -171,6 +192,10 @@ export default function BoardSVG() {
           const r = NODE_RADIUS[node.type] || 32;
           const isChoice = choiceNodes.has(id);
 
+          const lightFill = lightenHex(fill, 0.15);
+          const darkFill = darkenHex(fill, 0.25);
+          const depth = Math.max(3, r * 0.12);
+
           return (
             <g
               key={id}
@@ -178,14 +203,32 @@ export default function BoardSVG() {
               style={{ cursor: isChoice ? 'pointer' : 'default' }}
             >
               {isChoice && <ChoiceHighlight cx={node.x} cy={node.y} r={r} />}
+
+              {/* Shadow/depth circle */}
+              <circle
+                cx={node.x} cy={node.y + depth} r={r}
+                fill={darkFill}
+                filter="url(#hex-shadow)"
+              />
+
+              {/* Main circle with gradient feel */}
               <circle
                 cx={node.x} cy={node.y} r={r}
-                fill={fill} stroke="#fff" strokeWidth={3}
+                fill={fill} stroke={darkFill} strokeWidth={2}
               />
+
+              {/* Top highlight */}
+              <ellipse
+                cx={node.x - r * 0.15} cy={node.y - r * 0.2}
+                rx={r * 0.5} ry={r * 0.3}
+                fill="rgba(255,255,255,0.25)"
+              />
+
+              {/* Icon */}
               <text
                 x={node.x} y={node.y + 2}
                 textAnchor="middle" dominantBaseline="middle"
-                fontSize={22} fill="white"
+                fontSize={r * 0.7} fill="white"
                 style={{ pointerEvents: 'none' }}
               >
                 {icon}
@@ -194,7 +237,8 @@ export default function BoardSVG() {
                 <text
                   x={node.x} y={node.y + r + 18}
                   textAnchor="middle" fontSize={13} fontWeight={700}
-                  fill="var(--ink)"
+                  fill="var(--ink-700)"
+                  style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {node.label}
                 </text>

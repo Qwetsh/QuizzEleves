@@ -34,36 +34,41 @@ export default function Dice() {
   const usePower = useGameStore((s) => s.usePower);
 
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent;
+  const team = teams[currentTeam];
+  const canRelance = diceValue && !showQuestion && !rolling && !showEvent && team?.powers?.relance?.charges > 0;
 
   const handleRoll = () => {
     soundDice();
     rollDice();
   };
-  const team = teams[currentTeam];
-  const canRelance = diceValue && !showQuestion && !rolling && !showEvent && team?.powers?.relance?.charges > 0;
 
   return (
-    <div className="flex flex-col items-center gap-2 my-4">
+    <div className="flex flex-col items-center gap-3">
       <motion.div
-        className="text-6xl select-none"
+        className="select-none"
+        style={{
+          fontSize: 64,
+          filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.25))',
+        }}
         variants={diceVariants}
         animate={rolling ? 'rolling' : diceValue ? 'result' : 'idle'}
       >
         {diceValue ? DICE_FACES[diceValue] : '\u{1F3B2}'}
       </motion.div>
-      <motion.button
+
+      <div style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: 'var(--ink-500)' }}>
+        {rolling ? 'Le d\u00e9 tourne\u2026' : (disabled ? '' : 'Cliquer pour lancer')}
+      </div>
+
+      <button
         onClick={handleRoll}
         disabled={disabled}
-        className={`px-6 py-2 rounded-lg font-bold text-white transition ${
-          disabled
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700 shadow-md'
-        }`}
-        whileHover={!disabled ? { scale: 1.05 } : {}}
-        whileTap={!disabled ? { scale: 0.95 } : {}}
+        className="btn"
+        style={{ width: '100%', ...(disabled ? { opacity: 0.5, cursor: 'not-allowed', filter: 'saturate(0.6)' } : {}) }}
       >
-        {rolling ? 'Lancement...' : 'Lancer le d\u00e9'}
-      </motion.button>
+        {"\u{1F3B2} Lancer le d\u00e9"}
+      </button>
+
       <AnimatePresence>
         {canRelance && (
           <motion.button
@@ -71,11 +76,21 @@ export default function Dice() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             onClick={() => usePower('relance')}
-            className="px-4 py-1.5 rounded-lg font-semibold text-sm border-2 border-yellow-400 bg-yellow-50 hover:bg-yellow-100 transition"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px',
+              borderRadius: 14,
+              fontWeight: 600,
+              fontSize: 14,
+              border: '2px solid var(--gold-400)',
+              background: 'linear-gradient(180deg, #fff7e2, #f3d997)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-ui)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 0 rgba(110,78,16,0.3)',
+              transition: 'transform 100ms ease',
+            }}
           >
-            {"\u{1F3B2} Relance !"} <span className="opacity-60">(x{team.powers.relance.charges})</span>
+            {"\u{1F3B2} Relance !"} <span style={{ opacity: 0.6 }}>(x{team.powers.relance.charges})</span>
           </motion.button>
         )}
       </AnimatePresence>

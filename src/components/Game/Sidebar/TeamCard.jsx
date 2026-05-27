@@ -4,19 +4,8 @@ import { useGameStore } from '../../../store/gameStore';
 
 export default function TeamCard({ team, index }) {
   const currentTeam = useGameStore((s) => s.currentTeam);
-  const board = useGameStore((s) => s.board);
   const finished = useGameStore((s) => s.finished);
   const isCurrent = index === currentTeam && !finished;
-
-  const node = board?.[team.pos];
-  let posLabel = '?';
-  if (node) {
-    if (node.type === 'depart') posLabel = 'd\u00e9part';
-    else if (node.type === 'arrivee') posLabel = '\u{1F3C1} arriv\u00e9e';
-    else if (node.type === 'jonction') posLabel = 'jonction';
-    else if (node.type === 'event') posLabel = '\u{1F381} \u00e9v\u00e9nement';
-    else if (node.type === 'subject') posLabel = SUBJECTS[node.subject]?.name || node.subject;
-  }
 
   const powerEntries = Object.entries(team.powers || {}).map(([key, val]) => ({
     key,
@@ -26,53 +15,42 @@ export default function TeamCard({ team, index }) {
 
   return (
     <div
-      className={`rounded-lg p-2 mb-1 border-2 transition ${
-        isCurrent
-          ? 'border-yellow-400 bg-yellow-50 shadow-md'
-          : 'border-transparent bg-white'
-      }`}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 10px',
+        borderRadius: 12,
+        marginBottom: 6,
+        border: isCurrent ? '2px solid var(--gold-500)' : '2px solid transparent',
+        background: isCurrent
+          ? 'linear-gradient(90deg, rgba(243,201,105,0.2), rgba(243,201,105,0.05))'
+          : 'rgba(255, 250, 240, 0.5)',
+        boxShadow: isCurrent ? '0 0 0 3px rgba(243,201,105,0.15)' : 'none',
+        transition: 'all 160ms ease',
+      }}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-xl">{team.emoji}</span>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-sm truncate" style={{ color: team.color }}>
-            {team.name}
-            {isCurrent && <span className="ml-1 text-xs text-yellow-600">{"\u25C0"}</span>}
-          </div>
-          <div className="text-xs text-[var(--muted)]">{posLabel}</div>
+      <span className="text-2xl">{team.emoji}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--ink-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {team.name}
+          {isCurrent && <span style={{ fontSize: 11, color: 'var(--gold-700)' }}>{"\u25C0 tour"}</span>}
         </div>
-        <div className="text-right text-xs text-[var(--muted)]">
-          <div>{"\u{1F4B0}"} {team.money}</div>
-          <div>{"\u2705"} {team.correct} {"\u274C"} {team.wrong}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-500)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 1 }}>
+          {powerEntries.map(({ key, info, charges }) => (
+            <span key={key} title={info.name}>{info.icon} {charges}</span>
+          ))}
+          {team.sablierActif && <span title="Timer /2">{"\u23F1\uFE0F"}</span>}
+          {team.doubleActive && <span title="Double question">{"\u2753"}</span>}
         </div>
       </div>
-      {powerEntries.length > 0 && (
-        <div className="flex gap-1 mt-1">
-          {powerEntries.map(({ key, info, charges }) => (
-            <span
-              key={key}
-              className={`text-xs px-1.5 py-0.5 rounded border ${
-                info.category === 'def'
-                  ? 'border-blue-300 bg-blue-50'
-                  : 'border-red-300 bg-red-50'
-              } ${charges === 0 ? 'opacity-40' : ''}`}
-              title={info.desc}
-            >
-              {info.icon} {charges}
-            </span>
-          ))}
-          {team.sablierActif && (
-            <span className="text-xs px-1 py-0.5 rounded border border-orange-300 bg-orange-50" title="Timer /2 au prochain tour">
-              {"\u23F1\uFE0F"}
-            </span>
-          )}
-          {team.doubleActive && (
-            <span className="text-xs px-1 py-0.5 rounded border border-purple-300 bg-purple-50" title="Double question au prochain tour">
-              {"\u2753"}
-            </span>
-          )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', fontSize: 12, fontWeight: 600 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span className="coin" /> <span>{team.money}</span>
         </div>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ink-500)' }}>
+          <span style={{ color: '#2f9d5a' }}>{"\u2713"} {team.correct}</span>
+          <span style={{ color: '#c9472f' }}>{"\u2717"} {team.wrong}</span>
+        </div>
+      </div>
     </div>
   );
 }

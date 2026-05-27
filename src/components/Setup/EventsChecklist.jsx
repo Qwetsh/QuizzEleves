@@ -10,35 +10,47 @@ export default function EventsChecklist() {
   const allChecked = enabledEvents.length === allKeys.length;
 
   return (
-    <div className="mb-6">
+    <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-semibold text-[var(--muted)]">
+        <div className="field-label" style={{ marginBottom: 0 }}>
           {`\u00c9v\u00e9nements (${enabledEvents.length}/${allKeys.length})`}
-        </label>
+        </div>
         <button
           onClick={() => setAllEvents(!allChecked)}
-          className="text-xs text-blue-600 hover:underline"
+          style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
         >
           {allChecked ? 'Tout d\u00e9cocher' : 'Tout cocher'}
         </button>
       </div>
-      <div className="bg-white rounded-lg border border-[var(--border)] p-3 grid grid-cols-2 gap-1">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         {allKeys.map((key) => {
           const ev = EVENTS[key];
-          const checked = enabledEvents.includes(key);
+          const on = enabledEvents.includes(key);
           return (
-            <label
+            <div
               key={key}
-              className="flex items-center gap-2 cursor-pointer text-sm py-0.5 hover:bg-gray-50 rounded px-1"
+              onClick={() => toggleEvent(key)}
+              className="flex items-center gap-2.5 cursor-pointer select-none"
+              style={{
+                padding: '6px 8px',
+                borderRadius: 8,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(232, 169, 88, 0.12)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggleEvent(key)}
-                className="accent-blue-500"
-              />
-              <span>{ev.icon} {ev.name}</span>
-            </label>
+              <div
+                style={{
+                  width: 18, height: 18, borderRadius: 5,
+                  background: on ? 'var(--gold-600)' : '#fffefb',
+                  border: `2px solid ${on ? 'var(--gold-700)' : 'var(--ink-400)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 14, flexShrink: 0,
+                }}
+              >
+                {on ? '\u2713' : ''}
+              </div>
+              <span style={{ fontSize: 13 }}>{ev.icon} {ev.name}</span>
+            </div>
           );
         })}
       </div>

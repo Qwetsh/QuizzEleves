@@ -6,26 +6,18 @@ const overlayVariants = {
 };
 
 const contentVariants = {
-  hidden: { opacity: 0, scale: 0.85, y: 30 },
+  hidden: { opacity: 0, scale: 0.6, y: 30 },
   visible: { opacity: 1, scale: 1, y: 0 },
   exit: { opacity: 0, scale: 0.9, y: -20 },
 };
 
-/**
- * Animated modal overlay wrapper.
- * Usage:
- *   <AnimatePresence>
- *     {showModal && (
- *       <ModalOverlay onClose={close}>
- *         <div>content</div>
- *       </ModalOverlay>
- *     )}
- *   </AnimatePresence>
- */
 export default function ModalOverlay({ children, onClose, className = 'max-w-lg' }) {
   return (
     <motion.div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      style={{
+        background: 'radial-gradient(ellipse at center, rgba(31,20,10,0.65), rgba(31,20,10,0.85))',
+      }}
       variants={overlayVariants}
       initial="hidden"
       animate="visible"
@@ -34,7 +26,15 @@ export default function ModalOverlay({ children, onClose, className = 'max-w-lg'
       onClick={onClose}
     >
       <motion.div
-        className={`bg-[var(--paper)] rounded-2xl shadow-2xl w-full overflow-hidden ${className}`}
+        className={`w-full overflow-hidden ${className}`}
+        style={{
+          maxHeight: '88vh',
+          overflowY: 'auto',
+          background: '#fffefb',
+          borderRadius: 22,
+          border: '1px solid rgba(122, 94, 58, 0.3)',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.5)',
+        }}
         variants={contentVariants}
         initial="hidden"
         animate="visible"

@@ -1,55 +1,76 @@
+/* ============================================
+   QUÊTE DES MATIÈRES — Animations
+   ============================================ */
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.6) translateY(8px); }
+  60%  { opacity: 1; transform: scale(1.06) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.anim-pop-in { animation: pop-in 380ms cubic-bezier(.34,1.56,.64,1) both; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.anim-fade-in { animation: fade-in 240ms ease both; }
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.anim-float { animation: float-y 2.6s ease-in-out infinite; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243, 201, 105, 0.6); }
+  50%      { box-shadow: 0 0 0 12px rgba(243, 201, 105, 0); }
+}
+.anim-pulse { animation: pulse-glow 1.8s ease-out infinite; }
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0.6; }
+}
+.confetti { animation: confetti-fall 4s linear infinite; }
+
+@keyframes confetti-rise {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  50% { opacity: 1; }
+  100% { transform: translateY(-100vh) rotate(720deg) scale(0.5); opacity: 0; }
+}
+.confetti-piece { animation: confetti-rise 3s ease-out infinite; }
+
+@keyframes toast-rise {
+  0%   { opacity: 0; transform: translate(-50%, 0) scale(0.7); }
+  20%  { opacity: 1; transform: translate(-50%, -10px) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -70px) scale(1); }
+}
+
+@keyframes blazon-pulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-3px) scale(1.04); }
+}
+
+@keyframes hex-pulse {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(243, 201, 105, 0)); }
+  50%      { filter: brightness(1.18) drop-shadow(0 0 14px rgba(243, 201, 105, 0.95)); }
+}
+
+/* Dice */
 @keyframes shake {
   0%, 100% { transform: translateY(0) rotate(0); }
   25% { transform: translateY(-8px) rotate(-15deg); }
   50% { transform: translateY(0) rotate(15deg); }
   75% { transform: translateY(-4px) rotate(-5deg); }
 }
-
-@keyframes pop {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes pawn-shake {
-  0%, 100% { transform: translate(0,0); }
-  20% { transform: translate(-4px, 2px); }
-  40% { transform: translate(4px, -2px); }
-  60% { transform: translate(-3px, -1px); }
-  80% { transform: translate(3px, 1px); }
-}
-
-@keyframes pawn-flash {
-  0%, 100% { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
-  50% { filter: drop-shadow(0 0 12px #fff700) drop-shadow(0 0 20px #fff700); }
-}
-
-@keyframes pflash {
-  0%   { opacity: 0; transform: scale(0.5); }
-  20%  { opacity: 1; transform: scale(1.3); }
-  60%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.1); }
-}
-
 .dice-rolling { animation: shake 0.5s; }
-.pawn-shake { animation: pawn-shake 0.5s; }
-.pawn-flash { animation: pawn-flash 0.6s; }
-.modal-pop { animation: pop 0.3s ease; }
-.power-flash-anim { animation: pflash 1.2s ease-out; }
 
-@keyframes confetti-rise {
-  0% {
-    transform: translateY(0) rotate(0deg) scale(1);
-    opacity: 1;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) rotate(720deg) scale(0.5);
-    opacity: 0;
-  }
+/* Blazon */
+.blazon--glow {
+  filter: drop-shadow(0 0 12px rgba(243, 201, 105, 0.85)) drop-shadow(0 6px 8px rgba(0,0,0,0.3));
+  animation: blazon-pulse 1.4s ease-in-out infinite;
 }
 
-.confetti-piece {
-  animation: confetti-rise 3s ease-out infinite;
-}
+/* Legacy compat */
+.modal-pop { animation: pop-in 380ms cubic-bezier(.34,1.56,.64,1) both; }
+.pawn-shake { animation: shake 0.5s; }

@@ -29,85 +29,76 @@ export default function EventModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-      <ModalOverlay className="max-w-md">
-        <div className="p-6">
-        {/* Header */}
-        <div className="text-center mb-4">
-          <div className="text-5xl mb-2">{event.icon}</div>
-          <h2 className="text-xl font-bold">{event.name}</h2>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-lg">{team?.emoji}</span>
-            <span className="font-semibold" style={{ color: team?.color }}>
-              {team?.name}
-            </span>
+        <ModalOverlay className="max-w-md">
+          <div style={{ padding: '26px 26px 4px', textAlign: 'center' }}>
+            {/* Large icon */}
+            <div
+              style={{
+                width: 100, height: 100, borderRadius: 28,
+                margin: '0 auto 14px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 54,
+                background: 'linear-gradient(180deg, #a371e0, #7c3aed)',
+                boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -6px 0 rgba(0,0,0,0.18), 0 8px 0 rgba(60,25,110,0.5)',
+              }}
+            >
+              {event?.icon}
+            </div>
+            <div
+              style={{
+                display: 'inline-block', padding: '4px 14px',
+                background: 'rgba(168, 62, 127, 0.15)',
+                color: 'var(--m-anglais-deep)',
+                fontSize: 11, fontFamily: 'var(--font-display)',
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                borderRadius: 999, marginBottom: 12,
+              }}
+            >
+              {"\u00c9v\u00e9nement sp\u00e9cial"}
+            </div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28 }}>{event?.name}</h2>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, margin: '10px 0 4px', color: 'var(--ink-600)' }}>
+              <span className="text-lg">{team?.emoji}</span>
+              <span>{team?.name}</span>
+            </div>
           </div>
-        </div>
 
-        {/* Phase content */}
-        {phase === 'intro' && (
-          <IntroPhase event={event} onAccept={acceptEvent} onDecline={declineEvent} />
-        )}
-
-        {phase === 'target' && (
-          <TargetPhase
-            teams={teams}
-            currentTeam={currentTeam}
-            eventKey={key}
-            onSelect={eventSelectTarget}
-          />
-        )}
-
-        {phase === 'dice' && (
-          <DicePhase data={data} />
-        )}
-
-        {phase === 'question' && (
-          <QuestionPhase data={data} onAnswer={eventAnswerQuestion} />
-        )}
-
-        {phase === 'choice' && (
-          <ChoicePhase eventKey={key} team={team} onChoice={eventRechargeChoice} />
-        )}
-
-        {phase === 'result' && (
-          <ResultPhase data={data} onClose={closeEvent} />
-        )}
-        </div>
-      </ModalOverlay>
+          <div style={{ padding: '10px 32px 24px', textAlign: 'center' }}>
+            {phase === 'intro' && (
+              <IntroPhase event={event} onAccept={acceptEvent} onDecline={declineEvent} />
+            )}
+            {phase === 'target' && (
+              <TargetPhase teams={teams} currentTeam={currentTeam} eventKey={key} onSelect={eventSelectTarget} />
+            )}
+            {phase === 'dice' && <DicePhase data={data} />}
+            {phase === 'question' && (
+              <QuestionPhase data={data} onAnswer={eventAnswerQuestion} />
+            )}
+            {phase === 'choice' && (
+              <ChoicePhase eventKey={key} team={team} onChoice={eventRechargeChoice} />
+            )}
+            {phase === 'result' && <ResultPhase data={data} onClose={closeEvent} />}
+          </div>
+        </ModalOverlay>
       )}
     </AnimatePresence>
   );
 }
 
-// --- Sub-components ---
-
 function IntroPhase({ event, onAccept, onDecline }) {
   return (
     <>
-      <p className="text-[var(--muted)] mb-6 text-center">{event.desc}</p>
+      <p style={{ fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)', margin: '12px 0 22px' }}>
+        {event.desc}
+      </p>
       <div className="flex gap-3 justify-center">
         {event.optional ? (
           <>
-            <button
-              onClick={onAccept}
-              className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition"
-            >
-              Accepter
-            </button>
-            <button
-              onClick={onDecline}
-              className="px-6 py-2 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500 transition"
-            >
-              Refuser
-            </button>
+            <button className="btn btn--green" onClick={onAccept}>Accepter</button>
+            <button className="btn btn--ghost" onClick={onDecline}>Refuser</button>
           </>
         ) : (
-          <button
-            onClick={onAccept}
-            className="px-6 py-2 bg-pink-600 text-white font-bold rounded-lg hover:bg-pink-700 transition"
-          >
-            OK
-          </button>
+          <button className="btn btn--purple btn--lg" onClick={onAccept}>OK</button>
         )}
       </div>
     </>
@@ -123,10 +114,9 @@ function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
     vol: '\u00c0 qui voler une charge ?',
     echange: '\u00c9changer ta position avec qui ?',
   };
-
   return (
     <>
-      <p className="text-sm font-semibold mb-3 text-center">{labels[eventKey] || 'Choisir une cible :'}</p>
+      <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{labels[eventKey] || 'Choisir une cible :'}</p>
       <div className="space-y-2">
         {teams.map((t, i) => {
           if (i === currentTeam) return null;
@@ -134,10 +124,19 @@ function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
             <button
               key={i}
               onClick={() => onSelect(i)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-[var(--border)] bg-white hover:border-pink-400 hover:bg-pink-50 transition"
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: 12, borderRadius: 14,
+                border: '2px solid rgba(122,94,58,0.22)',
+                background: '#fffefb',
+                cursor: 'pointer', fontFamily: 'var(--font-ui)',
+                transition: 'all 100ms ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#a83e7f'; e.currentTarget.style.background = '#faf0f5'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(122,94,58,0.22)'; e.currentTarget.style.background = '#fffefb'; }}
             >
               <span className="text-2xl">{t.emoji}</span>
-              <span className="font-bold" style={{ color: t.color }}>{t.name}</span>
+              <span style={{ fontFamily: 'var(--font-display)', color: t.color }}>{t.name}</span>
             </button>
           );
         })}
@@ -149,14 +148,13 @@ function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
 function DicePhase({ data }) {
   const dv = data?.diceValue;
   const rolling = data?.diceRolling;
-
   return (
     <div className="text-center py-4">
-      <div className={`text-7xl mb-4 select-none ${rolling ? 'animate-bounce' : ''}`}>
+      <div className={`text-7xl select-none ${rolling ? 'anim-float' : ''}`}>
         {dv ? DICE_FACES[dv] : '\u{1F3B2}'}
       </div>
       {!rolling && dv && (
-        <p className="text-lg font-bold">
+        <p style={{ fontSize: 18, fontFamily: 'var(--font-display)', marginTop: 12 }}>
           {"R\u00e9sultat : "}{dv} !
         </p>
       )}
@@ -171,37 +169,37 @@ function QuestionPhase({ data, onAnswer }) {
   const selected = data?.questionSelected;
 
   if (!question) return <p>Chargement...</p>;
-
   const subjectInfo = SUBJECTS[subject] || {};
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-3 justify-center">
         <span className="text-xl">{subjectInfo.icon}</span>
-        <span className="font-bold text-sm" style={{ color: subjectInfo.color }}>{subjectInfo.name}</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: subjectInfo.color }}>{subjectInfo.name}</span>
       </div>
-      <p className="font-semibold mb-4">{question.q}</p>
+      <p style={{ fontWeight: 600, marginBottom: 16 }}>{question.q}</p>
       <div className="space-y-2">
         {question.a.map((answer, idx) => {
-          let btnClass = 'border-[var(--border)] bg-white hover:border-blue-400';
+          let style = { border: '2px solid rgba(122,94,58,0.22)', background: '#fffefb' };
           if (revealed) {
-            if (idx === question.c) {
-              btnClass = 'border-green-500 bg-green-50 ring-2 ring-green-400';
-            } else if (idx === selected && idx !== question.c) {
-              btnClass = 'border-red-500 bg-red-50';
-            } else {
-              btnClass = 'border-gray-200 bg-gray-50 opacity-50';
-            }
+            if (idx === question.c) style = { border: '2px solid #5b8c3a', background: '#d1f0b8' };
+            else if (idx === selected && idx !== question.c) style = { border: '2px solid #c9472f', background: '#f7c8c8' };
+            else style = { ...style, opacity: 0.4 };
           }
-
           return (
             <button
               key={idx}
               onClick={() => !revealed && onAnswer(idx)}
               disabled={revealed}
-              className={`w-full text-left p-3 rounded-lg border-2 transition text-sm ${btnClass}`}
+              style={{
+                width: '100%', textAlign: 'left', padding: 12, borderRadius: 14,
+                cursor: revealed ? 'not-allowed' : 'pointer',
+                fontSize: 14, transition: 'all 100ms ease',
+                fontFamily: 'var(--font-ui)',
+                ...style,
+              }}
             >
-              <span className="font-mono text-xs text-[var(--muted)] mr-2">
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--ink-400)', marginRight: 8 }}>
                 {String.fromCharCode(65 + idx)}
               </span>
               {answer}
@@ -209,8 +207,8 @@ function QuestionPhase({ data, onAnswer }) {
           );
         })}
       </div>
-      {revealed && (
-        <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200 text-xs">
+      {revealed && question.e && (
+        <div style={{ marginTop: 12, padding: 12, background: 'var(--parch-50)', borderRadius: 12, border: '1px solid rgba(122,94,58,0.16)', fontSize: 13 }}>
           <strong>Explication :</strong> {question.e}
         </div>
       )}
@@ -220,23 +218,14 @@ function QuestionPhase({ data, onAnswer }) {
 
 function ChoicePhase({ eventKey, team, onChoice }) {
   if (eventKey === 'recharge') {
-    const hasBouclier = team.powerDef === 'bouclier' || team.powerOff === 'bouclier' || team.powers?.bouclier;
-    const hasIndice = team.powerDef === 'indice' || team.powerOff === 'indice' || team.powers?.indice;
-
     return (
       <>
-        <p className="text-sm font-semibold mb-3 text-center">Quelle charge veux-tu recharger ?</p>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>Quelle charge veux-tu recharger ?</p>
         <div className="flex gap-3 justify-center">
-          <button
-            onClick={() => onChoice('bouclier')}
-            className="px-5 py-3 rounded-lg border-2 border-blue-300 bg-blue-50 hover:bg-blue-100 font-bold transition"
-          >
+          <button className="btn btn--blue" onClick={() => onChoice('bouclier')}>
             {"\u{1F6E1}\uFE0F Bouclier"}
           </button>
-          <button
-            onClick={() => onChoice('indice')}
-            className="px-5 py-3 rounded-lg border-2 border-yellow-300 bg-yellow-50 hover:bg-yellow-100 font-bold transition"
-          >
+          <button className="btn" onClick={() => onChoice('indice')}>
             {"\u{1F4A1} Indice"}
           </button>
         </div>
@@ -249,15 +238,8 @@ function ChoicePhase({ eventKey, team, onChoice }) {
 function ResultPhase({ data, onClose }) {
   return (
     <>
-      <p className="text-center text-lg font-semibold mb-6">{data?.message}</p>
-      <div className="text-center">
-        <button
-          onClick={onClose}
-          className="px-6 py-2 bg-pink-600 text-white font-bold rounded-lg hover:bg-pink-700 transition"
-        >
-          OK
-        </button>
-      </div>
+      <p style={{ fontSize: 18, fontFamily: 'var(--font-display)', marginBottom: 22 }}>{data?.message}</p>
+      <button className="btn btn--purple btn--lg" onClick={onClose}>OK</button>
     </>
   );
 }

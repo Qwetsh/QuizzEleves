@@ -1,113 +1,88 @@
 import { useGameStore } from '../../store/gameStore';
 
-function RadioGroup({ label, name, value, options, onChange }) {
-  return (
-    <div className="mb-3">
-      <div className="text-xs font-semibold text-[var(--muted)] mb-1">{label}</div>
-      <div className="flex gap-2 flex-wrap">
-        {options.map((opt) => (
-          <label
-            key={opt.value}
-            className={`flex items-center gap-1 px-3 py-1 rounded border text-sm cursor-pointer transition ${
-              value === opt.value
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-[var(--border)] bg-white hover:border-blue-300'
-            }`}
-          >
-            <input
-              type="radio"
-              name={name}
-              value={opt.value}
-              checked={value === opt.value}
-              onChange={() => onChange(opt.value)}
-              className="sr-only"
-            />
-            {opt.label}
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SliderParam({ label, param, min, max, value, onChange }) {
-  return (
-    <div className="mb-3">
-      <div className="text-xs font-semibold text-[var(--muted)] mb-1">
-        {`${label} : ${value}`}
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-blue-500"
-      />
-    </div>
-  );
-}
-
 export default function BoardParams() {
   const params = useGameStore((s) => s.boardParams);
   const setBoardParam = useGameStore((s) => s.setBoardParam);
 
   return (
-    <div className="mb-6">
-      <label className="block text-sm font-semibold mb-2 text-[var(--muted)]">
-        Plateau
-      </label>
-      <div className="bg-white rounded-lg border border-[var(--border)] p-3 space-y-1">
-        <SliderParam
-          label="Cases par voie"
-          min={3} max={6}
-          value={params.casesParVoie}
-          onChange={(v) => setBoardParam('casesParVoie', v)}
+    <div>
+      <div className="field-label">Plateau</div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
+          {"Cases par voie : "}<strong>{params.casesParVoie}</strong>
+        </div>
+        <input
+          type="range" min={3} max={6} value={params.casesParVoie}
+          onChange={(e) => setBoardParam('casesParVoie', Number(e.target.value))}
+          style={{ accentColor: '#b8862c', width: '100%' }}
         />
-        <RadioGroup
-          label={"Voies parall\u00e8les"}
-          name="nbVoies"
-          value={params.nbVoies}
-          options={[
-            { value: 2, label: '2 voies' },
-            { value: 3, label: '3 voies' },
-          ]}
-          onChange={(v) => setBoardParam('nbVoies', v)}
+      </div>
+
+      <ChipGroup
+        label={"Voies parall\u00e8les"}
+        value={params.nbVoies}
+        options={[{ value: 2, label: '2 voies' }, { value: 3, label: '3 voies' }]}
+        onChange={(v) => setBoardParam('nbVoies', v)}
+      />
+
+      <ChipGroup
+        label="Sections"
+        value={params.nbSections}
+        options={[{ value: 2, label: '2' }, { value: 3, label: '3' }, { value: 4, label: '4' }]}
+        onChange={(v) => setBoardParam('nbSections', v)}
+      />
+
+      <ChipGroup
+        label="Voie finale"
+        value={params.voieFinale}
+        options={[
+          { value: 'court-long', label: 'Court / Long' },
+          { value: 'unique', label: 'Unique' },
+          { value: 'aucune', label: 'Aucune' },
+        ]}
+        onChange={(v) => setBoardParam('voieFinale', v)}
+      />
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
+          {"Couloirs mix : "}<strong>{params.couloirsMix}</strong>
+        </div>
+        <input
+          type="range" min={0} max={3} value={params.couloirsMix}
+          onChange={(e) => setBoardParam('couloirsMix', Number(e.target.value))}
+          style={{ accentColor: '#b8862c', width: '100%' }}
         />
-        <RadioGroup
-          label="Sections"
-          name="nbSections"
-          value={params.nbSections}
-          options={[
-            { value: 2, label: '2' },
-            { value: 3, label: '3' },
-            { value: 4, label: '4' },
-          ]}
-          onChange={(v) => setBoardParam('nbSections', v)}
+      </div>
+
+      <div>
+        <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
+          {"\u00c9v\u00e9nements / couloir : "}<strong>{params.eventsPerCouloir}</strong>
+        </div>
+        <input
+          type="range" min={0} max={2} value={params.eventsPerCouloir}
+          onChange={(e) => setBoardParam('eventsPerCouloir', Number(e.target.value))}
+          style={{ accentColor: '#b8862c', width: '100%' }}
         />
-        <RadioGroup
-          label="Voie finale"
-          name="voieFinale"
-          value={params.voieFinale}
-          options={[
-            { value: 'court-long', label: 'Court / Long' },
-            { value: 'unique', label: 'Unique' },
-            { value: 'aucune', label: 'Aucune' },
-          ]}
-          onChange={(v) => setBoardParam('voieFinale', v)}
-        />
-        <SliderParam
-          label="Couloirs mix"
-          min={0} max={3}
-          value={params.couloirsMix}
-          onChange={(v) => setBoardParam('couloirsMix', v)}
-        />
-        <SliderParam
-          label={"\u00c9v\u00e9nements / couloir"}
-          min={0} max={2}
-          value={params.eventsPerCouloir}
-          onChange={(v) => setBoardParam('eventsPerCouloir', v)}
-        />
+      </div>
+    </div>
+  );
+}
+
+function ChipGroup({ label, value, options, onChange }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>{label}</div>
+      <div className="flex gap-2.5 flex-wrap">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            className={`chip ${value === opt.value ? 'is-active' : ''}`}
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
     </div>
   );

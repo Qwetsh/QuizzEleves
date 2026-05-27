@@ -16,20 +16,20 @@ export default function App() {
   const phase = useGameStore((s) => s.phase);
 
   return (
-    <div className="min-h-screen">
+    <div className="absolute inset-0 no-select" style={{ fontFamily: 'var(--font-ui)' }}>
       <AnimatePresence mode="wait">
         {phase === 'setup' && (
-          <motion.div key="setup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
+          <motion.div key="setup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
             <Setup />
           </motion.div>
         )}
         {phase === 'powerSelect' && (
-          <motion.div key="power" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition}>
+          <motion.div key="power" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
             <PowerSetup />
           </motion.div>
         )}
         {phase === 'game' && (
-          <motion.div key="game" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="h-screen">
+          <motion.div key="game" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
             <GameLayout />
           </motion.div>
         )}

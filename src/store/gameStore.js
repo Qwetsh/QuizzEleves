@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS } from '../data/teamPresets.js';
+import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { EVENTS } from '../data/events.js';
 import { SUBJECTS } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
@@ -18,6 +18,7 @@ function createDefaultTeams(n) {
     name: TEAM_DEFAULTS[i] || `\u00c9quipe ${i + 1}`,
     color: TEAM_COLORS[i],
     emoji: TEAM_DEFAULT_EMOJIS[i] || '\u{1F3B2}',
+    blazonGlyph: TEAM_BLAZON_GLYPHS[i] || 'lion',
     pos: 'depart',
     correct: 0,
     wrong: 0,
