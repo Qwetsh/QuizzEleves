@@ -21,7 +21,7 @@ export default function GameLog() {
       {log.length === 0 && <div style={{ color: 'var(--ink-400)' }}>{"La partie d\u00e9marre\u2026"}</div>}
       {log.map((msg, i) => (
         <div
-          key={i}
+          key={`log-${i}-${msg.slice(0, 20)}`}
           style={{
             padding: '5px 0',
             borderBottom: '1px dashed rgba(122, 94, 58, 0.18)',

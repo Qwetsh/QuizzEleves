@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { soundDice } from '../../logic/sounds';
+import { canUsePowerInContext } from '../../logic/powerActivator';
 
 const DICE_FACES = [null, '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
 
@@ -35,7 +36,8 @@ export default function Dice() {
 
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent;
   const team = teams[currentTeam];
-  const canRelance = diceValue && !showQuestion && !rolling && !showEvent && team?.powers?.relance?.charges > 0;
+  const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished };
+  const canRelance = team?.powers?.relance?.charges > 0 && canUsePowerInContext('relance', ctx);
 
   const handleRoll = () => {
     soundDice();

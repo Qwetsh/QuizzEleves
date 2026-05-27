@@ -7,7 +7,7 @@ export default function TeamList() {
   return (
     <div>
       {teams.map((team, i) => (
-        <TeamCard key={i} team={team} index={i} />
+        <TeamCard key={`team-${team.name}-${i}`} team={team} index={i} />
       ))}
     </div>
   );

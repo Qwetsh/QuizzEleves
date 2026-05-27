@@ -4,7 +4,7 @@
  *
  * @param {Array} questions - tableau de questions pour la matiere
  * @param {Set} askedSet - Set d'indices deja poses pour cette matiere
- * @returns {{ question: object, index: number } | null}
+ * @returns {{ question: object, index: number, newAsked: Set } | null}
  */
 export function pickQuestion(questions, askedSet) {
   if (!questions || questions.length === 0) return null;
@@ -15,16 +15,19 @@ export function pickQuestion(questions, askedSet) {
     if (!askedSet.has(i)) candidates.push(i);
   }
 
-  // Si tout a ete pose, on reinitialise
+  // Si tout a ete pose, on reinitialise avec un Set vide
+  let newAsked;
   if (candidates.length === 0) {
-    askedSet.clear();
+    newAsked = new Set();
     for (let i = 0; i < questions.length; i++) candidates.push(i);
+  } else {
+    newAsked = new Set(askedSet);
   }
 
   const idx = candidates[Math.floor(Math.random() * candidates.length)];
-  askedSet.add(idx);
+  newAsked.add(idx);
 
-  return { question: questions[idx], index: idx };
+  return { question: questions[idx], index: idx, newAsked };
 }
 
 /**

@@ -20,9 +20,9 @@ export default function Setup() {
 
   return (
     <div className="absolute inset-0 overflow-y-auto" style={{ padding: '36px 24px 80px' }}>
-      <div className="max-w-[1180px] mx-auto grid gap-7" style={{ gridTemplateColumns: '1.1fr 0.9fr' }}>
+      <div className="max-w-[1180px] mx-auto grid gap-7 grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
         {/* Hero */}
-        <div className="col-span-2 flex items-center gap-6 flex-wrap mb-2">
+        <div className="col-span-1 lg:col-span-2 flex items-center gap-6 flex-wrap mb-2">
           <div
             className="flex items-center justify-center text-5xl"
             style={{
@@ -56,7 +56,7 @@ export default function Setup() {
         </div>
 
         {hasSave && (
-          <div className="col-span-2">
+          <div className="col-span-1 lg:col-span-2">
             <button
               onClick={resumeGame}
               className="btn btn--blue btn--lg"

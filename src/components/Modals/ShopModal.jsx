@@ -97,6 +97,7 @@ export default function ShopModal() {
                       disabled={!canBuy}
                       className={`btn btn--sm ${canBuy ? '' : ''}`}
                       style={canBuy ? {} : { opacity: 0.4, cursor: 'not-allowed', filter: 'saturate(0.6)' }}
+                      aria-label={`Acheter ${power.name} pour ${power.price} pièces`}
                     >
                       Acheter
                     </button>

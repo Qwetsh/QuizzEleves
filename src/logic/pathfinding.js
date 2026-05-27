@@ -25,7 +25,6 @@ export function buildPredecessors(nodes) {
  */
 export function moveForward(nodes, currentPos, steps) {
   let pos = currentPos;
-  let remaining = steps;
 
   for (let i = 0; i < steps; i++) {
     const node = nodes[pos];
@@ -33,11 +32,10 @@ export function moveForward(nodes, currentPos, steps) {
 
     // Si jonction avec choix (>1 next) et on n'est pas au premier pas
     if (node.next.length > 1 && i > 0) {
-      return { finalPos: pos, stoppedAtJunction: true, remaining: remaining };
+      return { finalPos: pos, stoppedAtJunction: true, remaining: steps - i };
     }
 
     pos = node.next[0];
-    remaining--;
 
     if (nodes[pos].type === 'arrivee') break;
   }
@@ -74,7 +72,9 @@ export function moveBack(nodes, currentPos, steps, preds) {
 export function findNextJunction(nodes, currentPos) {
   let pos = currentPos;
   const visited = new Set();
+  let iter = 0;
   while (pos) {
+    if (++iter > 1000) break;
     if (visited.has(pos)) break;
     visited.add(pos);
     const node = nodes[pos];
@@ -94,7 +94,9 @@ export function findPrevJunction(nodes, currentPos, preds) {
 
   let pos = currentPos;
   const visited = new Set();
+  let iter = 0;
   while (pos) {
+    if (++iter > 1000) break;
     if (visited.has(pos)) break;
     visited.add(pos);
     const p = preds[pos];

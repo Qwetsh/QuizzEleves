@@ -32,6 +32,24 @@ export function addCharge(team, powerKey, amount = 1) {
 }
 
 /**
+ * Determine si un pouvoir peut etre utilise dans le contexte UI actuel.
+ * @param {string} key - cle du pouvoir (relance, indice, bouclier, etc.)
+ * @param {object} context - { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished }
+ * @returns {boolean}
+ */
+export function canUsePowerInContext(key, context) {
+  const { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished } = context;
+  const info = POWERS[key];
+  if (!info) return false;
+
+  if (key === 'relance') return !!diceValue && !showQuestion && !rolling && !showEvent;
+  if (key === 'indice') return !!showQuestion && !rolling;
+  if (key === 'bouclier') return false;
+  if (info.category === 'off') return !diceValue && !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished;
+  return false;
+}
+
+/**
  * Retourne la liste des pouvoirs disponibles (avec charges > 0) pour une equipe.
  */
 export function getAvailablePowers(team) {

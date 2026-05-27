@@ -124,7 +124,7 @@ export default function QuestionModal() {
                 }}
               />
             </div>
-            <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{timeLeft}s</div>
+            <div aria-live="polite" style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{timeLeft}s</div>
 
             {timerHalved && (
               <div style={{ fontSize: 12, marginTop: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>
@@ -134,7 +134,7 @@ export default function QuestionModal() {
           </div>
 
           {/* Choices - 2x2 grid */}
-          <div className="grid gap-3 p-5" style={{ gridTemplateColumns: question.a.length > 2 ? '1fr 1fr' : '1fr' }}>
+          <div className="grid gap-3 p-5 grid-cols-1 sm:grid-cols-2">
             {question.a.map((answer, idx) => {
               if (indiceHidden.includes(idx)) {
                 return (
@@ -182,11 +182,13 @@ export default function QuestionModal() {
                 }
               }
 
+              const letter = String.fromCharCode(65 + idx);
               return (
                 <button
                   key={idx}
                   onClick={() => handleAnswer(idx)}
                   disabled={revealed}
+                  aria-label={`Option ${letter}: ${answer}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '16px 18px', borderRadius: 14,
@@ -205,7 +207,7 @@ export default function QuestionModal() {
                     flexShrink: 0,
                     ...letterStyle,
                   }}>
-                    {String.fromCharCode(65 + idx)}
+                    {letter}
                   </span>
                   <span>{answer}</span>
                 </button>

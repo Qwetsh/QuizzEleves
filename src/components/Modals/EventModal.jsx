@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
@@ -24,7 +24,9 @@ export default function EventModal() {
 
   const isOpen = !!showEvent;
   const { event, key, phase, data } = showEvent || {};
-  const team = teams[currentTeam];
+  const team = teams?.[currentTeam];
+
+  if (isOpen && !team) return null;
 
   return (
     <AnimatePresence>
@@ -85,7 +87,7 @@ export default function EventModal() {
   );
 }
 
-function IntroPhase({ event, onAccept, onDecline }) {
+const IntroPhase = React.memo(function IntroPhase({ event, onAccept, onDecline }) {
   return (
     <>
       <p style={{ fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)', margin: '12px 0 22px' }}>
@@ -103,9 +105,9 @@ function IntroPhase({ event, onAccept, onDecline }) {
       </div>
     </>
   );
-}
+});
 
-function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
+const TargetPhase = React.memo(function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
   const labels = {
     foudreFree: 'Qui recule de 3 cases ?',
     sacrifice: 'Qui recule de 4 cases ?',
@@ -143,9 +145,9 @@ function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
       </div>
     </>
   );
-}
+});
 
-function DicePhase({ data }) {
+const DicePhase = React.memo(function DicePhase({ data }) {
   const dv = data?.diceValue;
   const rolling = data?.diceRolling;
   return (
@@ -160,9 +162,9 @@ function DicePhase({ data }) {
       )}
     </div>
   );
-}
+});
 
-function QuestionPhase({ data, onAnswer }) {
+const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
   const question = data?.eventQuestion;
   const subject = data?.eventSubject;
   const revealed = data?.questionRevealed;
@@ -214,7 +216,7 @@ function QuestionPhase({ data, onAnswer }) {
       )}
     </div>
   );
-}
+});
 
 function ChoicePhase({ eventKey, team, onChoice }) {
   if (eventKey === 'recharge') {

@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
+import { lighten, darken } from '../../utils/colors';
 
 const NODE_COLORS = {
   depart: '#5a4628',
@@ -27,7 +28,7 @@ const NODE_RADIUS = {
 
 const pawnTransition = { type: 'spring', damping: 18, stiffness: 120, mass: 0.8 };
 
-function Pawn({ team, idx, px, py, isActive }) {
+const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive }) {
   return (
     <motion.g
       animate={{ x: px, y: py }}
@@ -59,7 +60,7 @@ function Pawn({ team, idx, px, py, isActive }) {
       </text>
     </motion.g>
   );
-}
+});
 
 function ChoiceHighlight({ cx, cy, r }) {
   return (
@@ -73,23 +74,6 @@ function ChoiceHighlight({ cx, cy, r }) {
   );
 }
 
-function lightenHex(hex, amount) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h, 16);
-  const r = Math.min(255, ((n >> 16) & 255) + Math.round((255 - ((n >> 16) & 255)) * amount));
-  const g = Math.min(255, ((n >> 8) & 255) + Math.round((255 - ((n >> 8) & 255)) * amount));
-  const b = Math.min(255, (n & 255) + Math.round((255 - (n & 255)) * amount));
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-}
-
-function darkenHex(hex, amount) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h, 16);
-  const r = Math.round(((n >> 16) & 255) * (1 - amount));
-  const g = Math.round(((n >> 8) & 255) * (1 - amount));
-  const b = Math.round((n & 255) * (1 - amount));
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-}
 
 export default function BoardSVG() {
   const board = useGameStore((s) => s.board);
@@ -121,16 +105,38 @@ export default function BoardSVG() {
     });
   }, [board, teams]);
 
+  const nodeColors = useMemo(() => {
+    if (!board) return {};
+    const map = {};
+    for (const [id, node] of Object.entries(board)) {
+      let fill;
+      if (node.type === 'subject') {
+        const s = SUBJECTS[node.subject];
+        fill = s?.color || '#888';
+      } else {
+        fill = NODE_COLORS[node.type] || '#888';
+      }
+      map[id] = {
+        fill,
+        light: lighten(fill, 0.15),
+        dark: darken(fill, 0.25),
+      };
+    }
+    return map;
+  }, [board]);
+
+  const choiceNodes = useMemo(() => {
+    const set = new Set();
+    if (awaitingChoice && teams[currentTeam]) {
+      const node = board[teams[currentTeam].pos];
+      if (node) node.next.forEach((id) => set.add(id));
+    }
+    return set;
+  }, [awaitingChoice, currentTeam, board, teams]);
+
   if (!board) return null;
 
   const entries = Object.entries(board);
-
-  const choiceNodes = new Set();
-  if (awaitingChoice) {
-    const team = teams[currentTeam];
-    const node = board[team.pos];
-    if (node) node.next.forEach((id) => choiceNodes.add(id));
-  }
 
   return (
     <div
@@ -180,20 +186,13 @@ export default function BoardSVG() {
 
         {/* Nodes */}
         {entries.map(([id, node]) => {
-          let fill, icon;
-          if (node.type === 'subject') {
-            const s = SUBJECTS[node.subject];
-            fill = s?.color || '#888';
-            icon = s?.icon || '?';
-          } else {
-            fill = NODE_COLORS[node.type] || '#888';
-            icon = NODE_ICONS[node.type] || '?';
-          }
+          const icon = node.type === 'subject'
+            ? (SUBJECTS[node.subject]?.icon || '?')
+            : (NODE_ICONS[node.type] || '?');
           const r = NODE_RADIUS[node.type] || 32;
           const isChoice = choiceNodes.has(id);
 
-          const lightFill = lightenHex(fill, 0.15);
-          const darkFill = darkenHex(fill, 0.25);
+          const { fill, light: lightFill, dark: darkFill } = nodeColors[id] || {};
           const depth = Math.max(3, r * 0.12);
 
           return (

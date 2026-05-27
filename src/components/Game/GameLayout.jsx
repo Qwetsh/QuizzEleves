@@ -30,13 +30,16 @@ export default function GameLayout() {
   const finished = useGameStore((s) => s.finished);
   const openShop = useGameStore((s) => s.openShop);
   const [isFs, toggleFs] = useFullscreen();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const team = teams[currentTeam];
 
   return (
     <div className="flex absolute inset-0">
       {/* Board area */}
-      <div className="flex-1 relative" style={{ marginRight: 320 }}>
+      <div
+        className={`flex-1 relative transition-[margin] duration-200 ${sidebarOpen ? 'mr-72 lg:mr-80' : ''}`}
+      >
         {/* Board */}
         <BoardSVG />
 
@@ -68,14 +71,23 @@ export default function GameLayout() {
               </div>
             </div>
           )}
+
+          {/* Sidebar toggle button */}
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="btn btn--ghost btn--sm ml-auto"
+            style={{ pointerEvents: 'auto' }}
+            aria-label={sidebarOpen ? 'Masquer le panneau lat\u00e9ral' : 'Afficher le panneau lat\u00e9ral'}
+          >
+            {sidebarOpen ? '\u25B6' : '\u25C0'}
+          </button>
         </div>
       </div>
 
       {/* HUD Right Rail */}
       <div
-        className="absolute top-0 right-0 flex flex-col z-[60]"
+        className={`absolute top-0 right-0 flex flex-col z-[60] w-72 lg:w-80 transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
         style={{
-          width: 320,
           height: '100%',
           background: 'linear-gradient(180deg, rgba(255,250,240,0.98), rgba(244,234,213,0.95))',
           borderLeft: '1px solid rgba(122, 94, 58, 0.22)',

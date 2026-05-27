@@ -17,7 +17,7 @@ export default function VictoryModal() {
 
   useEffect(() => {
     if (finished && !dismissed) soundVictory();
-  }, [finished]);
+  }, [finished, dismissed]);
 
   const isOpen = finished && !dismissed && !!winner;
 
@@ -68,9 +68,9 @@ export default function VictoryModal() {
           >
             <div className="text-6xl mb-4">{winner.emoji}</div>
             <div
+              className="text-4xl sm:text-6xl"
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 72,
                 background: 'linear-gradient(180deg, #f3c969 0%, #b8862c 60%, #6e4e10 100%)',
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',

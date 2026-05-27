@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
+import { lighten } from '../../utils/colors';
 
 export default function PowerSetup() {
   const teams = useGameStore((s) => s.teams);
@@ -62,11 +63,15 @@ export default function PowerSetup() {
         </div>
 
         {/* Power cards */}
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {powers.map(([key, p]) => (
             <div
               key={key}
               onClick={() => handleSelect(key)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Choisir le pouvoir ${p.name}`}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(key); } }}
               className="cursor-pointer"
               style={{
                 padding: '24px 18px 22px',
@@ -94,7 +99,7 @@ export default function PowerSetup() {
                   margin: '0 auto 14px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 40,
-                  background: `linear-gradient(180deg, ${lightenSimple(p.color || '#888', 0.2)}, ${p.color || '#888'})`,
+                  background: `linear-gradient(180deg, ${lighten(p.color || '#888', 0.2)}, ${p.color || '#888'})`,
                   boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.5), inset 0 -5px 0 rgba(0,0,0,0.18)',
                 }}
               >
@@ -114,8 +119,9 @@ export default function PowerSetup() {
         <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 8 }}>
           {teams.map((t, i) => (
             <div
-              key={i}
+              key={`dot-${t.name}-${i}`}
               title={t.name}
+              aria-label={`\u00c9quipe ${t.name}${i === powerSetupIndex ? ' (en cours)' : ''}`}
               style={{
                 width: 16, height: 16, borderRadius: '50%',
                 background: t.color,
@@ -128,13 +134,4 @@ export default function PowerSetup() {
       </div>
     </div>
   );
-}
-
-function lightenSimple(hex, amount) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h, 16);
-  const r = Math.min(255, ((n >> 16) & 255) + Math.round(255 * amount));
-  const g = Math.min(255, ((n >> 8) & 255) + Math.round(255 * amount));
-  const b = Math.min(255, (n & 255) + Math.round(255 * amount));
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }

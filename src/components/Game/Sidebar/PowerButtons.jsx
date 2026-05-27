@@ -1,5 +1,5 @@
 import { useGameStore } from '../../../store/gameStore';
-import { POWERS } from '../../../data/powers';
+import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
 
 export default function PowerButtons() {
   const teams = useGameStore((s) => s.teams);
@@ -15,20 +15,15 @@ export default function PowerButtons() {
   const team = teams[currentTeam];
   if (!team?.powers) return null;
 
-  const powerEntries = Object.entries(team.powers)
-    .filter(([, val]) => val.charges > 0)
-    .map(([key, val]) => ({ key, ...POWERS[key], charges: val.charges }));
-
+  const powerEntries = getAvailablePowers(team);
   if (powerEntries.length === 0) return null;
+
+  const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished };
 
   return (
     <div className="flex flex-wrap gap-2 justify-center mt-3">
-      {powerEntries.map(({ key, icon, name, charges, category }) => {
-        let canUse = false;
-        if (key === 'relance') canUse = !!diceValue && !showQuestion && !rolling && !showEvent;
-        else if (key === 'indice') canUse = !!showQuestion && !rolling;
-        else if (key === 'bouclier') canUse = false;
-        else if (category === 'off') canUse = !diceValue && !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished;
+      {powerEntries.map(({ key, icon, name, charges }) => {
+        const canUse = canUsePowerInContext(key, ctx);
 
         return (
           <button

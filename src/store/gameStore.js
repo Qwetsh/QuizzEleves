@@ -91,6 +91,7 @@ export const useGameStore = create((set, get) => ({
   awaitingChoice: false, // junction choice
   showQuestion: null,    // { question, subject, index } or null
   showEvent: null,       // { key, event } or null
+  eventApplied: false,   // guard against double applyEventEffect calls
   showTargetPicker: null, // { powerKey } - for offensive powers needing a target
   indiceUsed: false,      // true if indice was used on current question
   indiceHidden: [],       // indices of answers hidden by indice power
@@ -131,6 +132,7 @@ export const useGameStore = create((set, get) => ({
       awaitingChoice: false,
       showQuestion: null,
       showEvent: null,
+      eventApplied: false,
       powerSetupIndex: 0,
       powerSetupCategory: 'def',
     });
@@ -284,6 +286,7 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
+    const { question: q, newAsked } = result;
     const subjectInfo = SUBJECTS[subject];
     addLog(`${subjectInfo?.icon || ''} Question en ${subjectInfo?.name || subject}`);
 
@@ -297,8 +300,8 @@ export const useGameStore = create((set, get) => ({
     }
 
     set({
-      showQuestion: { question: result.question, subject, index: result.index, timerHalved },
-      askedQuestions: { ...askedQuestions, [subject]: asked },
+      showQuestion: { question: q, subject, index: result.index, timerHalved },
+      askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false,
       indiceHidden: [],
     });
@@ -320,9 +323,9 @@ export const useGameStore = create((set, get) => ({
       addLog(`\u2705 Bonne r\u00e9ponse ! +${gain} \u{1F4B0}`);
     } else {
       // Check bouclier
-      const hasBouclier = team.powers?.bouclier?.charges > 0;
-      if (hasBouclier) {
-        const newPowers = { ...team.powers, bouclier: { charges: team.powers.bouclier.charges - 1 } };
+      const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
+      if (bouclierCharges > 0) {
+        const newPowers = { ...team.powers, bouclier: { charges: bouclierCharges - 1 } };
         newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, powers: newPowers };
         addLog(`\u274C Mauvaise r\u00e9ponse ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`);
       } else {
@@ -342,8 +345,7 @@ export const useGameStore = create((set, get) => ({
       set({ teams: nt });
       addLog(`\u2753 Double question ! Deuxi\u00e8me question...`);
       // Ask another question of random subject
-      const keys = ['francais', 'maths', 'histoire', 'geographie', 'svt', 'anglais'];
-      const randomSubject = keys[Math.floor(Math.random() * keys.length)];
+      const randomSubject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
       get().askQuestion(randomSubject);
       if (get().phase === 'game') saveGame(get());
       return;
@@ -357,9 +359,9 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
     const newTeams = [...teams];
 
-    const hasBouclier = team.powers?.bouclier?.charges > 0;
-    if (hasBouclier) {
-      const newPowers = { ...team.powers, bouclier: { charges: team.powers.bouclier.charges - 1 } };
+    const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
+    if (bouclierCharges > 0) {
+      const newPowers = { ...team.powers, bouclier: { charges: bouclierCharges - 1 } };
       newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, powers: newPowers };
       addLog(`\u23F0 Temps \u00e9coul\u00e9 ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`);
     } else {
@@ -377,8 +379,7 @@ export const useGameStore = create((set, get) => ({
       nt[currentTeam] = { ...updatedTeam, doubleActive: false };
       set({ teams: nt });
       addLog(`\u2753 Double question ! Deuxi\u00e8me question...`);
-      const keys = ['francais', 'maths', 'histoire', 'geographie', 'svt', 'anglais'];
-      const randomSubject = keys[Math.floor(Math.random() * keys.length)];
+      const randomSubject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
       get().askQuestion(randomSubject);
       if (get().phase === 'game') saveGame(get());
       return;
@@ -394,7 +395,7 @@ export const useGameStore = create((set, get) => ({
 
   // Called when an event is picked — sets up the intro phase
   triggerEvent: (picked) => {
-    set({ showEvent: { ...picked, phase: 'intro', data: {} } });
+    set({ showEvent: { ...picked, phase: 'intro', data: {} }, eventApplied: false });
   },
 
   // Player accepts an optional event (or clicks OK on mandatory)
@@ -489,8 +490,7 @@ export const useGameStore = create((set, get) => ({
     const { showEvent, questions, askedQuestions, addLog } = get();
     if (!showEvent) return;
 
-    const keys = ['francais', 'maths', 'histoire', 'geographie', 'svt', 'anglais'];
-    const subject = keys[Math.floor(Math.random() * keys.length)];
+    const subject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
     const pool = questions[subject] || [];
     const asked = askedQuestions[subject] || new Set();
     const result = pickQuestion(pool, asked);
@@ -502,9 +502,11 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
+    const { question: q, newAsked } = result;
+
     set({
-      showEvent: { ...showEvent, phase: 'question', data: { ...showEvent.data, eventQuestion: result.question, eventSubject: subject } },
-      askedQuestions: { ...askedQuestions, [subject]: asked },
+      showEvent: { ...showEvent, phase: 'question', data: { ...showEvent.data, eventQuestion: q, eventSubject: subject } },
+      askedQuestions: { ...askedQuestions, [subject]: newAsked },
     });
   },
 
@@ -522,7 +524,7 @@ export const useGameStore = create((set, get) => ({
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const newTeams = [...teams];
-    const currentCharges = team.powers?.[powerKey]?.charges || 0;
+    const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
     const newPowers = { ...team.powers, [powerKey]: { charges: currentCharges + 1 } };
     newTeams[currentTeam] = { ...team, powers: newPowers };
     const pName = POWERS[powerKey]?.name || powerKey;
@@ -533,6 +535,8 @@ export const useGameStore = create((set, get) => ({
 
   // Apply the actual event effect
   applyEventEffect: () => {
+    if (get().eventApplied) return;
+    set({ eventApplied: true });
     const { showEvent, teams, currentTeam, board, addLog } = get();
     if (!showEvent) return;
     const { key, data } = showEvent;
@@ -675,8 +679,9 @@ export const useGameStore = create((set, get) => ({
             }
           }
           if (stolen) {
-            const targetPowers = { ...target.powers, [stolen]: { charges: target.powers[stolen].charges - 1 } };
-            const myCharges = team.powers?.[stolen]?.charges || 0;
+            const stolenCharges = target.powers?.[stolen]?.charges ?? 0;
+            const targetPowers = { ...target.powers, [stolen]: { charges: stolenCharges - 1 } };
+            const myCharges = team.powers?.[stolen]?.charges ?? 0;
             const myPowers = { ...team.powers, [stolen]: { charges: myCharges + 1 } };
             newTeams[ti] = { ...target, powers: targetPowers };
             newTeams[currentTeam] = { ...team, powers: myPowers };
@@ -743,7 +748,7 @@ export const useGameStore = create((set, get) => ({
   },
 
   closeEvent: () => {
-    set({ showEvent: null });
+    set({ showEvent: null, eventApplied: false });
     get().nextTurn();
     if (get().phase === 'game') saveGame(get());
   },
@@ -753,7 +758,7 @@ export const useGameStore = create((set, get) => ({
     const { teams, currentTeam, rolling, finished, showQuestion, showEvent, awaitingChoice, diceValue } = get();
     if (finished || rolling || showEvent || awaitingChoice) return;
     const team = teams[currentTeam];
-    const charges = team.powers?.[powerKey]?.charges || 0;
+    const charges = team.powers?.[powerKey]?.charges ?? 0;
     if (charges <= 0) return;
 
     const power = POWERS[powerKey];
@@ -800,7 +805,8 @@ export const useGameStore = create((set, get) => ({
 
     // Consume charge
     const newTeams = [...teams];
-    const newPowers = { ...team.powers, indice: { charges: team.powers.indice.charges - 1 } };
+    const currentChargesIndice = team.powers?.indice?.charges ?? 0;
+    const newPowers = { ...team.powers, indice: { charges: currentChargesIndice - 1 } };
     newTeams[currentTeam] = { ...team, powers: newPowers };
 
     addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice ! 2 r\u00e9ponses \u00e9limin\u00e9es.`);
@@ -813,7 +819,8 @@ export const useGameStore = create((set, get) => ({
 
     // Consume charge
     const newTeams = [...teams];
-    const newPowers = { ...team.powers, relance: { charges: team.powers.relance.charges - 1 } };
+    const currentChargesRelance = team.powers?.relance?.charges ?? 0;
+    const newPowers = { ...team.powers, relance: { charges: currentChargesRelance - 1 } };
     // Restore position to before the roll
     newTeams[currentTeam] = { ...team, powers: newPowers, pos: preRollPos || team.pos };
 
@@ -845,7 +852,8 @@ export const useGameStore = create((set, get) => ({
     const newTeams = [...teams];
 
     // Consume charge
-    const newPowers = { ...team.powers, [powerKey]: { charges: team.powers[powerKey].charges - 1 } };
+    const currentChargesPower = team.powers?.[powerKey]?.charges ?? 0;
+    const newPowers = { ...team.powers, [powerKey]: { charges: currentChargesPower - 1 } };
     newTeams[currentTeam] = { ...team, powers: newPowers };
 
     if (powerKey === 'foudre') {
@@ -881,7 +889,7 @@ export const useGameStore = create((set, get) => ({
     if (team.money < price) return;
 
     const newTeams = [...teams];
-    const currentCharges = team.powers?.[powerKey]?.charges || 0;
+    const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
     const newPowers = { ...team.powers, [powerKey]: { charges: currentCharges + 1 } };
     newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
 
@@ -920,6 +928,7 @@ export const useGameStore = create((set, get) => ({
       awaitingChoice: false,
       showQuestion: null,
       showEvent: null,
+      eventApplied: false,
       showTargetPicker: null,
       showShop: false,
       indiceUsed: false,
@@ -946,6 +955,7 @@ export const useGameStore = create((set, get) => ({
     awaitingChoice: false,
     showQuestion: null,
     showEvent: null,
+    eventApplied: false,
     showTargetPicker: null,
     showShop: false,
     indiceUsed: false,

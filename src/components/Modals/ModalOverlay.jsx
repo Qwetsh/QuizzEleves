@@ -1,3 +1,4 @@
+import { useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 const overlayVariants = {
@@ -11,7 +12,69 @@ const contentVariants = {
   exit: { opacity: 0, scale: 0.9, y: -20 },
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export default function ModalOverlay({ children, onClose, className = 'max-w-lg' }) {
+  const dialogRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement;
+
+    // Focus first focusable element inside modal
+    const timer = requestAnimationFrame(() => {
+      const el = dialogRef.current;
+      if (!el) return;
+      const first = el.querySelector(FOCUSABLE_SELECTOR);
+      if (first) first.focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(timer);
+      // Restore focus on unmount
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const el = dialogRef.current;
+      if (!el) return;
+
+      const focusable = Array.from(el.querySelectorAll(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    },
+    [onClose],
+  );
+
   return (
     <motion.div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
@@ -24,8 +87,12 @@ export default function ModalOverlay({ children, onClose, className = 'max-w-lg'
       exit="hidden"
       transition={{ duration: 0.2 }}
       onClick={onClose}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-modal="true"
     >
       <motion.div
+        ref={dialogRef}
         className={`w-full overflow-hidden ${className}`}
         style={{
           maxHeight: '88vh',

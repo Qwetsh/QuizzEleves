@@ -38,13 +38,17 @@ describe('pickQuestion', () => {
     const result = pickQuestion(testQuestions, askedSet);
     expect(result).not.toBeNull();
     expect(result.question).toBe(testQuestions[result.index]);
-    // askedSet should have been cleared and now contains only the new pick
-    expect(askedSet.size).toBe(1);
+    // newAsked should contain only the new pick (reset cycle)
+    expect(result.newAsked.size).toBe(1);
+    // original set should NOT be mutated
+    expect(askedSet.size).toBe(3);
   });
 
-  it('adds the picked index to the asked set', () => {
+  it('adds the picked index to newAsked', () => {
     const askedSet = new Set();
     const result = pickQuestion(testQuestions, askedSet);
-    expect(askedSet.has(result.index)).toBe(true);
+    expect(result.newAsked.has(result.index)).toBe(true);
+    // original set should NOT be mutated
+    expect(askedSet.size).toBe(0);
   });
 });
