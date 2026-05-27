@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { soundCorrect, soundWrong, soundTimer } from '../../logic/sounds';
+import ModalOverlay from './ModalOverlay';
 
 const TIMER_DURATION = 30;
 const TIMER_HALVED = 15;
@@ -63,14 +65,15 @@ export default function QuestionModal() {
     setTimeout(() => answerQuestion(idx, tl), 2000);
   }, [revealed, answerQuestion, question, timeLeft]);
 
-  if (!showQuestion || !question) return null;
-
   const timerRatio = timeLeft / duration;
   const timerColor = timerRatio > 0.5 ? '#16a34a' : timerRatio > 0.2 ? '#f59e0b' : '#dc2626';
 
+  const isOpen = !!(showQuestion && question);
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--paper)] rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden modal-pop">
+    <AnimatePresence>
+      {isOpen && (
+      <ModalOverlay>
         {/* Header */}
         <div className="p-4 flex items-center gap-3" style={{ background: subjectInfo.color || '#888' }}>
           <span className="text-2xl">{subjectInfo.icon}</span>
@@ -173,7 +176,8 @@ export default function QuestionModal() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </ModalOverlay>
+      )}
+    </AnimatePresence>
   );
 }

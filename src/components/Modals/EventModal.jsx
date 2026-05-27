@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { soundEvent, soundClick } from '../../logic/sounds';
+import ModalOverlay from './ModalOverlay';
 
 const DICE_FACES = [null, '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
 
@@ -20,14 +22,15 @@ export default function EventModal() {
     if (showEvent) soundEvent();
   }, [showEvent?.key]);
 
-  if (!showEvent) return null;
-
-  const { event, key, phase, data } = showEvent;
+  const isOpen = !!showEvent;
+  const { event, key, phase, data } = showEvent || {};
   const team = teams[currentTeam];
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--paper)] rounded-2xl shadow-2xl max-w-md w-full p-6 modal-pop">
+    <AnimatePresence>
+      {isOpen && (
+      <ModalOverlay className="max-w-md">
+        <div className="p-6">
         {/* Header */}
         <div className="text-center mb-4">
           <div className="text-5xl mb-2">{event.icon}</div>
@@ -69,8 +72,10 @@ export default function EventModal() {
         {phase === 'result' && (
           <ResultPhase data={data} onClose={closeEvent} />
         )}
-      </div>
-    </div>
+        </div>
+      </ModalOverlay>
+      )}
+    </AnimatePresence>
   );
 }
 
