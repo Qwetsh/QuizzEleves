@@ -16,13 +16,3 @@ export function calculateMoneyGain(timeLeft, maxTime = 30) {
   if (ratio >= 0.2) return 4;
   return 2;
 }
-
-/**
- * Verifie si une equipe peut acheter un pouvoir.
- * @param {number} money - argent actuel
- * @param {number} price - prix du pouvoir
- * @returns {boolean}
- */
-export function canAfford(money, price) {
-  return money >= price;
-}

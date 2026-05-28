@@ -1,41 +1,8 @@
 import { POWERS } from '../data/powers.js';
 
 /**
- * Verifie si une equipe peut utiliser un pouvoir.
- * @param {object} team - l'equipe { powers: { bouclier: { charges: N }, ... } }
- * @param {string} powerKey - cle du pouvoir
- * @returns {boolean}
- */
-export function canUsePower(team, powerKey) {
-  const power = team.powers?.[powerKey];
-  if (!power) return false;
-  return power.charges > 0;
-}
-
-/**
- * Consomme une charge d'un pouvoir.
- * Retourne le nouveau nombre de charges (ou -1 si impossible).
- */
-export function consumeCharge(team, powerKey) {
-  const power = team.powers?.[powerKey];
-  if (!power || power.charges <= 0) return -1;
-  power.charges -= 1;
-  return power.charges;
-}
-
-/**
- * Ajoute une charge a un pouvoir.
- */
-export function addCharge(team, powerKey, amount = 1) {
-  if (!team.powers?.[powerKey]) return;
-  team.powers[powerKey].charges += amount;
-}
-
-/**
  * Determine si un pouvoir peut etre utilise dans le contexte UI actuel.
- * @param {string} key - cle du pouvoir (relance, indice, bouclier, etc.)
- * @param {object} context - { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished }
- * @returns {boolean}
+ * Using charges is free — players pay only to buy charges in the shop.
  */
 export function canUsePowerInContext(key, context) {
   const { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding } = context;
@@ -44,8 +11,7 @@ export function canUsePowerInContext(key, context) {
 
   if (key === 'relance') return !!diceValue && !showQuestion && !rolling && !showEvent && !!pendingLanding;
   if (key === 'indice') return !!showQuestion && !rolling;
-  if (key === 'bouclier') return false;
-  // Offensive powers: usable before rolling OR during pendingLanding window
+  if (key === 'bouclier') return false; // passive, auto-triggered
   if (info.category === 'off') return !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished && (!diceValue || !!pendingLanding);
   return false;
 }

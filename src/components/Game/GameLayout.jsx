@@ -11,6 +11,7 @@ import TargetPickerModal from '../Modals/TargetPickerModal';
 import VictoryModal from '../Modals/VictoryModal';
 import ShopModal from '../Modals/ShopModal';
 import DiceRollModal from '../Modals/DiceRollModal';
+import ChargePickerModal from '../Modals/ChargePickerModal';
 import FlyingCoins from './FlyingCoins';
 
 function useFullscreen() {
@@ -160,6 +161,7 @@ export default function GameLayout() {
       <DiceRollModal />
       <QuestionModal />
       <EventModal />
+      <ChargePickerModal />
       <TargetPickerModal />
       <VictoryModal />
       <ShopModal />

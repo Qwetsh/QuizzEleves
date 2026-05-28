@@ -374,6 +374,23 @@
   color: var(--parch-100);
   border-color: var(--ink-400);
 }
+.power-badge-level {
+  position: absolute;
+  left: -5px;
+  bottom: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #a86cda, #7434b0);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 9px;
+  line-height: 16px;
+  text-align: center;
+  border: 1.5px solid #c9a0f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
 .power-badge-meta {
   display: flex;
   flex-direction: column;

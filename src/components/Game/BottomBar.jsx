@@ -15,7 +15,7 @@ function biomeKey(subjectId) {
   return subjectId;
 }
 
-function PowerBadge({ powerKey, charges, kindLabel }) {
+function PowerBadge({ powerKey, charges, level, kindLabel }) {
   const info = POWERS[powerKey];
   if (!info) return null;
   const empty = charges <= 0;
@@ -23,11 +23,12 @@ function PowerBadge({ powerKey, charges, kindLabel }) {
     <div
       className={'power-badge ' + (empty ? 'is-empty' : '')}
       style={{ '--power-color': info.color }}
-      title={`${info.name} \u2014 ${info.desc}`}
+      title={`${info.name} — Niv.${level} — ${charges} charge${charges > 1 ? 's' : ''}\n${info.desc}`}
     >
       <div className="power-badge-disc">
         <span className="power-badge-icon">{info.icon}</span>
         <span className="power-badge-count">{charges}</span>
+        {level > 1 && <span className="power-badge-level">{level}</span>}
       </div>
       <div className="power-badge-meta">
         <div className="power-badge-kind">{kindLabel}</div>
@@ -138,13 +139,15 @@ function TeamStripCard({ team, active, rank, total }) {
           <PowerBadge
             powerKey={defKey}
             charges={powers[defKey]?.charges ?? 0}
-            kindLabel="D\u00e9fense"
+            level={powers[defKey]?.level ?? 1}
+            kindLabel="Défense"
           />
         )}
         {offKey && (
           <PowerBadge
             powerKey={offKey}
             charges={powers[offKey]?.charges ?? 0}
+            level={powers[offKey]?.level ?? 1}
             kindLabel="Attaque"
           />
         )}

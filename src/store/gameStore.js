@@ -4,12 +4,15 @@ import { EVENTS } from '../data/events.js';
 import { SUBJECTS, SUBJECT_KEYS } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
-import { moveForward, moveBack, findNextJunction, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
+import { moveForward, moveBack } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
+import { randomSubject, resolveWrongAnswer, resolveDoubleQuestion } from '../logic/turnHelpers.js';
+import * as eventH from './eventHandlers.js';
+import * as powerH from './powerHandlers.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -30,9 +33,25 @@ function createDefaultTeams(n) {
   }));
 }
 
+// UI state reset shared by nextTurn, resumeGame, reset
+const TURN_RESET = {
+  diceValue: null,
+  pendingMove: null,
+  pendingLanding: false,
+  awaitingChoice: false,
+  preRollPos: null,
+  preRollValue: null,
+  showTargetPicker: null,
+  showShop: false,
+  indiceUsed: false,
+  indiceHidden: [],
+  freeActivation: false,
+  showChargePicker: false,
+};
+
 export const useGameStore = create((set, get) => ({
   // --- Phase ---
-  phase: 'setup', // 'setup' | 'powerSelect' | 'game'
+  phase: 'setup',
   setPhase: (phase) => set({ phase }),
 
   // --- Setup state ---
@@ -50,12 +69,8 @@ export const useGameStore = create((set, get) => ({
   },
 
   boardParams: {
-    casesParVoie: 4,
-    nbVoies: 3,
-    nbSections: 3,
-    voieFinale: 'court-long',
-    couloirsMix: 2,
-    eventsPerCouloir: 1,
+    casesParVoie: 4, nbVoies: 3, nbSections: 3,
+    voieFinale: 'court-long', couloirsMix: 2, eventsPerCouloir: 1,
   },
   setBoardParam: (key, value) => {
     set({ boardParams: { ...get().boardParams, [key]: value } });
@@ -64,15 +79,9 @@ export const useGameStore = create((set, get) => ({
   enabledEvents: Object.keys(EVENTS),
   toggleEvent: (key) => {
     const { enabledEvents } = get();
-    if (enabledEvents.includes(key)) {
-      set({ enabledEvents: enabledEvents.filter((k) => k !== key) });
-    } else {
-      set({ enabledEvents: [...enabledEvents, key] });
-    }
+    set({ enabledEvents: enabledEvents.includes(key) ? enabledEvents.filter((k) => k !== key) : [...enabledEvents, key] });
   },
-  setAllEvents: (enabled) => {
-    set({ enabledEvents: enabled ? Object.keys(EVENTS) : [] });
-  },
+  setAllEvents: (enabled) => set({ enabledEvents: enabled ? Object.keys(EVENTS) : [] }),
 
   // --- Game state ---
   teams: [],
@@ -81,65 +90,49 @@ export const useGameStore = create((set, get) => ({
   viewBox: { w: 2400, h: 620 },
   finished: false,
   askedQuestions: {},
-  questions: {},       // loaded questions for current level
-  log: [],             // game log entries
+  questions: {},
+  log: [],
 
-  // UI state
+  // --- UI state ---
   rolling: false,
   diceValue: null,
-  pendingMove: null,    // { remaining }
-  pendingLanding: false, // true = waiting before processing landing (relance window)
-  _landingSeq: 0,        // sequence counter for landing timeouts
-  _landingId: 0,         // current landing timeout id
-  awaitingChoice: false, // junction choice
-  showQuestion: null,    // { question, subject, index } or null
-  showEvent: null,       // { key, event } or null
-  eventApplied: false,   // guard against double applyEventEffect calls
-  showTargetPicker: null, // { powerKey } - for offensive powers needing a target
-  indiceUsed: false,      // true if indice was used on current question
-  indiceHidden: [],       // indices of answers hidden by indice power
-  showDiceModal: false,   // true = dice roll ceremony modal is playing
+  pendingMove: null,
+  pendingLanding: false,
+  _landingSeq: 0,
+  _landingId: 0,
+  freeActivation: false,
+  showChargePicker: false,
+  awaitingChoice: false,
+  showQuestion: null,
+  showEvent: null,
+  eventApplied: false,
+  showTargetPicker: null,
+  indiceUsed: false,
+  indiceHidden: [],
+  showDiceModal: false,
+  showShop: false,
+  preRollPos: null,
+  preRollValue: null,
 
   // --- Power selection ---
   powerSetupIndex: 0,
   powerSetupCategory: 'def',
 
   // --- Log ---
-  addLog: (msg) => {
-    set({ log: [...get().log, msg] });
-  },
+  addLog: (msg) => set({ log: [...get().log, msg] }),
 
   // --- Start game ---
   startGame: () => {
     const { setupTeams, boardParams, level } = get();
     const { nodes, viewBox } = generateBoard(boardParams);
-    const teams = setupTeams.map((t) => {
-      const powers = {};
-      if (t.powerDef) powers[t.powerDef] = { charges: INITIAL_CHARGES, level: 1 };
-      if (t.powerOff) powers[t.powerOff] = { charges: INITIAL_CHARGES, level: 1 };
-      return { ...t, pos: 'depart', powers };
-    });
+    const teams = setupTeams.map((t) => ({ ...t, pos: 'depart', powers: {} }));
     const questions = getQuestions(level);
     set({
-      phase: 'powerSelect',
-      teams,
-      board: nodes,
-      viewBox,
-      questions,
-      currentTeam: 0,
-      finished: false,
-      askedQuestions: {},
-      log: [],
-      rolling: false,
-      diceValue: null,
-      pendingMove: null,
-      pendingLanding: false,
-      awaitingChoice: false,
-      showQuestion: null,
-      showEvent: null,
-      eventApplied: false,
-      powerSetupIndex: 0,
-      powerSetupCategory: 'def',
+      phase: 'powerSelect', teams, board: nodes, viewBox, questions,
+      currentTeam: 0, finished: false, askedQuestions: {}, log: [],
+      ...TURN_RESET,
+      showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
+      powerSetupIndex: 0, powerSetupCategory: 'def',
     });
   },
 
@@ -161,8 +154,14 @@ export const useGameStore = create((set, get) => ({
       if (powerSetupCategory === 'def') {
         set({ powerSetupCategory: 'off', powerSetupIndex: 0 });
       } else {
-        addLog(`\u{1F3B2} D\u00e9but de la partie ! ${teams.length} \u00e9quipes en lice.`);
-        set({ phase: 'game' });
+        const finalTeams = teams.map((t) => {
+          const powers = { ...t.powers };
+          if (t.powerDef && !powers[t.powerDef]) powers[t.powerDef] = { charges: INITIAL_CHARGES, level: 1 };
+          if (t.powerOff && !powers[t.powerOff]) powers[t.powerOff] = { charges: INITIAL_CHARGES, level: 1 };
+          return { ...t, powers };
+        });
+        addLog(`\u{1F3B2} D\u00e9but de la partie ! ${finalTeams.length} \u00e9quipes en lice.`);
+        set({ teams: finalTeams, phase: 'game' });
       }
     } else {
       set({ powerSetupIndex: nextIndex });
@@ -186,7 +185,7 @@ export const useGameStore = create((set, get) => ({
   handleDiceResult: (value) => {
     const { teams, currentTeam, board, addLog } = get();
     const team = teams[currentTeam];
-    set({ preRollPos: team.pos, preRollValue: value }); // save for relance
+    set({ preRollPos: team.pos, preRollValue: value, freeActivation: false });
     addLog(`${team.emoji} ${team.name} lance le d\u00e9 : ${value}`);
 
     const result = moveForward(board, team.pos, value);
@@ -200,31 +199,27 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    // Delay landing to give time for relance power usage
-    const landingId = ++get()._landingSeq;
-    set({ pendingLanding: true, _landingId: landingId });
-    setTimeout(() => {
-      if (get().pendingLanding && get()._landingId === landingId) {
-        set({ pendingLanding: false });
-        get().handleLanding();
-      }
-    }, 4000);
+    // Rolling a 1: open charge picker
+    if (value === 1) {
+      addLog(`\u2728 ${team.emoji} A fait 1 ! Choisis un pouvoir \u00e0 recharger gratuitement !`);
+      set({ showChargePicker: true, freeActivation: true, pendingLanding: true });
+      return;
+    }
+
+    // Wait for player to use powers or click "Continuer"
+    set({ pendingLanding: true });
   },
 
   // --- Junction choice ---
   chooseJunction: (nextNodeId) => {
     const { teams, currentTeam, board, pendingMove } = get();
     const team = teams[currentTeam];
-
-    // Cancel any pending landing timeout
     set({ pendingLanding: false });
 
-    // Move to chosen path
     const newTeams = [...teams];
     newTeams[currentTeam] = { ...team, pos: nextNodeId };
     set({ teams: newTeams, awaitingChoice: false });
 
-    // Continue moving remaining steps
     if (pendingMove && pendingMove.remaining > 1) {
       const result = moveForward(board, nextNodeId, pendingMove.remaining - 1);
       const updatedTeams = [...get().teams];
@@ -250,7 +245,6 @@ export const useGameStore = create((set, get) => ({
 
     if (!node) { get().nextTurn(); return; }
 
-    // Arrival
     if (node.type === 'arrivee') {
       addLog(`\u{1F3C6} ${team.emoji} ${team.name} atteint l'arriv\u00e9e !`);
       set({ finished: true });
@@ -258,39 +252,27 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    // Event square (events are now placed on subject nodes)
     if (node.type === 'event') {
       const picked = pickRandomEvent(enabledEvents);
       if (picked) {
         addLog(`\u{1F381} ${team.emoji} ${team.name} tombe sur : ${picked.event.icon} ${picked.event.name}`);
-        get().triggerEvent(picked);
+        eventH.triggerEvent(set, get, picked);
         return;
       }
-      // Fallback: treat as subject question
-      const fallbackSubject = node.subject || SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
-      get().askQuestion(fallbackSubject);
+      get().askQuestion(node.subject || randomSubject());
       return;
     }
 
-    // Subject square → question
     if (node.type === 'subject') {
-      const subj = node.subject === 'multi'
-        ? SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)]
-        : node.subject;
+      const subj = node.subject === 'multi' ? randomSubject() : node.subject;
       get().askQuestion(subj);
       return;
     }
 
-    // Depart — just next turn
-    if (node.type === 'depart') {
-      get().nextTurn();
-      return;
-    }
+    if (node.type === 'depart') { get().nextTurn(); return; }
 
-    // Jonction — random subject question
     if (node.type === 'jonction') {
-      const subj = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
-      get().askQuestion(subj);
+      get().askQuestion(randomSubject());
       return;
     }
 
@@ -315,7 +297,6 @@ export const useGameStore = create((set, get) => ({
     const subjectInfo = SUBJECTS[subject];
     addLog(`${subjectInfo?.icon || ''} Question en ${subjectInfo?.name || subject}`);
 
-    // Check sablier flag
     const timerDivisor = team.sablierActif ? (team.sablierDivisor || 2) : 1;
     const timerHalved = team.sablierActif || false;
     if (timerHalved) {
@@ -328,16 +309,15 @@ export const useGameStore = create((set, get) => ({
     set({
       showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
-      indiceUsed: false,
-      indiceHidden: [],
+      indiceUsed: false, indiceHidden: [],
     });
   },
 
   answerQuestion: (chosenIndex, timeLeft = 0) => {
-    const { showQuestion, teams, currentTeam, board, addLog } = get();
+    const { showQuestion, teams, currentTeam, addLog } = get();
     if (!showQuestion) return;
 
-    const { question, subject, timerHalved, timerDivisor } = showQuestion;
+    const { question, timerHalved, timerDivisor } = showQuestion;
     const correct = chosenIndex === question.c;
     const team = teams[currentTeam];
     const newTeams = [...teams];
@@ -345,41 +325,43 @@ export const useGameStore = create((set, get) => ({
     const maxTime = Math.floor(30 / effectiveDivisor);
 
     if (correct) {
-      const noBonus = team.doubleNoBonus || false;
+      // Double/triple: money only on last question (or never if doubleNoBonus)
+      const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleCount || 0) > 1);
       const gain = noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime);
       newTeams[currentTeam] = { ...team, correct: team.correct + 1, money: team.money + gain };
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
     } else {
-      // Check bouclier
-      const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
-      if (bouclierCharges > 0) {
-        const newPowers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: bouclierCharges - 1 } };
-        newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, powers: newPowers };
-        addLog(`\u274C Mauvaise r\u00e9ponse ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`);
-      } else {
-        const newPos = moveBack(board, team.pos, 2);
-        newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, pos: newPos };
-        addLog(`\u274C Mauvaise r\u00e9ponse ! Recul de 2 cases.`);
+      const { updatedTeam, logMessage } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
+      newTeams[currentTeam] = updatedTeam;
+      addLog(logMessage);
+
+      // Double/triple: wrong answer stops immediately, clear double state
+      if (team.doubleActive) {
+        newTeams[currentTeam] = { ...newTeams[currentTeam], doubleActive: false, doubleCount: 0, doubleNoBonus: false };
+        addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
       }
+
+      set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+      get().nextTurn();
+      return;
     }
 
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
 
-    // Handle double/triple question: if doubleCount > 0, ask another question
+    // Double/triple question: continue only on correct answer
     const updatedTeam = get().teams[currentTeam];
-    const remainingCount = (updatedTeam.doubleCount || 0) - 1;
-    if (updatedTeam.doubleActive && remainingCount > 0) {
+    const doubleResult = resolveDoubleQuestion(updatedTeam);
+    if (doubleResult.shouldContinue) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...updatedTeam, doubleCount: remainingCount };
+      nt[currentTeam] = doubleResult.updatedTeam;
       set({ teams: nt });
-      addLog(`\u2753 Question multiple ! Encore ${remainingCount} question(s)...`);
-      const randomSubject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
-      get().askQuestion(randomSubject);
+      addLog(doubleResult.logMessage);
+      get().askQuestion(randomSubject());
       if (get().phase === 'game') saveGame(get());
       return;
-    } else if (updatedTeam.doubleActive) {
+    } else if (doubleResult.updatedTeam !== updatedTeam) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...updatedTeam, doubleActive: false, doubleCount: 0, doubleNoBonus: false };
+      nt[currentTeam] = doubleResult.updatedTeam;
       set({ teams: nt });
     }
 
@@ -387,691 +369,68 @@ export const useGameStore = create((set, get) => ({
   },
 
   timeoutQuestion: () => {
-    const { teams, currentTeam, board, addLog } = get();
-    const team = teams[currentTeam];
-    const newTeams = [...teams];
-
-    const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
-    if (bouclierCharges > 0) {
-      const newPowers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: bouclierCharges - 1 } };
-      newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, powers: newPowers };
-      addLog(`\u23F0 Temps \u00e9coul\u00e9 ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`);
-    } else {
-      const newPos = moveBack(board, team.pos, 2);
-      newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, pos: newPos };
-      addLog(`\u23F0 Temps \u00e9coul\u00e9 ! ${team.emoji} ${team.name} recule de 2 cases.`);
-    }
-
-    set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
-
-    // Handle double/triple question
-    const updatedTeam = get().teams[currentTeam];
-    const remainingCount = (updatedTeam.doubleCount || 0) - 1;
-    if (updatedTeam.doubleActive && remainingCount > 0) {
-      const nt = [...get().teams];
-      nt[currentTeam] = { ...updatedTeam, doubleCount: remainingCount };
-      set({ teams: nt });
-      addLog(`\u2753 Question multiple ! Encore ${remainingCount} question(s)...`);
-      const randomSubject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
-      get().askQuestion(randomSubject);
-      if (get().phase === 'game') saveGame(get());
-      return;
-    } else if (updatedTeam.doubleActive) {
-      const nt = [...get().teams];
-      nt[currentTeam] = { ...updatedTeam, doubleActive: false, doubleCount: 0, doubleNoBonus: false };
-      set({ teams: nt });
-    }
-
-    get().nextTurn();
-  },
-
-  // --- Events ---
-  // showEvent: { key, event, phase, data }
-  // phase: 'intro' | 'target' | 'dice' | 'question' | 'choice' | 'result'
-  // data: { targetIndex, diceResult, questionResult, message }
-
-  // Called when an event is picked — sets up the intro phase
-  triggerEvent: (picked) => {
-    set({ showEvent: { ...picked, phase: 'intro', data: {} }, eventApplied: false });
-  },
-
-  // Player accepts an optional event (or clicks OK on mandatory)
-  acceptEvent: () => {
-    const { showEvent, teams, currentTeam, board, addLog } = get();
-    if (!showEvent) return;
-    const { key, event } = showEvent;
-    const team = teams[currentTeam];
-
-    // Events that need a target
-    const needsTarget = ['foudreFree', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent'];
-    if (needsTarget.includes(key)) {
-      set({ showEvent: { ...showEvent, phase: 'target' } });
-      return;
-    }
-
-    // Events that need a dice roll
-    if (key === 'rejouer' || key === 'quitteDouble' || key === 'pariArgent') {
-      get().eventRollDice();
-      return;
-    }
-
-    // Events that need a question
-    if (key === 'pari' || key === 'bonus' || key === 'jackpot') {
-      get().eventAskQuestion();
-      return;
-    }
-
-    // Recharge: choice
-    if (key === 'recharge' || key === 'marcheNoir') {
-      set({ showEvent: { ...showEvent, phase: 'choice' } });
-      return;
-    }
-
-    // Simple auto-apply events
-    get().applyEventEffect();
-  },
-
-  // Player declines an optional event
-  declineEvent: () => {
-    const { addLog, teams, currentTeam } = get();
-    const team = teams[currentTeam];
-    addLog(`${team.emoji} ${team.name} d\u00e9cline l'\u00e9v\u00e9nement.`);
-    set({ showEvent: null });
-    get().nextTurn();
-  },
-
-  // Target selected for event
-  eventSelectTarget: (targetIndex) => {
-    const { showEvent } = get();
-    if (!showEvent) return;
-    const { key } = showEvent;
-
-    // Duel needs a question after target selection
-    if (key === 'duel') {
-      set({ showEvent: { ...showEvent, phase: 'question', data: { ...showEvent.data, targetIndex } } });
-      // Ask question for the duel (target answers)
-      get().eventAskQuestion();
-      return;
-    }
-
-    // Others: apply immediately
-    set({ showEvent: { ...showEvent, data: { ...showEvent.data, targetIndex } } });
-    get().applyEventEffect();
-  },
-
-  // Roll dice for event
-  eventRollDice: () => {
-    const { showEvent } = get();
-    if (!showEvent) return;
-    set({ showEvent: { ...showEvent, phase: 'dice', data: { ...showEvent.data, diceRolling: true, diceValue: null } } });
-
-    const finalValue = Math.floor(Math.random() * 6) + 1;
-    let count = 0;
-    const interval = setInterval(() => {
-      const current = get().showEvent;
-      if (!current) { clearInterval(interval); return; }
-      set({ showEvent: { ...current, data: { ...current.data, diceValue: Math.floor(Math.random() * 6) + 1 } } });
-      count++;
-      if (count >= 10) {
-        clearInterval(interval);
-        const ev = get().showEvent;
-        if (!ev) return;
-        set({ showEvent: { ...ev, data: { ...ev.data, diceValue: finalValue, diceRolling: false } } });
-        // Auto-apply after short delay
-        setTimeout(() => {
-          if (get().showEvent) get().applyEventEffect();
-        }, 1000);
-      }
-    }, 80);
-  },
-
-  // Ask a question for event (pari, bonus, duel)
-  eventAskQuestion: () => {
-    const { showEvent, questions, askedQuestions, addLog } = get();
-    if (!showEvent) return;
-
-    const subject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
-    const pool = questions[subject] || [];
-    const asked = askedQuestions[subject] || new Set();
-    const result = pickQuestion(pool, asked);
-
-    if (!result) {
-      addLog(`\u26A0\uFE0F Pas de question disponible.`);
-      set({ showEvent: null });
-      get().nextTurn();
-      return;
-    }
-
-    const { question: q, newAsked } = result;
-
-    set({
-      showEvent: { ...showEvent, phase: 'question', data: { ...showEvent.data, eventQuestion: q, eventSubject: subject } },
-      askedQuestions: { ...askedQuestions, [subject]: newAsked },
-    });
-  },
-
-  // Answer event question
-  eventAnswerQuestion: (chosenIndex) => {
-    const { showEvent } = get();
-    if (!showEvent?.data?.eventQuestion) return;
-    const correct = chosenIndex === showEvent.data.eventQuestion.c;
-    set({ showEvent: { ...showEvent, data: { ...showEvent.data, questionResult: correct, questionRevealed: true, questionSelected: chosenIndex } } });
-    setTimeout(() => get().applyEventEffect(), 2000);
-  },
-
-  // Recharge choice
-  eventRechargeChoice: (powerKey) => {
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const newTeams = [...teams];
-    const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
-    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
-    newTeams[currentTeam] = { ...team, powers: newPowers };
-    const pName = POWERS[powerKey]?.name || powerKey;
-    addLog(`\u{1F50B} ${team.emoji} ${team.name} recharge ${pName} ! (+1 charge)`);
-    set({ teams: newTeams, showEvent: null });
+
+    const { updatedTeam, logMessage } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
+    newTeams[currentTeam] = updatedTeam;
+    addLog(logMessage);
+
+    // Double/triple: timeout stops immediately, clear double state
+    if (team.doubleActive) {
+      newTeams[currentTeam] = { ...newTeams[currentTeam], doubleActive: false, doubleCount: 0, doubleNoBonus: false };
+      addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
+    }
+
+    set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
     get().nextTurn();
   },
 
-  // Apply the actual event effect
-  applyEventEffect: () => {
-    if (get().eventApplied) return;
-    set({ eventApplied: true });
-    const { showEvent, teams, currentTeam, board, addLog } = get();
-    if (!showEvent) return;
-    const { key, data } = showEvent;
-    const team = teams[currentTeam];
-    const newTeams = [...teams];
-    let message = '';
-
-    switch (key) {
-      case 'recul': {
-        const newPos = moveBack(board, team.pos, 2);
-        newTeams[currentTeam] = { ...team, pos: newPos };
-        message = `${team.emoji} ${team.name} recule de 2 cases !`;
-        break;
-      }
-
-      case 'coupDePouce': {
-        const result = moveForward(board, team.pos, 3);
-        newTeams[currentTeam] = { ...team, pos: result.finalPos };
-        message = `${team.emoji} ${team.name} avance de 3 cases !`;
-        break;
-      }
-
-      case 'teleport': {
-        const junctionId = findNextJunction(board, team.pos);
-        if (junctionId) {
-          newTeams[currentTeam] = { ...team, pos: junctionId };
-          message = `${team.emoji} ${team.name} se t\u00e9l\u00e9porte \u00e0 la prochaine jonction !`;
-        } else {
-          message = `Pas de jonction devant \u2014 rien ne se passe.`;
-        }
-        break;
-      }
-
-      case 'oubli': {
-        newTeams[currentTeam] = { ...team, pos: 'depart' };
-        message = `\u{1F573}\uFE0F ${team.emoji} ${team.name} retourne au D\u00c9PART !`;
-        break;
-      }
-
-      case 'embuscade': {
-        const prevJ = findPrevJunction(board, team.pos);
-        if (prevJ) {
-          newTeams[currentTeam] = { ...team, pos: prevJ };
-          message = `${team.emoji} ${team.name} recule \u00e0 la derni\u00e8re jonction !`;
-        } else {
-          message = `Pas de jonction derri\u00e8re \u2014 rien ne se passe.`;
-        }
-        break;
-      }
-
-      case 'tempete': {
-        for (let i = 0; i < teams.length; i++) {
-          if (i === currentTeam) continue;
-          const t = newTeams[i];
-          const newPos = moveBack(board, t.pos, 1);
-          newTeams[i] = { ...t, pos: newPos };
-        }
-        message = `\u{1F32A}\uFE0F Temp\u00eate ! Toutes les autres \u00e9quipes reculent de 1 case.`;
-        break;
-      }
-
-      case 'rejouer': {
-        const dv = data?.diceValue || 1;
-        const result = moveForward(board, team.pos, dv);
-        newTeams[currentTeam] = { ...team, pos: result.finalPos };
-        message = `${team.emoji} ${team.name} rejoue et avance de ${dv} !`;
-        break;
-      }
-
-      case 'quitteDouble': {
-        const dv = data?.diceValue || 1;
-        if (dv >= 4) {
-          const result = moveForward(board, team.pos, dv * 2);
-          newTeams[currentTeam] = { ...team, pos: result.finalPos };
-          message = `\u{1F3B0} ${dv} ! Avance de ${dv * 2} cases (double) !`;
-        } else {
-          const newPos = moveBack(board, team.pos, dv);
-          newTeams[currentTeam] = { ...team, pos: newPos };
-          message = `\u{1F3B0} ${dv}... Recule de ${dv} cases !`;
-        }
-        break;
-      }
-
-      case 'foudreFree': {
-        const ti = data?.targetIndex;
-        if (ti != null) {
-          const target = newTeams[ti];
-          const newPos = moveBack(board, target.pos, 3);
-          newTeams[ti] = { ...target, pos: newPos };
-          message = `\u26A1 ${target.emoji} ${target.name} recule de 3 cases !`;
-        }
-        break;
-      }
-
-      case 'sacrifice': {
-        const ti = data?.targetIndex;
-        if (ti != null) {
-          const target = newTeams[ti];
-          const myNewPos = moveBack(board, team.pos, 2);
-          const targetNewPos = moveBack(board, target.pos, 4);
-          newTeams[currentTeam] = { ...team, pos: myNewPos };
-          newTeams[ti] = { ...target, pos: targetNewPos };
-          message = `\u{1F91D} ${team.emoji} recule de 2, ${target.emoji} recule de 4 !`;
-        }
-        break;
-      }
-
-      case 'don': {
-        const ti = data?.targetIndex;
-        if (ti != null) {
-          const target = newTeams[ti];
-          const result = moveForward(board, target.pos, 3);
-          newTeams[ti] = { ...target, pos: result.finalPos };
-          message = `\u{1F381} ${target.emoji} ${target.name} avance de 3 cases !`;
-        }
-        break;
-      }
-
-      case 'echange': {
-        const ti = data?.targetIndex;
-        if (ti != null) {
-          const target = newTeams[ti];
-          newTeams[currentTeam] = { ...team, pos: target.pos };
-          newTeams[ti] = { ...target, pos: team.pos };
-          message = `\u{1F500} ${team.emoji} et ${target.emoji} \u00e9changent leurs positions !`;
-        }
-        break;
-      }
-
-      case 'vol': {
-        const ti = data?.targetIndex;
-        if (ti != null) {
-          const target = newTeams[ti];
-          // Try to steal a charge (bouclier or indice)
-          let stolen = null;
-          for (const pk of ['bouclier', 'indice']) {
-            if (target.powers?.[pk]?.charges > 0) {
-              stolen = pk;
-              break;
-            }
-          }
-          if (stolen) {
-            const stolenCharges = target.powers?.[stolen]?.charges ?? 0;
-            const targetPowerEntry = target.powers?.[stolen] || { charges: 0, level: 1 };
-            const targetPowers = { ...target.powers, [stolen]: { ...targetPowerEntry, charges: stolenCharges - 1 } };
-            const myCharges = team.powers?.[stolen]?.charges ?? 0;
-            const myPowerEntry = team.powers?.[stolen] || { charges: 0, level: 1 };
-            const myPowers = { ...team.powers, [stolen]: { ...myPowerEntry, charges: myCharges + 1 } };
-            newTeams[ti] = { ...target, powers: targetPowers };
-            newTeams[currentTeam] = { ...team, powers: myPowers };
-            message = `\u{1FA99} ${team.emoji} vole 1 charge de ${POWERS[stolen].name} \u00e0 ${target.emoji} !`;
-          } else {
-            message = `\u{1FA99} ${target.emoji} n'a rien \u00e0 voler !`;
-          }
-        }
-        break;
-      }
-
-      case 'duel': {
-        const ti = data?.targetIndex;
-        const correct = data?.questionResult;
-        if (ti != null) {
-          const target = newTeams[ti];
-          if (correct) {
-            // Target succeeded → current team moves back 2
-            const myNewPos = moveBack(board, team.pos, 2);
-            newTeams[currentTeam] = { ...team, pos: myNewPos };
-            message = `\u2694\uFE0F ${target.emoji} r\u00e9ussit le duel ! ${team.emoji} recule de 2.`;
-          } else {
-            // Target failed → target moves back 2
-            const targetNewPos = moveBack(board, target.pos, 2);
-            newTeams[ti] = { ...target, pos: targetNewPos };
-            message = `\u2694\uFE0F ${target.emoji} \u00e9choue ! ${target.emoji} recule de 2.`;
-          }
-        }
-        break;
-      }
-
-      case 'pari': {
-        const correct = data?.questionResult;
-        if (correct) {
-          const result = moveForward(board, team.pos, 3);
-          newTeams[currentTeam] = { ...team, pos: result.finalPos };
-          message = `\u{1F4B0} Pari gagn\u00e9 ! ${team.emoji} avance de 3 cases !`;
-        } else {
-          const newPos = moveBack(board, team.pos, 3);
-          newTeams[currentTeam] = { ...team, pos: newPos };
-          message = `\u{1F4B0} Pari perdu ! ${team.emoji} recule de 3 cases.`;
-        }
-        break;
-      }
-
-      case 'bonus': {
-        const correct = data?.questionResult;
-        if (correct) {
-          const result = moveForward(board, team.pos, 3);
-          newTeams[currentTeam] = { ...team, pos: result.finalPos };
-          message = `\u{1F3AF} Question bonus r\u00e9ussie ! ${team.emoji} avance de 3 !`;
-        } else {
-          message = `\u{1F3AF} Rat\u00e9... Pas de p\u00e9nalit\u00e9.`;
-        }
-        break;
-      }
-
-      case 'tresor': {
-        const gain = 15 + Math.floor(Math.random() * 11); // 15-25
-        newTeams[currentTeam] = { ...team, money: team.money + gain };
-        message = `\u{1F4B0} ${team.emoji} ${team.name} trouve un tr\u00e9sor de ${gain} pi\u00e8ces !`;
-        break;
-      }
-      case 'impot': {
-        const loss = Math.floor(team.money * 0.3);
-        newTeams[currentTeam] = { ...team, money: team.money - loss };
-        message = `\u{1F451} ${team.emoji} ${team.name} paie ${loss} pi\u00e8ces d'imp\u00f4t !`;
-        break;
-      }
-      case 'pariArgent': {
-        const diceResult = data?.diceValue;
-        if (diceResult && diceResult % 2 === 0) {
-          newTeams[currentTeam] = { ...team, money: team.money + 10 };
-          message = `\u{1F3B0} Pair ! ${team.emoji} ${team.name} gagne 10 pi\u00e8ces ! (mise doubl\u00e9e)`;
-        } else {
-          newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 10) };
-          message = `\u{1F3B0} Impair ! ${team.emoji} ${team.name} perd sa mise de 10 pi\u00e8ces !`;
-        }
-        break;
-      }
-      case 'marcheNoir': {
-        message = `\u{1F3AA} ${team.emoji} ${team.name} visite le march\u00e9 noir...`;
-        break;
-      }
-      case 'volArgent': {
-        const targetIndex = data?.targetIndex;
-        if (targetIndex != null && targetIndex >= 0 && targetIndex < teams.length) {
-          const target = teams[targetIndex];
-          const stolen = Math.min(10, target.money ?? 0);
-          newTeams[targetIndex] = { ...target, money: target.money - stolen };
-          newTeams[currentTeam] = { ...team, money: team.money + stolen };
-          message = `\u{1F977} ${team.emoji} ${team.name} vole ${stolen} pi\u00e8ces \u00e0 ${target.emoji} ${target.name} !`;
-        }
-        break;
-      }
-      case 'taxeCommune': {
-        for (let i = 0; i < newTeams.length; i++) {
-          newTeams[i] = { ...newTeams[i], money: Math.max(0, newTeams[i].money - 5) };
-        }
-        message = `\u{1F3E6} Taxe commune ! Toutes les \u00e9quipes perdent 5 pi\u00e8ces.`;
-        break;
-      }
-      case 'jackpot': {
-        const qResult = data?.questionResult;
-        if (qResult === true) {
-          newTeams[currentTeam] = { ...team, money: team.money + 30 };
-          message = `\u{1F3C6} Jackpot ! ${team.emoji} ${team.name} gagne 30 pi\u00e8ces !`;
-        } else {
-          newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 10) };
-          message = `\u{1F3C6} Rat\u00e9 ! ${team.emoji} ${team.name} perd 10 pi\u00e8ces.`;
-        }
-        break;
-      }
-      case 'banquier': {
-        const bonus = team.correct * 3;
-        newTeams[currentTeam] = { ...team, money: team.money + bonus };
-        message = `\u{1F3E6} Le banquier r\u00e9compense ${team.emoji} ${team.name} : +${bonus} pi\u00e8ces (${team.correct} bonnes r\u00e9ponses x3) !`;
-        break;
-      }
-
-      default:
-        message = `\u00c9v\u00e9nement appliqu\u00e9.`;
-    }
-
-    addLog(message);
-    set({ teams: newTeams, showEvent: { ...showEvent, phase: 'result', data: { ...data, message } } });
-  },
-
+  // --- Events (delegated) ---
+  triggerEvent: (picked) => eventH.triggerEvent(set, get, picked),
+  acceptEvent: () => eventH.acceptEvent(set, get),
+  declineEvent: () => eventH.declineEvent(set, get),
+  eventSelectTarget: (ti) => eventH.eventSelectTarget(set, get, ti),
+  eventRollDice: () => eventH.eventRollDice(set, get),
+  eventAskQuestion: () => eventH.eventAskQuestion(set, get),
+  eventAnswerQuestion: (ci) => eventH.eventAnswerQuestion(set, get, ci),
+  eventRechargeChoice: (pk) => eventH.eventRechargeChoice(set, get, pk),
+  applyEventEffect: () => eventH.applyEventEffect(set, get),
   closeEvent: () => {
     set({ showEvent: null, eventApplied: false });
     get().nextTurn();
     if (get().phase === 'game') saveGame(get());
   },
 
-  // --- Powers ---
-  usePower: (powerKey) => {
-    const { teams, currentTeam, rolling, finished, showQuestion, showEvent, awaitingChoice, diceValue } = get();
-    if (finished || rolling || showEvent || awaitingChoice) return;
-    const team = teams[currentTeam];
-    const charges = team.powers?.[powerKey]?.charges ?? 0;
-    if (charges <= 0) return;
-
-    const power = POWERS[powerKey];
-    if (!power) return;
-
-    // Check activation cost
-    const activationCost = power.activationCost || 0;
-    if (activationCost > 0 && team.money < activationCost) return;
-
-    // Indice: only during question
-    if (powerKey === 'indice') {
-      if (!showQuestion || get().indiceUsed) return;
-      get().useIndice();
-      return;
-    }
-
-    // Relance: only after dice result, during pendingLanding window
-    if (powerKey === 'relance') {
-      const { pendingLanding } = get();
-      if (!diceValue || showQuestion || !pendingLanding) return;
-      get().useRelance();
-      return;
-    }
-
-    // Offensive powers: need target picker (before rolling OR during pendingLanding)
-    if (power.category === 'off') {
-      const { pendingLanding } = get();
-      if (showQuestion) return;
-      if (diceValue && !pendingLanding) return;
-      set({ showTargetPicker: { powerKey } });
-      return;
-    }
+  // --- Confirm landing (player done using powers) ---
+  confirmLanding: () => {
+    if (!get().pendingLanding) return;
+    set({ pendingLanding: false, freeActivation: false });
+    get().handleLanding();
   },
 
-  useIndice: () => {
-    const { teams, currentTeam, showQuestion, addLog } = get();
-    const team = teams[currentTeam];
-    const question = showQuestion?.question;
-    if (!question) return;
+  // --- Powers (delegated) ---
+  usePower: (pk) => powerH.usePower(set, get, pk),
+  useIndice: () => powerH.useIndice(set, get),
+  useRelance: () => powerH.useRelance(set, get),
+  applyOffensivePower: (ti) => powerH.applyOffensivePower(set, get, ti),
+  cancelTargetPicker: () => powerH.cancelTargetPicker(set, get),
 
-    const level = team.powers?.indice?.level ?? 1;
+  // --- Charge picker (delegated) ---
+  chargePickerChoice: (pk) => powerH.chargePickerChoice(set, get, pk),
+  chargePickerSkip: () => powerH.chargePickerSkip(set, get),
 
-    // Find wrong answers to hide
-    const wrongIndices = question.a
-      .map((_, i) => i)
-      .filter((i) => i !== question.c);
-    // Shuffle
-    for (let i = wrongIndices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [wrongIndices[i], wrongIndices[j]] = [wrongIndices[j], wrongIndices[i]];
-    }
-    const hideCount = level >= 3 ? wrongIndices.length : 2;
-    const hidden = wrongIndices.slice(0, hideCount);
-
-    // Consume charge + deduct activation cost
-    const newTeams = [...teams];
-    const currentChargesIndice = team.powers?.indice?.charges ?? 0;
-    const cost = POWERS.indice.activationCost || 0;
-    const newPowers = { ...team.powers, indice: { ...team.powers.indice, charges: currentChargesIndice - 1 } };
-    newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
-
-    const eliminatedCount = level >= 3 ? 'toutes les mauvaises' : '2';
-    addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${eliminatedCount} r\u00e9ponses \u00e9limin\u00e9es.${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
-    set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
-
-    // Level 2+: bonus time
-    if (level >= 2) {
-      set({ showQuestion: { ...get().showQuestion, bonusTime: 5 } });
-    }
-  },
-
-  useRelance: () => {
-    const { teams, currentTeam, board, addLog, preRollPos, preRollValue } = get();
-    const team = teams[currentTeam];
-    const level = team.powers?.relance?.level ?? 1;
-    const prevValue = preRollValue || 0;
-
-    // Consume charge + deduct activation cost
-    const newTeams = [...teams];
-    const currentChargesRelance = team.powers?.relance?.charges ?? 0;
-    if (currentChargesRelance <= 0) return;
-    const cost = POWERS.relance.activationCost || 0;
-    if (cost > 0 && team.money < cost) return;
-    const newPowers = { ...team.powers, relance: { ...team.powers.relance, charges: currentChargesRelance - 1 } };
-    // Restore position to before the roll
-    newTeams[currentTeam] = { ...team, powers: newPowers, pos: preRollPos || team.pos, money: team.money - cost };
-
-    addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
-    set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false });
-
-    const finalValue = Math.floor(Math.random() * 6) + 1;
-    let count = 0;
-    const interval = setInterval(() => {
-      set({ diceValue: Math.floor(Math.random() * 6) + 1 });
-      count++;
-      if (count >= 10) {
-        clearInterval(interval);
-        set({ diceValue: finalValue, rolling: false });
-
-        let effectiveValue;
-        if (level >= 3) effectiveValue = prevValue + finalValue;
-        else if (level >= 2) effectiveValue = Math.max(prevValue, finalValue);
-        else effectiveValue = finalValue;
-
-        addLog(`\u{1F3B2} Relance : ${finalValue} !${level >= 2 ? ` (effectif: ${effectiveValue})` : ''}`);
-        get().handleDiceResult(effectiveValue);
-      }
-    }, 80);
-  },
-
-  // Offensive power: target selected
-  applyOffensivePower: (targetTeamIndex) => {
-    const { teams, currentTeam, board, showTargetPicker, addLog } = get();
-    if (!showTargetPicker) return;
-    const { powerKey } = showTargetPicker;
-    const team = teams[currentTeam];
-    const target = teams[targetTeamIndex];
-    const newTeams = [...teams];
-
-    // Consume charge + deduct activation cost
-    const currentChargesPower = team.powers?.[powerKey]?.charges ?? 0;
-    const cost = POWERS[powerKey]?.activationCost || 0;
-    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentChargesPower - 1 } };
-    newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
-
-    if (powerKey === 'foudre') {
-      const level = team.powers?.foudre?.level ?? 1;
-      const reculAmount = level >= 3 ? 7 : level >= 2 ? 5 : 3;
-      const newPos = moveBack(board, target.pos, reculAmount);
-      newTeams[targetTeamIndex] = { ...target, pos: newPos };
-      addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
-    } else if (powerKey === 'sablier') {
-      const level = team.powers?.sablier?.level ?? 1;
-      const divisor = level >= 3 ? 4 : level >= 2 ? 3 : 2;
-      newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
-      addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level}) sur ${target.emoji} ${target.name} ! Timer /${divisor} au prochain tour.${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
-    } else if (powerKey === 'double') {
-      const level = team.powers?.double?.level ?? 1;
-      const questionCount = level >= 3 ? 3 : 2;
-      const noBonus = level === 2;
-      newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleCount: questionCount, doubleNoBonus: noBonus };
-      addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! ${questionCount} questions au prochain tour.${noBonus ? ' (sans bonus)' : ''}${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
-    }
-
-    set({ teams: newTeams, showTargetPicker: null });
-  },
-
-  cancelTargetPicker: () => set({ showTargetPicker: null }),
-
-  // --- Shop ---
-  showShop: false,
+  // --- Shop (delegated) ---
   openShop: () => {
     const { finished, rolling, showQuestion, showEvent, awaitingChoice } = get();
     if (finished || rolling || showQuestion || showEvent || awaitingChoice) return;
     set({ showShop: true });
   },
   closeShop: () => set({ showShop: false }),
-
-  buyNewPower: (powerKey) => {
-    const { teams, currentTeam, addLog } = get();
-    const team = teams[currentTeam];
-    const power = POWERS[powerKey];
-    if (!power) return;
-    const price = power.price;
-    if (team.money < price) return;
-    if (team.powers?.[powerKey]) return; // already owned
-
-    const newTeams = [...teams];
-    const newPowers = { ...team.powers, [powerKey]: { charges: 1, level: 1 } };
-    newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
-    addLog(`\u{1F6D2} ${team.emoji} ${team.name} d\u00e9bloque ${power.name} ! (-${price} \u{1F4B0})`);
-    set({ teams: newTeams });
-    saveGame(get());
-  },
-
-  buyPowerCharge: (powerKey) => {
-    const { teams, currentTeam, addLog } = get();
-    const team = teams[currentTeam];
-    const price = POWERS[powerKey]?.price || 15;
-    if (team.money < price) return;
-
-    const newTeams = [...teams];
-    const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
-    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
-    newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
-
-    const pName = POWERS[powerKey]?.name || powerKey;
-    addLog(`\u{1F6D2} ${team.emoji} ${team.name} ach\u00e8te 1 charge de ${pName} (${price} \u{1F4B0})`);
-    set({ teams: newTeams });
-  },
-
-  upgradePowerLevel: (powerKey) => {
-    const { teams, currentTeam, addLog } = get();
-    const team = teams[currentTeam];
-    const power = POWERS[powerKey];
-    if (!power) return;
-    const currentLevel = team.powers?.[powerKey]?.level ?? 1;
-    if (currentLevel >= 3) return; // max level
-    const cost = power.upgradeCosts[currentLevel - 1]; // index 0 = lvl1->2, index 1 = lvl2->3
-    if (team.money < cost) return;
-
-    const newTeams = [...teams];
-    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], level: currentLevel + 1 } };
-    newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
-    addLog(`\u2B06\uFE0F ${team.emoji} ${team.name} am\u00e9liore ${power.name} au niveau ${currentLevel + 1} ! (-${cost} \u{1F4B0})`);
-    set({ teams: newTeams });
-    saveGame(get());
-  },
+  buyNewPower: (pk) => powerH.buyNewPower(set, get, pk),
+  buyPowerCharge: (pk) => powerH.buyPowerCharge(set, get, pk),
+  upgradePowerLevel: (pk) => powerH.upgradePowerLevel(set, get, pk),
 
   // --- Turn management ---
   nextTurn: () => {
@@ -1079,16 +438,7 @@ export const useGameStore = create((set, get) => ({
     if (finished) return;
     set({
       currentTeam: (currentTeam + 1) % teams.length,
-      diceValue: null,
-      pendingMove: null,
-      pendingLanding: false,
-      awaitingChoice: false,
-      preRollPos: null,
-      preRollValue: null,
-      showTargetPicker: null,
-      showShop: false,
-      indiceUsed: false,
-      indiceHidden: [],
+      ...TURN_RESET,
     });
     if (get().phase === 'game') saveGame(get());
   },
@@ -1100,19 +450,8 @@ export const useGameStore = create((set, get) => ({
     set({
       ...saved,
       rolling: false,
-      diceValue: null,
-      pendingMove: null,
-      pendingLanding: false,
-      awaitingChoice: false,
-      showQuestion: null,
-      showEvent: null,
-      eventApplied: false,
-      showTargetPicker: null,
-      showShop: false,
-      indiceUsed: false,
-      indiceHidden: [],
-      preRollPos: null,
-      preRollValue: null,
+      ...TURN_RESET,
+      showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
     });
   },
 
@@ -1120,39 +459,16 @@ export const useGameStore = create((set, get) => ({
   reset: () => {
     clearSave();
     set({
-    phase: 'setup',
-    teams: [],
-    currentTeam: 0,
-    board: null,
-    finished: false,
-    askedQuestions: {},
-    questions: {},
-    log: [],
-    rolling: false,
-    diceValue: null,
-    pendingMove: null,
-    pendingLanding: false,
-    awaitingChoice: false,
-    showQuestion: null,
-    showEvent: null,
-    eventApplied: false,
-    showTargetPicker: null,
-    showShop: false,
-    showDiceModal: false,
-    indiceUsed: false,
-    indiceHidden: [],
-    preRollPos: null,
-    nbTeams: 3,
-    setupTeams: createDefaultTeams(3),
-    enabledEvents: Object.keys(EVENTS),
-    boardParams: {
-      casesParVoie: 4,
-      nbVoies: 3,
-      nbSections: 3,
-      voieFinale: 'court-long',
-      couloirsMix: 2,
-      eventsPerCouloir: 1,
-    },
-  });
+      phase: 'setup', teams: [], currentTeam: 0, board: null, finished: false,
+      askedQuestions: {}, questions: {}, log: [],
+      rolling: false, ...TURN_RESET,
+      showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
+      nbTeams: 3, setupTeams: createDefaultTeams(3),
+      enabledEvents: Object.keys(EVENTS),
+      boardParams: {
+        casesParVoie: 4, nbVoies: 3, nbSections: 3,
+        voieFinale: 'court-long', couloirsMix: 2, eventsPerCouloir: 1,
+      },
+    });
   },
 }));
