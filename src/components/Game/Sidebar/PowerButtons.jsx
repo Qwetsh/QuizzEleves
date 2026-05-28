@@ -11,6 +11,7 @@ export default function PowerButtons() {
   const showQuestion = useGameStore((s) => s.showQuestion);
   const showEvent = useGameStore((s) => s.showEvent);
   const awaitingChoice = useGameStore((s) => s.awaitingChoice);
+  const pendingLanding = useGameStore((s) => s.pendingLanding);
 
   const team = teams[currentTeam];
   if (!team?.powers) return null;
@@ -18,7 +19,7 @@ export default function PowerButtons() {
   const powerEntries = getAvailablePowers(team);
   if (powerEntries.length === 0) return null;
 
-  const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished };
+  const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding };
 
   return (
     <div className="flex flex-wrap gap-2 justify-center mt-3">

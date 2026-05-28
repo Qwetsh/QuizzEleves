@@ -16,4 +16,12 @@ export const EVENTS = {
   tempete:      { name: 'Tempete',           icon: '\u{1F32A}\uFE0F', desc: 'Toutes les autres equipes reculent de 1 case.',                           optional: false, weight: 1 },
   echange:      { name: 'Echange',           icon: '\u{1F500}',  desc: 'Choisis un adversaire et echange ta position avec lui.',                        optional: true,  weight: 1 },
   bonus:        { name: 'Question bonus',    icon: '\u{1F3AF}',  desc: 'Reponds a une question. Reussi : +3 cases. Rate : rien.',                       optional: true,  weight: 1 },
+  tresor:        { name: 'Tresor cache',      icon: '\u{1F4B0}',  desc: 'Tu decouvres un coffre rempli de pieces !',                                       effect: 'tresor',      category: 'money' },
+  impot:         { name: 'Impot royal',       icon: '\u{1F451}',  desc: 'Le roi exige un impot ! Tu perds 30% de tes pieces.',                              effect: 'impot',       category: 'money' },
+  pariArgent:    { name: 'Pari',              icon: '\u{1F3B0}',  desc: 'Un marchand te propose un pari : mise 10 pieces, lance le de. Pair = double, impair = perdu !', effect: 'pari', needsDice: true, category: 'money' },
+  marcheNoir:    { name: 'Marche noir',       icon: '\u{1F3AA}',  desc: 'Un marchand mysterieux te propose une charge de pouvoir a -50% !',                  effect: 'marcheNoir',  needsChoice: true, category: 'money' },
+  volArgent:     { name: 'Vol de pieces',     icon: '\u{1F977}',  desc: 'Tu voles 10 pieces a une equipe de ton choix !',                                    effect: 'vol',         needsTarget: true, category: 'money' },
+  taxeCommune:   { name: 'Taxe commune',      icon: '\u{1F3E6}',  desc: 'Une taxe frappe tout le monde ! Chaque equipe perd 5 pieces.',                      effect: 'taxeCommune', category: 'money' },
+  jackpot:       { name: 'Jackpot',           icon: '\u{1F3C6}',  desc: 'Question bonus ! Bonne reponse = 30 pieces, mauvaise = -10.',                       effect: 'jackpot',     needsQuestion: true, category: 'money' },
+  banquier:      { name: 'Banquier',          icon: '\u{1F3E6}',  desc: 'Le banquier te recompense : +3 pieces par bonne reponse accumulee !',               effect: 'banquier',    category: 'money' },
 };

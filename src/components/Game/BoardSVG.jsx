@@ -7,23 +7,23 @@ import { lighten, darken } from '../../utils/colors';
 const NODE_COLORS = {
   depart: '#5a4628',
   arrivee: '#b8862c',
-  jonction: '#7a5e3a',
+  jonction: '#e0a458',
   event: '#a83e7f',
 };
 
 const NODE_ICONS = {
   depart: '\u{1F3C1}',
   arrivee: '\u{1F3C6}',
-  jonction: '\u2726',
+  jonction: '\u{1F3B2}',
   event: '\u{1F381}',
 };
 
 const NODE_RADIUS = {
-  depart: 36,
-  arrivee: 36,
-  jonction: 26,
-  event: 30,
-  subject: 32,
+  depart: 52,
+  arrivee: 52,
+  jonction: 46,
+  event: 44,
+  subject: 46,
 };
 
 const pawnTransition = { type: 'spring', damping: 18, stiffness: 120, mass: 0.8 };
@@ -37,24 +37,24 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive }) {
     >
       {isActive && (
         <motion.circle
-          cx={0} cy={0} r={20}
-          fill="none" stroke={team.color} strokeWidth={3}
+          cx={0} cy={0} r={30}
+          fill="none" stroke={team.color} strokeWidth={3.5}
           initial={{ opacity: 0.3, scale: 0.8 }}
           animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.8, 1.1, 0.8] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}
       <motion.circle
-        cx={0} cy={0} r={16}
+        cx={0} cy={0} r={24}
         fill="white" stroke={team.color}
-        strokeWidth={isActive ? 4 : 3}
+        strokeWidth={isActive ? 5 : 3.5}
         filter={isActive ? 'url(#glow-active)' : undefined}
         whileHover={{ scale: 1.15 }}
       />
       <text
         x={0} y={1}
         textAnchor="middle" dominantBaseline="central"
-        fontSize={20} style={{ pointerEvents: 'none' }}
+        fontSize={28} style={{ pointerEvents: 'none' }}
       >
         {team.emoji}
       </text>
@@ -65,8 +65,8 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive }) {
 function ChoiceHighlight({ cx, cy, r }) {
   return (
     <motion.circle
-      cx={cx} cy={cy} r={r + 6}
-      fill="none" stroke="#facc15" strokeWidth={4}
+      cx={cx} cy={cy} r={r + 10}
+      fill="none" stroke="#facc15" strokeWidth={5}
       initial={{ opacity: 0.4, scale: 0.9 }}
       animate={{ opacity: [0.4, 1, 0.4], scale: [0.9, 1.05, 0.9] }}
       transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -97,7 +97,7 @@ export default function BoardSVG() {
       const indexInGroup = group.indexOf(i);
       const count = group.length;
       const angle = (indexInGroup / Math.max(count, 1)) * 2 * Math.PI - Math.PI / 2;
-      const spread = count === 1 ? 0 : 24;
+      const spread = count === 1 ? 0 : 36;
       return {
         px: node.x + spread * Math.cos(angle),
         py: node.y + spread * Math.sin(angle),
@@ -148,7 +148,7 @@ export default function BoardSVG() {
       <svg
         viewBox={`0 0 ${viewBox.w} ${viewBox.h}`}
         className="block"
-        style={{ minWidth: Math.max(900, Math.round(viewBox.w / 1.5)) + 'px' }}
+        style={{ minWidth: Math.max(1200, Math.round(viewBox.w / 1.2)) + 'px' }}
       >
         <defs>
           <filter id="glow-active">
@@ -159,7 +159,7 @@ export default function BoardSVG() {
             </feMerge>
           </filter>
           <filter id="hex-shadow" x="-20%" y="-10%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#000" floodOpacity="0.28" />
+            <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#000" floodOpacity="0.28" />
           </filter>
         </defs>
 
@@ -176,7 +176,7 @@ export default function BoardSVG() {
                 d={`M ${node.x} ${node.y} C ${cx1} ${node.y}, ${cx1} ${target.y}, ${target.x} ${target.y}`}
                 fill="none"
                 stroke="rgba(122, 94, 58, 0.35)"
-                strokeWidth={6}
+                strokeWidth={9}
                 strokeLinecap="round"
                 strokeDasharray={node.type === 'jonction' ? '8 12' : '1 12'}
               />
@@ -234,8 +234,8 @@ export default function BoardSVG() {
               </text>
               {(node.type === 'depart' || node.type === 'arrivee') && (
                 <text
-                  x={node.x} y={node.y + r + 18}
-                  textAnchor="middle" fontSize={13} fontWeight={700}
+                  x={node.x} y={node.y + r + 24}
+                  textAnchor="middle" fontSize={18} fontWeight={700}
                   fill="var(--ink-700)"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >

@@ -1,8 +1,8 @@
 import { SUBJECT_KEYS } from '../data/subjects.js';
 
-const SX = 80;      // espacement horizontal entre cases
-const Y_C = 310;     // y central du parcours
-const Y_GAP = 170;   // ecart entre voies paralleles
+const SX = 130;      // espacement horizontal entre cases
+const Y_C = 480;     // y central du parcours
+const Y_GAP = 260;   // ecart entre voies paralleles
 
 function shuffleArray(arr) {
   const p = arr.slice();
@@ -13,9 +13,7 @@ function shuffleArray(arr) {
   return p;
 }
 
-function randomSubject() {
-  return SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
-}
+
 
 /**
  * Genere le plateau sous forme de graphe de noeuds.
@@ -40,7 +38,7 @@ export function generateBoard(params) {
   } = params;
 
   const nodes = {};
-  let x = 50;
+  let x = 80;
   let prevId = 'depart';
 
   nodes.depart = { x, y: Y_C, type: 'depart', label: 'D\u00c9PART', next: [] };
@@ -49,7 +47,7 @@ export function generateBoard(params) {
   // --- Couloir d'echauffement (mix) ---
   for (let i = 0; i < couloirsMix; i++) {
     const id = `mixWarm_${i}`;
-    nodes[id] = { x, y: Y_C, type: 'subject', subject: randomSubject(), next: [] };
+    nodes[id] = { x, y: Y_C, type: 'subject', subject: 'multi', next: [] };
     nodes[prevId].next.push(id);
     prevId = id;
     x += SX;
@@ -72,7 +70,7 @@ export function generateBoard(params) {
     const subjs = availablePool.slice(0, nbVoies);
     availablePool = availablePool.slice(nbVoies);
     const ys = nbVoies === 2
-      ? [Y_C - 90, Y_C + 90]
+      ? [Y_C - 140, Y_C + 140]
       : [Y_C - Y_GAP, Y_C, Y_C + Y_GAP];
 
     const lastInVoies = [];
@@ -107,7 +105,7 @@ export function generateBoard(params) {
     if (s < nbSections - 1) {
       for (let i = 0; i < couloirsMix; i++) {
         const id = `mixInter_${s}_${i}`;
-        nodes[id] = { x, y: Y_C, type: 'subject', subject: randomSubject(), next: [] };
+        nodes[id] = { x, y: Y_C, type: 'subject', subject: 'multi', next: [] };
         nodes[prevId].next.push(id);
         prevId = id;
         x += SX;
@@ -126,7 +124,7 @@ export function generateBoard(params) {
     let cx = x;
     for (let i = 0; i < 3; i++) {
       const id = `court_${i}`;
-      nodes[id] = { x: cx, y: Y_C - 110, type: 'subject', subject: randomSubject(), next: [] };
+      nodes[id] = { x: cx, y: Y_C - 170, type: 'subject', subject: 'multi', next: [] };
       courtIds.push(id);
       cx += SX;
     }
@@ -134,7 +132,7 @@ export function generateBoard(params) {
     let lx = x;
     for (let i = 0; i < 5; i++) {
       const id = `long_${i}`;
-      nodes[id] = { x: lx, y: Y_C + 110, type: 'subject', subject: randomSubject(), next: [] };
+      nodes[id] = { x: lx, y: Y_C + 170, type: 'subject', subject: 'multi', next: [] };
       longIds.push(id);
       lx += SX;
     }
@@ -150,7 +148,7 @@ export function generateBoard(params) {
   } else if (voieFinale === 'unique') {
     for (let i = 0; i < 3; i++) {
       const id = `final_${i}`;
-      nodes[id] = { x, y: Y_C, type: 'subject', subject: randomSubject(), next: [] };
+      nodes[id] = { x, y: Y_C, type: 'subject', subject: 'multi', next: [] };
       nodes[prevId].next.push(id);
       prevId = id;
       x += SX;
@@ -177,7 +175,7 @@ export function generateBoard(params) {
     });
   }
 
-  const viewBox = { w: nodes.arrivee.x + 60, h: 620 };
+  const viewBox = { w: nodes.arrivee.x + 100, h: 960 };
   return { nodes, viewBox };
 }
 

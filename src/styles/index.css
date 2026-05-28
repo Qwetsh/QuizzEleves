@@ -73,6 +73,11 @@
   --t-purple: #8745d4;
   --t-teal: #129fb0;
 
+  /* --- Surfaces --- */
+  --surface: #fffaf0;
+  --surface-card: #fffefb;
+  --surface-2: #f7ebcf;
+
   /* --- Legacy compat aliases --- */
   --bg: var(--parch-100);
   --paper: #fffaf0;

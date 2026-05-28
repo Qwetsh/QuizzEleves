@@ -38,14 +38,15 @@ export function addCharge(team, powerKey, amount = 1) {
  * @returns {boolean}
  */
 export function canUsePowerInContext(key, context) {
-  const { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished } = context;
+  const { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding } = context;
   const info = POWERS[key];
   if (!info) return false;
 
-  if (key === 'relance') return !!diceValue && !showQuestion && !rolling && !showEvent;
+  if (key === 'relance') return !!diceValue && !showQuestion && !rolling && !showEvent && !!pendingLanding;
   if (key === 'indice') return !!showQuestion && !rolling;
   if (key === 'bouclier') return false;
-  if (info.category === 'off') return !diceValue && !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished;
+  // Offensive powers: usable before rolling OR during pendingLanding window
+  if (info.category === 'off') return !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished && (!diceValue || !!pendingLanding);
   return false;
 }
 

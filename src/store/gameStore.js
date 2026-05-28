@@ -88,6 +88,9 @@ export const useGameStore = create((set, get) => ({
   rolling: false,
   diceValue: null,
   pendingMove: null,    // { remaining }
+  pendingLanding: false, // true = waiting before processing landing (relance window)
+  _landingSeq: 0,        // sequence counter for landing timeouts
+  _landingId: 0,         // current landing timeout id
   awaitingChoice: false, // junction choice
   showQuestion: null,    // { question, subject, index } or null
   showEvent: null,       // { key, event } or null
@@ -95,6 +98,7 @@ export const useGameStore = create((set, get) => ({
   showTargetPicker: null, // { powerKey } - for offensive powers needing a target
   indiceUsed: false,      // true if indice was used on current question
   indiceHidden: [],       // indices of answers hidden by indice power
+  showDiceModal: false,   // true = dice roll ceremony modal is playing
 
   // --- Power selection ---
   powerSetupIndex: 0,
@@ -111,8 +115,8 @@ export const useGameStore = create((set, get) => ({
     const { nodes, viewBox } = generateBoard(boardParams);
     const teams = setupTeams.map((t) => {
       const powers = {};
-      if (t.powerDef) powers[t.powerDef] = { charges: INITIAL_CHARGES };
-      if (t.powerOff) powers[t.powerOff] = { charges: INITIAL_CHARGES };
+      if (t.powerDef) powers[t.powerDef] = { charges: INITIAL_CHARGES, level: 1 };
+      if (t.powerOff) powers[t.powerOff] = { charges: INITIAL_CHARGES, level: 1 };
       return { ...t, pos: 'depart', powers };
     });
     const questions = getQuestions(level);
@@ -129,6 +133,7 @@ export const useGameStore = create((set, get) => ({
       rolling: false,
       diceValue: null,
       pendingMove: null,
+      pendingLanding: false,
       awaitingChoice: false,
       showQuestion: null,
       showEvent: null,
@@ -166,28 +171,22 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling } = get();
-    if (finished || rolling) return;
-    set({ rolling: true, diceValue: null });
-
-    // Animation: rapid random values then final
+    const { finished, rolling, showDiceModal } = get();
+    if (finished || rolling || showDiceModal) return;
     const finalValue = Math.floor(Math.random() * 6) + 1;
-    let count = 0;
-    const interval = setInterval(() => {
-      set({ diceValue: Math.floor(Math.random() * 6) + 1 });
-      count++;
-      if (count >= 10) {
-        clearInterval(interval);
-        set({ diceValue: finalValue, rolling: false });
-        get().handleDiceResult(finalValue);
-      }
-    }, 80);
+    set({ rolling: true, diceValue: finalValue, showDiceModal: true });
+  },
+
+  completeDiceRoll: () => {
+    const { diceValue } = get();
+    set({ showDiceModal: false, rolling: false });
+    if (diceValue) get().handleDiceResult(diceValue);
   },
 
   handleDiceResult: (value) => {
     const { teams, currentTeam, board, addLog } = get();
     const team = teams[currentTeam];
-    set({ preRollPos: team.pos }); // save for relance
+    set({ preRollPos: team.pos, preRollValue: value }); // save for relance
     addLog(`${team.emoji} ${team.name} lance le d\u00e9 : ${value}`);
 
     const result = moveForward(board, team.pos, value);
@@ -201,13 +200,24 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    get().handleLanding();
+    // Delay landing to give time for relance power usage
+    const landingId = ++get()._landingSeq;
+    set({ pendingLanding: true, _landingId: landingId });
+    setTimeout(() => {
+      if (get().pendingLanding && get()._landingId === landingId) {
+        set({ pendingLanding: false });
+        get().handleLanding();
+      }
+    }, 4000);
   },
 
   // --- Junction choice ---
   chooseJunction: (nextNodeId) => {
     const { teams, currentTeam, board, pendingMove } = get();
     const team = teams[currentTeam];
+
+    // Cancel any pending landing timeout
+    set({ pendingLanding: false });
 
     // Move to chosen path
     const newTeams = [...teams];
@@ -264,11 +274,26 @@ export const useGameStore = create((set, get) => ({
 
     // Subject square → question
     if (node.type === 'subject') {
-      get().askQuestion(node.subject);
+      const subj = node.subject === 'multi'
+        ? SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)]
+        : node.subject;
+      get().askQuestion(subj);
       return;
     }
 
-    // Jonction or depart — just next turn
+    // Depart — just next turn
+    if (node.type === 'depart') {
+      get().nextTurn();
+      return;
+    }
+
+    // Jonction — random subject question
+    if (node.type === 'jonction') {
+      const subj = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
+      get().askQuestion(subj);
+      return;
+    }
+
     get().nextTurn();
   },
 
@@ -291,16 +316,17 @@ export const useGameStore = create((set, get) => ({
     addLog(`${subjectInfo?.icon || ''} Question en ${subjectInfo?.name || subject}`);
 
     // Check sablier flag
+    const timerDivisor = team.sablierActif ? (team.sablierDivisor || 2) : 1;
     const timerHalved = team.sablierActif || false;
     if (timerHalved) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...nt[currentTeam], sablierActif: false };
+      nt[currentTeam] = { ...nt[currentTeam], sablierActif: false, sablierDivisor: undefined };
       set({ teams: nt });
-      addLog(`\u23F1\uFE0F Sablier actif ! Timer r\u00e9duit \u00e0 15 secondes.`);
+      addLog(`\u23F1\uFE0F Sablier actif ! Timer divis\u00e9 par ${timerDivisor}.`);
     }
 
     set({
-      showQuestion: { question: q, subject, index: result.index, timerHalved },
+      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false,
       indiceHidden: [],
@@ -311,21 +337,23 @@ export const useGameStore = create((set, get) => ({
     const { showQuestion, teams, currentTeam, board, addLog } = get();
     if (!showQuestion) return;
 
-    const { question, subject, timerHalved } = showQuestion;
+    const { question, subject, timerHalved, timerDivisor } = showQuestion;
     const correct = chosenIndex === question.c;
     const team = teams[currentTeam];
     const newTeams = [...teams];
-    const maxTime = timerHalved ? 15 : 30;
+    const effectiveDivisor = timerDivisor || (timerHalved ? 2 : 1);
+    const maxTime = Math.floor(30 / effectiveDivisor);
 
     if (correct) {
-      const gain = calculateMoneyGain(timeLeft, maxTime);
+      const noBonus = team.doubleNoBonus || false;
+      const gain = noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime);
       newTeams[currentTeam] = { ...team, correct: team.correct + 1, money: team.money + gain };
-      addLog(`\u2705 Bonne r\u00e9ponse ! +${gain} \u{1F4B0}`);
+      addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
     } else {
       // Check bouclier
       const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
       if (bouclierCharges > 0) {
-        const newPowers = { ...team.powers, bouclier: { charges: bouclierCharges - 1 } };
+        const newPowers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: bouclierCharges - 1 } };
         newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, powers: newPowers };
         addLog(`\u274C Mauvaise r\u00e9ponse ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`);
       } else {
@@ -337,18 +365,22 @@ export const useGameStore = create((set, get) => ({
 
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
 
-    // Handle double question: if still active, ask another question instead of next turn
+    // Handle double/triple question: if doubleCount > 0, ask another question
     const updatedTeam = get().teams[currentTeam];
-    if (updatedTeam.doubleActive) {
+    const remainingCount = (updatedTeam.doubleCount || 0) - 1;
+    if (updatedTeam.doubleActive && remainingCount > 0) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...updatedTeam, doubleActive: false };
+      nt[currentTeam] = { ...updatedTeam, doubleCount: remainingCount };
       set({ teams: nt });
-      addLog(`\u2753 Double question ! Deuxi\u00e8me question...`);
-      // Ask another question of random subject
+      addLog(`\u2753 Question multiple ! Encore ${remainingCount} question(s)...`);
       const randomSubject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
       get().askQuestion(randomSubject);
       if (get().phase === 'game') saveGame(get());
       return;
+    } else if (updatedTeam.doubleActive) {
+      const nt = [...get().teams];
+      nt[currentTeam] = { ...updatedTeam, doubleActive: false, doubleCount: 0, doubleNoBonus: false };
+      set({ teams: nt });
     }
 
     get().nextTurn();
@@ -361,7 +393,7 @@ export const useGameStore = create((set, get) => ({
 
     const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
     if (bouclierCharges > 0) {
-      const newPowers = { ...team.powers, bouclier: { charges: bouclierCharges - 1 } };
+      const newPowers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: bouclierCharges - 1 } };
       newTeams[currentTeam] = { ...team, wrong: team.wrong + 1, powers: newPowers };
       addLog(`\u23F0 Temps \u00e9coul\u00e9 ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`);
     } else {
@@ -372,17 +404,22 @@ export const useGameStore = create((set, get) => ({
 
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
 
-    // Handle double question
+    // Handle double/triple question
     const updatedTeam = get().teams[currentTeam];
-    if (updatedTeam.doubleActive) {
+    const remainingCount = (updatedTeam.doubleCount || 0) - 1;
+    if (updatedTeam.doubleActive && remainingCount > 0) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...updatedTeam, doubleActive: false };
+      nt[currentTeam] = { ...updatedTeam, doubleCount: remainingCount };
       set({ teams: nt });
-      addLog(`\u2753 Double question ! Deuxi\u00e8me question...`);
+      addLog(`\u2753 Question multiple ! Encore ${remainingCount} question(s)...`);
       const randomSubject = SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)];
       get().askQuestion(randomSubject);
       if (get().phase === 'game') saveGame(get());
       return;
+    } else if (updatedTeam.doubleActive) {
+      const nt = [...get().teams];
+      nt[currentTeam] = { ...updatedTeam, doubleActive: false, doubleCount: 0, doubleNoBonus: false };
+      set({ teams: nt });
     }
 
     get().nextTurn();
@@ -406,26 +443,26 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
 
     // Events that need a target
-    const needsTarget = ['foudreFree', 'sacrifice', 'duel', 'don', 'vol', 'echange'];
+    const needsTarget = ['foudreFree', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent'];
     if (needsTarget.includes(key)) {
       set({ showEvent: { ...showEvent, phase: 'target' } });
       return;
     }
 
     // Events that need a dice roll
-    if (key === 'rejouer' || key === 'quitteDouble') {
+    if (key === 'rejouer' || key === 'quitteDouble' || key === 'pariArgent') {
       get().eventRollDice();
       return;
     }
 
     // Events that need a question
-    if (key === 'pari' || key === 'bonus') {
+    if (key === 'pari' || key === 'bonus' || key === 'jackpot') {
       get().eventAskQuestion();
       return;
     }
 
     // Recharge: choice
-    if (key === 'recharge') {
+    if (key === 'recharge' || key === 'marcheNoir') {
       set({ showEvent: { ...showEvent, phase: 'choice' } });
       return;
     }
@@ -478,9 +515,12 @@ export const useGameStore = create((set, get) => ({
       if (count >= 10) {
         clearInterval(interval);
         const ev = get().showEvent;
+        if (!ev) return;
         set({ showEvent: { ...ev, data: { ...ev.data, diceValue: finalValue, diceRolling: false } } });
         // Auto-apply after short delay
-        setTimeout(() => get().applyEventEffect(), 1000);
+        setTimeout(() => {
+          if (get().showEvent) get().applyEventEffect();
+        }, 1000);
       }
     }, 80);
   },
@@ -525,7 +565,7 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
     const newTeams = [...teams];
     const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
-    const newPowers = { ...team.powers, [powerKey]: { charges: currentCharges + 1 } };
+    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
     newTeams[currentTeam] = { ...team, powers: newPowers };
     const pName = POWERS[powerKey]?.name || powerKey;
     addLog(`\u{1F50B} ${team.emoji} ${team.name} recharge ${pName} ! (+1 charge)`);
@@ -680,9 +720,11 @@ export const useGameStore = create((set, get) => ({
           }
           if (stolen) {
             const stolenCharges = target.powers?.[stolen]?.charges ?? 0;
-            const targetPowers = { ...target.powers, [stolen]: { charges: stolenCharges - 1 } };
+            const targetPowerEntry = target.powers?.[stolen] || { charges: 0, level: 1 };
+            const targetPowers = { ...target.powers, [stolen]: { ...targetPowerEntry, charges: stolenCharges - 1 } };
             const myCharges = team.powers?.[stolen]?.charges ?? 0;
-            const myPowers = { ...team.powers, [stolen]: { charges: myCharges + 1 } };
+            const myPowerEntry = team.powers?.[stolen] || { charges: 0, level: 1 };
+            const myPowers = { ...team.powers, [stolen]: { ...myPowerEntry, charges: myCharges + 1 } };
             newTeams[ti] = { ...target, powers: targetPowers };
             newTeams[currentTeam] = { ...team, powers: myPowers };
             message = `\u{1FA99} ${team.emoji} vole 1 charge de ${POWERS[stolen].name} \u00e0 ${target.emoji} !`;
@@ -739,6 +781,69 @@ export const useGameStore = create((set, get) => ({
         break;
       }
 
+      case 'tresor': {
+        const gain = 15 + Math.floor(Math.random() * 11); // 15-25
+        newTeams[currentTeam] = { ...team, money: team.money + gain };
+        message = `\u{1F4B0} ${team.emoji} ${team.name} trouve un tr\u00e9sor de ${gain} pi\u00e8ces !`;
+        break;
+      }
+      case 'impot': {
+        const loss = Math.floor(team.money * 0.3);
+        newTeams[currentTeam] = { ...team, money: team.money - loss };
+        message = `\u{1F451} ${team.emoji} ${team.name} paie ${loss} pi\u00e8ces d'imp\u00f4t !`;
+        break;
+      }
+      case 'pariArgent': {
+        const diceResult = data?.diceValue;
+        if (diceResult && diceResult % 2 === 0) {
+          newTeams[currentTeam] = { ...team, money: team.money + 10 };
+          message = `\u{1F3B0} Pair ! ${team.emoji} ${team.name} gagne 10 pi\u00e8ces ! (mise doubl\u00e9e)`;
+        } else {
+          newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 10) };
+          message = `\u{1F3B0} Impair ! ${team.emoji} ${team.name} perd sa mise de 10 pi\u00e8ces !`;
+        }
+        break;
+      }
+      case 'marcheNoir': {
+        message = `\u{1F3AA} ${team.emoji} ${team.name} visite le march\u00e9 noir...`;
+        break;
+      }
+      case 'volArgent': {
+        const targetIndex = data?.targetIndex;
+        if (targetIndex != null && targetIndex >= 0 && targetIndex < teams.length) {
+          const target = teams[targetIndex];
+          const stolen = Math.min(10, target.money ?? 0);
+          newTeams[targetIndex] = { ...target, money: target.money - stolen };
+          newTeams[currentTeam] = { ...team, money: team.money + stolen };
+          message = `\u{1F977} ${team.emoji} ${team.name} vole ${stolen} pi\u00e8ces \u00e0 ${target.emoji} ${target.name} !`;
+        }
+        break;
+      }
+      case 'taxeCommune': {
+        for (let i = 0; i < newTeams.length; i++) {
+          newTeams[i] = { ...newTeams[i], money: Math.max(0, newTeams[i].money - 5) };
+        }
+        message = `\u{1F3E6} Taxe commune ! Toutes les \u00e9quipes perdent 5 pi\u00e8ces.`;
+        break;
+      }
+      case 'jackpot': {
+        const qResult = data?.questionResult;
+        if (qResult === true) {
+          newTeams[currentTeam] = { ...team, money: team.money + 30 };
+          message = `\u{1F3C6} Jackpot ! ${team.emoji} ${team.name} gagne 30 pi\u00e8ces !`;
+        } else {
+          newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 10) };
+          message = `\u{1F3C6} Rat\u00e9 ! ${team.emoji} ${team.name} perd 10 pi\u00e8ces.`;
+        }
+        break;
+      }
+      case 'banquier': {
+        const bonus = team.correct * 3;
+        newTeams[currentTeam] = { ...team, money: team.money + bonus };
+        message = `\u{1F3E6} Le banquier r\u00e9compense ${team.emoji} ${team.name} : +${bonus} pi\u00e8ces (${team.correct} bonnes r\u00e9ponses x3) !`;
+        break;
+      }
+
       default:
         message = `\u00c9v\u00e9nement appliqu\u00e9.`;
     }
@@ -764,6 +869,10 @@ export const useGameStore = create((set, get) => ({
     const power = POWERS[powerKey];
     if (!power) return;
 
+    // Check activation cost
+    const activationCost = power.activationCost || 0;
+    if (activationCost > 0 && team.money < activationCost) return;
+
     // Indice: only during question
     if (powerKey === 'indice') {
       if (!showQuestion || get().indiceUsed) return;
@@ -771,16 +880,19 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    // Relance: only after dice result, before landing processed
+    // Relance: only after dice result, during pendingLanding window
     if (powerKey === 'relance') {
-      if (!diceValue || showQuestion) return;
+      const { pendingLanding } = get();
+      if (!diceValue || showQuestion || !pendingLanding) return;
       get().useRelance();
       return;
     }
 
-    // Offensive powers: need target picker
+    // Offensive powers: need target picker (before rolling OR during pendingLanding)
     if (power.category === 'off') {
-      if (diceValue || showQuestion) return; // only before rolling
+      const { pendingLanding } = get();
+      if (showQuestion) return;
+      if (diceValue && !pendingLanding) return;
       set({ showTargetPicker: { powerKey } });
       return;
     }
@@ -792,40 +904,55 @@ export const useGameStore = create((set, get) => ({
     const question = showQuestion?.question;
     if (!question) return;
 
-    // Find 2 wrong answers to hide
+    const level = team.powers?.indice?.level ?? 1;
+
+    // Find wrong answers to hide
     const wrongIndices = question.a
       .map((_, i) => i)
       .filter((i) => i !== question.c);
-    // Shuffle and pick 2
+    // Shuffle
     for (let i = wrongIndices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [wrongIndices[i], wrongIndices[j]] = [wrongIndices[j], wrongIndices[i]];
     }
-    const hidden = wrongIndices.slice(0, 2);
+    const hideCount = level >= 3 ? wrongIndices.length : 2;
+    const hidden = wrongIndices.slice(0, hideCount);
 
-    // Consume charge
+    // Consume charge + deduct activation cost
     const newTeams = [...teams];
     const currentChargesIndice = team.powers?.indice?.charges ?? 0;
-    const newPowers = { ...team.powers, indice: { charges: currentChargesIndice - 1 } };
-    newTeams[currentTeam] = { ...team, powers: newPowers };
+    const cost = POWERS.indice.activationCost || 0;
+    const newPowers = { ...team.powers, indice: { ...team.powers.indice, charges: currentChargesIndice - 1 } };
+    newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
 
-    addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice ! 2 r\u00e9ponses \u00e9limin\u00e9es.`);
+    const eliminatedCount = level >= 3 ? 'toutes les mauvaises' : '2';
+    addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${eliminatedCount} r\u00e9ponses \u00e9limin\u00e9es.${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
     set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
+
+    // Level 2+: bonus time
+    if (level >= 2) {
+      set({ showQuestion: { ...get().showQuestion, bonusTime: 5 } });
+    }
   },
 
   useRelance: () => {
-    const { teams, currentTeam, board, addLog, preRollPos } = get();
+    const { teams, currentTeam, board, addLog, preRollPos, preRollValue } = get();
     const team = teams[currentTeam];
+    const level = team.powers?.relance?.level ?? 1;
+    const prevValue = preRollValue || 0;
 
-    // Consume charge
+    // Consume charge + deduct activation cost
     const newTeams = [...teams];
     const currentChargesRelance = team.powers?.relance?.charges ?? 0;
-    const newPowers = { ...team.powers, relance: { charges: currentChargesRelance - 1 } };
+    if (currentChargesRelance <= 0) return;
+    const cost = POWERS.relance.activationCost || 0;
+    if (cost > 0 && team.money < cost) return;
+    const newPowers = { ...team.powers, relance: { ...team.powers.relance, charges: currentChargesRelance - 1 } };
     // Restore position to before the roll
-    newTeams[currentTeam] = { ...team, powers: newPowers, pos: preRollPos || team.pos };
+    newTeams[currentTeam] = { ...team, powers: newPowers, pos: preRollPos || team.pos, money: team.money - cost };
 
-    addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance !`);
-    set({ teams: newTeams, diceValue: null, rolling: true });
+    addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
+    set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false });
 
     const finalValue = Math.floor(Math.random() * 6) + 1;
     let count = 0;
@@ -835,9 +962,14 @@ export const useGameStore = create((set, get) => ({
       if (count >= 10) {
         clearInterval(interval);
         set({ diceValue: finalValue, rolling: false });
-        // If re-rolled 1, advance 1 without power
-        addLog(`\u{1F3B2} Relance : ${finalValue} !`);
-        get().handleDiceResult(finalValue);
+
+        let effectiveValue;
+        if (level >= 3) effectiveValue = prevValue + finalValue;
+        else if (level >= 2) effectiveValue = Math.max(prevValue, finalValue);
+        else effectiveValue = finalValue;
+
+        addLog(`\u{1F3B2} Relance : ${finalValue} !${level >= 2 ? ` (effectif: ${effectiveValue})` : ''}`);
+        get().handleDiceResult(effectiveValue);
       }
     }, 80);
   },
@@ -851,21 +983,29 @@ export const useGameStore = create((set, get) => ({
     const target = teams[targetTeamIndex];
     const newTeams = [...teams];
 
-    // Consume charge
+    // Consume charge + deduct activation cost
     const currentChargesPower = team.powers?.[powerKey]?.charges ?? 0;
-    const newPowers = { ...team.powers, [powerKey]: { charges: currentChargesPower - 1 } };
-    newTeams[currentTeam] = { ...team, powers: newPowers };
+    const cost = POWERS[powerKey]?.activationCost || 0;
+    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentChargesPower - 1 } };
+    newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
 
     if (powerKey === 'foudre') {
-      const newPos = moveBack(board, target.pos, 3);
+      const level = team.powers?.foudre?.level ?? 1;
+      const reculAmount = level >= 3 ? 7 : level >= 2 ? 5 : 3;
+      const newPos = moveBack(board, target.pos, reculAmount);
       newTeams[targetTeamIndex] = { ...target, pos: newPos };
-      addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre sur ${target.emoji} ${target.name} ! Recul de 3 cases.`);
+      addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
     } else if (powerKey === 'sablier') {
-      newTeams[targetTeamIndex] = { ...target, sablierActif: true };
-      addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier sur ${target.emoji} ${target.name} ! Timer /2 au prochain tour.`);
+      const level = team.powers?.sablier?.level ?? 1;
+      const divisor = level >= 3 ? 4 : level >= 2 ? 3 : 2;
+      newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
+      addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level}) sur ${target.emoji} ${target.name} ! Timer /${divisor} au prochain tour.${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
     } else if (powerKey === 'double') {
-      newTeams[targetTeamIndex] = { ...target, doubleActive: true };
-      addLog(`\u2753 ${team.emoji} ${team.name} utilise Double sur ${target.emoji} ${target.name} ! Double question au prochain tour.`);
+      const level = team.powers?.double?.level ?? 1;
+      const questionCount = level >= 3 ? 3 : 2;
+      const noBonus = level === 2;
+      newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleCount: questionCount, doubleNoBonus: noBonus };
+      addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! ${questionCount} questions au prochain tour.${noBonus ? ' (sans bonus)' : ''}${cost > 0 ? ` (-${cost} \u{1F4B0})` : ''}`);
     }
 
     set({ teams: newTeams, showTargetPicker: null });
@@ -882,6 +1022,23 @@ export const useGameStore = create((set, get) => ({
   },
   closeShop: () => set({ showShop: false }),
 
+  buyNewPower: (powerKey) => {
+    const { teams, currentTeam, addLog } = get();
+    const team = teams[currentTeam];
+    const power = POWERS[powerKey];
+    if (!power) return;
+    const price = power.price;
+    if (team.money < price) return;
+    if (team.powers?.[powerKey]) return; // already owned
+
+    const newTeams = [...teams];
+    const newPowers = { ...team.powers, [powerKey]: { charges: 1, level: 1 } };
+    newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
+    addLog(`\u{1F6D2} ${team.emoji} ${team.name} d\u00e9bloque ${power.name} ! (-${price} \u{1F4B0})`);
+    set({ teams: newTeams });
+    saveGame(get());
+  },
+
   buyPowerCharge: (powerKey) => {
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
@@ -890,12 +1047,30 @@ export const useGameStore = create((set, get) => ({
 
     const newTeams = [...teams];
     const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
-    const newPowers = { ...team.powers, [powerKey]: { charges: currentCharges + 1 } };
+    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
     newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
 
     const pName = POWERS[powerKey]?.name || powerKey;
     addLog(`\u{1F6D2} ${team.emoji} ${team.name} ach\u00e8te 1 charge de ${pName} (${price} \u{1F4B0})`);
     set({ teams: newTeams });
+  },
+
+  upgradePowerLevel: (powerKey) => {
+    const { teams, currentTeam, addLog } = get();
+    const team = teams[currentTeam];
+    const power = POWERS[powerKey];
+    if (!power) return;
+    const currentLevel = team.powers?.[powerKey]?.level ?? 1;
+    if (currentLevel >= 3) return; // max level
+    const cost = power.upgradeCosts[currentLevel - 1]; // index 0 = lvl1->2, index 1 = lvl2->3
+    if (team.money < cost) return;
+
+    const newTeams = [...teams];
+    const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], level: currentLevel + 1 } };
+    newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
+    addLog(`\u2B06\uFE0F ${team.emoji} ${team.name} am\u00e9liore ${power.name} au niveau ${currentLevel + 1} ! (-${cost} \u{1F4B0})`);
+    set({ teams: newTeams });
+    saveGame(get());
   },
 
   // --- Turn management ---
@@ -906,8 +1081,10 @@ export const useGameStore = create((set, get) => ({
       currentTeam: (currentTeam + 1) % teams.length,
       diceValue: null,
       pendingMove: null,
+      pendingLanding: false,
       awaitingChoice: false,
       preRollPos: null,
+      preRollValue: null,
       showTargetPicker: null,
       showShop: false,
       indiceUsed: false,
@@ -925,6 +1102,7 @@ export const useGameStore = create((set, get) => ({
       rolling: false,
       diceValue: null,
       pendingMove: null,
+      pendingLanding: false,
       awaitingChoice: false,
       showQuestion: null,
       showEvent: null,
@@ -934,6 +1112,7 @@ export const useGameStore = create((set, get) => ({
       indiceUsed: false,
       indiceHidden: [],
       preRollPos: null,
+      preRollValue: null,
     });
   },
 
@@ -952,12 +1131,14 @@ export const useGameStore = create((set, get) => ({
     rolling: false,
     diceValue: null,
     pendingMove: null,
+    pendingLanding: false,
     awaitingChoice: false,
     showQuestion: null,
     showEvent: null,
     eventApplied: false,
     showTargetPicker: null,
     showShop: false,
+    showDiceModal: false,
     indiceUsed: false,
     indiceHidden: [],
     preRollPos: null,

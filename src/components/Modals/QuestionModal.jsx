@@ -44,13 +44,12 @@ export default function QuestionModal() {
     if (timeLeft <= 0) {
       soundWrong();
       setRevealed(true);
-      setTimeout(() => timeoutQuestion(), 2000);
       return;
     }
     if (timeLeft <= 5) soundTimer();
     const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
     return () => clearTimeout(timer);
-  }, [showQuestion, timeLeft, revealed, timeoutQuestion]);
+  }, [showQuestion, timeLeft, revealed]);
 
   const handleAnswer = useCallback((idx) => {
     if (revealed) return;
@@ -58,9 +57,16 @@ export default function QuestionModal() {
     setRevealed(true);
     if (idx === question?.c) soundCorrect();
     else soundWrong();
-    const tl = timeLeft;
-    setTimeout(() => answerQuestion(idx, tl), 2000);
-  }, [revealed, answerQuestion, question, timeLeft]);
+  }, [revealed, question]);
+
+  const handleContinue = useCallback(() => {
+    if (!revealed) return;
+    if (selected != null) {
+      answerQuestion(selected, timeLeft);
+    } else {
+      timeoutQuestion();
+    }
+  }, [revealed, selected, timeLeft, answerQuestion, timeoutQuestion]);
 
   const timerRatio = timeLeft / duration;
   const timerColor = timerRatio > 0.5 ? '#fff' : timerRatio > 0.2 ? '#f3c969' : '#e85d6b';
@@ -224,7 +230,7 @@ export default function QuestionModal() {
               background: 'var(--parch-50)',
             }}
           >
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {canUseIndice && !revealed && (
                 <button
                   onClick={() => usePower('indice')}
@@ -241,18 +247,36 @@ export default function QuestionModal() {
                   {"\u{1F4A1} Indice"} <span style={{ opacity: 0.6 }}>(x{team.powers.indice.charges})</span>
                 </button>
               )}
+              <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
+                {revealed && selected != null && selected === question.c ? (
+                  <strong style={{ color: '#2f9d5a' }}>{"Bonne r\u00e9ponse !"}</strong>
+                ) : revealed && selected != null ? (
+                  <strong style={{ color: '#c9472f' }}>{"Mauvaise r\u00e9ponse"}</strong>
+                ) : revealed ? (
+                  <strong style={{ color: '#c9472f' }}>{"Temps \u00e9coul\u00e9 !"}</strong>
+                ) : (
+                  <span>{"Choisis ta r\u00e9ponse"}</span>
+                )}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
-              {revealed && selected != null && selected === question.c ? (
-                <strong style={{ color: '#2f9d5a' }}>{"Bonne r\u00e9ponse !"}</strong>
-              ) : revealed && selected != null ? (
-                <strong style={{ color: '#c9472f' }}>{"Mauvaise r\u00e9ponse"}</strong>
-              ) : revealed ? (
-                <strong style={{ color: '#c9472f' }}>{"Temps \u00e9coul\u00e9 !"}</strong>
-              ) : (
-                <span>{"Choisis ta r\u00e9ponse"}</span>
-              )}
-            </div>
+            {revealed && (
+              <button
+                onClick={handleContinue}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '10px 22px', borderRadius: 14,
+                  background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))',
+                  border: 'none',
+                  fontSize: 15, fontWeight: 700, color: '#fff',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-display)',
+                  boxShadow: '0 3px 0 var(--gold-700), 0 4px 8px rgba(0,0,0,0.15)',
+                  textShadow: '0 1px 0 rgba(0,0,0,0.15)',
+                }}
+              >
+                Continuer
+              </button>
+            )}
           </div>
 
           {/* Explanation */}
