@@ -7,7 +7,7 @@ const defaultParams = {
   nbSections: 3,
   voieFinale: 'court-long',
   couloirsMix: 2,
-  eventsPerCouloir: 1,
+  eventEveryX: 3,
 };
 
 const minimalParams = {
@@ -16,7 +16,7 @@ const minimalParams = {
   nbSections: 2,
   voieFinale: 'aucune',
   couloirsMix: 0,
-  eventsPerCouloir: 0,
+  eventEveryX: 0,
 };
 
 const maxVoiesParams = {
@@ -25,7 +25,7 @@ const maxVoiesParams = {
   nbSections: 4,
   voieFinale: 'unique',
   couloirsMix: 3,
-  eventsPerCouloir: 2,
+  eventEveryX: 2,
 };
 
 const allParamSets = [
@@ -118,6 +118,51 @@ describe('generateBoard', () => {
           expect(nodeIds.has(nextId), `node "${id}" -> unknown "${nextId}"`).toBe(true);
         }
       }
+    });
+  });
+
+  const countByType = (nodes, type) =>
+    Object.values(nodes).filter((n) => n.type === type).length;
+
+  describe('event distribution (eventEveryX)', () => {
+    it('places no events when eventEveryX is 0', () => {
+      const { nodes } = generateBoard({ ...defaultParams, eventEveryX: 0 });
+      expect(countByType(nodes, 'event')).toBe(0);
+    });
+
+    it('places at least one event when eventEveryX >= 1', () => {
+      const { nodes } = generateBoard({ ...defaultParams, eventEveryX: 3 });
+      expect(countByType(nodes, 'event')).toBeGreaterThan(0);
+    });
+
+    it('produces more events with a smaller interval', () => {
+      const dense = generateBoard({ ...defaultParams, eventEveryX: 2 });
+      const sparse = generateBoard({ ...defaultParams, eventEveryX: 5 });
+      expect(countByType(dense.nodes, 'event')).toBeGreaterThan(
+        countByType(sparse.nodes, 'event')
+      );
+    });
+
+    it('leaves no long run of subject cases without an event along any path', () => {
+      const X = 3;
+      const { nodes } = generateBoard({ ...defaultParams, eventEveryX: X });
+      // Longest chain of consecutive subject cases (no event) reachable from depart.
+      // With "one event every X", a player should never cross many subject cases in a row.
+      let worst = 0;
+      const stack = [['depart', 0]];
+      const seen = new Set();
+      while (stack.length) {
+        const [id, run] = stack.pop();
+        const node = nodes[id];
+        const newRun = node.type === 'subject' ? run + 1 : 0;
+        if (newRun > worst) worst = newRun;
+        const key = `${id}:${newRun}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        for (const nx of node.next) stack.push([nx, newRun]);
+      }
+      // A voie has at most `casesParVoie` (4) cases; with X=3 the gap stays bounded.
+      expect(worst).toBeLessThanOrEqual(2 * X);
     });
   });
 

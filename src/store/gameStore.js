@@ -71,7 +71,7 @@ export const useGameStore = create((set, get) => ({
 
   boardParams: {
     casesParVoie: 4, nbVoies: 3, nbSections: 3,
-    voieFinale: 'court-long', couloirsMix: 2, eventsPerCouloir: 1,
+    voieFinale: 'court-long', couloirsMix: 2, eventEveryX: 3,
   },
   setBoardParam: (key, value) => {
     set({ boardParams: { ...get().boardParams, [key]: value } });
@@ -477,7 +477,7 @@ export const useGameStore = create((set, get) => ({
       enabledEvents: Object.keys(EVENTS),
       boardParams: {
         casesParVoie: 4, nbVoies: 3, nbSections: 3,
-        voieFinale: 'court-long', couloirsMix: 2, eventsPerCouloir: 1,
+        voieFinale: 'court-long', couloirsMix: 2, eventEveryX: 3,
       },
     });
   },

@@ -57,11 +57,16 @@ export default function BoardParams() {
 
       <div>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
-          {"\u00c9v\u00e9nements / section : "}<strong>{params.eventsPerCouloir}</strong>
+          {"\u00c9v\u00e9nements : "}
+          <strong>
+            {params.eventEveryX < 1
+              ? 'Aucun'
+              : `1 toutes les ${params.eventEveryX} cases`}
+          </strong>
         </div>
         <input
-          type="range" min={0} max={2} value={params.eventsPerCouloir}
-          onChange={(e) => setBoardParam('eventsPerCouloir', Number(e.target.value))}
+          type="range" min={0} max={6} value={params.eventEveryX}
+          onChange={(e) => setBoardParam('eventEveryX', Number(e.target.value))}
           style={{ accentColor: '#b8862c', width: '100%' }}
         />
       </div>

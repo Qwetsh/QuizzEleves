@@ -24,7 +24,7 @@ function shuffleArray(arr) {
  * @param {number} params.nbSections - nombre de sections (2-4)
  * @param {string} params.voieFinale - 'court-long' | 'unique' | 'aucune'
  * @param {number} params.couloirsMix - nombre de cases echauffement/inter-section (0-3)
- * @param {number} params.eventsPerCouloir - nombre de cases evenement par couloir (0-2)
+ * @param {number} params.eventEveryX - un evenement toutes les X cases (0 = aucun)
  * @returns {{ nodes: object, viewBox: { w: number, h: number } }}
  */
 export function generateBoard(params) {
@@ -34,7 +34,7 @@ export function generateBoard(params) {
     nbSections = 3,
     voieFinale = 'court-long',
     couloirsMix = 2,
-    eventsPerCouloir = 0,
+    eventEveryX = 3,
   } = params;
 
   const nodes = {};
@@ -162,16 +162,48 @@ export function generateBoard(params) {
     nodes[prevId].next.push('arrivee');
   }
 
-  // --- Distribution aleatoire des evenements sur les cases subject ---
-  const totalCorridors = 1 + Math.max(0, nbSections - 1); // warm + inter-sections
-  const totalEvents = eventsPerCouloir * totalCorridors;
-  if (totalEvents > 0) {
-    const subjectIds = Object.keys(nodes).filter(
-      (id) => nodes[id].type === 'subject'
-    );
-    const picked = shuffleArray(subjectIds).slice(0, totalEvents);
-    picked.forEach((id) => {
-      nodes[id].type = 'event';
+  // --- Distribution reguliere des evenements : un evenement toutes les X cases ---
+  // On reconstruit chaque voie/couloir comme une chaine lineaire de cases subject,
+  // puis on marque une case sur X. Cela garantit une repartition uniforme le long
+  // du parcours (pas de longue section sans evenement), contrairement a un tirage
+  // aleatoire global qui laissait des trous.
+  if (eventEveryX >= 1) {
+    const isSubj = (id) => nodes[id] && nodes[id].type === 'subject';
+    const preds = {};
+    for (const [id, n] of Object.entries(nodes)) {
+      for (const nx of n.next) {
+        if (!preds[nx]) preds[nx] = [];
+        preds[nx].push(id);
+      }
+    }
+
+    // Une chaine commence a une case subject dont aucun predecesseur n'est subject.
+    const chains = [];
+    for (const id of Object.keys(nodes)) {
+      if (!isSubj(id)) continue;
+      if ((preds[id] || []).some(isSubj)) continue;
+      const chain = [];
+      let cur = id;
+      while (cur && isSubj(cur)) {
+        chain.push(cur);
+        const nextSubj = nodes[cur].next.filter(isSubj);
+        cur = nextSubj.length === 1 ? nextSubj[0] : null;
+      }
+      chains.push(chain);
+    }
+
+    // Place un evenement toutes les X cases dans chaque chaine. Le decalage de
+    // depart (ci % eventEveryX) evite que les evenements s'alignent tous sur la
+    // meme colonne entre voies paralleles.
+    chains.forEach((chain, ci) => {
+      let step = ci % eventEveryX;
+      for (const id of chain) {
+        step++;
+        if (step >= eventEveryX) {
+          nodes[id].type = 'event';
+          step = 0;
+        }
+      }
     });
   }
 
