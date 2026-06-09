@@ -8,7 +8,7 @@ import { EVENTS } from '../data/events.js';
 export function pickRandomEvent(enabledKeys) {
   const pool = enabledKeys
     .filter((k) => EVENTS[k])
-    .map((k) => ({ key: k, event: EVENTS[k], weight: EVENTS[k].weight }));
+    .map((k) => ({ key: k, event: EVENTS[k], weight: EVENTS[k].weight ?? 1 }));
 
   if (pool.length === 0) return null;
 

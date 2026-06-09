@@ -43,4 +43,20 @@ describe('pickRandomEvent', () => {
     expect(counts.oubli).toBeLessThan(iterations * 0.4);
     expect(counts.oubli).toBeGreaterThan(iterations * 0.05);
   });
+
+  it('treats events without a weight as weight 1 (no NaN degeneration)', () => {
+    // 'tresor' is a money event defined without a `weight` property.
+    // Before the fix, NaN total weight made the picker always fall back to pool[0].
+    const counts = { rejouer: 0, tresor: 0 };
+    const iterations = 1000;
+
+    for (let i = 0; i < iterations; i++) {
+      const result = pickRandomEvent(['rejouer', 'tresor']);
+      counts[result.key]++;
+    }
+
+    // Both equal-weight events should be picked a comparable number of times.
+    expect(counts.tresor).toBeGreaterThan(iterations * 0.3);
+    expect(counts.rejouer).toBeGreaterThan(iterations * 0.3);
+  });
 });
