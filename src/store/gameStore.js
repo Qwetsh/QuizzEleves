@@ -47,6 +47,7 @@ const TURN_RESET = {
   indiceHidden: [],
   freeActivation: false,
   showChargePicker: false,
+  movePath: null,
 };
 
 export const useGameStore = create((set, get) => ({
@@ -113,6 +114,8 @@ export const useGameStore = create((set, get) => ({
   showShop: false,
   preRollPos: null,
   preRollValue: null,
+  // Animation: { teamIndex, waypoints: [{x,y},...], type: 'forward'|'back' }
+  movePath: null,
 
   // --- Power selection ---
   powerSetupIndex: 0,
@@ -191,7 +194,9 @@ export const useGameStore = create((set, get) => ({
     const result = moveForward(board, team.pos, value);
     const newTeams = [...teams];
     newTeams[currentTeam] = { ...team, pos: result.finalPos };
-    set({ teams: newTeams });
+    // Build animation waypoints from path
+    const waypoints = result.path.map((id) => ({ x: board[id].x, y: board[id].y }));
+    set({ teams: newTeams, movePath: { teamIndex: currentTeam, waypoints, type: 'forward' } });
 
     if (result.stoppedAtJunction) {
       set({ awaitingChoice: true, pendingMove: { remaining: result.remaining } });
@@ -224,7 +229,8 @@ export const useGameStore = create((set, get) => ({
       const result = moveForward(board, nextNodeId, pendingMove.remaining - 1);
       const updatedTeams = [...get().teams];
       updatedTeams[currentTeam] = { ...updatedTeams[currentTeam], pos: result.finalPos };
-      set({ teams: updatedTeams, pendingMove: null });
+      const waypoints = result.path.map((id) => ({ x: board[id].x, y: board[id].y }));
+      set({ teams: updatedTeams, pendingMove: null, movePath: { teamIndex: currentTeam, waypoints, type: 'forward' } });
 
       if (result.stoppedAtJunction) {
         set({ awaitingChoice: true, pendingMove: { remaining: result.remaining } });
@@ -331,7 +337,7 @@ export const useGameStore = create((set, get) => ({
       newTeams[currentTeam] = { ...team, correct: team.correct + 1, money: team.money + gain };
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
     } else {
-      const { updatedTeam, logMessage } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
+      const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
       newTeams[currentTeam] = updatedTeam;
       addLog(logMessage);
 
@@ -341,7 +347,8 @@ export const useGameStore = create((set, get) => ({
         addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
       }
 
-      set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+      const backPath = path ? { teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' } : null;
+      set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
       get().nextTurn();
       return;
     }
@@ -373,17 +380,17 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
     const newTeams = [...teams];
 
-    const { updatedTeam, logMessage } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
+    const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
     newTeams[currentTeam] = updatedTeam;
     addLog(logMessage);
 
-    // Double/triple: timeout stops immediately, clear double state
     if (team.doubleActive) {
       newTeams[currentTeam] = { ...newTeams[currentTeam], doubleActive: false, doubleCount: 0, doubleNoBonus: false };
       addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
     }
 
-    set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+    const backPath = path ? { teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' } : null;
+    set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
     get().nextTurn();
   },
 
@@ -402,6 +409,9 @@ export const useGameStore = create((set, get) => ({
     get().nextTurn();
     if (get().phase === 'game') saveGame(get());
   },
+
+  // --- Animation ---
+  clearMovePath: () => set({ movePath: null }),
 
   // --- Confirm landing (player done using powers) ---
   confirmLanding: () => {

@@ -73,10 +73,13 @@ export default function QuestionModal() {
   const isOpen = !!(showQuestion && question);
   const bgColor = subjectInfo.color || '#888';
 
+  const isCorrect = revealed && selected != null && selected === question?.c;
+  const isWrong = revealed && (selected == null || selected !== question?.c);
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <ModalOverlay className="max-w-[640px]">
+        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''}`}>
           {/* Quiz Header */}
           <div
             className="relative overflow-hidden text-center text-white"

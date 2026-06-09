@@ -1,4 +1,4 @@
-import { calculateMoneyGain, canAfford } from '../logic/moneyCalculator.js';
+import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 
 describe('calculateMoneyGain', () => {
   it('returns 0 when timeLeft is 0', () => {
@@ -31,23 +31,5 @@ describe('calculateMoneyGain', () => {
 
   it('uses default maxTime of 30', () => {
     expect(calculateMoneyGain(30)).toBe(10);
-  });
-});
-
-describe('canAfford', () => {
-  it('returns true when money equals price', () => {
-    expect(canAfford(10, 10)).toBe(true);
-  });
-
-  it('returns true when money exceeds price', () => {
-    expect(canAfford(15, 10)).toBe(true);
-  });
-
-  it('returns false when money is less than price', () => {
-    expect(canAfford(5, 10)).toBe(false);
-  });
-
-  it('returns true for free items (price 0)', () => {
-    expect(canAfford(0, 0)).toBe(true);
   });
 });

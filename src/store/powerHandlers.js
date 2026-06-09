@@ -119,7 +119,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   if (powerKey === 'foudre') {
     const level = team.powers?.foudre?.level ?? 1;
     const reculAmount = level >= 3 ? 7 : level >= 2 ? 5 : 3;
-    newTeams[targetTeamIndex] = { ...target, pos: moveBack(board, target.pos, reculAmount) };
+    newTeams[targetTeamIndex] = { ...target, pos: moveBack(board, target.pos, reculAmount).finalPos };
     addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.`);
   } else if (powerKey === 'sablier') {
     const level = team.powers?.sablier?.level ?? 1;

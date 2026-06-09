@@ -72,6 +72,7 @@ export default function PowerButtons() {
             fontWeight: 700,
             cursor: 'pointer',
             boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.15)',
+            animation: 'btn-pulse 2s ease-in-out infinite',
             transition: 'all 100ms ease',
           }}
         >

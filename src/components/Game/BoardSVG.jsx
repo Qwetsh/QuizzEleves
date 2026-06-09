@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { lighten, darken } from '../../utils/colors';
@@ -26,16 +26,54 @@ const NODE_RADIUS = {
   subject: 46,
 };
 
-const pawnTransition = { type: 'spring', damping: 18, stiffness: 120, mass: 0.8 };
+// Step-by-step pawn animation
+const STEP_DURATION = 220; // ms per step
 
-const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive }) {
+const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, movePath, onMoveComplete }) {
+  const [animPos, setAnimPos] = useState({ x: px, y: py });
+  const animating = useRef(false);
+
+  // Animate through waypoints when movePath targets this pawn
+  useEffect(() => {
+    if (!movePath || movePath.teamIndex !== idx || movePath.waypoints.length < 2) {
+      setAnimPos({ x: px, y: py });
+      return;
+    }
+
+    animating.current = true;
+    const waypoints = movePath.waypoints;
+    let step = 0;
+    setAnimPos({ x: waypoints[0].x, y: waypoints[0].y });
+
+    const interval = setInterval(() => {
+      step++;
+      if (step >= waypoints.length) {
+        clearInterval(interval);
+        animating.current = false;
+        if (onMoveComplete) onMoveComplete();
+        return;
+      }
+      setAnimPos({ x: waypoints[step].x, y: waypoints[step].y });
+    }, STEP_DURATION);
+
+    return () => clearInterval(interval);
+  }, [movePath, idx, onMoveComplete]);
+
+  // When not animating, sync to final position
+  useEffect(() => {
+    if (!animating.current) {
+      setAnimPos({ x: px, y: py });
+    }
+  }, [px, py]);
+
+  const isBack = movePath?.teamIndex === idx && movePath?.type === 'back';
+
   return (
     <motion.g
-      animate={{ x: px, y: py }}
-      transition={pawnTransition}
-      style={{ x: px, y: py }}
+      animate={{ x: animPos.x, y: animPos.y }}
+      transition={{ type: 'spring', damping: 22, stiffness: 180, mass: 0.6 }}
     >
-      {isActive && (
+      {isActive && !isBack && (
         <motion.circle
           cx={0} cy={0} r={30}
           fill="none" stroke={team.color} strokeWidth={3.5}
@@ -44,9 +82,18 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive }) {
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}
+      {isBack && (
+        <motion.circle
+          cx={0} cy={0} r={30}
+          fill="none" stroke="#c9472f" strokeWidth={3.5}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.7, 0], scale: [0.8, 1.2, 0.8] }}
+          transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
       <motion.circle
         cx={0} cy={0} r={24}
-        fill="white" stroke={team.color}
+        fill="white" stroke={isBack ? '#c9472f' : team.color}
         strokeWidth={isActive ? 5 : 3.5}
         filter={isActive ? 'url(#glow-active)' : undefined}
         whileHover={{ scale: 1.15 }}
@@ -74,6 +121,8 @@ function ChoiceHighlight({ cx, cy, r }) {
   );
 }
 
+// Camera spring config
+const CAMERA_SPRING = { damping: 25, stiffness: 80, mass: 1 };
 
 export default function BoardSVG() {
   const board = useGameStore((s) => s.board);
@@ -82,7 +131,13 @@ export default function BoardSVG() {
   const awaitingChoice = useGameStore((s) => s.awaitingChoice);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const chooseJunction = useGameStore((s) => s.chooseJunction);
+  const movePath = useGameStore((s) => s.movePath);
+  const clearMovePath = useGameStore((s) => s.clearMovePath);
 
+  const containerRef = useRef(null);
+  const svgRef = useRef(null);
+
+  // Compute pawn target positions (final, for when not animating)
   const pawnPositions = useMemo(() => {
     if (!board || !teams.length) return [];
     const groups = {};
@@ -104,6 +159,28 @@ export default function BoardSVG() {
       };
     });
   }, [board, teams]);
+
+  // Camera follow: scroll to active team's pawn
+  useEffect(() => {
+    if (!board || !teams.length || !containerRef.current || !svgRef.current) return;
+    const team = teams[currentTeam];
+    if (!team) return;
+    const node = board[team.pos];
+    if (!node) return;
+
+    const container = containerRef.current;
+    const svg = svgRef.current;
+    const svgWidth = svg.clientWidth || svg.getBoundingClientRect().width;
+    const containerWidth = container.clientWidth;
+
+    // Convert node.x from viewBox coords to pixel coords
+    const scale = svgWidth / viewBox.w;
+    const targetPixelX = node.x * scale;
+
+    // Center the pawn in the container
+    const scrollTarget = targetPixelX - containerWidth / 2;
+    container.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
+  }, [board, teams, currentTeam, viewBox]);
 
   const nodeColors = useMemo(() => {
     if (!board) return {};
@@ -134,18 +211,24 @@ export default function BoardSVG() {
     return set;
   }, [awaitingChoice, currentTeam, board, teams]);
 
+  const onMoveComplete = useCallback(() => {
+    clearMovePath();
+  }, [clearMovePath]);
+
   if (!board) return null;
 
   const entries = Object.entries(board);
 
   return (
     <div
+      ref={containerRef}
       className="absolute inset-0 overflow-auto"
       style={{
         background: 'radial-gradient(ellipse at 50% 30%, rgba(255,240,194,0.55), transparent 55%), radial-gradient(ellipse at 20% 80%, rgba(91,140,58,0.10), transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(45,140,110,0.10), transparent 50%)',
       }}
     >
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${viewBox.w} ${viewBox.h}`}
         className="block"
         style={{ minWidth: Math.max(1200, Math.round(viewBox.w / 1.2)) + 'px' }}
@@ -258,6 +341,8 @@ export default function BoardSVG() {
               px={pos.px}
               py={pos.py}
               isActive={idx === currentTeam}
+              movePath={movePath}
+              onMoveComplete={onMoveComplete}
             />
           );
         })}

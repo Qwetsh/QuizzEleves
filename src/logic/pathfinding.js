@@ -25,22 +25,23 @@ export function buildPredecessors(nodes) {
  */
 export function moveForward(nodes, currentPos, steps) {
   let pos = currentPos;
+  const path = [currentPos];
 
   for (let i = 0; i < steps; i++) {
     const node = nodes[pos];
     if (!node || node.next.length === 0) break;
 
-    // Si jonction avec choix (>1 next) et on n'est pas au premier pas
     if (node.next.length > 1 && i > 0) {
-      return { finalPos: pos, stoppedAtJunction: true, remaining: steps - i };
+      return { finalPos: pos, stoppedAtJunction: true, remaining: steps - i, path };
     }
 
     pos = node.next[0];
+    path.push(pos);
 
     if (nodes[pos].type === 'arrivee') break;
   }
 
-  return { finalPos: pos, stoppedAtJunction: false, remaining: 0 };
+  return { finalPos: pos, stoppedAtJunction: false, remaining: 0, path };
 }
 
 /**
@@ -57,12 +58,14 @@ export function moveBack(nodes, currentPos, steps, preds) {
   if (!preds) preds = buildPredecessors(nodes);
 
   let pos = currentPos;
+  const path = [currentPos];
   for (let i = 0; i < steps; i++) {
     const p = preds[pos];
     if (!p || p.length === 0) break;
     pos = p[0];
+    path.push(pos);
   }
-  return pos;
+  return { finalPos: pos, path };
 }
 
 /**

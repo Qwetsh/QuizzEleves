@@ -64,25 +64,25 @@ describe('moveForward', () => {
 describe('moveBack', () => {
   it('moves backward by the given number of steps', () => {
     const preds = buildPredecessors(testBoard);
-    const pos = moveBack(testBoard, 'b', 1, preds);
-    expect(pos).toBe('a');
+    const { finalPos } = moveBack(testBoard, 'b', 1, preds);
+    expect(finalPos).toBe('a');
   });
 
   it('moves multiple steps backward', () => {
     const preds = buildPredecessors(testBoard);
-    const pos = moveBack(testBoard, 'b', 2, preds);
-    expect(pos).toBe('depart');
+    const { finalPos } = moveBack(testBoard, 'b', 2, preds);
+    expect(finalPos).toBe('depart');
   });
 
   it('stops at depart (no predecessor)', () => {
     const preds = buildPredecessors(testBoard);
-    const pos = moveBack(testBoard, 'a', 5, preds);
-    expect(pos).toBe('depart');
+    const { finalPos } = moveBack(testBoard, 'a', 5, preds);
+    expect(finalPos).toBe('depart');
   });
 
   it('builds predecessors automatically if not provided', () => {
-    const pos = moveBack(testBoard, 'b', 1);
-    expect(pos).toBe('a');
+    const { finalPos } = moveBack(testBoard, 'b', 1);
+    expect(finalPos).toBe('a');
   });
 });
 

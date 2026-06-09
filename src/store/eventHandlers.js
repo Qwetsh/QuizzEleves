@@ -150,7 +150,7 @@ export function applyEventEffect(set, get) {
 
   switch (key) {
     case 'recul': {
-      const newPos = moveBack(board, team.pos, 2);
+      const { finalPos: newPos } = moveBack(board, team.pos, 2);
       newTeams[currentTeam] = { ...team, pos: newPos };
       message = `${team.emoji} ${team.name} recule de 2 cases !`;
       break;
@@ -189,7 +189,7 @@ export function applyEventEffect(set, get) {
     case 'tempete': {
       for (let i = 0; i < teams.length; i++) {
         if (i === currentTeam) continue;
-        newTeams[i] = { ...newTeams[i], pos: moveBack(board, newTeams[i].pos, 1) };
+        newTeams[i] = { ...newTeams[i], pos: moveBack(board, newTeams[i].pos, 1).finalPos };
       }
       message = `\u{1F32A}\uFE0F Temp\u00eate ! Toutes les autres \u00e9quipes reculent de 1 case.`;
       break;
@@ -208,8 +208,8 @@ export function applyEventEffect(set, get) {
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         message = `\u{1F3B0} ${dv} ! Avance de ${dv * 2} cases (double) !`;
       } else {
-        const newPos = moveBack(board, team.pos, dv);
-        newTeams[currentTeam] = { ...team, pos: newPos };
+        const { finalPos: newPos2 } = moveBack(board, team.pos, dv);
+        newTeams[currentTeam] = { ...team, pos: newPos2 };
         message = `\u{1F3B0} ${dv}... Recule de ${dv} cases !`;
       }
       break;
@@ -218,8 +218,8 @@ export function applyEventEffect(set, get) {
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        const newPos = moveBack(board, target.pos, 3);
-        newTeams[ti] = { ...target, pos: newPos };
+        const { finalPos: newPos3 } = moveBack(board, target.pos, 3);
+        newTeams[ti] = { ...target, pos: newPos3 };
         message = `\u26A1 ${target.emoji} ${target.name} recule de 3 cases !`;
       }
       break;
@@ -228,8 +228,8 @@ export function applyEventEffect(set, get) {
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        newTeams[currentTeam] = { ...team, pos: moveBack(board, team.pos, 2) };
-        newTeams[ti] = { ...target, pos: moveBack(board, target.pos, 4) };
+        newTeams[currentTeam] = { ...team, pos: moveBack(board, team.pos, 2).finalPos };
+        newTeams[ti] = { ...target, pos: moveBack(board, target.pos, 4).finalPos };
         message = `\u{1F91D} ${team.emoji} recule de 2, ${target.emoji} recule de 4 !`;
       }
       break;
@@ -280,10 +280,10 @@ export function applyEventEffect(set, get) {
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
         if (correct) {
-          newTeams[currentTeam] = { ...team, pos: moveBack(board, team.pos, 2) };
+          newTeams[currentTeam] = { ...team, pos: moveBack(board, team.pos, 2).finalPos };
           message = `\u2694\uFE0F ${target.emoji} r\u00e9ussit le duel ! ${team.emoji} recule de 2.`;
         } else {
-          newTeams[ti] = { ...target, pos: moveBack(board, target.pos, 2) };
+          newTeams[ti] = { ...target, pos: moveBack(board, target.pos, 2).finalPos };
           message = `\u2694\uFE0F ${target.emoji} \u00e9choue ! ${target.emoji} recule de 2.`;
         }
       }
@@ -296,7 +296,7 @@ export function applyEventEffect(set, get) {
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         message = `\u{1F4B0} Pari gagn\u00e9 ! ${team.emoji} avance de 3 cases !`;
       } else {
-        newTeams[currentTeam] = { ...team, pos: moveBack(board, team.pos, 3) };
+        newTeams[currentTeam] = { ...team, pos: moveBack(board, team.pos, 3).finalPos };
         message = `\u{1F4B0} Pari perdu ! ${team.emoji} recule de 3 cases.`;
       }
       break;

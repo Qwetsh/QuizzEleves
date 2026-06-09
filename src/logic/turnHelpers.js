@@ -22,10 +22,11 @@ export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse'
       logMessage: `\u274C ${reason} ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`,
     };
   }
-  const newPos = moveBack(board, team.pos, 2);
+  const { finalPos, path } = moveBack(board, team.pos, 2);
   return {
-    updatedTeam: { ...team, wrong: team.wrong + 1, pos: newPos },
+    updatedTeam: { ...team, wrong: team.wrong + 1, pos: finalPos },
     logMessage: `\u274C ${reason} ! Recul de 2 cases.`,
+    path,
   };
 }
 
