@@ -27,7 +27,25 @@ export function pickQuestion(questions, askedSet) {
   const idx = candidates[Math.floor(Math.random() * candidates.length)];
   newAsked.add(idx);
 
-  return { question: questions[idx], index: idx, newAsked };
+  return { question: shuffleAnswers(questions[idx]), index: idx, newAsked };
+}
+
+/**
+ * Renvoie une copie de la question dont l'ordre des reponses est melange,
+ * en recalculant l'index `c` de la bonne reponse.
+ * Evite que la bonne reponse soit toujours a la meme position (ex: en haut a droite).
+ *
+ * @param {{ a: string[], c: number }} question
+ * @returns {object} question avec `a` melange et `c` mis a jour
+ */
+export function shuffleAnswers(question) {
+  if (!question || !Array.isArray(question.a)) return question;
+  const order = shuffleArray(question.a.map((_, i) => i));
+  return {
+    ...question,
+    a: order.map((i) => question.a[i]),
+    c: order.indexOf(question.c),
+  };
 }
 
 /**

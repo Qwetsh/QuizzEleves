@@ -1,4 +1,4 @@
-import { pickQuestion } from '../logic/questionPicker.js';
+import { pickQuestion, shuffleAnswers } from '../logic/questionPicker.js';
 
 const testQuestions = [
   { text: 'Q1', answer: 'A1' },
@@ -50,5 +50,34 @@ describe('pickQuestion', () => {
     expect(result.newAsked.has(result.index)).toBe(true);
     // original set should NOT be mutated
     expect(askedSet.size).toBe(0);
+  });
+});
+
+describe('shuffleAnswers', () => {
+  const q = { q: 'Capitale de la France ?', a: ['Lyon', 'Paris', 'Nice', 'Lille'], c: 1, e: 'x' };
+
+  it('keeps the correct answer text aligned with the new index', () => {
+    for (let i = 0; i < 200; i++) {
+      const s = shuffleAnswers(q);
+      expect(s.a[s.c]).toBe('Paris');
+      expect([...s.a].sort()).toEqual([...q.a].sort());
+    }
+  });
+
+  it('varies the position of the correct answer across picks', () => {
+    const positions = new Set();
+    for (let i = 0; i < 200; i++) positions.add(shuffleAnswers(q).c);
+    expect(positions.size).toBeGreaterThan(1);
+  });
+
+  it('does not mutate the original question', () => {
+    shuffleAnswers(q);
+    expect(q.a).toEqual(['Lyon', 'Paris', 'Nice', 'Lille']);
+    expect(q.c).toBe(1);
+  });
+
+  it('returns the question unchanged when it has no answers array', () => {
+    const weird = { text: 'no answers' };
+    expect(shuffleAnswers(weird)).toBe(weird);
   });
 });
