@@ -58,6 +58,9 @@ export const useGameStore = create((set, get) => ({
   phase: 'setup',
   setPhase: (phase) => set({ phase }),
 
+  // Bac a sable dev : partie simulee qui ne touche pas a la sauvegarde
+  devSandbox: false,
+
   // --- Setup state ---
   level: 'cycle4',
   setLevel: (level) => set({ level }),
@@ -136,6 +139,7 @@ export const useGameStore = create((set, get) => ({
     const teams = setupTeams.map((t) => ({ ...t, pos: 'depart', powers: {} }));
     const questions = getQuestions(level);
     set({
+      devSandbox: false,
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       ...TURN_RESET, movePath: null,
@@ -447,6 +451,31 @@ export const useGameStore = create((set, get) => ({
     get().handleLanding();
   },
 
+  // --- Dev : simulateur de combat (localhost uniquement, voir Setup) ---
+  devStartFight: (subject, forceDefault = false) => {
+    const { setupTeams, boardParams, level } = get();
+    const { nodes, viewBox } = generateBoard(boardParams);
+    // Deux equipes de test, equipees pour rendre la recompense interessante
+    const teams = setupTeams.slice(0, 2).map((t) => ({
+      ...t,
+      pos: 'depart',
+      money: 25,
+      powerDef: 'bouclier',
+      powerOff: 'foudre',
+      powers: { bouclier: { charges: 2, level: 1 }, foudre: { charges: 2, level: 1 } },
+    }));
+    const questions = getQuestions(level);
+    set({
+      devSandbox: true,
+      phase: 'game', teams, board: nodes, viewBox, questions,
+      currentTeam: 0, finished: false, askedQuestions: {}, log: [],
+      ...TURN_RESET, movePath: null,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false,
+    });
+    fightH.startFight(set, get, 1, subject);
+    if (forceDefault) set({ showFight: { ...get().showFight, forceDefault: true } });
+  },
+
   // --- Fight (delegated) ---
   fightBegin: () => fightH.fightBegin(set, get),
   fightRoundWin: (side) => fightH.fightRoundWin(set, get, side),
@@ -502,6 +531,7 @@ export const useGameStore = create((set, get) => ({
     if (!saved) return;
     set({
       ...saved,
+      devSandbox: false,
       rolling: false,
       ...TURN_RESET,
       movePath: null,
@@ -511,8 +541,10 @@ export const useGameStore = create((set, get) => ({
 
   // --- Reset ---
   reset: () => {
-    clearSave();
+    // En bac a sable dev, ne pas effacer la sauvegarde de la vraie partie
+    if (!get().devSandbox) clearSave();
     set({
+      devSandbox: false,
       phase: 'setup', teams: [], currentTeam: 0, board: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
       rolling: false, ...TURN_RESET, movePath: null,

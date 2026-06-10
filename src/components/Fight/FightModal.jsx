@@ -3,7 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
-import { getMinigame } from './minigames';
+import { getMinigame, getDefaultMinigame } from './minigames';
+
+// Le simulateur dev peut forcer le duel generique via fight.forceDefault
+function resolveMinigame(fight) {
+  return fight.forceDefault ? getDefaultMinigame() : getMinigame(fight.subject);
+}
 import { soundEvent } from '../../logic/sounds';
 
 const DICE_FACES = [null, '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -53,7 +58,7 @@ export default function FightModal() {
 function VersusScreen({ fight, attacker, defender }) {
   const fightBegin = useGameStore((s) => s.fightBegin);
   const subjectInfo = SUBJECTS[fight.subject] || {};
-  const minigame = getMinigame(fight.subject);
+  const minigame = resolveMinigame(fight);
 
   // Avance automatiquement apres la presentation
   useEffect(() => {
@@ -173,7 +178,7 @@ function WinStars({ count }) {
 
 function MinigameStage({ fight, attacker, defender }) {
   const fightRoundWin = useGameStore((s) => s.fightRoundWin);
-  const minigame = getMinigame(fight.subject);
+  const minigame = resolveMinigame(fight);
   const { Component, persistent } = minigame;
 
   return (

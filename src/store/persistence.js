@@ -11,6 +11,8 @@ const SAVE_FIELDS = [
  * askedQuestions values are Sets — serialize them as arrays.
  */
 export function saveGame(state) {
+  // Bac a sable dev (simulateur de combat) : ne jamais ecraser la vraie partie
+  if (state.devSandbox) return;
   try {
     const data = {};
     for (const key of SAVE_FIELDS) {

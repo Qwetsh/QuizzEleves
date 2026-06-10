@@ -62,3 +62,8 @@ const DEFAULT_MINIGAME = {
 export function getMinigame(subject) {
   return MINIGAMES[subject] || DEFAULT_MINIGAME;
 }
+
+// Le duel generique (utilise par le simulateur dev pour tester le fallback)
+export function getDefaultMinigame() {
+  return DEFAULT_MINIGAME;
+}

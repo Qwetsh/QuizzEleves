@@ -2,11 +2,52 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { loadGame } from '../../store/persistence';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { getMinigame, getDefaultMinigame } from '../Fight/minigames';
 import LevelSelect from './LevelSelect';
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
+
+// Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
+// Lance un duel direct entre les deux premières équipes du setup, sans toucher
+// à la sauvegarde (bac à sable). Quitter : bouton ✕ du jeu.
+function DevFightPanel() {
+  const devStartFight = useGameStore((s) => s.devStartFight);
+  return (
+    <div className="panel" style={{ border: '2px dashed #c9472f', background: 'rgba(201,71,47,0.04)' }}>
+      <div className="field-label" style={{ color: '#c9472f' }}>
+        {"\u{1F6E0}️ Dev — simulateur de combat (localhost)"}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 10 }}>
+        Duel direct entre les 2 premières équipes ci-dessus. La sauvegarde n'est pas touchée — quitte avec ✕.
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {SUBJECT_KEYS.map((key) => {
+          const s = SUBJECTS[key];
+          const mg = getMinigame(key);
+          return (
+            <button
+              key={key}
+              onClick={() => devStartFight(key)}
+              className="btn btn--ghost btn--sm"
+              style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+            >
+              {s.icon} {mg.name}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => devStartFight(SUBJECT_KEYS[Math.floor(Math.random() * SUBJECT_KEYS.length)], true)}
+          className="btn btn--ghost btn--sm"
+          style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+        >
+          {"⚡"} {getDefaultMinigame().name} (générique)
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Setup() {
   const startGame = useGameStore((s) => s.startGame);
@@ -86,6 +127,7 @@ export default function Setup() {
           <div className="panel">
             <EventsChecklist />
           </div>
+          {import.meta.env.DEV && <DevFightPanel />}
         </div>
 
         {/* Right column */}
