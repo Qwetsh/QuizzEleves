@@ -83,7 +83,7 @@ export default function GeoDuel({ attacker, defender, onRoundWin }) {
     const pool = remaining.length ? remaining : GEO_PLACES;
     const place = shuffle(pool)[0];
     const { x, y } = lonLatToXY(place.lon, place.lat);
-    return { id: place.name, label: place.name, x, y, photo: photoUrl(place.photo) };
+    return { id: place.name, label: place.name, x, y, photo: photoUrl(place.photo), showName: place.showName };
   };
 
   const handleRoundEnd = ({ pA, pB }) => {

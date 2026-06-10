@@ -52,9 +52,10 @@ export const GEO_PLACES = [
   { name: 'La Cité interdite (Pékin)', lat: 39.92, lon: 116.40, photo: 'cite-interdite' },
   { name: 'La porte de l\'Inde (Mumbai)', lat: 18.92, lon: 72.83, photo: 'mumbai' },
   { name: 'Hollywood (Los Angeles)', lat: 34.13, lon: -118.32, photo: 'hollywood' },
-  { name: 'Le canal de Suez (Égypte)', lat: 30.45, lon: 32.35, photo: 'canal-suez' },
-  { name: 'Le canal de Panamá', lat: 9.08, lon: -79.68, photo: 'canal-panama' },
-  { name: 'Le détroit de Gibraltar', lat: 35.95, lon: -5.60, photo: 'gibraltar' },
+  // Canaux et detroits : la photo seule n'est pas parlante, le nom est affiche
+  { name: 'Le canal de Suez (Égypte)', lat: 30.45, lon: 32.35, photo: 'canal-suez', showName: true },
+  { name: 'Le canal de Panamá', lat: 9.08, lon: -79.68, photo: 'canal-panama', showName: true },
+  { name: 'Le détroit de Gibraltar', lat: 35.95, lon: -5.60, photo: 'gibraltar', showName: true },
   { name: 'Le port de Rotterdam (Pays-Bas)', lat: 51.95, lon: 4.14, photo: 'rotterdam' },
   { name: 'Les tours Petronas (Kuala Lumpur)', lat: 3.16, lon: 101.71, photo: 'petronas' },
   { name: 'Les dunes du Sahara (erg Chebbi)', lat: 31.15, lon: -4.00, photo: 'sahara' },

@@ -301,7 +301,9 @@ export default function PlacementDuel({
                 boxShadow: '0 3px 10px rgba(0,0,0,0.3)', userSelect: 'none',
               }}
             />
-            <strong style={{ fontSize: 19 }}>Où se trouve ce lieu ?</strong>
+            <strong style={{ fontSize: 19 }}>
+              {target.showName ? <>Place : {target.label}</> : 'Où se trouve ce lieu ?'}
+            </strong>
           </>
         ) : (
           <>Place : <strong style={{ fontSize: 21 }}>{target.label}</strong></>
