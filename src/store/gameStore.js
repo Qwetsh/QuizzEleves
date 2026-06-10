@@ -479,6 +479,7 @@ export const useGameStore = create((set, get) => ({
   // --- Fight (delegated) ---
   fightBegin: () => fightH.fightBegin(set, get),
   fightRoundWin: (side) => fightH.fightRoundWin(set, get, side),
+  fightMatchWin: (side) => fightH.fightMatchWin(set, get, side),
   fightChooseReward: (choice) => fightH.fightChooseReward(set, get, choice),
   closeFight: () => fightH.closeFight(set, get),
   // Tire une question pour un mini-jeu de combat (marquee comme posee)

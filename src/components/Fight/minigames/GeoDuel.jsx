@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useGameStore } from '../../../store/gameStore';
 import PlacementDuel from './PlacementDuel.jsx';
 import { GEO_PLACES, lonLatToXY, haversineKm } from './placementData.jsx';
 import { shuffle } from '../../../data/fightData';
@@ -11,6 +13,15 @@ const PHOTO_URLS = import.meta.glob('../../../assets/places/*.jpg', {
 
 function photoUrl(slug) {
   return slug ? PHOTO_URLS[`../../../assets/places/${slug}.jpg`] : undefined;
+}
+
+// --- Scoring facon GeoGuessr ---
+export const GEO_TARGET_SCORE = 25000;
+
+// 5000 pts a moins de 100 km, puis decroissance exponentielle
+export function geoPoints(km) {
+  if (km <= 100) return 5000;
+  return Math.round(5000 * Math.exp(-(km - 100) / 2000));
 }
 
 function metric(a, b) {
@@ -33,14 +44,40 @@ function renderScene() {
   );
 }
 
+function ScoreBar({ team, score, align }) {
+  const ratio = Math.min(1, score / GEO_TARGET_SCORE);
+  return (
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)',
+        flexDirection: align === 'right' ? 'row-reverse' : 'row',
+      }}>
+        <span style={{ fontSize: 18 }}>{team.emoji}</span>
+        <span style={{ fontSize: 13, color: '#fff' }}>{team.name}</span>
+        <span style={{ fontSize: 16, color: '#f3c969' }}>{score.toLocaleString('fr-FR')} pts</span>
+      </div>
+      <div style={{ height: 7, background: 'rgba(255,255,255,0.15)', borderRadius: 4, overflow: 'hidden', transform: align === 'right' ? 'scaleX(-1)' : 'none' }}>
+        <div style={{
+          height: '100%', width: `${ratio * 100}%`,
+          background: `linear-gradient(90deg, ${team.color}, #f3c969)`,
+          borderRadius: 4, transition: 'width 500ms ease',
+        }} />
+      </div>
+    </div>
+  );
+}
+
 /**
- * GeoGuessr (géographie) — un lieu célèbre à localiser sur la carte du
- * monde (projection équirectangulaire : lat/lon -> x/y linéaire).
- * Moteur PlacementDuel commit-reveal ; le plus proche en km gagne.
- * V1 : le lieu est annoncé par son nom — les photos (validées par
- * l'enseignant) prendront le relais via le champ photo des données.
+ * Tour du monde (géographie) — façon GeoGuessr : photo d'un lieu célèbre
+ * SANS son nom, chaque équipe plante son drapeau (commit-reveal), et
+ * marque des points selon la distance (≤100 km = 5 000 pts, dégressif).
+ * PREMIER À 25 000 POINTS = victoire directe du combat.
  */
-export default function GeoDuel({ attacker, defender, round, onRoundWin }) {
+export default function GeoDuel({ attacker, defender, onRoundWin }) {
+  const fightMatchWin = useGameStore((s) => s.fightMatchWin);
+  const [scores, setScores] = useState({ attacker: 0, defender: 0 });
+  const [geoRound, setGeoRound] = useState(1);
+
   const pickTarget = (usedIds) => {
     const remaining = GEO_PLACES.filter((p) => !usedIds.includes(p.name));
     const pool = remaining.length ? remaining : GEO_PLACES;
@@ -49,17 +86,50 @@ export default function GeoDuel({ attacker, defender, round, onRoundWin }) {
     return { id: place.name, label: place.name, x, y, photo: photoUrl(place.photo) };
   };
 
+  const handleRoundEnd = ({ pA, pB }) => {
+    const next = { attacker: scores.attacker + (pA || 0), defender: scores.defender + (pB || 0) };
+    setScores(next);
+    if (next.attacker >= GEO_TARGET_SCORE || next.defender >= GEO_TARGET_SCORE) {
+      // Les deux peuvent franchir la barre au meme tour : le plus haut total gagne
+      if (next.attacker !== next.defender) {
+        fightMatchWin(next.attacker > next.defender ? 'attacker' : 'defender');
+        return;
+      }
+    }
+    setGeoRound((r) => r + 1);
+  };
+
   return (
-    <PlacementDuel
-      attacker={attacker}
-      defender={defender}
-      round={round}
-      onRoundWin={onRoundWin}
-      pickTarget={pickTarget}
-      renderScene={renderScene}
-      aspect={2}
-      metric={metric}
-      formatDistance={formatDistance}
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
+      {/* Tableau de score : course a 25 000 points */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 16,
+        padding: '6px 14px', borderRadius: 12,
+        background: 'rgba(255,254,251,0.10)',
+        border: '1px solid rgba(243,201,105,0.3)',
+      }}>
+        <ScoreBar team={attacker} score={scores.attacker} align="left" />
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'rgba(255,255,255,0.75)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          {'\u{1F3C1}'} {GEO_TARGET_SCORE.toLocaleString('fr-FR')} pts
+        </div>
+        <ScoreBar team={defender} score={scores.defender} align="right" />
+      </div>
+
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <PlacementDuel
+          attacker={attacker}
+          defender={defender}
+          round={geoRound}
+          onRoundWin={onRoundWin}
+          onRoundEnd={handleRoundEnd}
+          scoreFn={geoPoints}
+          pickTarget={pickTarget}
+          renderScene={renderScene}
+          aspect={2}
+          metric={metric}
+          formatDistance={formatDistance}
+        />
+      </div>
+    </div>
   );
 }

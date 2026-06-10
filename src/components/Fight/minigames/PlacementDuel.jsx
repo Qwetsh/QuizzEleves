@@ -20,10 +20,15 @@ import { soundCorrect, soundClick } from '../../../logic/sounds';
  * - aspect : ratio largeur/hauteur de la scène (ex. 2 pour la carte monde)
  * - formatDistance(a, b) -> string : distance affichée entre 2 points 0..1
  * - metric(a, b) -> number : distance servant à départager
+ * - scoreFn(metricValue) -> number (optionnel) : mode POINTS façon GeoGuessr —
+ *   chaque équipe marque à chaque manche, pas d'égalité rejouée
+ * - onRoundEnd({ winner, dA, dB, pA, pB }) (optionnel) : remplace l'appel
+ *   direct à onRoundWin au clic sur Suivant (utilisé par le mode points)
  */
 export default function PlacementDuel({
   attacker, defender, round, onRoundWin,
   pickTarget, renderScene, aspect = 1, formatDistance, metric,
+  scoreFn, onRoundEnd,
 }) {
   const usedIds = useRef([]);
   const reported = useRef(false);
@@ -49,13 +54,18 @@ export default function PlacementDuel({
     if (!validated.attacker || !validated.defender || reveal || !target) return;
     const dA = metric(marks.attacker, target);
     const dB = metric(marks.defender, target);
-    if (dA === dB) {
+    // Mode manches : egalite parfaite = on rejoue. Mode points : on marque quand meme.
+    if (dA === dB && !scoreFn) {
       setReveal({ tie: true });
       setTimeout(startRound, 2000);
       return;
     }
-    const winner = dA < dB ? 'attacker' : 'defender';
-    setReveal({ winner, dA, dB });
+    const winner = dA < dB ? 'attacker' : dB < dA ? 'defender' : null;
+    setReveal({
+      winner, dA, dB,
+      pA: scoreFn ? scoreFn(dA) : null,
+      pB: scoreFn ? scoreFn(dB) : null,
+    });
     soundCorrect();
   }, [validated]);
 
@@ -63,7 +73,8 @@ export default function PlacementDuel({
   const nextRound = () => {
     if (!reveal || reveal.tie || reported.current) return;
     reported.current = true;
-    onRoundWin(reveal.winner);
+    if (onRoundEnd) onRoundEnd(reveal);
+    else onRoundWin(reveal.winner);
   };
 
   if (!target) {
@@ -143,11 +154,15 @@ export default function PlacementDuel({
 
   // --- Phase revelation : une grande scene commune ---
   if (reveal && !reveal.tie) {
-    const winnerTeam = reveal.winner === 'attacker' ? attacker : defender;
+    const winnerTeam = reveal.winner ? (reveal.winner === 'attacker' ? attacker : defender) : null;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', alignItems: 'center' }}>
         <div style={banner()}>
-          {'\u{1F3AF}'} {target.label} — <strong style={{ color: winnerTeam.color }}>{winnerTeam.emoji} {winnerTeam.name}</strong> est au plus près !
+          {'\u{1F3AF}'} {target.label} — {winnerTeam ? (
+            <><strong style={{ color: winnerTeam.color }}>{winnerTeam.emoji} {winnerTeam.name}</strong> est au plus près !</>
+          ) : (
+            <strong>égalité parfaite !</strong>
+          )}
         </div>
         <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
           <div style={{ position: 'relative', aspectRatio: String(aspect), maxWidth: '100%', maxHeight: '100%', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
@@ -190,9 +205,15 @@ export default function PlacementDuel({
             {distanceBadge(defender, marks.defender)}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff' }}>
-          <span>{attacker.emoji} {attacker.name} : <strong>{formatDistance(marks.attacker, target)}</strong></span>
-          <span>{defender.emoji} {defender.name} : <strong>{formatDistance(marks.defender, target)}</strong></span>
+        <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span>
+            {attacker.emoji} {attacker.name} : <strong>{formatDistance(marks.attacker, target)}</strong>
+            {reveal.pA != null && <strong style={{ color: '#f3c969' }}>{` +${reveal.pA.toLocaleString('fr-FR')} pts`}</strong>}
+          </span>
+          <span>
+            {defender.emoji} {defender.name} : <strong>{formatDistance(marks.defender, target)}</strong>
+            {reveal.pB != null && <strong style={{ color: '#f3c969' }}>{` +${reveal.pB.toLocaleString('fr-FR')} pts`}</strong>}
+          </span>
           <button className="btn btn--green" onPointerDown={nextRound} style={{ padding: '8px 22px' }}>
             Suivant ▶
           </button>

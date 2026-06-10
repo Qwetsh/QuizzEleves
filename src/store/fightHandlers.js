@@ -55,6 +55,20 @@ export function fightRoundWin(set, get, side) {
 }
 
 /**
+ * Victoire directe du combat, annoncee par un mini-jeu a score cumulatif
+ * (ex. Tour du monde : premier a 25 000 points) — sans passer par les manches.
+ */
+export function fightMatchWin(set, get, side) {
+  const f = get().showFight;
+  if (!f || f.phase !== 'minigame') return;
+  const { teams, addLog } = get();
+  const idx = side === 'attacker' ? f.attackerIndex : f.defenderIndex;
+  const winner = teams[idx];
+  addLog(`\u{1F3C5} ${winner.emoji} ${winner.name} remporte le duel !`);
+  set({ showFight: { ...f, wins: { ...f.wins, [side]: FIGHT_ROUNDS_TO_WIN }, winnerSide: side, phase: 'reward' } });
+}
+
+/**
  * Le vainqueur choisit sa recompense :
  * - 'steal'     : lance 2 des, vole autant de pieces au perdant
  * - 'knockback' : lance 1 de, le perdant recule d'autant

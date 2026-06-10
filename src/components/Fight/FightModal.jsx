@@ -151,7 +151,7 @@ function VersusScreen({ fight, attacker, defender }) {
           {minigame.rules}
         </div>
         <div style={{ fontSize: 11, color: 'var(--ink-400)', marginTop: 6, fontFamily: 'var(--font-ui)' }}>
-          Premier à {FIGHT_ROUNDS_TO_WIN} manches — touche l'écran pour commencer
+          {minigame.winLabel || `Premier à ${FIGHT_ROUNDS_TO_WIN} manches`} — touche l'écran pour commencer
         </div>
       </motion.div>
     </div>
@@ -183,34 +183,36 @@ function MinigameStage({ fight, attacker, defender }) {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 14, gap: 10, minHeight: 0 }}>
-      {/* Header scores */}
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 18px', borderRadius: 14,
-          background: 'rgba(255,254,251,0.12)',
-          border: '1px solid rgba(243,201,105,0.35)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 24 }}>{attacker.emoji}</span>
-          <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16 }}>{attacker.name}</span>
-          <WinStars count={fight.wins.attacker} />
-        </div>
+      {/* Header scores (les jeux a points cumulatifs affichent le leur) */}
+      {!minigame.pointsBased && (
         <div
           style={{
-            fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--gold-400, #f3c969)',
-            padding: '4px 14px', borderRadius: 999, border: '1px solid rgba(243,201,105,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 18px', borderRadius: 14,
+            background: 'rgba(255,254,251,0.12)',
+            border: '1px solid rgba(243,201,105,0.35)',
           }}
         >
-          Manche {fight.round}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 24 }}>{attacker.emoji}</span>
+            <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16 }}>{attacker.name}</span>
+            <WinStars count={fight.wins.attacker} />
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--gold-400, #f3c969)',
+              padding: '4px 14px', borderRadius: 999, border: '1px solid rgba(243,201,105,0.5)',
+            }}
+          >
+            Manche {fight.round}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <WinStars count={fight.wins.defender} />
+            <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16 }}>{defender.name}</span>
+            <span style={{ fontSize: 24 }}>{defender.emoji}</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <WinStars count={fight.wins.defender} />
-          <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16 }}>{defender.name}</span>
-          <span style={{ fontSize: 24 }}>{defender.emoji}</span>
-        </div>
-      </div>
+      )}
 
       {/* Mini-jeu (remonte a chaque manche sauf si persistant) */}
       <div style={{ flex: 1, minHeight: 0 }}>
