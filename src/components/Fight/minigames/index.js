@@ -17,7 +17,7 @@ const MINIGAMES = {
   anglais: {
     Component: VerbHunt,
     name: 'Chasse aux verbes irréguliers',
-    rules: 'Touchez les verbes IRRÉGULIERS de votre côté ! +1 par verbe irrégulier, -1 par verbe régulier. 30 secondes !',
+    rules: 'Des bulles de verbes apparaissent et éclatent : touchez les verbes IRRÉGULIERS avant qu\'ils disparaissent ! +1 / -1, 30 secondes.',
     persistent: false,
   },
   histoire: {
@@ -41,7 +41,7 @@ const MINIGAMES = {
   svt: {
     Component: SortingHunt,
     name: 'Le Grand Tri',
-    rules: 'Touchez tous les éléments de la catégorie demandée (vertébrés, ovipares, os…) ! +1 par bonne réponse, -1 par intrus. 30 secondes !',
+    rules: 'Des bulles apparaissent et éclatent : touchez les éléments de la catégorie demandée (vertébrés, ovipares, os…) avant qu\'ils disparaissent ! +1 / -1, 30 secondes.',
     persistent: true,
   },
   geographie: {
