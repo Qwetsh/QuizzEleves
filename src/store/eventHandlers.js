@@ -53,13 +53,13 @@ export function acceptEvent(set, get) {
   if (!showEvent) return;
   const { key } = showEvent;
 
-  const needsTarget = ['foudreFree', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent'];
+  const needsTarget = ['decharge', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent'];
   if (needsTarget.includes(key)) {
     set({ showEvent: { ...showEvent, phase: 'target' } });
     return;
   }
 
-  if (key === 'rejouer' || key === 'quitteDouble') {
+  if (key === 'rejouer' || key === 'quitteDouble' || key === 'tempete') {
     eventRollDice(set, get);
     return;
   }
@@ -86,7 +86,7 @@ export function declineEvent(set, get) {
 }
 
 export function eventSelectTarget(set, get, targetIndex) {
-  const { showEvent } = get();
+  const { showEvent, teams } = get();
   if (!showEvent) return;
   const { key } = showEvent;
 
@@ -94,6 +94,24 @@ export function eventSelectTarget(set, get, targetIndex) {
     set({ showEvent: { ...showEvent, phase: 'question', data: { ...showEvent.data, targetIndex } } });
     eventAskQuestion(set, get);
     return;
+  }
+
+  // Decharge electrique : cible choisie, puis lancer de de pour le recul
+  if (key === 'decharge') {
+    set({ showEvent: { ...showEvent, data: { ...showEvent.data, targetIndex } } });
+    eventRollDice(set, get);
+    return;
+  }
+
+  // Vol : si la cible a au moins une charge, choix du pouvoir vole puis du
+  // pouvoir recharge ; sinon resultat direct ("rien a voler")
+  if (key === 'vol') {
+    const target = teams[targetIndex];
+    const hasCharges = Object.entries(target?.powers || {}).some(([pk, p]) => POWERS[pk] && p?.charges > 0);
+    if (hasCharges) {
+      set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, targetIndex } } });
+      return;
+    }
   }
 
   set({ showEvent: { ...showEvent, data: { ...showEvent.data, targetIndex } } });
@@ -164,6 +182,27 @@ export function eventRechargeChoice(set, get, powerKey) {
   newTeams[currentTeam] = { ...team, powers: newPowers };
   const pName = POWERS[powerKey]?.name || powerKey;
   addLog(`\u{1F50B} ${team.emoji} ${team.name} recharge ${pName} ! (+1 charge)`);
+  set({ teams: newTeams, showEvent: null });
+  get().nextTurn();
+}
+
+// Vol : transfere 1 charge d'un pouvoir de la cible (stealKey) vers un
+// pouvoir de l'equipe active (giveKey) — les deux choisis par le joueur.
+export function eventVolApply(set, get, stealKey, giveKey) {
+  const { showEvent, teams, currentTeam, addLog } = get();
+  const targetIndex = showEvent?.data?.targetIndex;
+  if (targetIndex == null) return;
+  const team = teams[currentTeam];
+  const target = teams[targetIndex];
+  if (!target || !POWERS[stealKey] || !POWERS[giveKey]) return;
+  if ((target.powers?.[stealKey]?.charges ?? 0) <= 0) return;
+
+  const targetEntry = target.powers[stealKey];
+  const myEntry = team.powers?.[giveKey] || { charges: 0, level: 1 };
+  const newTeams = [...teams];
+  newTeams[targetIndex] = { ...target, powers: { ...target.powers, [stealKey]: { ...targetEntry, charges: targetEntry.charges - 1 } } };
+  newTeams[currentTeam] = { ...team, powers: { ...team.powers, [giveKey]: { ...myEntry, charges: myEntry.charges + 1 } } };
+  addLog(`\u{1FA99} ${team.emoji} ${team.name} vole 1 charge de ${POWERS[stealKey].name} à ${target.emoji} ${target.name} et recharge ${POWERS[giveKey].name} !`);
   set({ teams: newTeams, showEvent: null });
   get().nextTurn();
 }
@@ -251,13 +290,13 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'tempete': {
+      const dv = data?.diceValue || 1;
       for (let i = 0; i < teams.length; i++) {
-        if (i === currentTeam) continue;
-        const r = moveBack(board, newTeams[i].pos, 1);
+        const r = moveBack(board, newTeams[i].pos, dv);
         newTeams[i] = { ...newTeams[i], pos: r.finalPos };
         pushMove(i, r.path, 'back');
       }
-      message = `\u{1F32A}️ Tempête ! Toutes les autres équipes reculent de 1 case.`;
+      message = `\u{1F32A}️ Tempête ! TOUTES les équipes reculent de ${dv} case${dv > 1 ? 's' : ''}.`;
       break;
     }
     case 'rejouer': {
@@ -269,28 +308,33 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'quitteDouble': {
+      // Le de de l'evenement decide gagne/perdu ; la mise est le lancer
+      // d'ARRIVEE sur la case evenement (preRollValue), pas le de de l'evenement.
       const dv = data?.diceValue || 1;
+      const moveRoll = get().preRollValue || dv;
       if (dv >= 4) {
-        const result = moveForward(board, team.pos, dv * 2, { throughJunctions: true });
+        const gain = moveRoll * 2;
+        const result = moveForward(board, team.pos, gain, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
-        message = `\u{1F3B0} ${dv} ! Avance de ${dv * 2} cases (double) !`;
+        message = `\u{1F3B0} ${dv} ! Ton lancer de ${moveRoll} est doublé : avance de ${gain} cases !`;
       } else {
-        const r = moveBack(board, team.pos, dv);
+        const r = moveBack(board, team.pos, moveRoll);
         newTeams[currentTeam] = { ...team, pos: r.finalPos };
         pushMove(currentTeam, r.path, 'back');
-        message = `\u{1F3B0} ${dv}... Recule de ${dv} cases !`;
+        message = `\u{1F3B0} ${dv}... Perdu ! Recule de ton lancer : ${moveRoll} case${moveRoll > 1 ? 's' : ''}.`;
       }
       break;
     }
-    case 'foudreFree': {
+    case 'decharge': {
       const ti = data?.targetIndex;
+      const dv = data?.diceValue || 1;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        const r = moveBack(board, target.pos, 3);
+        const r = moveBack(board, target.pos, dv);
         newTeams[ti] = { ...target, pos: r.finalPos };
         pushMove(ti, r.path, 'back');
-        message = `⚡ ${target.emoji} ${target.name} recule de 3 cases !`;
+        message = `⚡ ${target.emoji} ${target.name} prend la décharge et recule de ${dv} case${dv > 1 ? 's' : ''} !`;
       }
       break;
     }
@@ -333,22 +377,10 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'vol': {
+      // Cas "rien a voler" uniquement — le vol effectif passe par eventVolApply
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
-        const target = newTeams[ti];
-        let stolen = null;
-        for (const pk of ['bouclier', 'indice']) {
-          if (target.powers?.[pk]?.charges > 0) { stolen = pk; break; }
-        }
-        if (stolen) {
-          const targetEntry = target.powers?.[stolen] || { charges: 0, level: 1 };
-          const myEntry = team.powers?.[stolen] || { charges: 0, level: 1 };
-          newTeams[ti] = { ...target, powers: { ...target.powers, [stolen]: { ...targetEntry, charges: targetEntry.charges - 1 } } };
-          newTeams[currentTeam] = { ...team, powers: { ...team.powers, [stolen]: { ...myEntry, charges: myEntry.charges + 1 } } };
-          message = `\u{1FA99} ${team.emoji} vole 1 charge de ${POWERS[stolen].name} à ${target.emoji} !`;
-        } else {
-          message = `\u{1FA99} ${target.emoji} n'a rien à voler !`;
-        }
+        message = `\u{1FA99} ${newTeams[ti].emoji} n'a aucune charge à voler !`;
       }
       break;
     }

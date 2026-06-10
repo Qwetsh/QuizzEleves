@@ -20,6 +20,7 @@ export default function EventModal() {
   const eventAnswerQuestion = useGameStore((s) => s.eventAnswerQuestion);
   const eventRechargeChoice = useGameStore((s) => s.eventRechargeChoice);
   const eventMarcheNoirBuy = useGameStore((s) => s.eventMarcheNoirBuy);
+  const eventVolApply = useGameStore((s) => s.eventVolApply);
 
   useEffect(() => {
     if (showEvent) soundEvent();
@@ -83,8 +84,11 @@ export default function EventModal() {
               <ChoicePhase
                 eventKey={key}
                 team={team}
+                teams={teams}
+                data={data}
                 onChoice={eventRechargeChoice}
                 onMarcheNoirBuy={eventMarcheNoirBuy}
+                onVolApply={eventVolApply}
                 onSkip={declineEvent}
               />
             )}
@@ -118,7 +122,7 @@ const IntroPhase = React.memo(function IntroPhase({ event, onAccept, onDecline }
 
 const TargetPhase = React.memo(function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
   const labels = {
-    foudreFree: 'Qui recule de 3 cases ?',
+    decharge: 'Qui re\u00e7oit la d\u00e9charge ? (recul = lancer de d\u00e9)',
     sacrifice: 'Qui recule de 4 cases ?',
     duel: 'Qui doit r\u00e9pondre ?',
     don: 'Qui avance de 3 cases ?',
@@ -217,19 +221,115 @@ const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
   );
 });
 
-function ChoicePhase({ eventKey, team, onChoice, onMarcheNoirBuy, onSkip }) {
+// Bouton generique de choix de pouvoir (recharge, vol)
+function PowerChoiceButton({ powerKey, charges, onClick, disabled }) {
+  const power = POWERS[powerKey];
+  if (!power) return null;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+        padding: 12, borderRadius: 14,
+        border: `2px solid ${disabled ? 'rgba(122,94,58,0.18)' : power.color + '66'}`,
+        background: disabled ? 'rgba(122,94,58,0.06)' : '#fffefb',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.55 : 1,
+        fontFamily: 'var(--font-ui)',
+        transition: 'all 100ms ease',
+      }}
+    >
+      <span className="text-2xl">{power.icon}</span>
+      <span style={{ fontFamily: 'var(--font-display)', flex: 1, textAlign: 'left' }}>
+        {power.name}
+        {charges != null && (
+          <span style={{ fontSize: 11, color: 'var(--ink-500)', marginLeft: 8 }}>
+            {charges} charge{charges > 1 ? 's' : ''}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onSkip }) {
+  // Vol en 2 etapes : pouvoir vole chez la cible, puis pouvoir recharge chez soi
+  const [stealKey, setStealKey] = useState(null);
+
   if (eventKey === 'recharge') {
+    const owned = Object.entries(team.powers || {}).filter(([k]) => POWERS[k]);
     return (
       <>
-        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>Quelle charge veux-tu recharger ?</p>
-        <div className="flex gap-3 justify-center">
-          <button className="btn btn--blue" onClick={() => onChoice('bouclier')}>
-            {"\u{1F6E1}\uFE0F Bouclier"}
-          </button>
-          <button className="btn" onClick={() => onChoice('indice')}>
-            {"\u{1F4A1} Indice"}
-          </button>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+          Quel pouvoir veux-tu recharger ?
+        </p>
+        <div className="space-y-2">
+          {owned.map(([key, entry]) => (
+            <PowerChoiceButton
+              key={key}
+              powerKey={key}
+              charges={entry?.charges ?? 0}
+              onClick={() => { soundClick(); onChoice(key); }}
+            />
+          ))}
         </div>
+      </>
+    );
+  }
+
+  if (eventKey === 'vol') {
+    const target = teams?.[data?.targetIndex];
+    if (!target) return null;
+
+    if (!stealKey) {
+      const stealable = Object.entries(target.powers || {}).filter(([k, p]) => POWERS[k] && p?.charges > 0);
+      return (
+        <>
+          <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+            {`Quel pouvoir voler \u00E0 ${target.emoji} ${target.name} ?`}
+          </p>
+          <div className="space-y-2">
+            {stealable.map(([key, entry]) => (
+              <PowerChoiceButton
+                key={key}
+                powerKey={key}
+                charges={entry.charges}
+                onClick={() => { soundClick(); setStealKey(key); }}
+              />
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    const mine = Object.entries(team.powers || {}).filter(([k]) => POWERS[k]);
+    return (
+      <>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+          {`Tu voles 1 charge de ${POWERS[stealKey]?.name}. Quel pouvoir recharger ?`}
+        </p>
+        <div className="space-y-2">
+          {mine.map(([key, entry]) => (
+            <PowerChoiceButton
+              key={key}
+              powerKey={key}
+              charges={entry?.charges ?? 0}
+              onClick={() => { soundClick(); onVolApply(stealKey, key); }}
+            />
+          ))}
+        </div>
+        <button
+          onClick={() => setStealKey(null)}
+          style={{
+            marginTop: 12, width: '100%',
+            fontSize: 13, color: 'var(--ink-500)',
+            cursor: 'pointer', background: 'none', border: 'none',
+            fontFamily: 'var(--font-ui)', padding: 6,
+          }}
+        >
+          \u2190 Changer de pouvoir \u00E0 voler
+        </button>
       </>
     );
   }

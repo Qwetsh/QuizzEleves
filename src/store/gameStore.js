@@ -410,6 +410,7 @@ export const useGameStore = create((set, get) => ({
   eventAnswerQuestion: (ci) => eventH.eventAnswerQuestion(set, get, ci),
   eventRechargeChoice: (pk) => eventH.eventRechargeChoice(set, get, pk),
   eventMarcheNoirBuy: (pk) => eventH.eventMarcheNoirBuy(set, get, pk),
+  eventVolApply: (stealKey, giveKey) => eventH.eventVolApply(set, get, stealKey, giveKey),
   applyEventEffect: () => eventH.applyEventEffect(set, get),
   closeEvent: () => {
     set({ showEvent: null, eventApplied: false });
