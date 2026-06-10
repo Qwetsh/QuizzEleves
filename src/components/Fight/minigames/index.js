@@ -3,7 +3,7 @@ import VerbHunt from './VerbHunt.jsx';
 import TimelineGame from './TimelineGame.jsx';
 import CompteEstBon from './CompteEstBon.jsx';
 import MotLePlusLong from './MotLePlusLong.jsx';
-import AnatomyDuel from './AnatomyDuel.jsx';
+import SortingHunt from './SortingHunt.jsx';
 import GeoDuel from './GeoDuel.jsx';
 
 /**
@@ -39,9 +39,9 @@ const MINIGAMES = {
     persistent: false,
   },
   svt: {
-    Component: AnatomyDuel,
-    name: "L'Anatomiste",
-    rules: 'Placez l\'élément demandé sur la silhouette, puis validez : votre repère se cache. Le plus proche de la cible gagne la manche !',
+    Component: SortingHunt,
+    name: 'Le Grand Tri',
+    rules: 'Touchez tous les éléments de la catégorie demandée (vertébrés, ovipares, os…) ! +1 par bonne réponse, -1 par intrus. 30 secondes !',
     persistent: true,
   },
   geographie: {

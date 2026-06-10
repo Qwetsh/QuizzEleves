@@ -21,6 +21,48 @@ export const REGULAR_VERBS = [
   'walk', 'want', 'wash', 'watch', 'work',
 ];
 
+// --- Le Grand Tri (SVT) ---
+// Defis de categorisation : toucher tous les elements de la categorie
+// demandee parmi des intrus. good = a toucher, bad = intrus.
+export const SVT_CHALLENGES = [
+  {
+    id: 'vertebres',
+    prompt: 'Touche tous les VERTÉBRÉS !',
+    good: ['chien', 'aigle', 'truite', 'grenouille', 'vipère', 'requin', 'tortue', 'cheval', 'pigeon', 'lézard'],
+    bad: ['fourmi', 'escargot', 'méduse', 'araignée', 'pieuvre', 'crabe', 'papillon', 'ver de terre', 'moustique', 'étoile de mer', 'criquet', 'abeille'],
+  },
+  {
+    id: 'ovipares',
+    prompt: 'Touche les animaux OVIPARES (qui pondent des œufs) !',
+    good: ['poule', 'tortue', 'crocodile', 'saumon', 'grenouille', 'autruche', 'couleuvre', 'papillon'],
+    bad: ['chien', 'vache', 'baleine', 'chauve-souris', 'lion', 'dauphin', 'cheval', 'lapin', 'éléphant', 'chat'],
+  },
+  {
+    id: 'mammiferes',
+    prompt: 'Touche tous les MAMMIFÈRES !',
+    good: ['baleine', 'chauve-souris', 'dauphin', 'être humain', 'lion', 'souris', 'vache', 'kangourou'],
+    bad: ['requin', 'manchot', 'crocodile', 'autruche', 'thon', 'grenouille', 'abeille', 'tortue', 'perroquet', 'truite'],
+  },
+  {
+    id: 'digestif',
+    prompt: "Touche les organes de l'appareil DIGESTIF !",
+    good: ['estomac', 'œsophage', 'intestin grêle', 'gros intestin', 'foie', 'pancréas', 'glandes salivaires', 'bouche'],
+    bad: ['cœur', 'poumon', 'rein', 'vessie', 'cerveau', 'trachée', 'artère', 'diaphragme'],
+  },
+  {
+    id: 'squelette',
+    prompt: 'Touche les OS du squelette !',
+    good: ['fémur', 'tibia', 'humérus', 'radius', 'crâne', 'vertèbre', 'bassin', 'cubitus'],
+    bad: ['biceps', 'quadriceps', 'cœur', 'foie', 'triceps', 'tendon', 'estomac', 'poumon'],
+  },
+  {
+    id: 'renouvelables',
+    prompt: "Touche les sources d'énergie RENOUVELABLES !",
+    good: ['solaire', 'éolienne', 'hydraulique', 'géothermie', 'biomasse', 'marémotrice'],
+    bad: ['pétrole', 'charbon', 'gaz naturel', 'uranium', 'essence', 'fioul', 'kérosène', 'butane'],
+  },
+];
+
 // --- Timeline (histoire) ---
 // Evenements dates du programme college, a replacer dans l'ordre
 export const TIMELINE_EVENTS = [
