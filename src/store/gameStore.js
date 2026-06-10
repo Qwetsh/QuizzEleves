@@ -13,6 +13,7 @@ import { saveGame, loadGame, clearSave } from './persistence.js';
 import { randomSubject, resolveWrongAnswer, resolveDoubleQuestion } from '../logic/turnHelpers.js';
 import * as eventH from './eventHandlers.js';
 import * as powerH from './powerHandlers.js';
+import * as fightH from './fightHandlers.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -108,6 +109,7 @@ export const useGameStore = create((set, get) => ({
   awaitingChoice: false,
   showQuestion: null,
   showEvent: null,
+  showFight: null,
   eventApplied: false,
   showTargetPicker: null,
   indiceUsed: false,
@@ -137,7 +139,7 @@ export const useGameStore = create((set, get) => ({
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       ...TURN_RESET, movePath: null,
-      showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false,
       powerSetupIndex: 0, powerSetupCategory: 'def',
     });
   },
@@ -176,8 +178,8 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling, showDiceModal } = get();
-    if (finished || rolling || showDiceModal) return;
+    const { finished, rolling, showDiceModal, showFight } = get();
+    if (finished || rolling || showDiceModal || showFight) return;
     const finalValue = Math.floor(Math.random() * 6) + 1;
     set({ rolling: true, diceValue: finalValue, showDiceModal: true });
   },
@@ -262,6 +264,17 @@ export const useGameStore = create((set, get) => ({
       set({ finished: true });
       saveGame(get());
       return;
+    }
+
+    // Combat : la case (hors depart) est occupee par une autre equipe.
+    // Le duel remplace l'action normale de la case.
+    if (node.type !== 'depart') {
+      const defenderIndex = teams.findIndex((t, i) => i !== currentTeam && t.pos === team.pos);
+      if (defenderIndex !== -1) {
+        const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : randomSubject();
+        fightH.startFight(set, get, defenderIndex, subj);
+        return;
+      }
     }
 
     if (node.type === 'event') {
@@ -434,6 +447,22 @@ export const useGameStore = create((set, get) => ({
     get().handleLanding();
   },
 
+  // --- Fight (delegated) ---
+  fightBegin: () => fightH.fightBegin(set, get),
+  fightRoundWin: (side) => fightH.fightRoundWin(set, get, side),
+  fightChooseReward: (choice) => fightH.fightChooseReward(set, get, choice),
+  closeFight: () => fightH.closeFight(set, get),
+  // Tire une question pour un mini-jeu de combat (marquee comme posee)
+  fightPickQuestion: (subject) => {
+    const { questions, askedQuestions } = get();
+    const pool = questions[subject] || [];
+    const asked = askedQuestions[subject] || new Set();
+    const result = pickQuestion(pool, asked);
+    if (!result) return null;
+    set({ askedQuestions: { ...askedQuestions, [subject]: result.newAsked } });
+    return result.question;
+  },
+
   // --- Powers (delegated) ---
   usePower: (pk) => powerH.usePower(set, get, pk),
   useIndice: () => powerH.useIndice(set, get),
@@ -447,8 +476,8 @@ export const useGameStore = create((set, get) => ({
 
   // --- Shop (delegated) ---
   openShop: () => {
-    const { finished, rolling, showQuestion, showEvent, awaitingChoice } = get();
-    if (finished || rolling || showQuestion || showEvent || awaitingChoice) return;
+    const { finished, rolling, showQuestion, showEvent, showFight, awaitingChoice } = get();
+    if (finished || rolling || showQuestion || showEvent || showFight || awaitingChoice) return;
     set({ showShop: true });
   },
   closeShop: () => set({ showShop: false }),
@@ -476,7 +505,7 @@ export const useGameStore = create((set, get) => ({
       rolling: false,
       ...TURN_RESET,
       movePath: null,
-      showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false,
     });
   },
 
@@ -487,7 +516,7 @@ export const useGameStore = create((set, get) => ({
       phase: 'setup', teams: [], currentTeam: 0, board: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
       rolling: false, ...TURN_RESET, movePath: null,
-      showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false,
       nbTeams: 3, setupTeams: createDefaultTeams(3),
       enabledEvents: Object.keys(EVENTS),
       boardParams: {

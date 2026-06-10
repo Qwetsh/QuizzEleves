@@ -12,6 +12,7 @@ import VictoryModal from '../Modals/VictoryModal';
 import ShopModal from '../Modals/ShopModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
+import FightModal from '../Fight/FightModal';
 import FlyingCoins from './FlyingCoins';
 
 function useFullscreen() {
@@ -198,6 +199,7 @@ export default function GameLayout() {
       <TargetPickerModal />
       <VictoryModal />
       <ShopModal />
+      <FightModal />
     </div>
   );
 }
