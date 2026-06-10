@@ -330,10 +330,10 @@
   },
   "canal-panama": {
     "title": "Panama Canal",
-    "file": "Panama_Canal_Map_EN.svg",
-    "author": "Thoroe",
+    "file": "Container Ship Enters Miraflores Locks - Panama Canal.jpg",
+    "author": "Adam Jones",
     "license": "CC BY-SA 2.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Panama_Canal_Map_EN.svg"
+    "source": "https://commons.wikimedia.org/wiki/File:Container%20Ship%20Enters%20Miraflores%20Locks%20-%20Panama%20Canal.jpg"
   },
   "gibraltar": {
     "title": "Strait of Gibraltar",
@@ -343,18 +343,18 @@
     "source": "https://commons.wikimedia.org/wiki/File:STS059-238-074_Strait_of_Gibraltar.jpg"
   },
   "rotterdam": {
-    "title": "Port of Rotterdam",
-    "file": "Port_of_Rotterdam_logo_(light-blue).svg",
-    "author": "Port of Rotterdam",
-    "license": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Port_of_Rotterdam_logo_(light-blue).svg"
+    "title": "Rotterdam",
+    "file": "A_view_of_Rotterdam,_taken_from_the_roof_of_the_Maassilo,_Rotterdam,_The_Netherlands.jpg",
+    "author": "Rob Oo",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:A_view_of_Rotterdam%2C_taken_from_the_roof_of_the_Maassilo%2C_Rotterdam%2C_The_Netherlands.jpg"
   },
   "petronas": {
-    "title": "Petronas Towers",
-    "file": "Petronas_Towers_Logo.svg",
-    "author": "Unknown authorUnknown author",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Petronas_Towers_Logo.svg"
+    "title": "Tours Petronas",
+    "file": "Petronas Panorama II.jpg",
+    "author": "Someformofhuman",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Petronas%20Panorama%20II.jpg"
   },
   "sahara": {
     "title": "Erg Chebbi",
@@ -364,11 +364,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Merzouga_Dunes_2011.jpg"
   },
   "atacama": {
-    "title": "Atacama Desert",
-    "file": "Atacama.png",
-    "author": "NASA",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Atacama.png"
+    "title": "Valle de la Luna (Chile)",
+    "file": "Valle_della_Luna_01.jpg",
+    "author": "Davide guallini",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Valle_della_Luna_01.jpg"
   },
   "ilulissat": {
     "title": "Ilulissat Icefjord",
@@ -378,11 +378,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Greenland_Ilulissat-25.jpg"
   },
   "antarctique": {
-    "title": "Antarctica",
-    "file": "Antarctica_(orthographic_projection).svg",
-    "author": "Heraldry",
-    "license": "CC BY-SA 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Antarctica_(orthographic_projection).svg"
+    "title": "Emperor penguin",
+    "file": "Mt Herschel, Antarctica, Jan 2006.jpg",
+    "author": "Andrew Mandemaker",
+    "license": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Mt%20Herschel%2C%20Antarctica%2C%20Jan%202006.jpg"
   },
   "barriere-corail": {
     "title": "Great Barrier Reef",
@@ -553,10 +553,10 @@
     "source": "https://commons.wikimedia.org/wiki/File:Torii_path_with_lantern_at_Fushimi_Inari_Taisha_Shrine%2C_Kyoto%2C_Japan.jpg"
   },
   "santorin": {
-    "title": "Santorini",
-    "file": "2011_Dimos_Thiras.png",
-    "author": "Pitichinaccio",
+    "title": "Oia, Greece",
+    "file": "Oia_sunset_-_panoramio_(2).jpg",
+    "author": "TomasEE",
     "license": "CC BY 3.0",
-    "source": "https://commons.wikimedia.org/wiki/File:2011_Dimos_Thiras.png"
+    "source": "https://commons.wikimedia.org/wiki/File:Oia_sunset_-_panoramio_(2).jpg"
   }
 }
