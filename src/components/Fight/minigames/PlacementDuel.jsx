@@ -57,11 +57,14 @@ export default function PlacementDuel({
     const winner = dA < dB ? 'attacker' : 'defender';
     setReveal({ winner, dA, dB });
     soundCorrect();
-    if (!reported.current) {
-      reported.current = true;
-      setTimeout(() => onRoundWin(winner), 3200);
-    }
   }, [validated]);
+
+  // Passage manuel a la manche suivante (bouton Suivant de la revelation)
+  const nextRound = () => {
+    if (!reveal || reveal.tie || reported.current) return;
+    reported.current = true;
+    onRoundWin(reveal.winner);
+  };
 
   if (!target) {
     return (
@@ -187,9 +190,12 @@ export default function PlacementDuel({
             {distanceBadge(defender, marks.defender)}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 18, fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff' }}>
+        <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff' }}>
           <span>{attacker.emoji} {attacker.name} : <strong>{formatDistance(marks.attacker, target)}</strong></span>
           <span>{defender.emoji} {defender.name} : <strong>{formatDistance(marks.defender, target)}</strong></span>
+          <button className="btn btn--green" onPointerDown={nextRound} style={{ padding: '8px 22px' }}>
+            Suivant ▶
+          </button>
         </div>
       </div>
     );
@@ -261,7 +267,24 @@ export default function PlacementDuel({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
       <div style={banner()}>
-        Place : <strong style={{ fontSize: 21 }}>{target.label}</strong>
+        {target.photo ? (
+          <>
+            {/* Mode devinette : la photo SANS le nom du lieu */}
+            <img
+              src={target.photo}
+              alt="Lieu mystère"
+              draggable={false}
+              style={{
+                height: 130, maxWidth: '90%', borderRadius: 10, objectFit: 'cover',
+                display: 'block', margin: '0 auto 6px',
+                boxShadow: '0 3px 10px rgba(0,0,0,0.3)', userSelect: 'none',
+              }}
+            />
+            <strong style={{ fontSize: 19 }}>Où se trouve ce lieu ?</strong>
+          </>
+        ) : (
+          <>Place : <strong style={{ fontSize: 21 }}>{target.label}</strong></>
+        )}
         <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2, fontFamily: 'var(--font-ui)' }}>
           Touche ta scène pour poser ton repère (ajustable), puis valide. Révélation quand les deux équipes ont validé !
         </div>

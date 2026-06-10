@@ -1,0 +1,282 @@
+{
+  "tour-eiffel": {
+    "title": "Tour Eiffel",
+    "file": "Tour_Eiffel_Wikimedia_Commons.jpg",
+    "author": "Benh LIEU SONG",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons.jpg"
+  },
+  "mont-saint-michel": {
+    "title": "Mont-Saint-Michel",
+    "file": "Mont-Saint-Michel_vu_du_ciel.jpg",
+    "author": "Amaustan",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mont-Saint-Michel_vu_du_ciel.jpg"
+  },
+  "statue-liberte": {
+    "title": "Statue de la Liberté",
+    "file": "Front_view_of_Statue_of_Liberty_with_pedestal_and_base_2024.jpg",
+    "author": "AskALotl",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Front_view_of_Statue_of_Liberty_with_pedestal_and_base_2024.jpg"
+  },
+  "machu-picchu": {
+    "title": "Machu Picchu",
+    "file": "Before_Machu_Picchu.jpg",
+    "author": "icelight from Boston, MA, US",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Before_Machu_Picchu.jpg"
+  },
+  "pyramides-gizeh": {
+    "title": "Pyramides de Gizeh",
+    "file": "All_Gizah_Pyramids.jpg",
+    "author": "Ricardo Liberato",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:All_Gizah_Pyramids.jpg"
+  },
+  "grande-muraille": {
+    "title": "Grande Muraille",
+    "file": "Great_Wall_of_China_July_2006.JPG",
+    "author": "Velatrix",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Great_Wall_of_China_July_2006.JPG"
+  },
+  "taj-mahal": {
+    "title": "Taj Mahal",
+    "file": "Taj_Mahal,_Agra,_India_edit3.jpg",
+    "author": "Taj_Mahal,_Agra,_India_edit2.jpg: Yann; edited by King of Hearts derivative work: Jbarta (talk)",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Taj_Mahal%2C_Agra%2C_India_edit3.jpg"
+  },
+  "opera-sydney": {
+    "title": "Opéra de Sydney",
+    "file": "Sydney_Opera_House_from_Circular_Quay,_2023,_10.jpg",
+    "author": "Kgbo",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sydney_Opera_House_from_Circular_Quay%2C_2023%2C_10.jpg"
+  },
+  "mont-fuji": {
+    "title": "Mont Fuji",
+    "file": "Fuji_Kawaguchi_357.JPG",
+    "author": "Marion &amp; Christoph Aistleitner",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Fuji_Kawaguchi_357.JPG"
+  },
+  "kilimandjaro": {
+    "title": "Kilimandjaro",
+    "file": "Kilimanjaro_from_Amboseli.jpg",
+    "author": "Sergey Pesterev",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kilimanjaro_from_Amboseli.jpg"
+  },
+  "colisee": {
+    "title": "Colisée",
+    "file": "Colosseo_2020.jpg",
+    "author": "FeaturedPics",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Colosseo_2020.jpg"
+  },
+  "acropole": {
+    "title": "Acropole d'Athènes",
+    "file": "Attica_06-13_Athens_50_View_from_Philopappos_-_Acropolis_Hill.jpg",
+    "author": "A.Savin",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Attica_06-13_Athens_50_View_from_Philopappos_-_Acropolis_Hill.jpg"
+  },
+  "big-ben": {
+    "title": "Big Ben",
+    "file": "Elizabeth_Tower,_August_2024.jpg",
+    "author": "Cary Bass-Deschênes from Richmond, California, United States",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Elizabeth_Tower%2C_August_2024.jpg"
+  },
+  "kremlin": {
+    "title": "Kremlin de Moscou",
+    "file": "Moscow_05-2012_Kremlin_22.jpg",
+    "author": "A.Savin",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Moscow_05-2012_Kremlin_22.jpg"
+  },
+  "sagrada-familia": {
+    "title": "Sagrada Família",
+    "file": "SF_maig_2026.jpg",
+    "author": "Canaan",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:SF_maig_2026.jpg"
+  },
+  "chutes-niagara": {
+    "title": "Chutes du Niagara",
+    "file": "Niagara_Falls_Sunset_(cropped).jpg",
+    "author": "Quentin Caron",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Niagara_Falls_Sunset_(cropped).jpg"
+  },
+  "grand-canyon": {
+    "title": "Grand Canyon",
+    "file": "Grand_Canyon_North.jpg",
+    "author": "Hendric Stattmann",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Grand_Canyon_North.jpg"
+  },
+  "everest": {
+    "title": "Everest",
+    "file": "Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006_edit_1.jpg",
+    "author": "Luca Galuzzi (Lucag)",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006_edit_1.jpg"
+  },
+  "petra": {
+    "title": "Pétra",
+    "file": "View_of_Petra.jpg",
+    "author": "Bernard Gagnon",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:View_of_Petra.jpg"
+  },
+  "angkor-vat": {
+    "title": "Angkor Vat",
+    "file": "Angkor_Wat.jpg",
+    "author": "Bjørn Christian Tørrissen",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Angkor_Wat.jpg"
+  },
+  "ile-paques": {
+    "title": "Île de Pâques",
+    "file": "Easter_Island_map-fr.svg",
+    "author": "Eric Gaba (Sting - fr:Sting)",
+    "license": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Easter_Island_map-fr.svg"
+  },
+  "chichen-itza": {
+    "title": "Chichén Itzá",
+    "file": "El_Castillo_Stitch_2008_Edit_1.jpg",
+    "author": "Fcb981",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:El_Castillo_Stitch_2008_Edit_1.jpg"
+  },
+  "burj-khalifa": {
+    "title": "Burj Khalifa",
+    "file": "Burj_Khalifa.JPG",
+    "author": "",
+    "license": "",
+    "source": "https://commons.wikimedia.org/wiki/File:Burj_Khalifa.JPG"
+  },
+  "amazonie": {
+    "title": "Forêt amazonienne",
+    "file": "Amazon_biome_outline_map.svg",
+    "author": "Aymatth2",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Amazon_biome_outline_map.svg"
+  },
+  "golden-gate": {
+    "title": "Golden Gate Bridge",
+    "file": "GG-ftpoint-bridge-2.jpg",
+    "author": "David Ball",
+    "license": "CC BY 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:GG-ftpoint-bridge-2.jpg"
+  },
+  "sainte-sophie": {
+    "title": "Sainte-Sophie (Constantinople)",
+    "file": "Hagia_Sophia_(228968325).jpeg",
+    "author": "Adli Wahid",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hagia_Sophia_(228968325).jpeg"
+  },
+  "montagne-table": {
+    "title": "Montagne de la Table",
+    "file": "View_from_Signal_Hill.jpg",
+    "author": "No machine-readable author provided. איתן6 assumed (based on copyright claims).",
+    "license": "CC BY 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:View_from_Signal_Hill.jpg"
+  },
+  "chutes-victoria": {
+    "title": "Chutes Victoria",
+    "file": "VictoriaFalls3.JPG",
+    "author": "Florence Devouard",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:VictoriaFalls3.JPG"
+  },
+  "uluru": {
+    "title": "Uluru",
+    "file": "Uluru,_helicopter_view,_cropped.jpg",
+    "author": "Corey Leopold",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Uluru%2C_helicopter_view%2C_cropped.jpg"
+  },
+  "geysir": {
+    "title": "Geysir",
+    "file": "Great_Geysir_(5).jpg",
+    "author": "Chmee2/Valtameri",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Great_Geysir_(5).jpg"
+  },
+  "lac-baikal": {
+    "title": "Lac Baïkal",
+    "file": "Baikal.A2001296.0420.250m-NASA_(1).jpg",
+    "author": "Jacques Descloitres, MODIS Land Rapid Response Team, NASA/GSFC",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Baikal.A2001296.0420.250m-NASA_(1).jpg"
+  },
+  "cervin": {
+    "title": "Cervin",
+    "file": "Matterhorn_as_seen_from_Zermatt,_Wallis,_Switzerland,_2012_August.jpg",
+    "author": "Ximonic (Simo Räsänen)",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Matterhorn_as_seen_from_Zermatt%2C_Wallis%2C_Switzerland%2C_2012_August.jpg"
+  },
+  "stonehenge": {
+    "title": "Stonehenge",
+    "file": "Stonehenge2007_07_30.jpg",
+    "author": "garethwiscombe",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Stonehenge2007_07_30.jpg"
+  },
+  "cap-horn": {
+    "title": "Cap Horn",
+    "file": "Cap_Horn1_bis.jpg",
+    "author": "Butterfly voyages Serge Ouachée",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cap_Horn1_bis.jpg"
+  },
+  "baobabs": {
+    "title": "Allée des baobabs",
+    "file": "Baobab_Avenue_Morondava_Madagascar_-_panoramio.jpg",
+    "author": "Hiroki Ogawa",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Baobab_Avenue_Morondava_Madagascar_-_panoramio.jpg"
+  },
+  "yellowstone": {
+    "title": "Parc national de Yellowstone",
+    "file": "Grand_Prismatic_Spring_2013.jpg",
+    "author": "James St. John from Newark, Ohio",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Grand_Prismatic_Spring_2013.jpg"
+  },
+  "kilauea": {
+    "title": "Kīlauea",
+    "file": "Kilauea_-_Landsat_mosaic.jpg",
+    "author": "Hawaii Land Cover Analysis project, NOAA Coastal Services Center",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Kilauea_-_Landsat_mosaic.jpg"
+  },
+  "porte-brandebourg": {
+    "title": "Porte de Brandebourg",
+    "file": "Berlin_-_0266_-_16052015_-_Brandenburger_Tor.jpg",
+    "author": "Pierre-Selim Huard",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Berlin_-_0266_-_16052015_-_Brandenburger_Tor.jpg"
+  },
+  "venise": {
+    "title": "Venise",
+    "file": "Collage_Venezia.jpg",
+    "author": "collection by DanieleDF1995 (talk)",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Collage_Venezia.jpg"
+  },
+  "christ-redempteur": {
+    "title": "Christ Rédempteur (Rio de Janeiro)",
+    "file": "Christ_the_Redeemer_-_Cristo_Redentor.jpg",
+    "author": "Arne Müseler",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Christ_the_Redeemer_-_Cristo_Redentor.jpg"
+  }
+}

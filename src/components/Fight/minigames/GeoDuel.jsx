@@ -3,6 +3,16 @@ import { GEO_PLACES, lonLatToXY, haversineKm } from './placementData.jsx';
 import { shuffle } from '../../../data/fightData';
 import worldMap from '../../../assets/world-equirect.jpg';
 
+// Photos des lieux (Wikimedia Commons, credits dans src/data/placePhotoCredits.json),
+// chargees a la demande par le navigateur — pas d'impact sur le bundle JS.
+const PHOTO_URLS = import.meta.glob('../../../assets/places/*.jpg', {
+  eager: true, query: '?url', import: 'default',
+});
+
+function photoUrl(slug) {
+  return slug ? PHOTO_URLS[`../../../assets/places/${slug}.jpg`] : undefined;
+}
+
 function metric(a, b) {
   return haversineKm(a, b);
 }
@@ -36,7 +46,7 @@ export default function GeoDuel({ attacker, defender, round, onRoundWin }) {
     const pool = remaining.length ? remaining : GEO_PLACES;
     const place = shuffle(pool)[0];
     const { x, y } = lonLatToXY(place.lon, place.lat);
-    return { id: place.name, label: place.name, x, y, photo: place.photo };
+    return { id: place.name, label: place.name, x, y, photo: photoUrl(place.photo) };
   };
 
   return (
