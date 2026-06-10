@@ -161,11 +161,11 @@
     "source": "https://commons.wikimedia.org/wiki/File:Burj_Khalifa.JPG"
   },
   "amazonie": {
-    "title": "Forêt amazonienne",
-    "file": "Amazon_biome_outline_map.svg",
-    "author": "Aymatth2",
-    "license": "CC BY-SA 4.0",
-    "source": "https://commons.wikimedia.org/wiki/File:Amazon_biome_outline_map.svg"
+    "title": "Amazon rainforest",
+    "file": "Amazon17_(5641020319).jpg",
+    "author": "CIAT",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Amazon17_(5641020319).jpg"
   },
   "golden-gate": {
     "title": "Golden Gate Bridge",
@@ -208,13 +208,6 @@
     "author": "Chmee2/Valtameri",
     "license": "CC BY-SA 3.0",
     "source": "https://commons.wikimedia.org/wiki/File:Great_Geysir_(5).jpg"
-  },
-  "lac-baikal": {
-    "title": "Lac Baïkal",
-    "file": "Baikal.A2001296.0420.250m-NASA_(1).jpg",
-    "author": "Jacques Descloitres, MODIS Land Rapid Response Team, NASA/GSFC",
-    "license": "Public domain",
-    "source": "https://commons.wikimedia.org/wiki/File:Baikal.A2001296.0420.250m-NASA_(1).jpg"
   },
   "cervin": {
     "title": "Cervin",
@@ -278,5 +271,292 @@
     "author": "Arne Müseler",
     "license": "CC BY-SA 3.0 de",
     "source": "https://commons.wikimedia.org/wiki/File:Christ_the_Redeemer_-_Cristo_Redentor.jpg"
+  },
+  "tokyo": {
+    "title": "Shibuya Crossing",
+    "file": "Shibuya_Crossing,_Aerial.jpg",
+    "author": "David Kernan",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Shibuya_Crossing%2C_Aerial.jpg"
+  },
+  "shanghai": {
+    "title": "Pudong",
+    "file": "Shanghai_skyline_from_the_bund.jpg",
+    "author": "https://www.pxfuel.com/en/free-photo-ovozr",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Shanghai_skyline_from_the_bund.jpg"
+  },
+  "singapour": {
+    "title": "Marina Bay Sands",
+    "file": "Marina_Bay_Sands_(I).jpg",
+    "author": "This Photo was taken by Supanut Arunoprayote. Feel free to use any of my images, but please mention me as the author and may send me a message. (สามารถใช้ภาพได้อิสระ แต่กรุณาใส่เครดิตผู้ถ่ายและอาจส่งข้อความบอกกล่าวด้วย) Please do not upload an updated image here without consultation with the Author. The author would like to make corrections only at his own source. This ensures that the changes are preserved.Please if you think that any changes should be required, please inform the author.Otherwise you can upload a new image with a new name. Please use one of the templates derivative or extract.",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Marina_Bay_Sands_(I).jpg"
+  },
+  "hong-kong": {
+    "title": "Victoria Harbour",
+    "file": "Hong_Kong_Skyline_viewed_from_Victoria_Peak.jpg",
+    "author": "Haydn Hsin",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hong_Kong_Skyline_viewed_from_Victoria_Peak.jpg"
+  },
+  "cite-interdite": {
+    "title": "Forbidden City",
+    "file": "The_Forbidden_City_-_View_from_Coal_Hill.jpg",
+    "author": "Pixelflake",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Forbidden_City_-_View_from_Coal_Hill.jpg"
+  },
+  "mumbai": {
+    "title": "Gateway of India",
+    "file": "Mumbai_03-2016_30_Gateway_of_India.jpg",
+    "author": "A.Savin",
+    "license": "FAL",
+    "source": "https://commons.wikimedia.org/wiki/File:Mumbai_03-2016_30_Gateway_of_India.jpg"
+  },
+  "hollywood": {
+    "title": "Hollywood Sign",
+    "file": "Hollywood_sign_(8485145044).jpg",
+    "author": "Gnaphron",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Hollywood_sign_(8485145044).jpg"
+  },
+  "canal-suez": {
+    "title": "Suez Canal",
+    "file": "Iss016e019375.jpg",
+    "author": "NASA",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Iss016e019375.jpg"
+  },
+  "canal-panama": {
+    "title": "Panama Canal",
+    "file": "Panama_Canal_Map_EN.svg",
+    "author": "Thoroe",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Panama_Canal_Map_EN.svg"
+  },
+  "gibraltar": {
+    "title": "Strait of Gibraltar",
+    "file": "STS059-238-074_Strait_of_Gibraltar.jpg",
+    "author": "NASA",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:STS059-238-074_Strait_of_Gibraltar.jpg"
+  },
+  "rotterdam": {
+    "title": "Port of Rotterdam",
+    "file": "Port_of_Rotterdam_logo_(light-blue).svg",
+    "author": "Port of Rotterdam",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Port_of_Rotterdam_logo_(light-blue).svg"
+  },
+  "petronas": {
+    "title": "Petronas Towers",
+    "file": "Petronas_Towers_Logo.svg",
+    "author": "Unknown authorUnknown author",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Petronas_Towers_Logo.svg"
+  },
+  "sahara": {
+    "title": "Erg Chebbi",
+    "file": "Merzouga_Dunes_2011.jpg",
+    "author": "Bjørn Christian Tørrissen",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Merzouga_Dunes_2011.jpg"
+  },
+  "atacama": {
+    "title": "Atacama Desert",
+    "file": "Atacama.png",
+    "author": "NASA",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Atacama.png"
+  },
+  "ilulissat": {
+    "title": "Ilulissat Icefjord",
+    "file": "Greenland_Ilulissat-25.jpg",
+    "author": "Michael Haferkamp",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Greenland_Ilulissat-25.jpg"
+  },
+  "antarctique": {
+    "title": "Antarctica",
+    "file": "Antarctica_(orthographic_projection).svg",
+    "author": "Heraldry",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Antarctica_(orthographic_projection).svg"
+  },
+  "barriere-corail": {
+    "title": "Great Barrier Reef",
+    "file": "ISS-45_StoryOfWater,_Great_Barrier_Reef,_Australia.jpg",
+    "author": "NASA/Kjell Lindgren",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:ISS-45_StoryOfWater%2C_Great_Barrier_Reef%2C_Australia.jpg"
+  },
+  "kinderdijk": {
+    "title": "Kinderdijk",
+    "file": "KinderdijkMolens02.jpg",
+    "author": "Lucas Hirschegger",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:KinderdijkMolens02.jpg"
+  },
+  "trois-gorges": {
+    "title": "Three Gorges Dam",
+    "file": "ThreeGorgesDam-China2009.jpg",
+    "author": "Source file: Le Grand Portage Derivative work: Rehman",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:ThreeGorgesDam-China2009.jpg"
+  },
+  "banaue": {
+    "title": "Banaue Rice Terraces",
+    "file": "Banaue-terrace.JPG",
+    "author": "User: (WT-shared) Roundtheworld at wts wikivoyage",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Banaue-terrace.JPG"
+  },
+  "mekong": {
+    "title": "Mekong Delta",
+    "file": "Tractor_Mekong_Delta_Vietnam.jpg",
+    "author": "Thomas Schoch – www.retas.de",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tractor_Mekong_Delta_Vietnam.jpg"
+  },
+  "mont-blanc": {
+    "title": "Mont Blanc",
+    "file": "Mont_Blanc_Aiguille.jpg",
+    "author": "Hseugut",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mont_Blanc_Aiguille.jpg"
+  },
+  "versailles": {
+    "title": "Palace of Versailles",
+    "file": "Versailles-Chateau-Jardins02.jpg",
+    "author": "G CHP",
+    "license": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Versailles-Chateau-Jardins02.jpg"
+  },
+  "dune-pilat": {
+    "title": "Dune of Pilat",
+    "file": "DunePyla.JPG",
+    "author": "Larrousiney at French Wikipedia",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:DunePyla.JPG"
+  },
+  "pont-gard": {
+    "title": "Pont du Gard",
+    "file": "Pont_du_Gard_BLS.jpg",
+    "author": "Benh LIEU SONG (Flickr)",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pont_du_Gard_BLS.jpg"
+  },
+  "calanques": {
+    "title": "Calanques National Park",
+    "file": "En-Vau_calanque_4.jpg",
+    "author": "kallerna",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:En-Vau_calanque_4.jpg"
+  },
+  "iguacu": {
+    "title": "Iguazu Falls",
+    "file": "Iguazu_Cataratas2.jpg",
+    "author": "Enaldo Valadares",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Iguazu_Cataratas2.jpg"
+  },
+  "uyuni": {
+    "title": "Salar de Uyuni",
+    "file": "Salar_Uyuni_au01.jpg",
+    "author": "Anouchka Unel",
+    "license": "FAL",
+    "source": "https://commons.wikimedia.org/wiki/File:Salar_Uyuni_au01.jpg"
+  },
+  "torres-paine": {
+    "title": "Torres del Paine National Park",
+    "file": "Torres_del_Paine_y_cuernos_del_Paine,_montaje.jpg",
+    "author": "Karen Chan 16 y Miguel.v ( local | logs | global ) (originales), y Jorge Morales Piderit (montaje).",
+    "license": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Torres_del_Paine_y_cuernos_del_Paine%2C_montaje.jpg"
+  },
+  "rushmore": {
+    "title": "Mount Rushmore",
+    "file": "Mount_Rushmore_detail_view_(100MP).jpg",
+    "author": "Thomas Wolf, www.foto-tw.de",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mount_Rushmore_detail_view_(100MP).jpg"
+  },
+  "lac-moraine": {
+    "title": "Moraine Lake",
+    "file": "Moraine_Lake_17092005.jpg",
+    "author": "Gorgo",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Moraine_Lake_17092005.jpg"
+  },
+  "djenne": {
+    "title": "Great Mosque of Djenné",
+    "file": "Djenne_great_mud_mosque.jpg",
+    "author": "Ruud Zwart",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Djenne_great_mud_mosque.jpg"
+  },
+  "cappadoce": {
+    "title": "Cappadocia",
+    "file": "Cappadocia_balloon_trip,_Ortahisar_Castle_(11893715185).jpg",
+    "author": "Arian Zwegers from Brussels, Belgium",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cappadocia_balloon_trip%2C_Ortahisar_Castle_(11893715185).jpg"
+  },
+  "pompei": {
+    "title": "Pompeii",
+    "file": "Theathres_of_Pompeii.jpg",
+    "author": "ElfQrin",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Theathres_of_Pompeii.jpg"
+  },
+  "alhambra": {
+    "title": "Alhambra",
+    "file": "Dawn_Charles_V_Palace_Alhambra_Granada_Andalusia_Spain.jpg",
+    "author": "Jebulon",
+    "license": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Dawn_Charles_V_Palace_Alhambra_Granada_Andalusia_Spain.jpg"
+  },
+  "neuschwanstein": {
+    "title": "Neuschwanstein Castle",
+    "file": "Schloss_Neuschwanstein_2013.jpg",
+    "author": "Thomas Wolf, www.foto-tw.de",
+    "license": "CC BY-SA 3.0 de",
+    "source": "https://commons.wikimedia.org/wiki/File:Schloss_Neuschwanstein_2013.jpg"
+  },
+  "moher": {
+    "title": "Cliffs of Moher",
+    "file": "Cliffs-Of-Moher-OBriens-From-South.JPG",
+    "author": "Bjørn Christian Tørrissen",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cliffs-Of-Moher-OBriens-From-South.JPG"
+  },
+  "geiranger": {
+    "title": "Geirangerfjord",
+    "file": "Geirangerfjord_.jpg",
+    "author": "Andreas Trepte",
+    "license": "CC BY-SA 2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Geirangerfjord_.jpg"
+  },
+  "bagan": {
+    "title": "Bagan",
+    "file": "Bagan,_Burma.jpg",
+    "author": "Corto Maltese 1999",
+    "license": "CC BY 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Bagan%2C_Burma.jpg"
+  },
+  "fushimi-inari": {
+    "title": "Fushimi Inari-taisha",
+    "file": "Torii_path_with_lantern_at_Fushimi_Inari_Taisha_Shrine,_Kyoto,_Japan.jpg",
+    "author": "Basile Morin",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Torii_path_with_lantern_at_Fushimi_Inari_Taisha_Shrine%2C_Kyoto%2C_Japan.jpg"
+  },
+  "santorin": {
+    "title": "Santorini",
+    "file": "2011_Dimos_Thiras.png",
+    "author": "Pitichinaccio",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2011_Dimos_Thiras.png"
   }
 }
