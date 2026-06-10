@@ -29,19 +29,19 @@ const NODE_RADIUS = {
 // Step-by-step pawn animation
 const STEP_DURATION = 220; // ms per step
 
-const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, movePath, onMoveComplete }) {
+const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMoveComplete }) {
   const [animPos, setAnimPos] = useState({ x: px, y: py });
   const animating = useRef(false);
 
-  // Animate through waypoints when movePath targets this pawn
+  // Animate through waypoints when a move targets this pawn
   useEffect(() => {
-    if (!movePath || movePath.teamIndex !== idx || movePath.waypoints.length < 2) {
+    if (!move || move.waypoints.length < 2) {
       setAnimPos({ x: px, y: py });
       return;
     }
 
     animating.current = true;
-    const waypoints = movePath.waypoints;
+    const waypoints = move.waypoints;
     let step = 0;
     setAnimPos({ x: waypoints[0].x, y: waypoints[0].y });
 
@@ -50,14 +50,14 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, movePath, o
       if (step >= waypoints.length) {
         clearInterval(interval);
         animating.current = false;
-        if (onMoveComplete) onMoveComplete();
+        if (onMoveComplete) onMoveComplete(idx);
         return;
       }
       setAnimPos({ x: waypoints[step].x, y: waypoints[step].y });
     }, STEP_DURATION);
 
     return () => clearInterval(interval);
-  }, [movePath, idx, onMoveComplete]);
+  }, [move, idx, onMoveComplete]);
 
   // When not animating, sync to final position
   useEffect(() => {
@@ -66,7 +66,7 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, movePath, o
     }
   }, [px, py]);
 
-  const isBack = movePath?.teamIndex === idx && movePath?.type === 'back';
+  const isBack = move?.type === 'back';
 
   return (
     <motion.g
@@ -132,7 +132,7 @@ export default function BoardSVG() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const chooseJunction = useGameStore((s) => s.chooseJunction);
   const movePath = useGameStore((s) => s.movePath);
-  const clearMovePath = useGameStore((s) => s.clearMovePath);
+  const clearTeamMove = useGameStore((s) => s.clearTeamMove);
 
   const containerRef = useRef(null);
   const svgRef = useRef(null);
@@ -211,9 +211,9 @@ export default function BoardSVG() {
     return set;
   }, [awaitingChoice, currentTeam, board, teams]);
 
-  const onMoveComplete = useCallback(() => {
-    clearMovePath();
-  }, [clearMovePath]);
+  const onMoveComplete = useCallback((teamIndex) => {
+    clearTeamMove(teamIndex);
+  }, [clearTeamMove]);
 
   if (!board) return null;
 
@@ -333,6 +333,7 @@ export default function BoardSVG() {
         {teams.map((team, idx) => {
           const pos = pawnPositions[idx];
           if (!pos) return null;
+          const move = movePath?.find((m) => m.teamIndex === idx) || null;
           return (
             <Pawn
               key={idx}
@@ -341,7 +342,7 @@ export default function BoardSVG() {
               px={pos.px}
               py={pos.py}
               isActive={idx === currentTeam}
-              movePath={movePath}
+              move={move}
               onMoveComplete={onMoveComplete}
             />
           );

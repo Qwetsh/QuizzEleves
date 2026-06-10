@@ -64,6 +64,46 @@ export default function GameLayout() {
             </div>
           </div>
         )}
+
+        {/* Bouton Boutique flottant — juste au-dessus du HUD des equipes */}
+        {team && (
+          <button
+            onClick={openShop}
+            aria-label="Ouvrir la boutique"
+            style={{
+              position: 'absolute',
+              bottom: 14,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 56,
+              display: 'inline-flex', alignItems: 'center', gap: 10,
+              padding: '12px 26px',
+              borderRadius: 999,
+              border: '2px solid rgba(110, 78, 16, 0.55)',
+              background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))',
+              fontFamily: 'var(--font-display)',
+              fontSize: 17,
+              color: '#fff',
+              cursor: 'pointer',
+              textShadow: '0 1px 0 rgba(0,0,0,0.25)',
+              boxShadow:
+                'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 0 rgba(110,78,16,0.55), 0 10px 20px rgba(46,31,16,0.3)',
+            }}
+          >
+            <span style={{ fontSize: 20 }}>{"\u{1F6D2}"}</span>
+            Boutique
+            <span
+              style={{
+                padding: '2px 10px', borderRadius: 999,
+                background: 'rgba(0,0,0,0.18)',
+                fontSize: 14,
+                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+              }}
+            >
+              {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Bottom bar — team cards */}
@@ -138,15 +178,8 @@ export default function GameLayout() {
           borderTop: '1px solid rgba(122, 94, 58, 0.18)',
           display: 'flex', gap: 8,
         }}>
-          <button
-            className="btn btn--ghost btn--sm"
-            onClick={openShop}
-            style={{ flex: 1 }}
-          >
-            {"\u{1F6D2} Boutique"}
-          </button>
-          <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label="Plein ecran">
-            {isFs ? "\u2716" : "\u26F6"}
+          <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label="Plein ecran" style={{ flex: 1 }}>
+            {isFs ? "\u2716 Quitter le plein \u00E9cran" : "\u26F6 Plein \u00E9cran"}
           </button>
           <button className="btn btn--ghost btn--sm" onClick={reset} aria-label="Quitter">
             {"\u2715"}

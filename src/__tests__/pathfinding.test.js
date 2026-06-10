@@ -43,10 +43,26 @@ describe('moveForward', () => {
     expect(result.remaining).toBe(1);
   });
 
-  it('passes through a junction on the first step', () => {
+  it('stops immediately when starting on a junction (choice required)', () => {
     const result = moveForward(testBoard, 'b', 1);
-    expect(result.finalPos).toBe('c');
+    expect(result.finalPos).toBe('b');
+    expect(result.stoppedAtJunction).toBe(true);
+    expect(result.remaining).toBe(1);
+    expect(result.path).toEqual(['b']);
+  });
+
+  it('keeps the full remaining steps when starting on a junction', () => {
+    const result = moveForward(testBoard, 'b', 3);
+    expect(result.finalPos).toBe('b');
+    expect(result.stoppedAtJunction).toBe(true);
+    expect(result.remaining).toBe(3);
+  });
+
+  it('traverses junctions via next[0] with throughJunctions option', () => {
+    const result = moveForward(testBoard, 'b', 2, { throughJunctions: true });
+    expect(result.finalPos).toBe('e');
     expect(result.stoppedAtJunction).toBe(false);
+    expect(result.path).toEqual(['b', 'c', 'e']);
   });
 
   it('stops at arrivee', () => {

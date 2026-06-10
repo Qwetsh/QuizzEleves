@@ -38,7 +38,7 @@ function PowerBadge({ powerKey, charges, level, kindLabel }) {
   );
 }
 
-function TeamStripCard({ team, active, rank, total }) {
+function TeamStripCard({ team, active, rank, total, compact }) {
   const board = useGameStore((s) => s.board);
 
   const powers = team.powers || {};
@@ -71,10 +71,10 @@ function TeamStripCard({ team, active, rank, total }) {
 
       <div className="ts-card-blazon">
         <div style={{
-          width: 52, height: 52, borderRadius: 14,
+          width: compact ? 38 : 52, height: compact ? 38 : 52, borderRadius: compact ? 11 : 14,
           background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 26,
+          fontSize: compact ? 20 : 26,
           boxShadow: active
             ? `inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 0 12px ${accent}66`
             : 'inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.15)',
@@ -161,8 +161,10 @@ export default function BottomBar() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const finished = useGameStore((s) => s.finished);
 
+  const compact = teams.length >= 5;
+
   return (
-    <div className="team-strip">
+    <div className={'team-strip' + (compact ? ' team-strip--compact' : '')}>
       <div className="team-strip-inner">
         {teams.map((t, i) => (
           <TeamStripCard
@@ -171,6 +173,7 @@ export default function BottomBar() {
             active={i === currentTeam && !finished}
             rank={i + 1}
             total={teams.length}
+            compact={compact}
           />
         ))}
       </div>

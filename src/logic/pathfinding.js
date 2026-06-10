@@ -17,13 +17,19 @@ export function buildPredecessors(nodes) {
 /**
  * Avance de n cases en suivant next[0] (chemin par defaut).
  * S'arrete aux jonctions (choix requis) ou a l'arrivee.
+ * Si la position de depart est elle-meme une jonction a branches multiples,
+ * s'arrete immediatement (remaining = steps) pour demander le choix.
  *
  * @param {object} nodes - graphe
  * @param {string} currentPos - id du noeud actuel
  * @param {number} steps - nombre de pas
- * @returns {{ finalPos: string, stoppedAtJunction: boolean, remaining: number }}
+ * @param {object} [opts]
+ * @param {boolean} [opts.throughJunctions] - traverse les jonctions via next[0]
+ *   sans s'arreter (deplacements d'evenements, pas de choix possible)
+ * @returns {{ finalPos: string, stoppedAtJunction: boolean, remaining: number, path: string[] }}
  */
-export function moveForward(nodes, currentPos, steps) {
+export function moveForward(nodes, currentPos, steps, opts = {}) {
+  const { throughJunctions = false } = opts;
   let pos = currentPos;
   const path = [currentPos];
 
@@ -31,7 +37,7 @@ export function moveForward(nodes, currentPos, steps) {
     const node = nodes[pos];
     if (!node || node.next.length === 0) break;
 
-    if (node.next.length > 1 && i > 0) {
+    if (!throughJunctions && node.next.length > 1) {
       return { finalPos: pos, stoppedAtJunction: true, remaining: steps - i, path };
     }
 

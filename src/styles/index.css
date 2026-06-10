@@ -256,3 +256,12 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spac
 
 /* No select on game UI */
 .no-select { user-select: none; }
+
+/* Conteneur scrollable a barre invisible (boutique, listes compactes) */
+.scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}

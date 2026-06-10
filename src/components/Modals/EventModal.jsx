@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
+import { POWERS } from '../../data/powers';
 import { soundEvent, soundClick } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
+import TeamTargetButton from './TeamTargetButton';
 
 const DICE_FACES = [null, '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
 
@@ -17,6 +19,7 @@ export default function EventModal() {
   const eventSelectTarget = useGameStore((s) => s.eventSelectTarget);
   const eventAnswerQuestion = useGameStore((s) => s.eventAnswerQuestion);
   const eventRechargeChoice = useGameStore((s) => s.eventRechargeChoice);
+  const eventMarcheNoirBuy = useGameStore((s) => s.eventMarcheNoirBuy);
 
   useEffect(() => {
     if (showEvent) soundEvent();
@@ -77,7 +80,13 @@ export default function EventModal() {
               <QuestionPhase data={data} onAnswer={eventAnswerQuestion} />
             )}
             {phase === 'choice' && (
-              <ChoicePhase eventKey={key} team={team} onChoice={eventRechargeChoice} />
+              <ChoicePhase
+                eventKey={key}
+                team={team}
+                onChoice={eventRechargeChoice}
+                onMarcheNoirBuy={eventMarcheNoirBuy}
+                onSkip={declineEvent}
+              />
             )}
             {phase === 'result' && <ResultPhase data={data} onClose={closeEvent} />}
           </div>
@@ -123,23 +132,13 @@ const TargetPhase = React.memo(function TargetPhase({ teams, currentTeam, eventK
         {teams.map((t, i) => {
           if (i === currentTeam) return null;
           return (
-            <button
+            <TeamTargetButton
               key={i}
+              team={t}
               onClick={() => onSelect(i)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                padding: 12, borderRadius: 14,
-                border: '2px solid rgba(122,94,58,0.22)',
-                background: '#fffefb',
-                cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                transition: 'all 100ms ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#a83e7f'; e.currentTarget.style.background = '#faf0f5'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(122,94,58,0.22)'; e.currentTarget.style.background = '#fffefb'; }}
-            >
-              <span className="text-2xl">{t.emoji}</span>
-              <span style={{ fontFamily: 'var(--font-display)', color: t.color }}>{t.name}</span>
-            </button>
+              hoverColor="#a83e7f"
+              hoverBg="#faf0f5"
+            />
           );
         })}
       </div>
@@ -218,7 +217,7 @@ const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
   );
 });
 
-function ChoicePhase({ eventKey, team, onChoice }) {
+function ChoicePhase({ eventKey, team, onChoice, onMarcheNoirBuy, onSkip }) {
   if (eventKey === 'recharge') {
     return (
       <>
@@ -234,6 +233,66 @@ function ChoicePhase({ eventKey, team, onChoice }) {
       </>
     );
   }
+
+  if (eventKey === 'marcheNoir') {
+    const owned = Object.entries(team.powers || {}).filter(([k]) => POWERS[k]);
+    const money = team.money ?? 0;
+    return (
+      <>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>
+          {"1 charge \u00E0 moiti\u00E9 prix \u2014 tu as "}{money} <span className="coin" />
+        </p>
+        <div className="space-y-2" style={{ marginTop: 12 }}>
+          {owned.map(([key, entry]) => {
+            const power = POWERS[key];
+            const price = Math.ceil(power.price / 2);
+            const canBuy = money >= price;
+            return (
+              <button
+                key={key}
+                onClick={() => { if (canBuy) { soundClick(); onMarcheNoirBuy(key); } }}
+                disabled={!canBuy}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: 12, borderRadius: 14,
+                  border: `2px solid ${canBuy ? power.color + '66' : 'rgba(122,94,58,0.18)'}`,
+                  background: canBuy ? '#fffefb' : 'rgba(122,94,58,0.06)',
+                  cursor: canBuy ? 'pointer' : 'not-allowed',
+                  opacity: canBuy ? 1 : 0.55,
+                  fontFamily: 'var(--font-ui)',
+                  transition: 'all 100ms ease',
+                }}
+              >
+                <span className="text-2xl">{power.icon}</span>
+                <span style={{ fontFamily: 'var(--font-display)', flex: 1, textAlign: 'left' }}>
+                  {power.name}
+                  <span style={{ fontSize: 11, color: 'var(--ink-500)', marginLeft: 8 }}>
+                    {entry?.charges ?? 0} charge{(entry?.charges ?? 0) > 1 ? 's' : ''}
+                  </span>
+                </span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>
+                  <s style={{ color: 'var(--ink-400)', marginRight: 6 }}>{power.price}</s>
+                  {price} <span className="coin" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button
+          onClick={onSkip}
+          style={{
+            marginTop: 14, width: '100%',
+            fontSize: 14, color: 'var(--ink-500)',
+            cursor: 'pointer', background: 'none', border: 'none',
+            fontFamily: 'var(--font-ui)', padding: 8,
+          }}
+        >
+          Non merci, je passe mon chemin
+        </button>
+      </>
+    );
+  }
+
   return null;
 }
 

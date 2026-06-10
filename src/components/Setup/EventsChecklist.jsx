@@ -22,7 +22,7 @@ export default function EventsChecklist() {
           {allChecked ? 'Tout d\u00e9cocher' : 'Tout cocher'}
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {allKeys.map((key) => {
           const ev = EVENTS[key];
           const on = enabledEvents.includes(key);
@@ -30,7 +30,7 @@ export default function EventsChecklist() {
             <div
               key={key}
               onClick={() => toggleEvent(key)}
-              className="flex items-center gap-2.5 cursor-pointer select-none"
+              className="flex items-start gap-2.5 cursor-pointer select-none"
               style={{
                 padding: '6px 8px',
                 borderRadius: 8,
@@ -45,11 +45,17 @@ export default function EventsChecklist() {
                   border: `2px solid ${on ? 'var(--gold-700)' : 'var(--ink-400)'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#fff', fontSize: 14, flexShrink: 0,
+                  marginTop: 1,
                 }}
               >
                 {on ? '\u2713' : ''}
               </div>
-              <span style={{ fontSize: 13 }}>{ev.icon} {ev.name}</span>
+              <div className="min-w-0">
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.icon} {ev.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.35, marginTop: 1 }}>
+                  {ev.desc}
+                </div>
+              </div>
             </div>
           );
         })}

@@ -33,7 +33,10 @@ function createDefaultTeams(n) {
   }));
 }
 
-// UI state reset shared by nextTurn, resumeGame, reset
+// UI state reset shared by nextTurn, resumeGame, reset.
+// NB: movePath n'est PAS reset ici — les animations de deplacement doivent
+// survivre au changement de tour (ex: recul apres mauvaise reponse) et sont
+// nettoyees par clearTeamMove quand chaque pion finit son trajet.
 const TURN_RESET = {
   diceValue: null,
   pendingMove: null,
@@ -47,7 +50,6 @@ const TURN_RESET = {
   indiceHidden: [],
   freeActivation: false,
   showChargePicker: false,
-  movePath: null,
 };
 
 export const useGameStore = create((set, get) => ({
@@ -114,7 +116,8 @@ export const useGameStore = create((set, get) => ({
   showShop: false,
   preRollPos: null,
   preRollValue: null,
-  // Animation: { teamIndex, waypoints: [{x,y},...], type: 'forward'|'back' }
+  // Animations: [{ teamIndex, waypoints: [{x,y},...], type: 'forward'|'back' }, ...]
+  // Tableau pour supporter plusieurs pions en mouvement (tempete, echange...).
   movePath: null,
 
   // --- Power selection ---
@@ -133,7 +136,7 @@ export const useGameStore = create((set, get) => ({
     set({
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
-      ...TURN_RESET,
+      ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
       powerSetupIndex: 0, powerSetupCategory: 'def',
     });
@@ -196,7 +199,7 @@ export const useGameStore = create((set, get) => ({
     newTeams[currentTeam] = { ...team, pos: result.finalPos };
     // Build animation waypoints from path
     const waypoints = result.path.map((id) => ({ x: board[id].x, y: board[id].y }));
-    set({ teams: newTeams, movePath: { teamIndex: currentTeam, waypoints, type: 'forward' } });
+    set({ teams: newTeams, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
 
     if (result.stoppedAtJunction) {
       set({ awaitingChoice: true, pendingMove: { remaining: result.remaining } });
@@ -219,6 +222,7 @@ export const useGameStore = create((set, get) => ({
   chooseJunction: (nextNodeId) => {
     const { teams, currentTeam, board, pendingMove } = get();
     const team = teams[currentTeam];
+    const junctionPos = team.pos;
     set({ pendingLanding: false });
 
     const newTeams = [...teams];
@@ -229,15 +233,17 @@ export const useGameStore = create((set, get) => ({
       const result = moveForward(board, nextNodeId, pendingMove.remaining - 1);
       const updatedTeams = [...get().teams];
       updatedTeams[currentTeam] = { ...updatedTeams[currentTeam], pos: result.finalPos };
-      const waypoints = result.path.map((id) => ({ x: board[id].x, y: board[id].y }));
-      set({ teams: updatedTeams, pendingMove: null, movePath: { teamIndex: currentTeam, waypoints, type: 'forward' } });
+      // Animation depuis la jonction, en passant par la branche choisie
+      const waypoints = [junctionPos, ...result.path].map((id) => ({ x: board[id].x, y: board[id].y }));
+      set({ teams: updatedTeams, pendingMove: null, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
 
       if (result.stoppedAtJunction) {
         set({ awaitingChoice: true, pendingMove: { remaining: result.remaining } });
         return;
       }
     } else {
-      set({ pendingMove: null });
+      const waypoints = [junctionPos, nextNodeId].map((id) => ({ x: board[id].x, y: board[id].y }));
+      set({ pendingMove: null, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
     }
 
     get().handleLanding();
@@ -347,7 +353,7 @@ export const useGameStore = create((set, get) => ({
         addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
       }
 
-      const backPath = path ? { teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' } : null;
+      const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
       get().nextTurn();
       return;
@@ -389,7 +395,7 @@ export const useGameStore = create((set, get) => ({
       addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
     }
 
-    const backPath = path ? { teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' } : null;
+    const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
     get().nextTurn();
   },
@@ -403,6 +409,7 @@ export const useGameStore = create((set, get) => ({
   eventAskQuestion: () => eventH.eventAskQuestion(set, get),
   eventAnswerQuestion: (ci) => eventH.eventAnswerQuestion(set, get, ci),
   eventRechargeChoice: (pk) => eventH.eventRechargeChoice(set, get, pk),
+  eventMarcheNoirBuy: (pk) => eventH.eventMarcheNoirBuy(set, get, pk),
   applyEventEffect: () => eventH.applyEventEffect(set, get),
   closeEvent: () => {
     set({ showEvent: null, eventApplied: false });
@@ -411,7 +418,13 @@ export const useGameStore = create((set, get) => ({
   },
 
   // --- Animation ---
-  clearMovePath: () => set({ movePath: null }),
+  // Retire l'animation d'un pion qui a fini son trajet ; null quand plus aucune.
+  clearTeamMove: (teamIndex) => {
+    const mp = get().movePath;
+    if (!mp) return;
+    const rest = mp.filter((m) => m.teamIndex !== teamIndex);
+    set({ movePath: rest.length ? rest : null });
+  },
 
   // --- Confirm landing (player done using powers) ---
   confirmLanding: () => {
@@ -461,6 +474,7 @@ export const useGameStore = create((set, get) => ({
       ...saved,
       rolling: false,
       ...TURN_RESET,
+      movePath: null,
       showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
     });
   },
@@ -471,7 +485,7 @@ export const useGameStore = create((set, get) => ({
     set({
       phase: 'setup', teams: [], currentTeam: 0, board: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
-      rolling: false, ...TURN_RESET,
+      rolling: false, ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showDiceModal: false, eventApplied: false,
       nbTeams: 3, setupTeams: createDefaultTeams(3),
       enabledEvents: Object.keys(EVENTS),

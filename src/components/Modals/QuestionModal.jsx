@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
@@ -6,7 +6,6 @@ import { soundCorrect, soundWrong, soundTimer } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
 
 const TIMER_DURATION = 30;
-const TIMER_HALVED = 15;
 
 export default function QuestionModal() {
   const showQuestion = useGameStore((s) => s.showQuestion);
@@ -25,19 +24,34 @@ export default function QuestionModal() {
   const question = showQuestion?.question;
   const subject = showQuestion?.subject;
   const timerHalved = showQuestion?.timerHalved;
+  // Sablier niv.2/3 divise par 3/4 — meme base que le calcul d'argent du store
+  const timerDivisor = showQuestion?.timerDivisor || (timerHalved ? 2 : 1);
+  const bonusTime = showQuestion?.bonusTime || 0;
   const team = teams[currentTeam];
   const subjectInfo = SUBJECTS[subject] || {};
-  const duration = timerHalved ? TIMER_HALVED : TIMER_DURATION;
+  const duration = Math.floor(TIMER_DURATION / timerDivisor);
 
   const canUseIndice = !indiceUsed && !revealed && team?.powers?.indice?.charges > 0;
 
+  // Reset uniquement quand la QUESTION change (pas quand showQuestion est
+  // re-cree par l'ajout de bonusTime apres usage de l'Indice).
+  const bonusApplied = useRef(false);
   useEffect(() => {
-    if (showQuestion) {
+    if (question) {
       setSelected(null);
       setRevealed(false);
-      setTimeLeft(timerHalved ? TIMER_HALVED : TIMER_DURATION);
+      setTimeLeft(Math.floor(TIMER_DURATION / timerDivisor));
+      bonusApplied.current = false;
     }
-  }, [showQuestion, timerHalved]);
+  }, [question, timerDivisor]);
+
+  // Indice niv.2 : secondes bonus ajoutees une seule fois
+  useEffect(() => {
+    if (bonusTime > 0 && !bonusApplied.current) {
+      bonusApplied.current = true;
+      setTimeLeft((t) => t + bonusTime);
+    }
+  }, [bonusTime]);
 
   useEffect(() => {
     if (!showQuestion || revealed) return;
@@ -68,7 +82,7 @@ export default function QuestionModal() {
     }
   }, [revealed, selected, timeLeft, answerQuestion, timeoutQuestion]);
 
-  const timerRatio = timeLeft / duration;
+  const timerRatio = Math.min(1, timeLeft / duration);
   const timerColor = timerRatio > 0.5 ? '#fff' : timerRatio > 0.2 ? '#f3c969' : '#e85d6b';
   const isOpen = !!(showQuestion && question);
   const bgColor = subjectInfo.color || '#888';
@@ -137,7 +151,7 @@ export default function QuestionModal() {
 
             {timerHalved && (
               <div style={{ fontSize: 12, marginTop: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>
-                {"\u23F1\uFE0F Sablier actif \u2014 15s"}
+                {`\u23F1\uFE0F Sablier actif \u2014 ${duration}s`}
               </div>
             )}
           </div>

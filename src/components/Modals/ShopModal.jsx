@@ -30,7 +30,7 @@ function RechargeSection({ ownedPowers, money, onBuyCharge }) {
   return (
     <div>
       <SectionHeader icon={"\u26A1"} label="Recharger" />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div className="scroll-hidden" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
         {ownedPowers.map(([key, teamPower]) => {
           const power = POWERS[key];
           const charges = teamPower?.charges || 0;
@@ -39,7 +39,7 @@ function RechargeSection({ ownedPowers, money, onBuyCharge }) {
             <div
               key={key}
               style={{
-                flex: '1 1 200px', maxWidth: 280,
+                flex: '0 0 220px',
                 borderRadius: 14,
                 border: `2px solid ${power.color}33`,
                 background: `linear-gradient(135deg, ${power.color}0a, ${power.color}14)`,
@@ -83,7 +83,7 @@ function UpgradeSection({ ownedPowers, money, onUpgrade }) {
   return (
     <div>
       <SectionHeader icon={"\u2B06\uFE0F"} label="Améliorer" />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div className="scroll-hidden" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
         {upgradeable.map(([key, teamPower]) => {
           const power = POWERS[key];
           const level = teamPower?.level || 1;
@@ -96,7 +96,7 @@ function UpgradeSection({ ownedPowers, money, onUpgrade }) {
             <div
               key={key}
               style={{
-                flex: '1 1 260px', maxWidth: 360,
+                flex: '0 0 300px',
                 borderRadius: 14,
                 border: `2px solid ${power.color}33`,
                 background: `linear-gradient(135deg, ${power.color}0a, ${power.color}14)`,
@@ -149,14 +149,14 @@ function UnlockSection({ unownedPowers, money, onBuyNew }) {
   return (
     <div>
       <SectionHeader icon={"\u{1F513}"} label="Débloquer" />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div className="scroll-hidden" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
         {unownedPowers.map(([key, power]) => {
           const canAfford = money >= power.price;
           return (
             <div
               key={key}
               style={{
-                flex: '1 1 160px', maxWidth: 220,
+                flex: '0 0 190px',
                 borderRadius: 14,
                 border: `2px solid ${power.color}22`,
                 background: `linear-gradient(135deg, ${power.color}06, ${power.color}0d)`,

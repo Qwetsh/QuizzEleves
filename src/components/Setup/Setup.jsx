@@ -53,6 +53,13 @@ export default function Setup() {
               {"Jeu de plateau p\u00e9dagogique \u00b7 Cycle 4"}
             </div>
           </div>
+          <button
+            onClick={startGame}
+            className="btn btn--green btn--lg"
+            style={{ marginLeft: 'auto', padding: '16px 36px' }}
+          >
+            {"\u{1F680} Lancer la partie"}
+          </button>
         </div>
 
         {hasSave && (
@@ -112,13 +119,6 @@ export default function Setup() {
               })}
             </div>
           </div>
-          <button
-            onClick={startGame}
-            className="btn btn--green btn--lg"
-            style={{ width: '100%', marginTop: 8 }}
-          >
-            {"\u{1F680} Lancer la partie"}
-          </button>
         </div>
       </div>
     </div>

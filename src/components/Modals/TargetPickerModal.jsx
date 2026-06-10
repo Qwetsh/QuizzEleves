@@ -2,6 +2,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
 import ModalOverlay from './ModalOverlay';
+import TeamTargetButton from './TeamTargetButton';
 
 export default function TargetPickerModal() {
   const showTargetPicker = useGameStore((s) => s.showTargetPicker);
@@ -41,23 +42,11 @@ export default function TargetPickerModal() {
               {teams.map((team, i) => {
                 if (i === currentTeam) return null;
                 return (
-                  <button
+                  <TeamTargetButton
                     key={i}
+                    team={team}
                     onClick={() => applyOffensivePower(i)}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                      padding: 12, borderRadius: 14,
-                      border: '2px solid rgba(122,94,58,0.22)',
-                      background: '#fffefb',
-                      cursor: 'pointer', fontFamily: 'var(--font-ui)',
-                      transition: 'all 100ms ease',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#e85d6b'; e.currentTarget.style.background = '#fef2f2'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(122,94,58,0.22)'; e.currentTarget.style.background = '#fffefb'; }}
-                  >
-                    <span className="text-2xl">{team.emoji}</span>
-                    <span style={{ fontFamily: 'var(--font-display)', color: team.color }}>{team.name}</span>
-                  </button>
+                  />
                 );
               })}
             </div>

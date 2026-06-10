@@ -418,17 +418,62 @@
   max-width: 80px;
 }
 
-/* Compact mode for many teams: hide power name labels, keep discs */
-.team-strip-inner:has(.ts-card:nth-child(5)) .power-badge-meta {
+/* =========================================================
+   Compact mode (5+ equipes) — classe posee par BottomBar.
+   Objectif : ZERO chevauchement, l'or doit toujours rester lisible.
+   ========================================================= */
+.team-strip--compact .team-strip-inner {
+  gap: 8px;
+  padding: 16px 10px 10px;
+}
+.team-strip--compact .ts-card {
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+}
+.team-strip--compact .ts-card-blazon {
+  width: 44px;
+}
+.team-strip--compact .ts-card-name {
+  font-size: 14px;
+}
+/* La ligne "lieu actuel" saute en compact : place aux stats */
+.team-strip--compact .ts-card-location {
   display: none;
 }
-.team-strip-inner:has(.ts-card:nth-child(5)) .power-badge {
-  min-width: 0;
-  padding: 3px;
+/* Stats : jamais de retour a la ligne, taux de reussite masque */
+.team-strip--compact .ts-card-stats {
+  flex-wrap: nowrap;
+  gap: 4px;
 }
-.team-strip-inner:has(.ts-card:nth-child(5)) .ts-card-powers {
+.team-strip--compact .ts-stat {
+  font-size: 11px;
+  padding: 2px 6px 2px 5px;
+}
+.team-strip--compact .ts-stat-num { font-size: 12px; }
+.team-strip--compact .ts-stat--rate { display: none; }
+/* Pouvoirs : disques seuls, en ligne, sans libelles */
+.team-strip--compact .ts-card-powers {
   flex-direction: row;
+  gap: 4px;
 }
-.team-strip-inner:has(.ts-card:nth-child(5)) .ts-card-name {
-  font-size: 16px;
+.team-strip--compact .power-badge {
+  min-width: 0;
+  padding: 2px;
+}
+.team-strip--compact .power-badge-meta {
+  display: none;
+}
+.team-strip--compact .power-badge-disc {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+}
+.team-strip--compact .ts-card-rank {
+  font-size: 10px;
+  padding: 2px 5px;
+}
+.team-strip--compact .ts-card-tab {
+  font-size: 9px;
+  padding: 4px 10px 3px;
+  top: -12px;
 }

@@ -3,6 +3,11 @@ import { moveBack } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
 import { saveGame } from './persistence.js';
 
+// Effet du niveau courant d'un pouvoir — seule source de verite : powers.js
+function levelEffect(powerKey, level) {
+  return POWERS[powerKey]?.levels?.[level - 1]?.effect || {};
+}
+
 // --- Power usage ---
 
 export function usePower(set, get, powerKey) {
@@ -42,6 +47,7 @@ export function useIndice(set, get) {
   if (!question) return;
 
   const level = team.powers?.indice?.level ?? 1;
+  const effect = levelEffect('indice', level);
 
   const wrongIndices = question.a
     .map((_, i) => i)
@@ -50,7 +56,7 @@ export function useIndice(set, get) {
     const j = Math.floor(Math.random() * (i + 1));
     [wrongIndices[i], wrongIndices[j]] = [wrongIndices[j], wrongIndices[i]];
   }
-  const hideCount = level >= 3 ? wrongIndices.length : 2;
+  const hideCount = Math.min(effect.count ?? 2, wrongIndices.length);
   const hidden = wrongIndices.slice(0, hideCount);
 
   const result = consumePowerCharge(team, 'indice');
@@ -59,12 +65,11 @@ export function useIndice(set, get) {
   const newTeams = [...teams];
   newTeams[currentTeam] = result.updatedTeam;
 
-  const eliminatedCount = level >= 3 ? 'toutes les mauvaises' : '2';
-  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${eliminatedCount} r\u00e9ponses \u00e9limin\u00e9es.`);
+  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideCount} r\u00e9ponses \u00e9limin\u00e9es.`);
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
 
-  if (level >= 2) {
-    set({ showQuestion: { ...get().showQuestion, bonusTime: 5 } });
+  if (effect.bonusTime > 0) {
+    set({ showQuestion: { ...get().showQuestion, bonusTime: effect.bonusTime } });
   }
 }
 
@@ -92,12 +97,13 @@ export function useRelance(set, get) {
       clearInterval(interval);
       set({ diceValue: finalValue, rolling: false });
 
+      const mode = levelEffect('relance', level).mode || 'replace';
       let effectiveValue;
-      if (level >= 3) effectiveValue = prevValue + finalValue;
-      else if (level >= 2) effectiveValue = Math.max(prevValue, finalValue);
+      if (mode === 'sum') effectiveValue = prevValue + finalValue;
+      else if (mode === 'best') effectiveValue = Math.max(prevValue, finalValue);
       else effectiveValue = finalValue;
 
-      addLog(`\u{1F3B2} Relance : ${finalValue} !${level >= 2 ? ` (effectif: ${effectiveValue})` : ''}`);
+      addLog(`\u{1F3B2} Relance : ${finalValue} !${mode !== 'replace' ? ` (effectif: ${effectiveValue})` : ''}`);
       get().handleDiceResult(effectiveValue);
     }
   }, 80);
@@ -116,25 +122,30 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   if (!result) return;
   newTeams[currentTeam] = result.updatedTeam;
 
+  const level = team.powers?.[powerKey]?.level ?? 1;
+  const effect = levelEffect(powerKey, level);
+  let foudreMove = null;
+
   if (powerKey === 'foudre') {
-    const level = team.powers?.foudre?.level ?? 1;
-    const reculAmount = level >= 3 ? 7 : level >= 2 ? 5 : 3;
-    newTeams[targetTeamIndex] = { ...target, pos: moveBack(board, target.pos, reculAmount).finalPos };
+    const reculAmount = effect.amount ?? 3;
+    const r = moveBack(board, target.pos, reculAmount);
+    newTeams[targetTeamIndex] = { ...target, pos: r.finalPos };
+    if (r.path.length > 1) {
+      foudreMove = [{ teamIndex: targetTeamIndex, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+    }
     addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.`);
   } else if (powerKey === 'sablier') {
-    const level = team.powers?.sablier?.level ?? 1;
-    const divisor = level >= 3 ? 4 : level >= 2 ? 3 : 2;
+    const divisor = effect.divisor ?? 2;
     newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
     addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level}) sur ${target.emoji} ${target.name} ! Timer /${divisor} au prochain tour.`);
   } else if (powerKey === 'double') {
-    const level = team.powers?.double?.level ?? 1;
-    const questionCount = level >= 3 ? 3 : 2;
-    const noBonus = level === 2;
+    const questionCount = effect.count ?? 2;
+    const noBonus = !!effect.noBonus;
     newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleCount: questionCount, doubleNoBonus: noBonus };
     addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! ${questionCount} questions au prochain tour.${noBonus ? ' (sans bonus)' : ''}`);
   }
 
-  set({ teams: newTeams, showTargetPicker: null });
+  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
   // Stay in pendingLanding so player can use more powers before clicking "Continuer"
 }
 
