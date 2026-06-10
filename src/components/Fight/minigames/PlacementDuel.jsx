@@ -86,21 +86,55 @@ export default function PlacementDuel({
     setValidated((prev) => ({ ...prev, [side]: true }));
   };
 
-  const pin = (color, pos, hidden = false) => pos && (
+  // Epingle a l'effigie de l'equipe : goutte coloree avec l'emoji dedans,
+  // la pointe posee exactement sur le point choisi.
+  const pin = (team, pos, hidden = false) => pos && (
     <div
       style={{
         position: 'absolute',
         left: `${pos.x * 100}%`, top: `${pos.y * 100}%`,
         transform: 'translate(-50%, -100%)',
-        fontSize: 26, lineHeight: 1,
-        filter: `drop-shadow(0 2px 2px rgba(0,0,0,0.4))`,
-        color,
         opacity: hidden ? 0 : 1,
         pointerEvents: 'none',
         transition: 'opacity 200ms ease',
+        zIndex: 5,
+        filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.45))',
       }}
     >
-      <span style={{ WebkitTextStroke: `1.5px ${color}`, color }}>{'\u{1F4CD}'}</span>
+      <div
+        style={{
+          width: 32, height: 32,
+          borderRadius: '50% 50% 50% 0',
+          transform: 'rotate(-45deg)',
+          background: team.color,
+          border: '2.5px solid #fffefb',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <span style={{ transform: 'rotate(45deg)', fontSize: 16, lineHeight: 1 }}>{team.emoji}</span>
+      </div>
+    </div>
+  );
+
+  // Badge de distance pose au milieu du trait drapeau -> cible (revelation)
+  const distanceBadge = (team, pos) => pos && (
+    <div
+      style={{
+        position: 'absolute',
+        left: `${((pos.x + target.x) / 2) * 100}%`,
+        top: `${((pos.y + target.y) / 2) * 100}%`,
+        transform: 'translate(-50%, -50%)',
+        padding: '3px 10px', borderRadius: 999,
+        background: 'rgba(255,254,251,0.95)',
+        border: `2px solid ${team.color}`,
+        fontFamily: 'var(--font-display)', fontSize: 13, color: 'var(--ink-900)',
+        whiteSpace: 'nowrap',
+        pointerEvents: 'none',
+        zIndex: 6,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
+      }}
+    >
+      {formatDistance(pos, target)}
     </div>
   );
 
@@ -115,6 +149,25 @@ export default function PlacementDuel({
         <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
           <div style={{ position: 'relative', aspectRatio: String(aspect), maxWidth: '100%', maxHeight: '100%', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
             {renderScene()}
+            {/* traits pointilles drapeau -> cible */}
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 4 }}
+            >
+              <line
+                x1={marks.attacker.x * 100} y1={marks.attacker.y * 100}
+                x2={target.x * 100} y2={target.y * 100}
+                stroke={attacker.color} strokeWidth="0.45" strokeDasharray="1.6 1.2" vectorEffect="non-scaling-stroke" strokeLinecap="round"
+                style={{ strokeWidth: 2.5 }}
+              />
+              <line
+                x1={marks.defender.x * 100} y1={marks.defender.y * 100}
+                x2={target.x * 100} y2={target.y * 100}
+                stroke={defender.color} strokeWidth="0.45" strokeDasharray="1.6 1.2" vectorEffect="non-scaling-stroke" strokeLinecap="round"
+                style={{ strokeWidth: 2.5 }}
+              />
+            </svg>
             {/* cible */}
             <motion.div
               initial={{ scale: 3, opacity: 0 }}
@@ -122,19 +175,21 @@ export default function PlacementDuel({
               transition={{ type: 'spring', damping: 12 }}
               style={{
                 position: 'absolute', left: `${target.x * 100}%`, top: `${target.y * 100}%`,
-                transform: 'translate(-50%, -50%)', fontSize: 24, pointerEvents: 'none',
+                transform: 'translate(-50%, -50%)', fontSize: 24, pointerEvents: 'none', zIndex: 5,
                 filter: 'drop-shadow(0 0 6px rgba(243,201,105,0.9))',
               }}
             >
               {'⭐'}
             </motion.div>
-            {pin(attacker.color, marks.attacker)}
-            {pin(defender.color, marks.defender)}
+            {pin(attacker, marks.attacker)}
+            {pin(defender, marks.defender)}
+            {distanceBadge(attacker, marks.attacker)}
+            {distanceBadge(defender, marks.defender)}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 18, fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff' }}>
-          <span><span style={{ color: attacker.color }}>{'\u{1F4CD}'}</span> {attacker.name} : <strong>{formatDistance(marks.attacker, target)}</strong></span>
-          <span><span style={{ color: defender.color }}>{'\u{1F4CD}'}</span> {defender.name} : <strong>{formatDistance(marks.defender, target)}</strong></span>
+          <span>{attacker.emoji} {attacker.name} : <strong>{formatDistance(marks.attacker, target)}</strong></span>
+          <span>{defender.emoji} {defender.name} : <strong>{formatDistance(marks.defender, target)}</strong></span>
         </div>
       </div>
     );
@@ -179,7 +234,7 @@ export default function PlacementDuel({
             }}
           >
             {renderScene()}
-            {pin(team.color, marks[key], done)}
+            {pin(team, marks[key], done)}
             {done && (
               <div style={{
                 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
