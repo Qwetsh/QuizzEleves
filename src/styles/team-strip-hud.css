@@ -300,16 +300,22 @@
   color: #1c3d6e;
 }
 
-/* Powers column */
+/* Powers column — scrollable (barre invisible) pour les pouvoirs achetes
+   en boutique qui s'ajoutent sous les deux pouvoirs de depart */
 .ts-card-powers {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
 }
 .power-badge {
   --power-color: #888;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
   padding: 3px 8px 3px 3px;
@@ -451,10 +457,16 @@
 }
 .team-strip--compact .ts-stat-num { font-size: 12px; }
 .team-strip--compact .ts-stat--rate { display: none; }
-/* Pouvoirs : disques seuls, en ligne, sans libelles */
+/* Pouvoirs : disques seuls, en ligne scrollable, sans libelles */
 .team-strip--compact .ts-card-powers {
   flex-direction: row;
   gap: 4px;
+  max-height: none;
+  max-width: 100px;
+  overflow-y: hidden;
+  overflow-x: auto;
+  padding-right: 0;
+  padding-bottom: 2px;
 }
 .team-strip--compact .power-badge {
   min-width: 0;

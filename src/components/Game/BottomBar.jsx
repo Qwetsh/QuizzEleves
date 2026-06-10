@@ -45,6 +45,13 @@ function TeamStripCard({ team, active, rank, total, compact }) {
   const defKey = team.powerDef;
   const offKey = team.powerOff;
 
+  // Tous les pouvoirs possedes : def, off, puis ceux achetes en boutique
+  const powerKeys = [
+    ...(defKey && powers[defKey] ? [defKey] : []),
+    ...(offKey && offKey !== defKey && powers[offKey] ? [offKey] : []),
+    ...Object.keys(powers).filter((k) => k !== defKey && k !== offKey && POWERS[k]),
+  ];
+
   // Resolve current tile and biome — board is { nodeId: nodeObj }
   const currentNode = board?.[team.pos];
   const subject = currentNode?.subject && currentNode.subject !== 'multi'
@@ -134,23 +141,16 @@ function TeamStripCard({ team, active, rank, total, compact }) {
         </div>
       </div>
 
-      <div className="ts-card-powers">
-        {defKey && (
+      <div className="ts-card-powers scroll-hidden">
+        {powerKeys.map((key) => (
           <PowerBadge
-            powerKey={defKey}
-            charges={powers[defKey]?.charges ?? 0}
-            level={powers[defKey]?.level ?? 1}
-            kindLabel="Défense"
+            key={key}
+            powerKey={key}
+            charges={powers[key]?.charges ?? 0}
+            level={powers[key]?.level ?? 1}
+            kindLabel={POWERS[key]?.category === 'off' ? 'Attaque' : 'Défense'}
           />
-        )}
-        {offKey && (
-          <PowerBadge
-            powerKey={offKey}
-            charges={powers[offKey]?.charges ?? 0}
-            level={powers[offKey]?.level ?? 1}
-            kindLabel="Attaque"
-          />
-        )}
+        ))}
       </div>
     </div>
   );
