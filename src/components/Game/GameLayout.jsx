@@ -5,6 +5,7 @@ import Dice from './Dice';
 import PowerButtons from './Sidebar/PowerButtons';
 import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
+import MobileSessionPanel from './MobileSessionPanel';
 import QuestionModal from '../Modals/QuestionModal';
 import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
@@ -245,6 +246,7 @@ export default function GameLayout() {
           borderTop: '1px solid rgba(122, 94, 58, 0.18)',
           display: 'flex', gap: 8,
         }}>
+          <MobileSessionPanel />
           <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label="Plein ecran" style={{ flex: 1 }}>
             {isFs ? "\u2716 Quitter le plein \u00E9cran" : "\u26F6 Plein \u00E9cran"}
           </button>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
@@ -6,24 +7,34 @@ import { useGameStore } from '../../store/gameStore';
 import '../../styles/team-strip-hud.css';
 
 const TILE_TYPES = {
-  depart:   { icon: '\u{1F3F0}', label: 'D\u00e9part' },
-  arrivee:  { icon: '\u{1F3C6}', label: 'Arriv\u00e9e' },
+  depart:   { icon: '\u{1F3F0}', label: 'Départ' },
+  arrivee:  { icon: '\u{1F3C6}', label: 'Arrivée' },
   jonction: { icon: '\u{1F3B2}', label: 'Carrefour' },
-  event:    { icon: '\u2728',    label: '\u00C9v\u00e9nement' },
+  event:    { icon: '✨',    label: 'Événement' },
 };
 
 function biomeKey(subjectId) {
-  if (subjectId === 'geographie') return 'geo';
-  return subjectId;
+  return subjectId === 'geographie' ? 'geo' : subjectId;
 }
 
+// Liste des pouvoirs possédés d'une équipe (def, off, puis achats)
+function powerKeysOf(team) {
+  const powers = team.powers || {};
+  const { powerDef: defKey, powerOff: offKey } = team;
+  return [
+    ...(defKey && powers[defKey] ? [defKey] : []),
+    ...(offKey && offKey !== defKey && powers[offKey] ? [offKey] : []),
+    ...Object.keys(powers).filter((k) => k !== defKey && k !== offKey && POWERS[k]),
+  ];
+}
+
+// Badge détaillé (carte active + popover)
 function PowerBadge({ powerKey, charges, level, kindLabel }) {
   const info = POWERS[powerKey];
   if (!info) return null;
-  const empty = charges <= 0;
   return (
     <div
-      className={'power-badge ' + (empty ? 'is-empty' : '')}
+      className={'power-badge ' + (charges <= 0 ? 'is-empty' : '')}
       style={{ '--power-color': info.color }}
       title={`${info.name} — Niv.${level} — ${charges} charge${charges > 1 ? 's' : ''}\n${info.desc}`}
     >
@@ -40,26 +51,39 @@ function PowerBadge({ powerKey, charges, level, kindLabel }) {
   );
 }
 
-// Mini-icones d'equipement (3 slots) + compteur de sac, sous les stats
-function EquipmentStrip({ team }) {
+// Disque seul (cartes inactives compactes)
+function PowerDisc({ powerKey, charges, level }) {
+  const info = POWERS[powerKey];
+  if (!info) return null;
+  return (
+    <div
+      className={'power-disc ' + (charges <= 0 ? 'is-empty' : '')}
+      style={{ '--power-color': info.color }}
+      title={`${info.name} — Niv.${level} — ${charges} charge${charges > 1 ? 's' : ''}`}
+    >
+      <span className="power-disc-icon">{info.icon}</span>
+      <span className="power-disc-count">{charges}</span>
+    </div>
+  );
+}
+
+// Mini-icônes d'équipement (3 slots) + compteur de sac
+function EquipmentStrip({ team, className }) {
   const equipment = team.equipment || {};
   const bag = (team.bag || []).filter(Boolean);
-  const hasAnything = Object.values(equipment).some(Boolean) || bag.length > 0;
-  if (!hasAnything) return null;
+  if (!Object.values(equipment).some(Boolean) && bag.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+    <div className={'ts-eq ' + (className || '')}>
       {Object.keys(SLOTS).map((slot) => {
         const item = ITEMS[equipment[slot]];
         const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
         return (
           <span
             key={slot}
+            className="ts-eq-slot"
             title={item ? `${SLOTS[slot].name} : ${item.name}\n${item.desc}` : `${SLOTS[slot].name} : vide`}
             style={{
-              width: 20, height: 20, borderRadius: 6,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, flexShrink: 0,
               background: item ? `linear-gradient(180deg, ${color}cc, ${color})` : 'rgba(122,94,58,0.1)',
               border: item ? `1px solid ${color}` : '1px dashed rgba(122,94,58,0.3)',
               opacity: item ? 1 : 0.5,
@@ -74,15 +98,7 @@ function EquipmentStrip({ team }) {
         );
       })}
       {bag.length > 0 && (
-        <span
-          title={`Sac : ${bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}`}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 2,
-            padding: '1px 6px', borderRadius: 999,
-            fontSize: 11, color: 'var(--ink-600)',
-            background: 'rgba(122,94,58,0.12)', border: '1px solid rgba(122,94,58,0.25)',
-          }}
-        >
+        <span className="ts-eq-bag" title={`Sac : ${bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}`}>
           {'\u{1F9F3}'} {bag.length}
         </span>
       )}
@@ -90,122 +106,172 @@ function EquipmentStrip({ team }) {
   );
 }
 
-function TeamStripCard({ team, active, rank, total, compact }) {
-  const board = useGameStore((s) => s.board);
-
-  const powers = team.powers || {};
-  const defKey = team.powerDef;
-  const offKey = team.powerOff;
-
-  // Tous les pouvoirs possedes : def, off, puis ceux achetes en boutique
-  const powerKeys = [
-    ...(defKey && powers[defKey] ? [defKey] : []),
-    ...(offKey && offKey !== defKey && powers[offKey] ? [offKey] : []),
-    ...Object.keys(powers).filter((k) => k !== defKey && k !== offKey && POWERS[k]),
-  ];
-
-  // Resolve current tile and biome — board is { nodeId: nodeObj }
-  const currentNode = board?.[team.pos];
-  const subject = currentNode?.subject && currentNode.subject !== 'multi'
-    ? SUBJECTS[currentNode.subject]
-    : null;
-  const tileType = currentNode ? TILE_TYPES[currentNode.type] : null;
-
-  const accent = team.color || '#888';
+// Pastilles de stats (or, bonnes/mauvaises réponses, taux)
+function StatChips({ team, withRate = true }) {
   const totalQ = (team.correct ?? 0) + (team.wrong ?? 0);
   const winRate = totalQ > 0 ? Math.round((team.correct / totalQ) * 100) : null;
-
   return (
-    <div
-      className={'ts-card ' + (active ? 'is-active' : '')}
-      style={{ '--team-accent': accent }}
-    >
-      {active && (
-        <div className="ts-card-tab">
-          <span className="ts-card-tab-arrow">{'\u25B6'}</span> {'\u00C0'} TOI DE JOUER
+    <div className="ts-card-stats">
+      <div className="ts-stat ts-stat--coin" title="Pièces d'or">
+        <span className="coin ts-stat-coin" /><span className="ts-stat-num">{team.money ?? 0}</span>
+      </div>
+      <div className="ts-stat ts-stat--good" title="Bonnes réponses">
+        <span className="ts-stat-ico">{'✓'}</span><span className="ts-stat-num">{team.correct ?? 0}</span>
+      </div>
+      <div className="ts-stat ts-stat--bad" title="Erreurs">
+        <span className="ts-stat-ico">{'✗'}</span><span className="ts-stat-num">{team.wrong ?? 0}</span>
+      </div>
+      {withRate && winRate !== null && (
+        <div className="ts-stat ts-stat--rate" title="Taux de réussite">
+          <span className="ts-stat-ico">{'◎'}</span><span className="ts-stat-num">{winRate}<small>%</small></span>
         </div>
       )}
+    </div>
+  );
+}
 
-      <div className="ts-card-stripe" aria-hidden="true" />
+function TeamLocation({ team }) {
+  const board = useGameStore((s) => s.board);
+  const node = board?.[team.pos];
+  const subject = node?.subject && node.subject !== 'multi' ? SUBJECTS[node.subject] : null;
+  const tileType = node ? TILE_TYPES[node.type] : null;
+  return (
+    <div className="ts-card-location">
+      {subject ? (
+        <>
+          <span className="ts-card-location-ico" style={{
+            background: `var(--m-${biomeKey(node.subject)}-soft)`,
+            color: `var(--m-${biomeKey(node.subject)}-deep)`,
+          }}>{subject.icon}</span>
+          <span className="ts-card-location-text">{subject.biome}</span>
+        </>
+      ) : tileType ? (
+        <>
+          <span className="ts-card-location-ico ts-card-location-ico--neutral">{tileType.icon}</span>
+          <span className="ts-card-location-text">{tileType.label}</span>
+        </>
+      ) : (
+        <span className="ts-card-location-text" style={{ opacity: 0.5 }}>En attente…</span>
+      )}
+    </div>
+  );
+}
 
-      <div className="ts-card-blazon">
-        <div style={{
-          width: compact ? 38 : 52, height: compact ? 38 : 52, borderRadius: compact ? 11 : 14,
-          background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: compact ? 20 : 26,
-          boxShadow: active
-            ? `inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 0 12px ${accent}66`
-            : 'inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.15)',
-        }}>
-          {team.emoji}
-        </div>
-        <div className="ts-card-rank">{rank}<span>/{total}</span></div>
+function Blazon({ team, size }) {
+  return (
+    <div className="ts-card-blazon">
+      <div className="ts-blazon-disc" style={{
+        width: size, height: size, borderRadius: size * 0.28, fontSize: size * 0.5,
+        background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)`,
+      }}>{team.emoji}</div>
+    </div>
+  );
+}
+
+// Détail complet (popover au tap d'une équipe inactive) — réutilisé en Phase 2 (mobile)
+function TeamDetailPopover({ team, rank, total, onClose }) {
+  const equipment = team.equipment || {};
+  const bag = (team.bag || []).filter(Boolean);
+  const pKeys = powerKeysOf(team);
+  return (
+    <div className="ts-pop" onClick={(e) => e.stopPropagation()}>
+      <button className="ts-pop-close" onClick={onClose} aria-label="Fermer">{'✕'}</button>
+      <div className="ts-pop-head">
+        <span className="ts-pop-emoji" style={{ background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)` }}>{team.emoji}</span>
+        <div className="ts-pop-name" style={{ color: team.color }}>{team.name}</div>
+        <div className="ts-pop-rank">{rank}/{total}</div>
       </div>
+      <StatChips team={team} />
+      <div className="ts-pop-section">
+        <div className="ts-pop-label">Équipement</div>
+        {Object.keys(SLOTS).map((slot) => {
+          const item = ITEMS[equipment[slot]];
+          const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
+          return (
+            <div key={slot} className="ts-pop-eq-row">
+              <span className="ts-eq-slot" style={{
+                background: item ? `linear-gradient(180deg, ${color}cc, ${color})` : 'rgba(122,94,58,0.1)',
+                border: item ? `1px solid ${color}` : '1px dashed rgba(122,94,58,0.3)',
+                opacity: item ? 1 : 0.5,
+              }}>
+                {item ? (itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} /> : item.icon) : SLOTS[slot].icon}
+              </span>
+              <span className="ts-pop-eq-name">{item ? item.name : <em style={{ opacity: 0.5 }}>{SLOTS[slot].name} : vide</em>}</span>
+            </div>
+          );
+        })}
+        {bag.length > 0 && (
+          <div className="ts-pop-bag">{'\u{1F9F3}'} Sac : {bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}</div>
+        )}
+      </div>
+      <div className="ts-pop-section">
+        <div className="ts-pop-label">Pouvoirs</div>
+        <div className="ts-pop-powers">
+          {pKeys.length ? pKeys.map((key) => (
+            <PowerBadge key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0}
+              level={team.powers[key]?.level ?? 1}
+              kindLabel={POWERS[key]?.category === 'off' ? 'Attaque' : 'Défense'} />
+          )) : <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Aucun pouvoir.</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
+// Carte de l'équipe ACTIVE — détaillée
+function ActiveCard({ team, rank, total }) {
+  const pKeys = powerKeysOf(team);
+  return (
+    <div className="ts-card ts-card--active is-active" style={{ '--team-accent': team.color }}>
+      <div className="ts-card-tab"><span className="ts-card-tab-arrow">{'▶'}</span> {'À'} TOI DE JOUER</div>
+      <div className="ts-card-stripe" aria-hidden="true" />
+      <Blazon team={team} size={52} />
+      <div className="ts-card-rank ts-card-rank--active">{rank}<span>/{total}</span></div>
       <div className="ts-card-body">
         <div className="ts-card-head">
-          <div className="ts-card-name" style={{ color: accent }}>{team.name}</div>
-          <div className="ts-card-location">
-            {subject ? (
-              <>
-                <span
-                  className="ts-card-location-ico"
-                  style={{
-                    background: `var(--m-${biomeKey(currentNode.subject)}-soft)`,
-                    color: `var(--m-${biomeKey(currentNode.subject)}-deep)`,
-                  }}
-                >
-                  {subject.icon}
-                </span>
-                <span className="ts-card-location-text">{subject.biome}</span>
-              </>
-            ) : tileType ? (
-              <>
-                <span className="ts-card-location-ico ts-card-location-ico--neutral">{tileType.icon}</span>
-                <span className="ts-card-location-text">{tileType.label}</span>
-              </>
-            ) : (
-              <span className="ts-card-location-text" style={{ opacity: 0.5 }}>En attente…</span>
-            )}
-          </div>
+          <div className="ts-card-name" style={{ color: team.color }}>{team.name}</div>
+          <TeamLocation team={team} />
         </div>
-
-        <div className="ts-card-stats">
-          <div className="ts-stat ts-stat--coin" title="Pi\u00e8ces d'or">
-            <span className="coin ts-stat-coin" />
-            <span className="ts-stat-num">{team.money ?? 0}</span>
-          </div>
-          <div className="ts-stat ts-stat--good" title="Bonnes r\u00e9ponses">
-            <span className="ts-stat-ico">{'\u2713'}</span>
-            <span className="ts-stat-num">{team.correct ?? 0}</span>
-          </div>
-          <div className="ts-stat ts-stat--bad" title="Erreurs">
-            <span className="ts-stat-ico">{'\u2717'}</span>
-            <span className="ts-stat-num">{team.wrong ?? 0}</span>
-          </div>
-          {winRate !== null && (
-            <div className="ts-stat ts-stat--rate" title="Taux de r\u00e9ussite">
-              <span className="ts-stat-ico">{'\u25CE'}</span>
-              <span className="ts-stat-num">{winRate}<small>%</small></span>
-            </div>
-          )}
-        </div>
-
+        <StatChips team={team} />
         <EquipmentStrip team={team} />
       </div>
-
       <div className="ts-card-powers scroll-hidden">
-        {powerKeys.map((key) => (
-          <PowerBadge
-            key={key}
-            powerKey={key}
-            charges={powers[key]?.charges ?? 0}
-            level={powers[key]?.level ?? 1}
-            kindLabel={POWERS[key]?.category === 'off' ? 'Attaque' : 'Défense'}
-          />
+        {pKeys.map((key) => (
+          <PowerBadge key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0}
+            level={team.powers[key]?.level ?? 1}
+            kindLabel={POWERS[key]?.category === 'off' ? 'Attaque' : 'Défense'} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// Carte d'une équipe INACTIVE — compacte, densité adaptative (container queries),
+// détail complet au tap (popover).
+function CompactCard({ team, rank, total, open, onToggle }) {
+  const pKeys = powerKeysOf(team);
+  return (
+    <div
+      className={'ts-card ts-card--mini' + (open ? ' is-open' : '')}
+      style={{ '--team-accent': team.color }}
+      onClick={onToggle}
+    >
+      <div className="ts-card-stripe" aria-hidden="true" />
+      <Blazon team={team} size={38} />
+      <div className="ts-card-rank">{rank}<span>/{total}</span></div>
+      <div className="ts-mini-main">
+        <div className="ts-card-name" style={{ color: team.color }}>{team.name}</div>
+        <div className="ts-stat ts-stat--coin ts-mini-coin" title="Pièces d'or">
+          <span className="coin ts-stat-coin" /><span className="ts-stat-num">{team.money ?? 0}</span>
+        </div>
+        <EquipmentStrip team={team} className="ts-mini-eq" />
+      </div>
+      <div className="ts-mini-powers">
+        {pKeys.map((key) => (
+          <PowerDisc key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0} level={team.powers[key]?.level ?? 1} />
+        ))}
+      </div>
+      {open && <TeamDetailPopover team={team} rank={rank} total={total} onClose={onToggle} />}
     </div>
   );
 }
@@ -214,22 +280,32 @@ export default function BottomBar() {
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const finished = useGameStore((s) => s.finished);
+  const [openIdx, setOpenIdx] = useState(null);
 
-  const compact = teams.length >= 5;
+  // Fermer le popover au clic en dehors d'une carte
+  useEffect(() => {
+    if (openIdx === null) return;
+    const onDown = (e) => { if (!e.target.closest('.ts-card')) setOpenIdx(null); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [openIdx]);
 
   return (
-    <div className={'team-strip' + (compact ? ' team-strip--compact' : '')}>
+    <div className="team-strip">
       <div className="team-strip-inner">
-        {teams.map((t, i) => (
-          <TeamStripCard
-            key={`ts-${t.name}-${i}`}
-            team={t}
-            active={i === currentTeam && !finished}
-            rank={i + 1}
-            total={teams.length}
-            compact={compact}
-          />
-        ))}
+        {teams.map((t, i) => {
+          const active = i === currentTeam && !finished;
+          return active ? (
+            <ActiveCard key={`ts-${t.name}-${i}`} team={t} rank={i + 1} total={teams.length} />
+          ) : (
+            <CompactCard
+              key={`ts-${t.name}-${i}`}
+              team={t} rank={i + 1} total={teams.length}
+              open={openIdx === i}
+              onToggle={() => setOpenIdx(openIdx === i ? null : i)}
+            />
+          );
+        })}
       </div>
     </div>
   );

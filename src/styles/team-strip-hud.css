@@ -1,12 +1,9 @@
 /* ============================================
-   TEAM STRIP HUD — bottom bar with one card per team
-   Extracted from Quête des Matières · Cycle 4
-   Depends on design tokens (see index.css)
+   TEAM STRIP HUD — bande du bas, une carte par équipe.
+   Carte ACTIVE détaillée + cartes INACTIVES compactes (détail au tap via
+   popover). Densité adaptée à la largeur RÉELLE de chaque carte (container
+   queries), pas au nombre d'équipes.
    ============================================ */
-
-/* =========================================================
-   TEAM STRIP HUD (bottom)
-   ========================================================= */
 
 .team-strip {
   position: absolute;
@@ -14,27 +11,23 @@
   right: 320px;
   bottom: 0;
   height: 148px;
-  z-index: 55;
+  /* Au-dessus des boutons flottants Boutique/Inventaire (z-56) pour que le
+     popover de détail et l'onglet « À toi de jouer » passent par-dessus.
+     Reste sous le HUD droit (z-60), spatialement séparé de toute façon. */
+  z-index: 58;
   pointer-events: none;
   background:
-    linear-gradient(180deg,
-      transparent 0%,
-      rgba(244, 234, 213, 0.55) 22%,
-      rgba(232, 217, 178, 0.96) 60%,
-      rgba(215, 191, 133, 0.98) 100%);
+    linear-gradient(180deg, transparent 0%, rgba(244, 234, 213, 0.55) 22%,
+      rgba(232, 217, 178, 0.96) 60%, rgba(215, 191, 133, 0.98) 100%);
   border-top: 1px solid rgba(122, 94, 58, 0.28);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 250, 240, 0.6),
-    0 -8px 24px rgba(46, 31, 16, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 240, 0.6), 0 -8px 24px rgba(46, 31, 16, 0.10);
 }
 .team-strip::before {
-  /* subtle parchment grain so strip blends with body bg */
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.32  0 0 0 0 0.22  0 0 0 0 0.10  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.32  0 0 0 0 0.22  0 0 0 0 0.10  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   opacity: 0.7;
   mix-blend-mode: multiply;
 }
@@ -42,61 +35,55 @@
   position: relative;
   height: 100%;
   display: flex;
+  align-items: stretch;
   gap: 10px;
   padding: 18px 14px 14px;
   pointer-events: auto;
+  /* overflow VISIBLE indispensable : l'onglet « À toi de jouer » et le popover
+     débordent vers le haut. Tout overflow non-visible (même sur un seul axe)
+     forcerait l'autre axe en auto et les couperait. Les cartes rétrécissent
+     via flex (densité gérée par container queries) — pas besoin de scroll. */
+  overflow: visible;
 }
 
-/* ----- Individual team card ----- */
+/* ----- Carte (base commune) ----- */
 .ts-card {
   --team-accent: #888;
   position: relative;
-  flex: 1 1 0;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 12px 10px 16px;
   border-radius: 16px;
-  background:
-    linear-gradient(180deg, #fffefb 0%, #f7ebcf 100%);
+  background: linear-gradient(180deg, #fffefb 0%, #f7ebcf 100%);
   border: 1.5px solid rgba(122, 94, 58, 0.28);
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.65),
-    inset 0 -3px 0 rgba(122, 94, 58, 0.12),
-    0 3px 0 rgba(46, 31, 16, 0.12),
-    0 8px 18px rgba(46, 31, 16, 0.10);
-  transition: transform 220ms cubic-bezier(.34,1.56,.64,1),
-              box-shadow 220ms ease,
-              border-color 220ms ease,
-              filter 220ms ease;
+    inset 0 2px 0 rgba(255, 255, 255, 0.65), inset 0 -3px 0 rgba(122, 94, 58, 0.12),
+    0 3px 0 rgba(46, 31, 16, 0.12), 0 8px 18px rgba(46, 31, 16, 0.10);
+  transition: transform 220ms cubic-bezier(.34,1.56,.64,1), box-shadow 220ms ease, border-color 220ms ease;
   overflow: visible;
   isolation: isolate;
 }
-.ts-card.is-active {
+
+/* Carte ACTIVE : plus large, surélevée, brillance */
+.ts-card--active {
+  flex: 1.7 1 0;
+  min-width: 200px;
   transform: translateY(-10px);
   border-color: var(--gold-600);
-  animation: turn-flash 0.8s ease-out;
-  background:
-    linear-gradient(180deg, #fffefb 0%, #fff3d2 70%, #f3d997 100%);
+  background: linear-gradient(180deg, #fffefb 0%, #fff3d2 70%, #f3d997 100%);
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.85),
-    inset 0 -3px 0 rgba(184, 134, 44, 0.30),
-    0 5px 0 rgba(110, 78, 16, 0.50),
-    0 18px 30px rgba(46, 31, 16, 0.22),
+    inset 0 2px 0 rgba(255, 255, 255, 0.85), inset 0 -3px 0 rgba(184, 134, 44, 0.30),
+    0 5px 0 rgba(110, 78, 16, 0.50), 0 18px 30px rgba(46, 31, 16, 0.22),
     0 0 0 3px rgba(243, 201, 105, 0.35);
   z-index: 10;
 }
-.ts-card.is-active::after {
-  /* shine sweep */
+.ts-card--active::after {
   content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  position: absolute; inset: 0;
   border-radius: inherit;
-  background: linear-gradient(110deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 65%);
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
   pointer-events: none;
   animation: ts-shine 2.8s ease-in-out infinite;
   mix-blend-mode: overlay;
@@ -108,24 +95,32 @@
   60%      { transform: translateX(30%); opacity: 0; }
 }
 
-/* Team color stripe on the left edge */
+/* Carte INACTIVE : compacte, cliquable, densité adaptative */
+.ts-card--mini {
+  flex: 1 1 0;
+  min-width: 92px;
+  gap: 9px;
+  padding: 9px 10px 9px 13px;
+  cursor: pointer;
+  container-type: inline-size;
+}
+.ts-card--mini:hover { border-color: var(--gold-500); }
+.ts-card--mini.is-open { border-color: var(--gold-600); z-index: 30; }
+
+/* Liseré couleur d'équipe */
 .ts-card-stripe {
   position: absolute;
   left: 0; top: 8px; bottom: 8px;
   width: 5px;
   border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg,
-    var(--team-accent),
-    color-mix(in oklab, var(--team-accent) 55%, #1a0d04));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
-              0 0 8px color-mix(in oklab, var(--team-accent) 60%, transparent);
+  background: linear-gradient(180deg, var(--team-accent), color-mix(in oklab, var(--team-accent) 55%, #1a0d04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 0 8px color-mix(in oklab, var(--team-accent) 60%, transparent);
 }
 
-/* "À toi de jouer" tab pulling out of the top of active card */
+/* Onglet « À toi de jouer » */
 .ts-card-tab {
   position: absolute;
-  top: -14px;
-  left: 50%;
+  top: -14px; left: 50%;
   transform: translateX(-50%);
   padding: 5px 14px 4px;
   border-radius: 10px;
@@ -135,357 +130,193 @@
   color: #fff;
   background: linear-gradient(180deg, #f3c969 0%, #b8862c 100%);
   border: 1.5px solid rgba(110, 78, 16, 0.6);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.18),
-    0 3px 0 rgba(110, 78, 16, 0.55),
-    0 6px 12px rgba(46, 31, 16, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.18),
+    0 3px 0 rgba(110, 78, 16, 0.55), 0 6px 12px rgba(46, 31, 16, 0.25);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
   white-space: nowrap;
   animation: ts-tab-bounce 1.6s ease-in-out infinite;
   z-index: 2;
 }
-.ts-card-tab-arrow {
-  display: inline-block;
-  font-size: 9px;
-  transform: translateY(-1px);
-  animation: ts-arrow-pulse 1.2s ease-in-out infinite;
-}
-@keyframes ts-tab-bounce {
-  0%, 100% { transform: translate(-50%, 0); }
-  50%      { transform: translate(-50%, -3px); }
-}
-@keyframes ts-arrow-pulse {
-  0%, 100% { transform: translateX(0); opacity: 1; }
-  50%      { transform: translateX(2px); opacity: 0.6; }
-}
+.ts-card-tab-arrow { display: inline-block; font-size: 9px; transform: translateY(-1px); animation: ts-arrow-pulse 1.2s ease-in-out infinite; }
+@keyframes ts-tab-bounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -3px); } }
+@keyframes ts-arrow-pulse { 0%, 100% { transform: translateX(0); opacity: 1; } 50% { transform: translateX(2px); opacity: 0.6; } }
 
-/* Blazon column */
-.ts-card-blazon {
-  position: relative;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
+/* Blason */
+.ts-card-blazon { position: relative; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+.ts-blazon-disc {
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -3px 0 rgba(0,0,0,0.16);
 }
+.ts-card--active .ts-blazon-disc { box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 0 12px var(--team-accent); }
 .ts-card-rank {
   position: absolute;
-  bottom: -6px;
-  right: -4px;
+  bottom: -6px; right: -4px;
   background: var(--ink-800);
   color: var(--gold-400);
   font-family: var(--font-display);
-  font-size: 11px;
-  padding: 2px 6px;
+  font-size: 10px;
+  padding: 2px 5px;
   border-radius: 8px;
   border: 1px solid rgba(243, 201, 105, 0.4);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
   line-height: 1;
 }
+.ts-card-rank--active { font-size: 11px; padding: 2px 6px; }
 .ts-card-rank span { color: var(--ink-400); font-size: 9px; }
+.ts-card--mini .ts-card-rank { position: static; margin-top: 4px; }
+.ts-card--mini .ts-card-blazon { flex-direction: column; }
 
-/* Body column */
-.ts-card-body {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  justify-content: center;
-}
-.ts-card-head {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
+/* Corps (carte active) */
+.ts-card-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; justify-content: center; }
+.ts-card-head { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .ts-card-name {
   font-family: var(--font-display);
   font-size: 18px;
   line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   text-shadow: 0 1px 0 rgba(255, 250, 240, 0.7);
 }
-.ts-card-location {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--ink-600);
-  min-width: 0;
-}
+.ts-card-location { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-600); min-width: 0; }
 .ts-card-location-ico {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  font-size: 11px;
-  background: var(--parch-200);
-  color: var(--ink-700);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
-              inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 6px; font-size: 11px;
+  background: var(--parch-200); color: var(--ink-700);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.10);
   flex-shrink: 0;
 }
-.ts-card-location-ico--neutral {
-  background: var(--parch-100);
-  color: var(--ink-500);
-}
-.ts-card-location-text {
-  font-family: var(--font-ui);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.ts-card-location-ico--neutral { background: var(--parch-100); color: var(--ink-500); }
+.ts-card-location-text { font-family: var(--font-ui); font-weight: 500; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Stats row — chips */
-.ts-card-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
+/* Corps compact (carte inactive) */
+.ts-mini-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; justify-content: center; }
+.ts-mini-coin { align-self: flex-start; }
+
+/* Stats — pastilles */
+.ts-card-stats { display: flex; flex-wrap: wrap; gap: 5px; }
 .ts-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px 3px 6px;
   border-radius: 999px;
   font-family: var(--font-display);
-  font-size: 13px;
-  line-height: 1;
+  font-size: 13px; line-height: 1;
   background: var(--surface);
   border: 1px solid rgba(122, 94, 58, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
-              0 1px 0 rgba(46, 31, 16, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 rgba(46, 31, 16, 0.08);
   color: var(--ink-800);
 }
 .ts-stat-num { font-size: 14px; line-height: 1; }
 .ts-stat-num small { font-size: 9px; opacity: 0.7; margin-left: 1px; }
-.ts-stat-ico {
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
+.ts-stat-ico { font-size: 11px; display: inline-flex; align-items: center; justify-content: center; width: 14px; }
+.ts-stat-coin { width: 13px !important; height: 13px !important; font-size: 13px; }
+.ts-stat--coin { background: linear-gradient(180deg, #fff5d0, #f3d997); border-color: rgba(184, 134, 44, 0.4); color: var(--ink-900); }
+.ts-stat--good { background: linear-gradient(180deg, #e6f3d6, #cfe6b0); border-color: rgba(91, 140, 58, 0.45); color: #2f5a18; }
+.ts-stat--bad  { background: linear-gradient(180deg, #f7d8d2, #ecb4a8); border-color: rgba(201, 71, 47, 0.40); color: #6b1f12; }
+.ts-stat--rate { background: linear-gradient(180deg, #d9e3f3, #b6c7e3); border-color: rgba(59, 108, 179, 0.40); color: #1c3d6e; }
+
+/* Équipement (mini-slots) */
+.ts-eq { display: flex; align-items: center; gap: 4px; }
+.ts-eq-slot {
+  width: 20px; height: 20px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
 }
-.ts-stat-coin {
-  width: 13px !important;
-  height: 13px !important;
-  font-size: 13px;
-}
-.ts-stat--coin {
-  background: linear-gradient(180deg, #fff5d0, #f3d997);
-  border-color: rgba(184, 134, 44, 0.4);
-  color: var(--ink-900);
-}
-.ts-stat--good {
-  background: linear-gradient(180deg, #e6f3d6, #cfe6b0);
-  border-color: rgba(91, 140, 58, 0.45);
-  color: #2f5a18;
-}
-.ts-stat--bad {
-  background: linear-gradient(180deg, #f7d8d2, #ecb4a8);
-  border-color: rgba(201, 71, 47, 0.40);
-  color: #6b1f12;
-}
-.ts-stat--rate {
-  background: linear-gradient(180deg, #d9e3f3, #b6c7e3);
-  border-color: rgba(59, 108, 179, 0.40);
-  color: #1c3d6e;
+.ts-eq-bag {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 6px; border-radius: 999px;
+  font-size: 11px; color: var(--ink-600);
+  background: rgba(122,94,58,0.12); border: 1px solid rgba(122,94,58,0.25);
 }
 
-/* Powers column — scrollable (barre invisible) pour les pouvoirs achetes
-   en boutique qui s'ajoutent sous les deux pouvoirs de depart */
-.ts-card-powers {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 96px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-right: 2px;
-}
+/* Pouvoirs détaillés (carte active + popover) */
+.ts-card-powers { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; max-height: 96px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
 .power-badge {
   --power-color: #888;
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 8px 3px 3px;
-  border-radius: 12px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in oklab, var(--power-color) 8%, #fffefb) 0%,
-      color-mix(in oklab, var(--power-color) 18%, #fffefb) 100%);
+  display: flex; flex-shrink: 0; align-items: center; gap: 8px;
+  padding: 3px 8px 3px 3px; border-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--power-color) 8%, #fffefb) 0%, color-mix(in oklab, var(--power-color) 18%, #fffefb) 100%);
   border: 1px solid color-mix(in oklab, var(--power-color) 45%, rgba(122, 94, 58, 0.22));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 0 rgba(46, 31, 16, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 rgba(46, 31, 16, 0.10);
   min-width: 92px;
-  transition: filter 160ms ease, opacity 160ms ease;
 }
-.power-badge.is-empty {
-  filter: saturate(0.35);
-  opacity: 0.62;
-}
+.power-badge.is-empty { filter: saturate(0.35); opacity: 0.62; }
 .power-badge-disc {
-  position: relative;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
-  background:
-    linear-gradient(180deg,
-      color-mix(in oklab, var(--power-color) 55%, #ffffff) 0%,
-      var(--power-color) 100%);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
-    0 1px 2px rgba(0, 0, 0, 0.18);
-  color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  position: relative; width: 30px; height: 30px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--power-color) 55%, #ffffff) 0%, var(--power-color) 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.18);
+  color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
-.power-badge-icon {
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+.power-badge-icon { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25)); }
+.power-badge-count, .power-disc-count {
+  position: absolute; right: -5px; top: -5px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--ink-800); color: var(--gold-400);
+  font-family: var(--font-display); font-size: 10px; line-height: 16px; text-align: center;
+  border: 1.5px solid var(--gold-500); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
-.power-badge-count {
-  position: absolute;
-  right: -5px;
-  top: -5px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--ink-800);
-  color: var(--gold-400);
-  font-family: var(--font-display);
-  font-size: 10px;
-  line-height: 16px;
-  text-align: center;
-  border: 1.5px solid var(--gold-500);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+.power-badge.is-empty .power-badge-count, .power-disc.is-empty .power-disc-count { background: var(--ink-500); color: var(--parch-100); border-color: var(--ink-400); }
+.power-badge-level { position: absolute; left: -5px; bottom: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: linear-gradient(180deg, #a86cda, #7434b0); color: #fff; font-family: var(--font-display); font-size: 9px; line-height: 16px; text-align: center; border: 1.5px solid #c9a0f0; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.power-badge-meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.power-badge-kind { font-family: var(--font-display); font-size: 8px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-500); line-height: 1; }
+.power-badge-name { font-family: var(--font-ui); font-weight: 600; font-size: 11px; color: var(--ink-800); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+
+/* Pouvoirs en disques (carte inactive) */
+.ts-mini-powers { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-content: center; gap: 5px; max-width: 84px; }
+.power-disc {
+  --power-color: #888;
+  position: relative; width: 27px; height: 27px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--power-color) 55%, #ffffff) 0%, var(--power-color) 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.22), 0 1px 2px rgba(0,0,0,0.18);
+  color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,0.25);
 }
-.power-badge.is-empty .power-badge-count {
-  background: var(--ink-500);
-  color: var(--parch-100);
-  border-color: var(--ink-400);
+.power-disc.is-empty { filter: saturate(0.35); opacity: 0.6; }
+.power-disc-count { right: -4px; top: -4px; min-width: 14px; height: 14px; font-size: 9px; line-height: 14px; }
+
+/* ---- Densité adaptative des cartes inactives (largeur réelle) ---- */
+@container (max-width: 208px) {
+  .ts-mini-eq { display: none; }          /* équipement → popover */
 }
-.power-badge-level {
-  position: absolute;
-  left: -5px;
-  bottom: -5px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #a86cda, #7434b0);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 9px;
-  line-height: 16px;
-  text-align: center;
-  border: 1.5px solid #c9a0f0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-.power-badge-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.power-badge-kind {
-  font-family: var(--font-display);
-  font-size: 8px;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: var(--ink-500);
-  line-height: 1;
-}
-.power-badge-name {
-  font-family: var(--font-ui);
-  font-weight: 600;
-  font-size: 11px;
-  color: var(--ink-800);
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 80px;
+@container (max-width: 152px) {
+  .ts-card--mini .ts-card-name { display: none; }  /* blason + or + disques seulement */
+  .ts-mini-powers { max-width: 60px; }
 }
 
-/* =========================================================
-   Compact mode (5+ equipes) — classe posee par BottomBar.
-   Objectif : ZERO chevauchement, l'or doit toujours rester lisible.
-   ========================================================= */
-.team-strip--compact .team-strip-inner {
-  gap: 8px;
-  padding: 16px 10px 10px;
+/* ---- Popover de détail (tap d'une équipe inactive) ---- */
+.ts-pop {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 270px; max-width: 86vw;
+  cursor: default;
+  z-index: 80;
+  padding: 12px 14px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fffefb 0%, #f6ead0 100%);
+  border: 1.5px solid var(--gold-600);
+  box-shadow: 0 16px 36px rgba(46, 31, 16, 0.32), inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  animation: ts-pop-in 160ms cubic-bezier(.34,1.56,.64,1);
 }
-.team-strip--compact .ts-card {
-  gap: 8px;
-  padding: 8px 8px 8px 12px;
+.ts-pop::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 9px solid transparent; border-top-color: #f6ead0;
 }
-.team-strip--compact .ts-card-blazon {
-  width: 44px;
+@keyframes ts-pop-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.ts-pop-close {
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px; border-radius: 8px;
+  border: 1px solid rgba(122,94,58,0.3); background: rgba(255,255,255,0.7);
+  cursor: pointer; color: var(--ink-600); font-size: 13px; line-height: 1;
 }
-.team-strip--compact .ts-card-name {
-  font-size: 14px;
-}
-/* La ligne "lieu actuel" saute en compact : place aux stats */
-.team-strip--compact .ts-card-location {
-  display: none;
-}
-/* Stats : jamais de retour a la ligne, taux de reussite masque */
-.team-strip--compact .ts-card-stats {
-  flex-wrap: nowrap;
-  gap: 4px;
-}
-.team-strip--compact .ts-stat {
-  font-size: 11px;
-  padding: 2px 6px 2px 5px;
-}
-.team-strip--compact .ts-stat-num { font-size: 12px; }
-.team-strip--compact .ts-stat--rate { display: none; }
-/* Pouvoirs : disques seuls, en ligne scrollable, sans libelles */
-.team-strip--compact .ts-card-powers {
-  flex-direction: row;
-  gap: 4px;
-  max-height: none;
-  max-width: 100px;
-  overflow-y: hidden;
-  overflow-x: auto;
-  padding-right: 0;
-  padding-bottom: 2px;
-}
-.team-strip--compact .power-badge {
-  min-width: 0;
-  padding: 2px;
-}
-.team-strip--compact .power-badge-meta {
-  display: none;
-}
-.team-strip--compact .power-badge-disc {
-  width: 26px;
-  height: 26px;
-  font-size: 14px;
-}
-.team-strip--compact .ts-card-rank {
-  font-size: 10px;
-  padding: 2px 5px;
-}
-.team-strip--compact .ts-card-tab {
-  font-size: 9px;
-  padding: 4px 10px 3px;
-  top: -12px;
-}
+.ts-pop-close:hover { background: #fff; }
+.ts-pop-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-right: 26px; }
+.ts-pop-emoji { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.16); }
+.ts-pop-name { flex: 1; font-family: var(--font-display); font-size: 17px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-pop-rank { font-family: var(--font-display); font-size: 12px; color: var(--ink-500); }
+.ts-pop-section { margin-top: 11px; }
+.ts-pop-label { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-500); margin-bottom: 6px; }
+.ts-pop-eq-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 13px; color: var(--ink-800); }
+.ts-pop-eq-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-pop-bag { margin-top: 6px; font-size: 12px; color: var(--ink-600); }
+.ts-pop-powers { display: flex; flex-direction: column; gap: 6px; }

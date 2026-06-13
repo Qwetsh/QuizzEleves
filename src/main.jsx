@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import MobileApp from './components/Mobile/MobileApp';
 import './styles/index.css';
 import './styles/animations.css';
 import { applyCachedBalance, refreshBalance } from './logic/balanceConfig';
@@ -8,30 +9,34 @@ import { applyCachedItems, refreshItems } from './logic/itemsConfig';
 import { applyCachedQuestions, refreshQuestions } from './logic/questionsConfig';
 import { useGameStore } from './store/gameStore';
 
-// Équilibrage : applique tout de suite le dernier état connu (cache local,
-// synchrone et offline-safe) AVANT le premier rendu, puis rafraîchit depuis
-// Supabase en arrière-plan (sans bloquer ; hors-ligne = on garde le cache).
-applyCachedBalance();
-refreshBalance().catch(() => {});
+// Le companion mobile s'ouvre via l'URL d'appairage (?join=CODE) : c'est une
+// vue lecture seule, indépendante du moteur de jeu du TBI.
+const joinMode = new URLSearchParams(window.location.search).has('join');
 
-// Objets : applique le cache (mute le catalogue ITEMS) puis resynchronise les
-// objets activés du store, AVANT le rendu. Refresh Supabase en arrière-plan.
-applyCachedItems();
-useGameStore.getState().syncEnabledItems();
-refreshItems()
-  .then((n) => { if (n) useGameStore.getState().syncEnabledItems(); })
-  .catch(() => {});
+if (joinMode) {
+  // Mobile : on a seulement besoin du catalogue d'objets pour résoudre noms/images.
+  applyCachedItems();
+  refreshItems().catch(() => {});
+} else {
+  // TBI complet — applique les caches (synchrone, offline-safe) AVANT le 1er rendu,
+  // puis rafraîchit depuis Supabase en arrière-plan.
+  applyCachedBalance();
+  refreshBalance().catch(() => {});
 
-// Questions : même stratégie. Le cache (ou à défaut les fichiers JS embarqués)
-// sert immédiatement ; le refresh Supabase met à jour le store et notifie le
-// Setup (compteurs de questions) via questionsVersion.
-applyCachedQuestions();
-refreshQuestions()
-  .then((n) => { if (n) useGameStore.getState().bumpQuestionsVersion(); })
-  .catch(() => {});
+  applyCachedItems();
+  useGameStore.getState().syncEnabledItems();
+  refreshItems()
+    .then((n) => { if (n) useGameStore.getState().syncEnabledItems(); })
+    .catch(() => {});
+
+  applyCachedQuestions();
+  refreshQuestions()
+    .then((n) => { if (n) useGameStore.getState().bumpQuestionsVersion(); })
+    .catch(() => {});
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    {joinMode ? <MobileApp /> : <App />}
   </React.StrictMode>
 );
