@@ -2,7 +2,7 @@ export const POWERS = {
   bouclier: {
     name: 'Bouclier',
     icon: '\u{1F6E1}\uFE0F',
-    desc: 'Annule le recul apres une mauvaise reponse.',
+    desc: 'Amortit le recul apres une mauvaise reponse.',
     type: 'passive',
     category: 'def',
     price: 15,
@@ -10,15 +10,15 @@ export const POWERS = {
     activationCost: 0,
     upgradeCosts: [20, 30],
     levels: [
-      { desc: 'Annule 1 recul', effect: { type: 'blockRecul' } },
-      { desc: 'Annule le recul + conserve 50% des pieces', effect: { type: 'blockRecul', keepMoney: 0.5 } },
+      { desc: 'Reduit le recul de moitie (1 case au lieu de 2)', effect: { type: 'reduceRecul', amount: 1 } },
+      { desc: 'Annule le recul', effect: { type: 'blockRecul' } },
       { desc: 'Annule le recul + gagne 5 pieces', effect: { type: 'blockRecul', bonusMoney: 5 } },
     ],
   },
   indice: {
     name: 'Indice',
     icon: '\u{1F4A1}',
-    desc: 'Elimine 2 mauvaises reponses.',
+    desc: 'Elimine 1 mauvaise reponse.',
     type: 'passive',
     category: 'def',
     price: 15,
@@ -26,9 +26,9 @@ export const POWERS = {
     activationCost: 5,
     upgradeCosts: [20, 30],
     levels: [
+      { desc: 'Elimine 1 mauvaise reponse', effect: { type: 'hideAnswers', count: 1, bonusTime: 0 } },
+      { desc: 'Elimine 1 reponse + 5s de bonus', effect: { type: 'hideAnswers', count: 1, bonusTime: 5 } },
       { desc: 'Elimine 2 mauvaises reponses', effect: { type: 'hideAnswers', count: 2, bonusTime: 0 } },
-      { desc: 'Elimine 2 reponses + 5s de bonus', effect: { type: 'hideAnswers', count: 2, bonusTime: 5 } },
-      { desc: 'Elimine 3 reponses (reste la bonne)', effect: { type: 'hideAnswers', count: 3, bonusTime: 0 } },
     ],
   },
   relance: {
@@ -90,9 +90,9 @@ export const POWERS = {
     activationCost: 10,
     upgradeCosts: [20, 30],
     levels: [
-      { desc: 'Double question', effect: { type: 'multiQuestion', count: 2, noBonus: false } },
-      { desc: 'Double question sans bonus pieces', effect: { type: 'multiQuestion', count: 2, noBonus: true } },
-      { desc: 'Triple question', effect: { type: 'multiQuestion', count: 3, noBonus: false } },
+      { desc: 'Double question (sans bonus pieces)', effect: { type: 'multiQuestion', count: 2, noBonus: true } },
+      { desc: 'Triple question (sans bonus pieces)', effect: { type: 'multiQuestion', count: 3, noBonus: true } },
+      { desc: 'Triple question + timer divise par 2', effect: { type: 'multiQuestion', count: 3, noBonus: true, timerDivisor: 2 } },
     ],
   },
 };

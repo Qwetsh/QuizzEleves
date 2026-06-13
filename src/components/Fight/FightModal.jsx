@@ -284,23 +284,33 @@ function RewardScreen({ fight, attacker, defender }) {
                 <button className="btn btn--purple btn--lg" onClick={() => fightChooseReward('knockback')}>
                   {"⬅️ Repousser — 1 dé de cases"}
                 </button>
+                <button className="btn btn--lg" onClick={() => fightChooseReward('loot')}>
+                  {"\u{1F392} Butin — vole un objet"}
+                </button>
               </div>
               <p style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 12, fontFamily: 'var(--font-ui)' }}>
                 Piller : vole à {loser.emoji} {loser.name} autant de pièces que la somme des 2 dés.<br />
-                Repousser : {loser.emoji} {loser.name} recule du résultat du dé.
+                Repousser : {loser.emoji} {loser.name} recule du résultat du dé.<br />
+                Butin : vole un objet au hasard à {loser.emoji} {loser.name} (équipement ou consommable).
               </p>
             </>
           )}
 
           {fight.phase === 'reward' && reward && (
             <div style={{ padding: '10px 0' }}>
-              <div className={reward.rolling ? 'anim-float' : ''} style={{ fontSize: 64, letterSpacing: 8 }}>
-                {reward.dice.map((d, i) => <span key={i}>{DICE_FACES[d]}</span>)}
-              </div>
-              {!reward.rolling && (
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, marginTop: 8 }}>
-                  {reward.dice.reduce((a, b) => a + b, 0)} !
-                </div>
+              {reward.choice === 'loot' ? (
+                <div className="anim-float" style={{ fontSize: 64 }}>{"\u{1F392}"}</div>
+              ) : (
+                <>
+                  <div className={reward.rolling ? 'anim-float' : ''} style={{ fontSize: 64, letterSpacing: 8 }}>
+                    {reward.dice.map((d, i) => <span key={i}>{DICE_FACES[d]}</span>)}
+                  </div>
+                  {!reward.rolling && (
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, marginTop: 8 }}>
+                      {reward.dice.reduce((a, b) => a + b, 0)} !
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

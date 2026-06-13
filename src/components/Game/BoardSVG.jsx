@@ -1,30 +1,42 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
-import { lighten, darken } from '../../utils/colors';
+import { NODE_RADIUS, TILE_SCALE, islandCircles as buildIslandCircles, bezierPoint } from '../../logic/boardGeometry';
 
-const NODE_COLORS = {
-  depart: '#5a4628',
-  arrivee: '#b8862c',
-  jonction: '#e0a458',
-  event: '#a83e7f',
-};
+// Assets du plateau (refonte pierre & jungle) — voir scripts/name-assets.mjs
+const BOARD_ASSET_URLS = import.meta.glob('../../assets/board/*.{png,jpg}', { eager: true, query: '?url', import: 'default' });
+const BOARD_ASSETS = Object.fromEntries(
+  Object.entries(BOARD_ASSET_URLS).map(([p, url]) => [p.split('/').pop().replace(/\.(png|jpg)$/, ''), url])
+);
+const bimg = (name) => BOARD_ASSETS[name];
 
-const NODE_ICONS = {
-  depart: '\u{1F3C1}',
-  arrivee: '\u{1F3C6}',
-  jonction: '\u{1F3B2}',
-  event: '\u{1F381}',
-};
+// Taille (en unités viewBox) d'une tuile de la texture d'herbe
+const GRASS_TILE = 460;
 
-const NODE_RADIUS = {
-  depart: 52,
-  arrivee: 52,
-  jonction: 46,
-  event: 44,
-  subject: 46,
-};
+// Rayons des cases et géométrie de l'île : voir src/logic/boardGeometry.js
+// (source partagée avec decorGenerator pour le placement des props)
+
+// Pierres de gué le long de la courbe de Bezier d'un chemin
+// (les segments d'assets ne peuvent pas suivre la geometrie generee)
+function SteppingStones({ x0, y0, x1, y1 }) {
+  const dist = Math.hypot(x1 - x0, y1 - y0);
+  const n = Math.max(2, Math.round(dist / 58));
+  const stones = [];
+  for (let i = 1; i <= n; i++) {
+    const t = 0.16 + (0.68 * i) / (n + 1);
+    const { x: px, y: py } = bezierPoint(x0, y0, x1, y1, t);
+    const s = 1 + ((i % 3) - 1) * 0.18;
+    stones.push(
+      <g key={i} transform={`translate(${px} ${py})`}>
+        <ellipse cx={1} cy={3} rx={12 * s} ry={8.5 * s} fill="rgba(60, 42, 18, 0.22)" />
+        <ellipse rx={12 * s} ry={8.5 * s} fill="#ddd1a9" stroke="#a3946f" strokeWidth={1.5} />
+        <ellipse cx={-2.5 * s} cy={-2 * s} rx={6 * s} ry={3.4 * s} fill="rgba(255, 250, 230, 0.4)" />
+      </g>
+    );
+  }
+  return stones;
+}
 
 // Step-by-step pawn animation
 const STEP_DURATION = 220; // ms per step
@@ -121,11 +133,201 @@ function ChoiceHighlight({ cx, cy, r }) {
   );
 }
 
+// --- Couches mémoïsées du plateau ---
+// Le terrain (defs, île, herbe, chemins) et la couche décor+tuiles ne
+// dépendent que du plateau : sans React.memo, chaque pas d'animation de pion
+// (changement de teams/movePath) reconstruisait ~2500 éléments SVG statiques.
+
+const Terrain = React.memo(function Terrain({ board, islandCircles, viewBox }) {
+  return (
+    <>
+      <defs>
+        <filter id="glow-active">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        {/* Fusion organique des cercles de l'île (blur + seuil sur l'alpha) */}
+        <filter id="gooey" x="-25%" y="-40%" width="150%" height="180%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="28" result="blur" />
+          <feColorMatrix
+            in="blur"
+            type="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -10"
+          />
+        </filter>
+        {/* Textures peintes (herbe, sable) en tuilage miroir — aucune couture */}
+        {['herbe', 'sable'].map((tex) => (
+          <pattern key={tex} id={`tex-${tex}`} patternUnits="userSpaceOnUse" width={GRASS_TILE * 2} height={GRASS_TILE * 2}>
+            <image href={bimg(`texture-${tex}`)} x="0" y="0" width={GRASS_TILE} height={GRASS_TILE} preserveAspectRatio="none" />
+            <g transform={`translate(${GRASS_TILE * 2} 0) scale(-1 1)`}>
+              <image href={bimg(`texture-${tex}`)} x="0" y="0" width={GRASS_TILE} height={GRASS_TILE} preserveAspectRatio="none" />
+            </g>
+            <g transform={`translate(0 ${GRASS_TILE * 2}) scale(1 -1)`}>
+              <image href={bimg(`texture-${tex}`)} x="0" y="0" width={GRASS_TILE} height={GRASS_TILE} preserveAspectRatio="none" />
+            </g>
+            <g transform={`translate(${GRASS_TILE * 2} ${GRASS_TILE * 2}) scale(-1 -1)`}>
+              <image href={bimg(`texture-${tex}`)} x="0" y="0" width={GRASS_TILE} height={GRASS_TILE} preserveAspectRatio="none" />
+            </g>
+          </pattern>
+        ))}
+        {/* Formes de l'île (sable plein) et de l'herbe, pour masquer les textures */}
+        <mask id="island-mask">
+          <g filter="url(#gooey)">
+            {islandCircles.map((c, i) => (
+              <circle key={i} cx={c.x} cy={c.y} r={c.r} fill="#fff" />
+            ))}
+          </g>
+        </mask>
+        <mask id="grass-mask">
+          <g filter="url(#gooey)">
+            {islandCircles.map((c, i) => (
+              <circle key={i} cx={c.x} cy={c.y} r={c.r * 0.72} fill="#fff" />
+            ))}
+          </g>
+        </mask>
+      </defs>
+
+      {/* Fond : l'eau est la texture du conteneur, visible à travers le SVG */}
+
+      {/* Écume au bord de l'île */}
+      <g filter="url(#gooey)" opacity={0.65}>
+        {islandCircles.map((c, i) => (
+          <circle key={i} cx={c.x} cy={c.y} r={c.r + 16} fill="#eef4ec" />
+        ))}
+      </g>
+
+      {/* Île : sable texturé */}
+      <g mask="url(#island-mask)">
+        <rect
+          x={-70} y={-12}
+          width={viewBox.w + 110} height={viewBox.h + 24}
+          fill="url(#tex-sable)"
+        />
+      </g>
+
+      {/* Cœur d'herbe — frange claire de transition, puis texture peinte */}
+      <g filter="url(#gooey)" opacity={0.85}>
+        {islandCircles.map((c, i) => (
+          <circle key={i} cx={c.x} cy={c.y} r={c.r * 0.75} fill="#cdd9a0" />
+        ))}
+      </g>
+      <g mask="url(#grass-mask)">
+        <rect
+          x={-70} y={-12}
+          width={viewBox.w + 110} height={viewBox.h + 24}
+          fill="url(#tex-herbe)"
+        />
+      </g>
+
+      {/* Chemins : pierres de gué le long des courbes */}
+      {Object.entries(board).map(([id, node]) =>
+        node.next.map((toId) => {
+          const target = board[toId];
+          if (!target) return null;
+          return (
+            <g key={`${id}-${toId}`}>
+              <SteppingStones x0={node.x} y0={node.y} x1={target.x} y1={target.y} />
+            </g>
+          );
+        })
+      )}
+    </>
+  );
+});
+
+// Props thématiques + tuiles des cases : une seule couche triée par Y pour
+// des chevauchements cohérents (prop devant une case → dessiné par-dessus,
+// prop derrière → masqué par la tuile)
+const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction }) {
+  return [
+    ...(boardDecor || []).flatMap((d, i) => {
+      const src = bimg(d.img);
+      if (!src) return [];
+      return [{
+        y: d.y,
+        el: (
+          <image
+            key={`dp-${i}`}
+            href={src}
+            x={d.x - d.w / 2} y={d.y - d.w / 2}
+            width={d.w} height={d.w}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ),
+      }];
+    }),
+    ...Object.entries(board).map(([id, node]) => {
+      const r = NODE_RADIUS[node.type] || 32;
+      const isChoice = choiceNodes.has(id);
+
+      // Visuel selon le type de case — largeurs depuis boardGeometry.TILE_SCALE
+      let tile = null;
+      if (node.type === 'depart') {
+        // Monument à la rose des vents (pierre + drapeau doré + laurier)
+        tile = { src: bimg('socle-depart-v2'), w: r * 4.4, dy: -r * 0.85 };
+      } else if (node.type === 'arrivee') {
+        // Monument à l'étoile dorée et fanion
+        tile = { src: bimg('socle-arrivee-v2'), w: r * TILE_SCALE.arrivee, dy: -r * 0.7 };
+      } else if (node.type === 'jonction') {
+        // Roue des matières : la jonction pose une question au hasard
+        tile = { src: bimg('case-multi'), w: r * TILE_SCALE.jonction, dy: 0 };
+      } else if (node.type === 'event') {
+        // Socle au coffre — l'asset se suffit
+        tile = { src: bimg('socle-event'), w: r * TILE_SCALE.event, dy: -r * 0.3 };
+      } else if (node.type === 'subject') {
+        // Cases gravées (le symbole de la matière est dans l'asset) ;
+        // 'multi' = roue des matières
+        const name = node.subject === 'multi' ? 'case-multi' : `case-${node.subject}`;
+        tile = { src: bimg(name), w: r * TILE_SCALE.subject, dy: 0 };
+      }
+
+      return { y: node.y, el: (
+        <g
+          key={id}
+          onClick={isChoice ? () => chooseJunction(id) : undefined}
+          style={{ cursor: isChoice ? 'pointer' : 'default' }}
+        >
+          {isChoice && <ChoiceHighlight cx={node.x} cy={node.y} r={r} />}
+
+          {tile && tile.src ? (
+            <image
+              href={tile.src}
+              x={node.x - tile.w / 2}
+              y={node.y - tile.w / 2 + tile.dy}
+              width={tile.w}
+              height={tile.w}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          ) : (
+            // Filet de sécurité si un asset manque : couleur + emoji lisibles
+            <>
+              <circle cx={node.x} cy={node.y} r={r} fill={SUBJECTS[node.subject]?.color || '#d9cda5'} stroke="#a3946f" strokeWidth={2} />
+              <text
+                x={node.x} y={node.y + 2}
+                textAnchor="middle" dominantBaseline="middle"
+                fontSize={r * 0.62}
+                style={{ pointerEvents: 'none' }}
+              >
+                {SUBJECTS[node.subject]?.icon
+                  || (node.type === 'depart' ? '\u{1F3F0}' : node.type === 'arrivee' ? '\u{1F3C6}' : node.type === 'event' ? '\u{1F381}' : '❓')}
+              </text>
+            </>
+          )}
+        </g>
+      ) };
+    }),
+  ].sort((a, b) => a.y - b.y).map((it) => it.el);
+});
+
 // Camera spring config
 const CAMERA_SPRING = { damping: 25, stiffness: 80, mass: 1 };
 
 export default function BoardSVG() {
   const board = useGameStore((s) => s.board);
+  const boardDecor = useGameStore((s) => s.boardDecor);
   const viewBox = useGameStore((s) => s.viewBox);
   const teams = useGameStore((s) => s.teams);
   const awaitingChoice = useGameStore((s) => s.awaitingChoice);
@@ -182,25 +384,10 @@ export default function BoardSVG() {
     container.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
   }, [board, teams, currentTeam, viewBox]);
 
-  const nodeColors = useMemo(() => {
-    if (!board) return {};
-    const map = {};
-    for (const [id, node] of Object.entries(board)) {
-      let fill;
-      if (node.type === 'subject') {
-        const s = SUBJECTS[node.subject];
-        fill = s?.color || '#888';
-      } else {
-        fill = NODE_COLORS[node.type] || '#888';
-      }
-      map[id] = {
-        fill,
-        light: lighten(fill, 0.15),
-        dark: darken(fill, 0.25),
-      };
-    }
-    return map;
-  }, [board]);
+  // Île procédurale : cercles disposés le long des cases et des chemins
+  // (boardGeometry, partagé avec decorGenerator), fusionnés en forme
+  // organique par le filtre "gooey" (blur + seuil alpha).
+  const islandCircles = useMemo(() => (board ? buildIslandCircles(board) : []), [board]);
 
   const choiceNodes = useMemo(() => {
     const set = new Set();
@@ -217,117 +404,24 @@ export default function BoardSVG() {
 
   if (!board) return null;
 
-  const entries = Object.entries(board);
-
   return (
     <div
       ref={containerRef}
       className="absolute inset-0 overflow-auto"
       style={{
-        background: 'radial-gradient(ellipse at 50% 30%, rgba(255,240,194,0.55), transparent 55%), radial-gradient(ellipse at 20% 80%, rgba(91,140,58,0.10), transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(45,140,110,0.10), transparent 50%)',
+        background: `url(${bimg('texture-eau')}) repeat`,
+        backgroundSize: '460px 460px',
       }}
     >
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${viewBox.w} ${viewBox.h}`}
+        viewBox={`-70 -12 ${viewBox.w + 110} ${viewBox.h + 24}`}
         className="block"
         style={{ minWidth: Math.max(1200, Math.round(viewBox.w / 1.2)) + 'px' }}
       >
-        <defs>
-          <filter id="glow-active">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="hex-shadow" x="-20%" y="-10%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#000" floodOpacity="0.28" />
-          </filter>
-        </defs>
+        <Terrain board={board} islandCircles={islandCircles} viewBox={viewBox} />
 
-        {/* Paths */}
-        {entries.map(([id, node]) =>
-          node.next.map((toId) => {
-            const target = board[toId];
-            if (!target) return null;
-            const dx = target.x - node.x;
-            const cx1 = node.x + dx * 0.5;
-            return (
-              <path
-                key={`${id}-${toId}`}
-                d={`M ${node.x} ${node.y} C ${cx1} ${node.y}, ${cx1} ${target.y}, ${target.x} ${target.y}`}
-                fill="none"
-                stroke="rgba(122, 94, 58, 0.35)"
-                strokeWidth={9}
-                strokeLinecap="round"
-                strokeDasharray={node.type === 'jonction' ? '8 12' : '1 12'}
-              />
-            );
-          })
-        )}
-
-        {/* Nodes */}
-        {entries.map(([id, node]) => {
-          const icon = node.type === 'subject'
-            ? (SUBJECTS[node.subject]?.icon || '?')
-            : (NODE_ICONS[node.type] || '?');
-          const r = NODE_RADIUS[node.type] || 32;
-          const isChoice = choiceNodes.has(id);
-
-          const { fill, light: lightFill, dark: darkFill } = nodeColors[id] || {};
-          const depth = Math.max(3, r * 0.12);
-
-          return (
-            <g
-              key={id}
-              onClick={isChoice ? () => chooseJunction(id) : undefined}
-              style={{ cursor: isChoice ? 'pointer' : 'default' }}
-            >
-              {isChoice && <ChoiceHighlight cx={node.x} cy={node.y} r={r} />}
-
-              {/* Shadow/depth circle */}
-              <circle
-                cx={node.x} cy={node.y + depth} r={r}
-                fill={darkFill}
-                filter="url(#hex-shadow)"
-              />
-
-              {/* Main circle with gradient feel */}
-              <circle
-                cx={node.x} cy={node.y} r={r}
-                fill={fill} stroke={darkFill} strokeWidth={2}
-              />
-
-              {/* Top highlight */}
-              <ellipse
-                cx={node.x - r * 0.15} cy={node.y - r * 0.2}
-                rx={r * 0.5} ry={r * 0.3}
-                fill="rgba(255,255,255,0.25)"
-              />
-
-              {/* Icon */}
-              <text
-                x={node.x} y={node.y + 2}
-                textAnchor="middle" dominantBaseline="middle"
-                fontSize={r * 0.7} fill="white"
-                style={{ pointerEvents: 'none' }}
-              >
-                {icon}
-              </text>
-              {(node.type === 'depart' || node.type === 'arrivee') && (
-                <text
-                  x={node.x} y={node.y + r + 24}
-                  textAnchor="middle" fontSize={18} fontWeight={700}
-                  fill="var(--ink-700)"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {node.label}
-                </text>
-              )}
-            </g>
-          );
-        })}
+        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} />
 
         {/* Animated Pawns */}
         {teams.map((team, idx) => {

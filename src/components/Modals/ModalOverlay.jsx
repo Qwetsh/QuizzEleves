@@ -15,7 +15,7 @@ const contentVariants = {
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export default function ModalOverlay({ children, onClose, className = 'max-w-lg' }) {
+export default function ModalOverlay({ children, onClose, className = 'max-w-lg', panelStyle }) {
   const dialogRef = useRef(null);
   const previousFocusRef = useRef(null);
 
@@ -101,6 +101,7 @@ export default function ModalOverlay({ children, onClose, className = 'max-w-lg'
           borderRadius: 22,
           border: '1px solid rgba(122, 94, 58, 0.3)',
           boxShadow: '0 30px 80px rgba(0,0,0,0.5)',
+          ...panelStyle,
         }}
         variants={contentVariants}
         initial="hidden"

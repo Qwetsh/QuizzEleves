@@ -1,0 +1,554 @@
+﻿// Tests fonctionnels du système d'objets : catalogue, effets passifs,
+// achats/reventes, consommables, hooks événements et combat.
+// On pilote le vrai store zustand (pas de mock de la logique métier).
+import { useGameStore } from '../store/gameStore.js';
+import { ITEMS, RARITIES, SLOTS } from '../data/items.js';
+import { getEffectValue, reducedRecul, reducedSteal, reducedTax } from '../logic/itemEffects.js';
+import { resolveWrongAnswer } from '../logic/turnHelpers.js';
+import { generateShopStock, pickLootItem, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
+import { EVENTS } from '../data/events.js';
+
+// Le sac est positionnel (BAG_SIZE cases, null = vide) : on compare le contenu
+const bagItems = (t) => (t.bag || []).filter(Boolean);
+
+// Plateau linéaire : depart -> n1..n8 -> arrivee
+const BOARD = (() => {
+  const b = { depart: { x: 0, y: 0, type: 'depart', next: ['n1'] } };
+  for (let i = 1; i <= 8; i++) {
+    b[`n${i}`] = { x: i, y: 0, type: 'subject', subject: 'maths', next: [i === 8 ? 'arrivee' : `n${i + 1}`] };
+  }
+  b.arrivee = { x: 9, y: 0, type: 'arrivee', next: [] };
+  return b;
+})();
+
+const QUESTIONS = { maths: [{ q: 'Q ?', a: ['A', 'B', 'C', 'D'], c: 1 }] };
+
+function mkTeam(i, over = {}) {
+  return {
+    name: `T${i}`, color: '#111', emoji: '🦁', blazonGlyph: 'lion',
+    pos: 'n4', correct: 0, wrong: 0, money: 50,
+    powerDef: null, powerOff: null, powers: {},
+    sablierActif: false, doubleActive: false,
+    equipment: { head: null, body: null, feet: null }, bag: [],
+    ...over,
+  };
+}
+
+// devSandbox: true => saveGame est un no-op (pas de localStorage en Node)
+function freshGame(overrides = [{}, {}, {}]) {
+  useGameStore.setState({
+    phase: 'game', devSandbox: true,
+    teams: overrides.map((o, i) => mkTeam(i, o)),
+    currentTeam: 0, board: BOARD, finished: false,
+    askedQuestions: {}, questions: QUESTIONS, log: [],
+    rolling: false, diceValue: null, pendingMove: null, pendingLanding: false,
+    awaitingChoice: false, showQuestion: null, showEvent: null, showFight: null,
+    showTargetPicker: null, showShop: false, showInventory: false,
+    showChargePicker: false, showDiceModal: false, eventApplied: false,
+    indiceUsed: false, indiceHidden: [], freeActivation: false,
+    shopStock: [], shopStockTurns: 10, movePath: null,
+    preRollPos: null, preRollValue: null,
+  });
+}
+
+const S = () => useGameStore.getState();
+const team = (i = 0) => S().teams[i];
+const equip = (i, slot, key) => {
+  const teams = [...S().teams];
+  teams[i] = { ...teams[i], equipment: { ...teams[i].equipment, [slot]: key } };
+  useGameStore.setState({ teams });
+};
+
+// --- Catalogue ---
+
+describe('catalogue items.js', () => {
+  const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction',
+    'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus'];
+  const CONSUMABLE_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime',
+    'shieldNext', 'gainCharge', 'fumigene'];
+
+  it('chaque item est complet et cohérent', () => {
+    for (const [key, item] of Object.entries(ITEMS)) {
+      expect(item.name, key).toBeTruthy();
+      expect(item.icon, key).toBeTruthy();
+      expect(item.desc, key).toBeTruthy();
+      expect(['head', 'body', 'feet', 'consumable'], key).toContain(item.slot);
+      expect(Object.keys(RARITIES), key).toContain(item.rarity);
+      expect(item.price, key).toBeGreaterThan(0);
+      expect(item.effects.length, key).toBeGreaterThan(0);
+      const allowed = item.slot === 'consumable' ? CONSUMABLE_EFFECTS : EQUIP_EFFECTS;
+      for (const fx of item.effects) {
+        expect(allowed, `${key}: effet ${fx.type}`).toContain(fx.type);
+        expect(fx.value, key).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('les légendaires sont lootOnly (et seulement eux)', () => {
+    for (const [key, item] of Object.entries(ITEMS)) {
+      expect(!!item.lootOnly, key).toBe(item.rarity === 'legendaire');
+    }
+  });
+
+  it('le stock boutique exclut les légendaires, le loot peut en donner', () => {
+    for (let n = 0; n < 20; n++) {
+      const stock = generateShopStock();
+      expect(stock).toHaveLength(4);
+      expect(new Set(stock).size).toBe(4);
+      for (const k of stock) expect(ITEMS[k].lootOnly).toBeFalsy();
+    }
+    expect(ITEMS[pickLootItem(1)].rarity).toBe('legendaire');
+    expect(ITEMS[pickLootItem(0)].rarity).not.toBe('legendaire');
+  });
+
+  it('enabledItems filtre la boutique et le loot', () => {
+    const enabled = ['chapeauPaille', 'potionHate'];
+    for (let n = 0; n < 10; n++) {
+      const stock = generateShopStock(4, enabled);
+      expect(stock.length).toBeLessThanOrEqual(2);
+      for (const k of stock) expect(enabled).toContain(k);
+      expect(enabled).toContain(pickLootItem(0.5, enabled));
+    }
+    // Rabattement : que des non-legendaires actives mais tirage "legendaire"
+    expect(enabled).toContain(pickLootItem(1, enabled));
+    // Aucun objet active
+    expect(generateShopStock(4, [])).toEqual([]);
+    expect(pickLootItem(0.5, [])).toBeNull();
+  });
+});
+
+// --- Helpers d'effets ---
+
+describe('itemEffects', () => {
+  it('getEffectValue cumule les effets de tout léquipement', () => {
+    const t = mkTeam(0, { equipment: { head: 'monocleDetective', body: 'etendardRoyal', feet: 'pegase' } });
+    expect(getEffectValue(t, 'timerBonus')).toBe(2);
+    expect(getEffectValue(t, 'indiceBoost')).toBe(1);
+    expect(getEffectValue(t, 'moneyPerCorrect')).toBe(3);
+    expect(getEffectValue(t, 'taxReduction')).toBe(50);
+    expect(getEffectValue(t, 'reculReduction')).toBe(2);
+    expect(getEffectValue(t, 'tempeteImmune')).toBe(1);
+  });
+
+  it('tolère les équipes sans equipment (anciennes sauvegardes)', () => {
+    expect(getEffectValue({ name: 'old' }, 'timerBonus')).toBe(0);
+  });
+
+  it('reducedRecul / reducedSteal / reducedTax', () => {
+    const t = mkTeam(0, { equipment: { head: null, body: 'capeOmbre', feet: 'bottesMontagne' } });
+    expect(reducedRecul(t, 2)).toBe(0);
+    expect(reducedRecul(t, 5)).toBe(3);
+    expect(reducedSteal(t, 10)).toBe(5);
+    expect(reducedTax(mkTeam(0, { equipment: { head: null, body: 'talismanOr', feet: null } }), 15)).toBe(0);
+  });
+});
+
+// --- Achats / reventes ---
+
+describe('boutique : buyItem / revente', () => {
+  beforeEach(() => freshGame());
+
+  it('achat déquipement : débit + slot rempli + retiré du stock', () => {
+    useGameStore.setState({ shopStock: ['chapeauPaille', 'potionHate'] });
+    S().buyItem('chapeauPaille');
+    expect(team().money).toBe(40);
+    expect(team().equipment.head).toBe('chapeauPaille');
+    expect(S().shopStock).toEqual(['potionHate']);
+  });
+
+  it('slot occupé : le nouvel équipement va dans le sac (pas de revente forcée)', () => {
+    equip(0, 'head', 'chapeauPaille');
+    useGameStore.setState({ shopStock: ['bandeauSage'] }); // prix 24
+    S().buyItem('bandeauSage');
+    expect(team().equipment.head).toBe('chapeauPaille'); // inchangé
+    expect(bagItems(team())).toEqual(['bandeauSage']);
+    expect(team().money).toBe(50 - 24);
+  });
+
+  it('consommable -> sac ; refusé si sac plein ou argent insuffisant', () => {
+    useGameStore.setState({ shopStock: ['potionHate', 'painVoyageur'] });
+    S().buyItem('potionHate');
+    expect(bagItems(team())).toEqual(['potionHate']);
+
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], bag: Array(BAG_SIZE).fill('potionHate') };
+    useGameStore.setState({ teams, shopStock: ['painVoyageur'] });
+    S().buyItem('painVoyageur');
+    expect(bagItems(team())).toHaveLength(BAG_SIZE); // sac plein : refus
+
+    teams[0] = { ...S().teams[0], bag: [], money: 2 };
+    useGameStore.setState({ teams: [teams[0], ...S().teams.slice(1)], shopStock: ['painVoyageur'] });
+    S().buyItem('painVoyageur');
+    expect(bagItems(team())).toHaveLength(0); // trop pauvre : refus
+  });
+
+  it('hors stock : refusé', () => {
+    useGameStore.setState({ shopStock: ['potionHate'] });
+    S().buyItem('bandeauSage');
+    expect(team().money).toBe(50);
+    expect(team().equipment.head).toBeNull();
+  });
+
+  it('sellEquipment / sellBagItem rendent la moitié du prix', () => {
+    equip(0, 'feet', 'bottesMontagne'); // 24 -> 12
+    S().sellEquipment('feet');
+    expect(team().equipment.feet).toBeNull();
+    expect(team().money).toBe(62);
+
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], bag: ['coffretEpices'] }; // 14 -> 7
+    useGameStore.setState({ teams });
+    S().sellBagItem(0);
+    expect(bagItems(team())).toHaveLength(0);
+    expect(team().money).toBe(69);
+  });
+});
+
+// --- Consommables ---
+
+describe('consommables : useConsumable', () => {
+  beforeEach(() => freshGame());
+  const giveBag = (items) => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], bag: items };
+    useGameStore.setState({ teams });
+  };
+
+  it('gainMoney', () => {
+    giveBag(['painVoyageur']);
+    S().useConsumable(0);
+    expect(team().money).toBe(58);
+    expect(bagItems(team())).toHaveLength(0);
+  });
+
+  it('gainMoneyAll crédite toutes les équipes', () => {
+    giveBag(['banquetPartage']);
+    S().useConsumable(0);
+    expect(team(0).money).toBe(55);
+    expect(team(1).money).toBe(55);
+    expect(team(2).money).toBe(55);
+  });
+
+  it('moveForward avance le pion avec animation', () => {
+    giveBag(['potionHate']);
+    S().useConsumable(0);
+    expect(team().pos).toBe('n6');
+    expect(S().movePath?.[0]?.waypoints?.length).toBe(3);
+  });
+
+  it('moveForward jusquà l’arrivée déclenche la victoire', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], pos: 'n8', bag: ['potionCelerite'] };
+    useGameStore.setState({ teams });
+    S().useConsumable(0);
+    expect(team().pos).toBe('arrivee');
+    expect(S().finished).toBe(true);
+  });
+
+  it('extraTime / shieldNext / fumigene posent leurs drapeaux', () => {
+    giveBag(['sablierPoche', 'bouclierBois', 'bombeFumigene']);
+    // Sac positionnel : chaque objet garde sa case
+    S().useConsumable(0);
+    S().useConsumable(1);
+    S().useConsumable(2);
+    expect(team().itemTimerBonus).toBe(10);
+    expect(team().itemShield).toBe(1);
+    expect(team().itemFumigene).toBe(true);
+    expect(bagItems(team())).toHaveLength(0);
+  });
+
+  it('gainCharge ouvre le sélecteur de charge (contexte objet, pas dé de 1)', () => {
+    giveBag(['cristalEnergie']);
+    S().useConsumable(0);
+    expect(S().showChargePicker?.source).toBe('item');
+  });
+
+  it('refusé pendant une question', () => {
+    giveBag(['painVoyageur']);
+    useGameStore.setState({ showQuestion: { question: QUESTIONS.maths[0] } });
+    S().useConsumable(0);
+    expect(bagItems(team())).toHaveLength(1);
+  });
+});
+
+// --- Effets passifs en jeu ---
+
+describe('effets passifs : questions', () => {
+  beforeEach(() => freshGame());
+
+  it('timerBonus (équipement + consommable one-shot)', () => {
+    equip(0, 'head', 'bandeauSage'); // +5s
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], itemTimerBonus: 10 };
+    useGameStore.setState({ teams });
+
+    S().askQuestion('maths');
+    expect(S().showQuestion.itemBonusTime).toBe(15);
+    expect(team().itemTimerBonus).toBe(0); // le one-shot est consommé
+  });
+
+  it('moneyPerCorrect s’ajoute au gain de bonne réponse', () => {
+    equip(0, 'body', 'banniereMarchand'); // +2
+    S().askQuestion('maths');
+    // les réponses sont mélangées : on lit l'index réel de la bonne réponse
+    S().answerQuestion(S().showQuestion.question.c, 30); // plein temps => +10 de base
+    expect(team().correct).toBe(1);
+    expect(team().money).toBe(50 + 10 + 2);
+  });
+
+  it('reculReduction réduit le recul sur mauvaise réponse', () => {
+    const t = mkTeam(0, { equipment: { head: null, body: null, feet: 'bottesUsees' } });
+    const r = resolveWrongAnswer(t, BOARD);
+    expect(r.updatedTeam.pos).toBe('n3'); // recul de 1 au lieu de 2
+  });
+
+  it('itemShield (bouclier de bois) absorbe le recul AVANT le pouvoir Bouclier', () => {
+    const t = mkTeam(0, { itemShield: 1, powers: { bouclier: { charges: 2, level: 1 } } });
+    const r = resolveWrongAnswer(t, BOARD);
+    expect(r.updatedTeam.pos).toBe('n4'); // pas de recul
+    expect(r.updatedTeam.itemShield).toBe(0);
+    expect(r.updatedTeam.powers.bouclier.charges).toBe(2); // pouvoir intact
+  });
+
+  it('indiceBoost élimine une réponse de plus', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { indice: { charges: 1, level: 1 } }, equipment: { head: 'lunettesLecture', body: null, feet: null } };
+    useGameStore.setState({ teams });
+    S().askQuestion('maths');
+    S().usePower('indice');
+    expect(S().indiceHidden).toHaveLength(2); // 1 (niv.1) + 1 boost lunettes
+  });
+});
+
+describe('effets passifs : pouvoirs offensifs', () => {
+  beforeEach(() => freshGame());
+
+  it('fumigene annule un pouvoir offensif (charge attaquant consommée)', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 1 } } };
+    teams[1] = { ...teams[1], itemFumigene: true };
+    useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
+    S().applyOffensivePower(1);
+    expect(team(1).pos).toBe('n4'); // pas de recul
+    expect(team(1).itemFumigene).toBe(false);
+    expect(team(0).powers.foudre.charges).toBe(0);
+  });
+
+  it('reculReduction atténue la Foudre', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 1 } } };
+    teams[1] = { ...teams[1], equipment: { head: null, body: null, feet: 'bottesMontagne' } };
+    useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
+    S().applyOffensivePower(1);
+    expect(team(1).pos).toBe('n3'); // 3 - 2 = 1 case de recul
+  });
+});
+
+// --- Hooks événements ---
+
+function runEvent(key, data = {}) {
+  useGameStore.setState({
+    showEvent: { key, event: EVENTS[key], phase: 'intro', data },
+    eventApplied: false,
+  });
+  S().applyEventEffect();
+}
+
+describe('effets passifs : événements', () => {
+  beforeEach(() => freshGame());
+
+  it('talismanOr annule l’impôt', () => {
+    equip(0, 'body', 'talismanOr');
+    runEvent('impot');
+    expect(team().money).toBe(50);
+  });
+
+  it('sans protection, l’impôt prélève 30%', () => {
+    runEvent('impot');
+    expect(team().money).toBe(35);
+  });
+
+  it('ancreMarine immunise contre la tempête', () => {
+    equip(0, 'feet', 'ancreMarine');
+    runEvent('tempete', { diceValue: 3 });
+    expect(team(0).pos).toBe('n4'); // immunisé
+    expect(team(1).pos).toBe('n1'); // a reculé de 3
+  });
+
+  it('grappin : le trou de l’oubli devient un recul de 3', () => {
+    equip(0, 'feet', 'grappinVoyageur');
+    runEvent('oubli');
+    expect(team().pos).toBe('n1');
+  });
+
+  it('capeOmbre divise le vol de pièces par deux', () => {
+    equip(1, 'body', 'capeOmbre');
+    runEvent('volArgent', { targetIndex: 1 });
+    expect(team(1).money).toBe(45); // 5 volées au lieu de 10
+    expect(team(0).money).toBe(55);
+  });
+
+  it('coffre : un objet est looté et révélé (visuel C)', () => {
+    runEvent('coffre');
+    const t = team();
+    const equippedOrBagged = Object.values(t.equipment).some(Boolean) || bagItems(t).length > 0;
+    const refunded = t.money > 50;
+    expect(equippedOrBagged || refunded).toBe(true);
+    if (equippedOrBagged) {
+      // Objet conservé : révélation visuel C (LootReveal), événement fermé
+      expect(S().lootReveal?.itemKey).toBeTruthy();
+      expect(ITEMS[S().lootReveal.itemKey]).toBeTruthy();
+      expect(S().showEvent).toBeNull();
+    } else {
+      // Sac plein : pas de révélation, message texte dans le ResultPhase
+      expect(S().lootReveal).toBeNull();
+    }
+  });
+});
+
+describe('événements : marchand ambulant & pillage', () => {
+  beforeEach(() => freshGame());
+
+  it('marchand : -30% et objet reçu', () => {
+    useGameStore.setState({ showEvent: { key: 'marchandAmbulant', event: EVENTS.marchandAmbulant, phase: 'choice', data: { merchandise: ['bandeauSage'] } } });
+    S().eventMerchantBuy('bandeauSage'); // 24 -> 17
+    expect(team(0).equipment.head).toBe('bandeauSage');
+    expect(team(0).money).toBe(50 - 17);
+    expect(S().showEvent).toBeNull();
+  });
+
+  it('pillage : vole un équipement ciblé', () => {
+    equip(1, 'feet', 'pegase');
+    useGameStore.setState({ showEvent: { key: 'pillage', event: EVENTS.pillage, phase: 'choice', data: { targetIndex: 1 } } });
+    S().eventPillageApply({ kind: 'equipment', slot: 'feet' });
+    expect(team(1).equipment.feet).toBeNull();
+    expect(team(0).equipment.feet).toBe('pegase');
+  });
+
+  it('pillage : vole un consommable du sac', () => {
+    const teams = [...S().teams];
+    teams[1] = { ...teams[1], bag: ['bombeFumigene'] };
+    useGameStore.setState({ teams, showEvent: { key: 'pillage', event: EVENTS.pillage, phase: 'choice', data: { targetIndex: 1 } } });
+    S().eventPillageApply({ kind: 'bag', index: 0 });
+    expect(bagItems(team(1))).toHaveLength(0);
+    expect(bagItems(team(0))).toEqual(['bombeFumigene']);
+  });
+});
+
+// --- Combat ---
+
+describe('combat : butin et protections', () => {
+  beforeEach(() => {
+    freshGame();
+    vi.useFakeTimers();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const setupFight = () => {
+    useGameStore.setState({
+      showFight: {
+        attackerIndex: 0, defenderIndex: 1, subject: 'maths',
+        phase: 'reward', round: 3, wins: { attacker: 2, defender: 1 },
+        winnerSide: 'attacker', reward: null, resultMessage: null,
+      },
+    });
+  };
+
+  it('butin (loot) : vole l’unique objet du perdant', () => {
+    const teams = [...S().teams];
+    teams[1] = { ...teams[1], bag: ['elixirGeant'] };
+    useGameStore.setState({ teams });
+    setupFight();
+    S().fightChooseReward('loot');
+    vi.advanceTimersByTime(700);
+    expect(bagItems(team(1))).toHaveLength(0);
+    expect(bagItems(team(0))).toEqual(['elixirGeant']);
+    expect(S().showFight.phase).toBe('result');
+  });
+
+  it('butin : perdant sans objet => fouille du champ de bataille', () => {
+    setupFight();
+    S().fightChooseReward('loot');
+    vi.advanceTimersByTime(700);
+    const w = team(0);
+    const got = Object.values(w.equipment).some(Boolean) || bagItems(w).length > 0 || w.money > 50;
+    expect(got).toBe(true);
+  });
+
+  it('armureGarde : pillage de pièces en combat entièrement bloqué', () => {
+    equip(1, 'body', 'armureGarde');
+    setupFight();
+    S().fightChooseReward('steal');
+    vi.advanceTimersByTime(3000); // animation dés + délai
+    expect(team(1).money).toBe(50);
+    expect(team(0).money).toBe(50);
+    expect(S().showFight.phase).toBe('result');
+  });
+});
+
+// --- Drag & drop de l'inventaire ---
+
+describe('inventaire : moveInventoryItem / isValidMove', () => {
+  beforeEach(() => freshGame());
+  const giveBag = (items) => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], bag: items };
+    useGameStore.setState({ teams });
+  };
+
+  it('équipe depuis le sac vers le bon slot', () => {
+    giveBag(['bandeauSage']); // coiffe (head)
+    expect(isValidMove(team(), 'bag:0', 'equip:head')).toBe(true);
+    expect(isValidMove(team(), 'bag:0', 'equip:feet')).toBe(false);
+    S().moveInventoryItem('bag:0', 'equip:head');
+    expect(team().equipment.head).toBe('bandeauSage');
+    expect(bagItems(team())).toHaveLength(0);
+  });
+
+  it('un consommable ne va dans aucun slot d’équipement', () => {
+    giveBag(['potionHate']);
+    expect(isValidMove(team(), 'bag:0', 'equip:head')).toBe(false);
+    expect(isValidMove(team(), 'bag:0', 'equip:body')).toBe(false);
+    S().moveInventoryItem('bag:0', 'equip:body'); // refusé
+    expect(team().equipment.body).toBeNull();
+    expect(bagItems(team())).toEqual(['potionHate']);
+  });
+
+  it('échange slot occupé <-> sac (swap)', () => {
+    equip(0, 'head', 'chapeauPaille');
+    giveBag(['bandeauSage']);
+    S().moveInventoryItem('bag:0', 'equip:head');
+    expect(team().equipment.head).toBe('bandeauSage');
+    expect(team().bag[0]).toBe('chapeauPaille'); // l'ancien revient dans la même case
+  });
+
+  it('déséquipe vers une case vide du sac', () => {
+    equip(0, 'feet', 'pegase');
+    S().moveInventoryItem('equip:feet', 'bag:5');
+    expect(team().equipment.feet).toBeNull();
+    expect(team().bag[5]).toBe('pegase');
+  });
+
+  it('déséquiper sur une case occupée : seulement si l’objet délogé est compatible', () => {
+    equip(0, 'head', 'chapeauPaille');
+    giveBag(['potionHate', 'bandeauSage']);
+    // potion ne peut pas prendre la place du chapeau
+    expect(isValidMove(team(), 'equip:head', 'bag:0')).toBe(false);
+    // bandeauSage (coiffe) peut : swap
+    expect(isValidMove(team(), 'equip:head', 'bag:1')).toBe(true);
+    S().moveInventoryItem('equip:head', 'bag:1');
+    expect(team().equipment.head).toBe('bandeauSage');
+    expect(team().bag[1]).toBe('chapeauPaille');
+  });
+
+  it('réorganisation libre dans le sac', () => {
+    giveBag(['potionHate', 'painVoyageur']);
+    S().moveInventoryItem('bag:0', 'bag:7');
+    expect(team().bag[7]).toBe('potionHate');
+    expect(team().bag[0]).toBeNull();
+    S().moveInventoryItem('bag:1', 'bag:7'); // swap libre
+    expect(team().bag[7]).toBe('painVoyageur');
+    expect(team().bag[1]).toBe('potionHate');
+  });
+});
+

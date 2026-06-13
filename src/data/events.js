@@ -23,4 +23,7 @@ export const EVENTS = {
   taxeCommune:   { name: 'Taxe commune',      icon: '\u{1F3E6}',  desc: 'Une taxe frappe tout le monde ! Chaque equipe perd 5 pieces.',                      effect: 'taxeCommune', category: 'money' },
   jackpot:       { name: 'Jackpot',           icon: '\u{1F3C6}',  desc: 'Question bonus ! Bonne reponse = 30 pieces, mauvaise = -10.',                       effect: 'jackpot',     needsQuestion: true, category: 'money' },
   banquier:      { name: 'Banquier',          icon: '\u{1F3E6}',  desc: 'Le banquier te recompense : +3 pieces par bonne reponse accumulee !',               effect: 'banquier',    category: 'money' },
+  coffre:           { name: 'Coffre au tresor',  icon: '\u{1F9F0}', desc: 'Tu decouvres un coffre mysterieux... Il contient un objet !',                      effect: 'coffre',      category: 'item', optional: false, weight: 1 },
+  marchandAmbulant: { name: 'Marchand ambulant', icon: '\u{1F9D9}', desc: 'Un marchand ambulant te propose ses objets a -30% ! Il a parfois des objets legendaires...', effect: 'marchandAmbulant', needsChoice: true, category: 'item', optional: true, weight: 1 },
+  pillage:          { name: 'Pillage',           icon: '\u{1F3F4}‍☠️', desc: 'Choisis une equipe et vole-lui UN objet (equipement ou consommable) !',     effect: 'pillage',     needsTarget: true, category: 'item', optional: true, weight: 0.5 },
 };

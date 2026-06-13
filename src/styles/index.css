@@ -40,30 +40,31 @@
   --leaf-500: #5b8c3a;
   --leaf-700: #355e1d;
 
-  /* --- Matières (biomes) --- */
-  --m-francais: #c9472f;
-  --m-francais-soft: #f3d4cb;
-  --m-francais-deep: #6b1f12;
+  /* --- Matières (biomes) ---
+     Palette alignee sur les assets du plateau (disques de pierre) */
+  --m-francais: #9b3165;
+  --m-francais-soft: #e9d2dd;
+  --m-francais-deep: #521a36;
 
-  --m-maths: #3b6cb3;
-  --m-maths-soft: #cfdcf0;
-  --m-maths-deep: #1c3d6e;
+  --m-maths: #c65429;
+  --m-maths-soft: #f2d9d0;
+  --m-maths-deep: #692d16;
 
-  --m-histoire: #b8862c;
-  --m-histoire-soft: #f0e0b2;
-  --m-histoire-deep: #6e4e10;
+  --m-histoire: #c79120;
+  --m-histoire-soft: #f3e7ce;
+  --m-histoire-deep: #694d11;
 
-  --m-geo: #2d8c6e;
-  --m-geo-soft: #c5e3d6;
-  --m-geo-deep: #14513e;
+  --m-geo: #579b9a;
+  --m-geo-soft: #dae9e9;
+  --m-geo-deep: #2e5252;
 
-  --m-svt: #5b8c3a;
-  --m-svt-soft: #d5e7c1;
-  --m-svt-deep: #2f5a18;
+  --m-svt: #779313;
+  --m-svt-soft: #e1e7cb;
+  --m-svt-deep: #3f4e0a;
 
-  --m-anglais: #a83e7f;
-  --m-anglais-soft: #ecccdf;
-  --m-anglais-deep: #5e1d44;
+  --m-anglais: #3160a5;
+  --m-anglais-soft: #d2dceb;
+  --m-anglais-deep: #1a3357;
 
   /* --- Équipes --- */
   --t-red: #d63a3a;

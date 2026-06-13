@@ -8,6 +8,7 @@ import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
+import ItemsChecklist from './ItemsChecklist';
 
 // Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
 // Lance un duel direct entre les deux premières équipes du setup, sans toucher
@@ -126,6 +127,9 @@ export default function Setup() {
           </div>
           <div className="panel">
             <EventsChecklist />
+          </div>
+          <div className="panel">
+            <ItemsChecklist />
           </div>
           {import.meta.env.DEV && <DevFightPanel />}
         </div>

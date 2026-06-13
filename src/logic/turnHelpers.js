@@ -1,6 +1,7 @@
 import { POWERS } from '../data/powers.js';
 import { SUBJECT_KEYS } from '../data/subjects.js';
 import { moveBack } from './pathfinding.js';
+import { reducedRecul } from './itemEffects.js';
 
 /**
  * Pick a random subject key.
@@ -14,21 +15,73 @@ export function randomSubject() {
  * Returns { updatedTeam, logMessage }.
  */
 export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse') {
-  const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
-  if (bouclierCharges > 0) {
-    const newPowers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: bouclierCharges - 1 } };
+  // 1. Consommable Bouclier de bois (one-shot) avant le pouvoir Bouclier
+  const itemShield = team.itemShield || 0;
+  if (itemShield > 0) {
     return {
-      updatedTeam: { ...team, wrong: team.wrong + 1, powers: newPowers },
-      logMessage: `\u274C ${reason} ! \u{1F6E1}\uFE0F Bouclier activ\u00e9 : pas de recul !`,
+      updatedTeam: { ...team, wrong: team.wrong + 1, itemShield: itemShield - 1 },
+      logMessage: `\u274C ${reason} ! \u{1FAB5} Bouclier de bois consomm\u00e9 : pas de recul !`,
     };
   }
-  const { finalPos, path } = moveBack(board, team.pos, 2);
+
+  // 2. Pouvoir Bouclier \u2014 effet selon le niveau (lu depuis powers.js) :
+  //    reduceRecul (niv.1) attenue, blockRecul (niv.2/3) annule
+  const bouclierCharges = team.powers?.bouclier?.charges ?? 0;
+  if (bouclierCharges > 0) {
+    const level = team.powers.bouclier.level ?? 1;
+    const effect = POWERS.bouclier.levels[level - 1]?.effect || {};
+    const newPowers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: bouclierCharges - 1 } };
+    const shielded = { ...team, wrong: team.wrong + 1, powers: newPowers };
+
+    if (effect.type === 'reduceRecul') {
+      const reculAmount = reducedRecul(shielded, 2 - (effect.amount ?? 1));
+      if (reculAmount <= 0) {
+        return { updatedTeam: shielded, logMessage: `\u274C ${reason} ! \u{1F6E1}\uFE0F Bouclier (niv.${level}) : pas de recul !` };
+      }
+      const { finalPos, path } = moveBack(board, team.pos, reculAmount);
+      return {
+        updatedTeam: { ...shielded, pos: finalPos },
+        logMessage: `\u274C ${reason} ! \u{1F6E1}\uFE0F Bouclier (niv.${level}) : recul r\u00e9duit \u00E0 ${reculAmount} case${reculAmount > 1 ? 's' : ''}.`,
+        path,
+      };
+    }
+
+    const bonusMoney = effect.bonusMoney ?? 0;
+    return {
+      updatedTeam: { ...shielded, money: shielded.money + bonusMoney },
+      logMessage: `\u274C ${reason} ! \u{1F6E1}\uFE0F Bouclier (niv.${level}) : pas de recul !${bonusMoney ? ` +${bonusMoney} \u{1F4B0}` : ''}`,
+    };
+  }
+
+  // 3. Recul reduit par l'equipement (reculReduction)
+  const reculAmount = reducedRecul(team, 2);
+  if (reculAmount <= 0) {
+    return {
+      updatedTeam: { ...team, wrong: team.wrong + 1 },
+      logMessage: `\u274C ${reason} ! \u{1F392} L'\u00e9quipement absorbe le recul !`,
+    };
+  }
+  const { finalPos, path } = moveBack(board, team.pos, reculAmount);
   return {
     updatedTeam: { ...team, wrong: team.wrong + 1, pos: finalPos },
-    logMessage: `\u274C ${reason} ! Recul de 2 cases.`,
+    logMessage: `\u274C ${reason} ! Recul de ${reculAmount} case${reculAmount > 1 ? 's' : ''}.`,
     path,
   };
 }
+
+/**
+ * Champs a nettoyer en fin de rafale Double (reussie, ratee ou timeout).
+ * Partage entre gameStore (answerQuestion/timeoutQuestion) et
+ * resolveDoubleQuestion pour que les 3 chemins de teardown restent identiques.
+ */
+export const BURST_RESET = {
+  doubleActive: false,
+  doubleCount: 0,
+  doubleNoBonus: false,
+  doubleTimerDivisor: undefined,
+  sablierActif: false,
+  sablierDivisor: undefined,
+};
 
 /**
  * Handle double/triple question continuation.
@@ -47,7 +100,7 @@ export function resolveDoubleQuestion(team) {
   }
   return {
     shouldContinue: false,
-    updatedTeam: { ...team, doubleActive: false, doubleCount: 0, doubleNoBonus: false },
+    updatedTeam: { ...team, ...BURST_RESET },
   };
 }
 

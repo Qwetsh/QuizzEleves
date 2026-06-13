@@ -38,7 +38,7 @@ export default function TeamCard({ team, index }) {
           {powerEntries.map(({ key, info, charges }) => (
             <span key={key} title={info.name}>{info.icon} {charges}</span>
           ))}
-          {team.sablierActif && <span title="Timer /2">{"\u23F1\uFE0F"}</span>}
+          {(team.sablierActif || (team.doubleActive && team.doubleTimerDivisor)) && <span title="Timer /2">{"\u23F1\uFE0F"}</span>}
           {team.doubleActive && <span title="Double question">{"\u2753"}</span>}
         </div>
       </div>

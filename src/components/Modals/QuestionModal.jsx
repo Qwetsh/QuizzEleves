@@ -4,8 +4,12 @@ import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { soundCorrect, soundWrong, soundTimer } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
+import '../../styles/temple-modal.css';
 
 const TIMER_DURATION = 30;
+
+// Cadre de pierre (panelStyle de ModalOverlay) — rappelle l'inventaire
+const STONE_PANEL = { background: 'transparent', border: 'none', boxShadow: 'none', borderRadius: 24, overflow: 'visible' };
 
 export default function QuestionModal() {
   const showQuestion = useGameStore((s) => s.showQuestion);
@@ -27,9 +31,11 @@ export default function QuestionModal() {
   // Sablier niv.2/3 divise par 3/4 — meme base que le calcul d'argent du store
   const timerDivisor = showQuestion?.timerDivisor || (timerHalved ? 2 : 1);
   const bonusTime = showQuestion?.bonusTime || 0;
+  // Bonus d'equipement / consommable (calcule par le store dans askQuestion)
+  const itemBonusTime = showQuestion?.itemBonusTime || 0;
   const team = teams[currentTeam];
   const subjectInfo = SUBJECTS[subject] || {};
-  const duration = Math.floor(TIMER_DURATION / timerDivisor);
+  const duration = Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime;
 
   const canUseIndice = !indiceUsed && !revealed && team?.powers?.indice?.charges > 0;
 
@@ -40,10 +46,10 @@ export default function QuestionModal() {
     if (question) {
       setSelected(null);
       setRevealed(false);
-      setTimeLeft(Math.floor(TIMER_DURATION / timerDivisor));
+      setTimeLeft(Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime);
       bonusApplied.current = false;
     }
-  }, [question, timerDivisor]);
+  }, [question, timerDivisor, itemBonusTime]);
 
   // Indice niv.2 : secondes bonus ajoutees une seule fois
   useEffect(() => {
@@ -93,7 +99,8 @@ export default function QuestionModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''}`}>
+        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''}`} panelStyle={STONE_PANEL}>
+          <div className="tm-stone"><div className="tm-parch">
           {/* Quiz Header */}
           <div
             className="relative overflow-hidden text-center text-white"
@@ -154,6 +161,11 @@ export default function QuestionModal() {
                 {`\u23F1\uFE0F Sablier actif \u2014 ${duration}s`}
               </div>
             )}
+            {itemBonusTime > 0 && (
+              <div style={{ fontSize: 12, marginTop: 6, marginLeft: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>
+                {`\u{1F392} \u00C9quipement : +${itemBonusTime}s`}
+              </div>
+            )}
           </div>
 
           {/* Choices - 2x2 grid */}
@@ -186,13 +198,9 @@ export default function QuestionModal() {
                 );
               }
 
-              let choiceStyle = {
-                border: '2px solid rgba(122,94,58,0.22)',
-                background: 'var(--parch-50)',
-                color: 'var(--ink-800)',
-              };
-              let letterStyle = { background: 'var(--parch-200)', color: 'var(--ink-700)' };
-
+              // Base = .tm-choice (parchemin + liseré pierre) ; surcharge à la révélation
+              let choiceStyle = null;
+              let letterStyle = null;
               if (revealed) {
                 if (idx === question.c) {
                   choiceStyle = { border: '2px solid #5b8c3a', background: 'linear-gradient(180deg, #d1f0b8, #a8d889)', color: '#1f3d10' };
@@ -201,7 +209,7 @@ export default function QuestionModal() {
                   choiceStyle = { border: '2px solid #c9472f', background: 'linear-gradient(180deg, #f7c8c8, #e89898)', color: '#5f1a10' };
                   letterStyle = { background: '#c9472f', color: '#fff' };
                 } else {
-                  choiceStyle = { ...choiceStyle, opacity: 0.4 };
+                  choiceStyle = { opacity: 0.4 };
                 }
               }
 
@@ -209,27 +217,13 @@ export default function QuestionModal() {
               return (
                 <button
                   key={idx}
+                  className="tm-choice"
                   onClick={() => handleAnswer(idx)}
                   disabled={revealed}
                   aria-label={`Option ${letter}: ${answer}`}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '16px 18px', borderRadius: 14,
-                    fontFamily: 'var(--font-ui)', fontSize: 16, fontWeight: 500,
-                    cursor: revealed ? 'not-allowed' : 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 100ms ease',
-                    boxShadow: '0 2px 0 rgba(46,31,16,0.08)',
-                    ...choiceStyle,
-                  }}
+                  style={choiceStyle || undefined}
                 >
-                  <span style={{
-                    width: 30, height: 30, borderRadius: 8,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-display)', fontSize: 16,
-                    flexShrink: 0,
-                    ...letterStyle,
-                  }}>
+                  <span className="tm-choice-letter" style={letterStyle || undefined}>
                     {letter}
                   </span>
                   <span>{answer}</span>
@@ -277,20 +271,7 @@ export default function QuestionModal() {
               </div>
             </div>
             {revealed && (
-              <button
-                onClick={handleContinue}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '10px 22px', borderRadius: 14,
-                  background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))',
-                  border: 'none',
-                  fontSize: 15, fontWeight: 700, color: '#fff',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-display)',
-                  boxShadow: '0 3px 0 var(--gold-700), 0 4px 8px rgba(0,0,0,0.15)',
-                  textShadow: '0 1px 0 rgba(0,0,0,0.15)',
-                }}
-              >
+              <button className="tm-btn-gold" onClick={handleContinue}>
                 Continuer
               </button>
             )}
@@ -309,6 +290,7 @@ export default function QuestionModal() {
               </div>
             </div>
           )}
+          </div></div>
         </ModalOverlay>
       )}
     </AnimatePresence>

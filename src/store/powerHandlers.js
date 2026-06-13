@@ -1,6 +1,7 @@
 import { POWERS } from '../data/powers.js';
 import { moveBack } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
+import { getEffectValue, reducedRecul } from '../logic/itemEffects.js';
 import { saveGame } from './persistence.js';
 
 // Effet du niveau courant d'un pouvoir — seule source de verite : powers.js
@@ -56,7 +57,9 @@ export function useIndice(set, get) {
     const j = Math.floor(Math.random() * (i + 1));
     [wrongIndices[i], wrongIndices[j]] = [wrongIndices[j], wrongIndices[i]];
   }
-  const hideCount = Math.min(effect.count ?? 2, wrongIndices.length);
+  // Equipement (indiceBoost) : reponses supplementaires eliminees
+  const boost = getEffectValue(team, 'indiceBoost');
+  const hideCount = Math.min((effect.count ?? 2) + boost, wrongIndices.length);
   const hidden = wrongIndices.slice(0, hideCount);
 
   const result = consumePowerCharge(team, 'indice');
@@ -122,12 +125,22 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   if (!result) return;
   newTeams[currentTeam] = result.updatedTeam;
 
+  // Consommable Bombe fumigene : la cible annule le pouvoir offensif
+  // (la charge de l'attaquant est quand meme consommee — le coup est esquive)
+  if (target.itemFumigene) {
+    newTeams[targetTeamIndex] = { ...target, itemFumigene: false };
+    addLog(`\u{1F4A8} La bombe fumigène de ${target.emoji} ${target.name} annule ${POWERS[powerKey].name} !`);
+    set({ teams: newTeams, showTargetPicker: null });
+    return;
+  }
+
   const level = team.powers?.[powerKey]?.level ?? 1;
   const effect = levelEffect(powerKey, level);
   let foudreMove = null;
 
   if (powerKey === 'foudre') {
-    const reculAmount = effect.amount ?? 3;
+    // Equipement de la cible (reculReduction) : recul attenue
+    const reculAmount = reducedRecul(target, effect.amount ?? 3);
     const r = moveBack(board, target.pos, reculAmount);
     newTeams[targetTeamIndex] = { ...target, pos: r.finalPos };
     if (r.path.length > 1) {
@@ -141,8 +154,13 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   } else if (powerKey === 'double') {
     const questionCount = effect.count ?? 2;
     const noBonus = !!effect.noBonus;
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleCount: questionCount, doubleNoBonus: noBonus };
-    addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! ${questionCount} questions au prochain tour.${noBonus ? ' (sans bonus)' : ''}`);
+    // Niv.3 : timer reduit persistant sur la rafale — champ separe du Sablier
+    // (un Sablier adverse one-shot ne doit pas heriter de cette persistance)
+    const pressure = effect.timerDivisor
+      ? { doubleTimerDivisor: effect.timerDivisor }
+      : {};
+    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleCount: questionCount, doubleNoBonus: noBonus, ...pressure };
+    addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! ${questionCount} questions au prochain tour.${noBonus ? ' (sans bonus)' : ''}${effect.timerDivisor ? ` Timer /${effect.timerDivisor} !` : ''}`);
   }
 
   set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
@@ -158,6 +176,8 @@ export function cancelTargetPicker(set, get) {
 
 export function chargePickerChoice(set, get, powerKey) {
   const { teams, currentTeam, addLog } = get();
+  // Ouvert par le dé de 1 (source 'dice') ou par un consommable (source 'item')
+  const fromDice = get().showChargePicker?.source !== 'item';
   const team = teams[currentTeam];
   const newTeams = [...teams];
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
@@ -167,8 +187,10 @@ export function chargePickerChoice(set, get, powerKey) {
   addLog(`\u2728 ${team.emoji} ${team.name} gagne 1 charge de ${pName} !`);
   set({ teams: newTeams, showChargePicker: false });
 
+  // Seul le flux "dé de 1" enchaîne sur une activation offensive immédiate ;
+  // un consommable (Cristal d'énergie...) ne fait que recharger.
   const power = POWERS[powerKey];
-  if (power?.category === 'off') {
+  if (fromDice && power?.category === 'off') {
     set({ showTargetPicker: { powerKey } });
     return;
   }

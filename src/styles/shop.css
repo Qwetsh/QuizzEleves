@@ -1,0 +1,237 @@
+/* ============================================
+   BOUTIQUE — Temple moussu (pierre & jungle)
+   Même langage visuel que l'inventaire :
+   inventory.css fournit le cadre (.inv,
+   .inv-frame, .inv-wood, plaques, médaillon,
+   bourse, feuillage). Ici : étals de parchemin
+   par section, cartes d'articles et boutons.
+   ============================================ */
+
+/* Intérieur bois : colonne d'étals scrollable */
+.shop .inv-wood {
+  flex-direction: column;
+  padding: 24px 20px 22px;
+}
+.shop-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 46px;
+  /* le padding haut laisse passer le fanion d'équipe (inv-teamtag) */
+  padding: 60px 12px 12px;
+}
+.shop-scroll::-webkit-scrollbar { width: 11px; }
+.shop-scroll::-webkit-scrollbar-track {
+  background: rgba(20, 10, 2, 0.35);
+  border-radius: 8px;
+}
+.shop-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--stone-2), var(--stone-3));
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 250, 230, 0.4);
+}
+
+/* ---------- Étal (section sur parchemin) ---------- */
+.shop-stall {
+  position: relative;
+  flex: none;
+  margin: 0 7px;
+  border-radius: 22px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.32  0 0 0 0 0.22  0 0 0 0 0.10  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, var(--paper-0), var(--paper-1));
+  box-shadow:
+    0 0 0 4px var(--stone-2),
+    0 0 0 7px var(--stone-3),
+    0 6px 16px rgba(30, 18, 5, 0.4),
+    inset 0 2px 0 rgba(255, 252, 235, 0.6),
+    inset 0 -4px 12px rgba(110, 80, 40, 0.2);
+  padding: 32px 16px 14px;
+}
+
+/* Bannière de bois clouée sur l'étal */
+.shop-stall-banner {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%) rotate(-1.6deg);
+  padding: 8px 26px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--wood-lite), var(--wood-lite2));
+  box-shadow:
+    0 5px 9px rgba(30, 18, 5, 0.4),
+    inset 0 2px 0 rgba(255, 235, 190, 0.35),
+    inset 0 -3px 0 rgba(60, 38, 14, 0.45);
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #432a0f;
+  text-shadow: 0 1px 0 rgba(255, 235, 190, 0.4);
+  z-index: 3;
+}
+.shop-stall:nth-child(even) .shop-stall-banner {
+  transform: translateX(-50%) rotate(1.8deg);
+}
+
+/* Petite pancarte d'arrivage, accrochée à droite */
+.shop-stall-note {
+  position: absolute;
+  top: -13px;
+  right: 20px;
+  transform: rotate(2.2deg);
+  padding: 5px 14px 6px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--wood-lite), var(--wood-lite2));
+  box-shadow:
+    0 4px 8px rgba(30, 18, 5, 0.35),
+    inset 0 1px 0 rgba(255, 235, 190, 0.3),
+    inset 0 -2px 0 rgba(60, 38, 14, 0.4);
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: #f4e3bd;
+  text-shadow: 0 1px 0 rgba(40, 24, 8, 0.5);
+  z-index: 3;
+}
+
+/* Rangée d'articles (scroll horizontal masqué via .scroll-hidden) */
+.shop-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 4px 6px;
+}
+
+/* ---------- Carte d'article : cadre pierre + cœur parchemin ---------- */
+.shop-card {
+  flex: 0 0 238px;
+  display: flex;
+  padding: 7px;
+  border-radius: 17px;
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-3));
+  box-shadow:
+    0 3px 7px rgba(40, 26, 8, 0.3),
+    inset 0 1px 0 rgba(255, 250, 230, 0.6);
+}
+.shop-card--wide { flex-basis: 312px; }
+.shop-card-inner {
+  flex: 1;
+  min-width: 0;
+  border-radius: 11px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.08  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, var(--paper-2), var(--paper-1));
+  box-shadow:
+    inset 0 3px 9px rgba(80, 55, 20, 0.28),
+    inset 0 -2px 0 rgba(255, 250, 230, 0.5);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.shop-card-head { display: flex; align-items: center; gap: 9px; }
+.shop-card-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(40, 26, 8, 0.25);
+}
+.shop-card-titles { min-width: 0; flex: 1; }
+.shop-card-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.15;
+  color: #3a3416;
+}
+.shop-card-sub {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+.shop-card-desc {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.38;
+  color: #4a431f;
+}
+.shop-card-warn {
+  margin-top: 4px;
+  font-style: italic;
+  color: rgba(74, 67, 31, 0.75);
+}
+.shop-card-warn.is-danger { color: #a33215; }
+.shop-card-next { color: #3a3416; font-weight: 700; }
+
+/* Pastille de niveau (Niv. 1 → 2) */
+.shop-lvl {
+  margin-left: auto;
+  padding: 2px 9px 3px;
+  border-radius: 7px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  white-space: nowrap;
+  background: rgba(255, 252, 235, 0.45);
+  box-shadow: inset 0 0 0 1.5px rgba(110, 95, 50, 0.35);
+}
+
+/* Pastilles de charges */
+.shop-pips { display: inline-flex; gap: 3px; margin-left: auto; }
+.shop-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(90, 70, 30, 0.18);
+  box-shadow: inset 0 1px 2px rgba(80, 55, 20, 0.35);
+}
+.shop-pip.on {
+  background: linear-gradient(180deg, #f3c969, #b8862c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ---------- Boutons d'achat ---------- */
+.shop-buy {
+  border: none;
+  border-radius: 11px;
+  padding: 8px 10px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #f3c969, #b8862c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 2px 0 rgba(110, 78, 16, 0.45);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  transition: transform 100ms ease, filter 120ms ease;
+}
+.shop-buy:hover:not(:disabled) { filter: brightness(1.06); }
+.shop-buy:active:not(:disabled) { transform: scale(0.96); }
+.shop-buy:disabled {
+  cursor: not-allowed;
+  background: rgba(110, 95, 50, 0.18);
+  color: rgba(74, 67, 31, 0.55);
+  box-shadow: inset 0 0 0 2px rgba(110, 95, 50, 0.25);
+  text-shadow: none;
+}
+.shop-buy--purple {
+  background: linear-gradient(180deg, #a86cda, #7434b0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 rgba(80, 30, 120, 0.45);
+}
+.shop-buy--purple:disabled {
+  background: rgba(110, 95, 50, 0.18);
+  box-shadow: inset 0 0 0 2px rgba(110, 95, 50, 0.25);
+}

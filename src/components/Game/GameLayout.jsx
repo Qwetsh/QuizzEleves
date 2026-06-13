@@ -10,8 +10,10 @@ import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
 import VictoryModal from '../Modals/VictoryModal';
 import ShopModal from '../Modals/ShopModal';
+import InventoryModal from '../Modals/InventoryModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
+import LootReveal from '../Modals/LootReveal';
 import FightModal from '../Fight/FightModal';
 import FlyingCoins from './FlyingCoins';
 
@@ -32,6 +34,8 @@ export default function GameLayout() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const reset = useGameStore((s) => s.reset);
   const openShop = useGameStore((s) => s.openShop);
+  const openInventory = useGameStore((s) => s.openInventory);
+  const devAddMoney = useGameStore((s) => s.devAddMoney);
   const [isFs, toggleFs] = useFullscreen();
 
   const team = teams[currentTeam];
@@ -66,44 +70,106 @@ export default function GameLayout() {
           </div>
         )}
 
-        {/* Bouton Boutique flottant — juste au-dessus du HUD des equipes */}
+        {/* Boutons Boutique + Inventaire flottants — juste au-dessus du HUD des equipes */}
         {team && (
-          <button
-            onClick={openShop}
-            aria-label="Ouvrir la boutique"
+          <div
             style={{
               position: 'absolute',
               bottom: 14,
               left: '50%',
               transform: 'translateX(-50%)',
               zIndex: 56,
-              display: 'inline-flex', alignItems: 'center', gap: 10,
-              padding: '12px 26px',
-              borderRadius: 999,
-              border: '2px solid rgba(110, 78, 16, 0.55)',
-              background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))',
-              fontFamily: 'var(--font-display)',
-              fontSize: 17,
-              color: '#fff',
-              cursor: 'pointer',
-              textShadow: '0 1px 0 rgba(0,0,0,0.25)',
-              boxShadow:
-                'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 0 rgba(110,78,16,0.55), 0 10px 20px rgba(46,31,16,0.3)',
+              display: 'flex', alignItems: 'center', gap: 10,
             }}
           >
-            <span style={{ fontSize: 20 }}>{"\u{1F6D2}"}</span>
-            Boutique
-            <span
+            <button
+              onClick={openShop}
+              aria-label="Ouvrir la boutique"
               style={{
-                padding: '2px 10px', borderRadius: 999,
-                background: 'rgba(0,0,0,0.18)',
-                fontSize: 14,
-                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                display: 'inline-flex', alignItems: 'center', gap: 10,
+                padding: '12px 26px',
+                borderRadius: 999,
+                border: '2px solid rgba(110, 78, 16, 0.55)',
+                background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))',
+                fontFamily: 'var(--font-display)',
+                fontSize: 17,
+                color: '#fff',
+                cursor: 'pointer',
+                textShadow: '0 1px 0 rgba(0,0,0,0.25)',
+                boxShadow:
+                  'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 0 rgba(110,78,16,0.55), 0 10px 20px rgba(46,31,16,0.3)',
               }}
             >
-              {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
-            </span>
-          </button>
+              <span style={{ fontSize: 20 }}>{"\u{1F6D2}"}</span>
+              Boutique
+              <span
+                style={{
+                  padding: '2px 10px', borderRadius: 999,
+                  background: 'rgba(0,0,0,0.18)',
+                  fontSize: 14,
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                }}
+              >
+                {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
+              </span>
+            </button>
+
+            <button
+              onClick={openInventory}
+              aria-label="Ouvrir l'inventaire"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 10,
+                padding: '12px 26px',
+                borderRadius: 999,
+                border: '2px solid rgba(74, 50, 26, 0.6)',
+                background: 'linear-gradient(180deg, #a9805a, #7a563a)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 17,
+                color: '#fff',
+                cursor: 'pointer',
+                textShadow: '0 1px 0 rgba(0,0,0,0.25)',
+                boxShadow:
+                  'inset 0 2px 0 rgba(255,255,255,0.35), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 0 rgba(60,40,20,0.55), 0 10px 20px rgba(46,31,16,0.3)',
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{"\u{1F392}"}</span>
+              Inventaire
+              {(team.bag?.filter(Boolean).length ?? 0) > 0 && (
+                <span
+                  style={{
+                    padding: '2px 10px', borderRadius: 999,
+                    background: 'rgba(0,0,0,0.18)',
+                    fontSize: 14,
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  {team.bag.filter(Boolean).length}
+                </span>
+              )}
+            </button>
+
+            {/* Bouton dev : pieces gratuites pour tester les achats (localhost uniquement) */}
+            {import.meta.env.DEV && (
+              <button
+                onClick={() => devAddMoney(10)}
+                aria-label="Dev : ajouter 10 pièces"
+                title="Dev — ajoute 10 pièces à l'équipe active"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '10px 16px',
+                  borderRadius: 999,
+                  border: '2px dashed rgba(110, 78, 16, 0.5)',
+                  background: 'rgba(255, 250, 240, 0.85)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 14,
+                  color: 'var(--ink-700)',
+                  cursor: 'pointer',
+                }}
+              >
+                {"\u{1F6E0}️"} +10 <span className="coin" />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -199,7 +265,9 @@ export default function GameLayout() {
       <TargetPickerModal />
       <VictoryModal />
       <ShopModal />
+      <InventoryModal />
       <FightModal />
+      <LootReveal />
     </div>
   );
 }

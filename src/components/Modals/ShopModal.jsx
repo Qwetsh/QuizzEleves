@@ -1,79 +1,156 @@
+// Boutique « Temple moussu » — même langage visuel que l'inventaire :
+// le chrome (cadre, plaque, feuillage, a11y) vient de TemplePanel ; ici,
+// les étals de parchemin (arrivage d'objets, recharge, amélioration,
+// déblocage de pouvoirs) à bannières de bois.
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
+import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { BAG_SIZE } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
-import ModalOverlay from './ModalOverlay';
+import { TemplePanel, CoinRune } from './TempleDecor';
+import ItemIcon from './ItemIcon';
+import '../../styles/inventory.css';
+import '../../styles/shop.css';
 
-function ChargeIndicator({ current, max = 5 }) {
+/* ---------- Briques partagées ---------- */
+
+function Stall({ banner, note, children }) {
   return (
-    <span style={{ display: 'inline-flex', gap: 3 }}>
+    <section className="shop-stall">
+      <div className="shop-stall-banner">{banner}</div>
+      {note && <div className="shop-stall-note">{note}</div>}
+      <div className="shop-row scroll-hidden">{children}</div>
+    </section>
+  );
+}
+
+function CardIcon({ icon, color, desaturate = false }) {
+  return (
+    <span
+      className="shop-card-icon"
+      style={{
+        background: `linear-gradient(180deg, ${color}cc, ${color})`,
+        filter: desaturate ? 'saturate(0.6)' : undefined,
+      }}
+    >
+      {icon}
+    </span>
+  );
+}
+
+function ChargePips({ current, max = 5 }) {
+  return (
+    <span className="shop-pips">
       {Array.from({ length: max }, (_, i) => (
-        <span
-          key={i}
-          style={{
-            width: 10, height: 10, borderRadius: '50%',
-            background: i < current
-              ? 'linear-gradient(180deg, #f3c969, #b8862c)'
-              : 'rgba(122, 94, 58, 0.18)',
-            border: '1px solid rgba(122, 94, 58, 0.25)',
-            display: 'inline-block',
-          }}
-        />
+        <span key={i} className={'shop-pip' + (i < current ? ' on' : '')} />
       ))}
     </span>
   );
 }
 
-// --- Section: Recharger ---
-function RechargeSection({ ownedPowers, money, onBuyCharge }) {
-  if (ownedPowers.length === 0) return null;
+function Price({ value }) {
   return (
-    <div>
-      <SectionHeader icon={"\u26A1"} label="Recharger" />
-      <div className="scroll-hidden" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
-        {ownedPowers.map(([key, teamPower]) => {
-          const power = POWERS[key];
-          const charges = teamPower?.charges || 0;
-          const canBuy = money >= power.price;
-          return (
-            <div
-              key={key}
-              style={{
-                flex: '0 0 220px',
-                borderRadius: 14,
-                border: `2px solid ${power.color}33`,
-                background: `linear-gradient(135deg, ${power.color}0a, ${power.color}14)`,
-                padding: '12px 16px',
-                display: 'flex', flexDirection: 'column', gap: 8,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <PowerIcon power={power} size={32} />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--ink-900)', flex: 1 }}>
-                  {power.name}
-                </span>
-                <ChargeIndicator current={charges} />
-              </div>
-              <button
-                onClick={() => { soundClick(); onBuyCharge(key); }}
-                disabled={!canBuy}
-                style={{
-                  ...goldBtnStyle(canBuy),
-                  padding: '6px 10px', fontSize: 13,
-                }}
-              >
-                +1 Charge ({power.price} <span className="coin" style={{ filter: 'brightness(1.3)' }} />)
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <>
+      ({value} <span className="coin" style={{ filter: 'brightness(1.2)' }} />)
+    </>
   );
 }
 
-// --- Section: Améliorer ---
-function UpgradeSection({ ownedPowers, money, onUpgrade }) {
+/* ---------- Étal : objets (stock rotatif) ---------- */
+function ItemStall({ team, shopStock, shopStockTurns, onBuyItem }) {
+  if (!shopStock || shopStock.length === 0) return null;
+  const bag = team.bag || [];
+  const equipment = team.equipment || {};
+
+  return (
+    <Stall
+      banner={'\u{1F4E6} Arrivage du moment'}
+      note={`Nouvel arrivage dans ${shopStockTurns} tour${shopStockTurns > 1 ? 's' : ''}`}
+    >
+      {shopStock.map((key) => {
+        const item = ITEMS[key];
+        if (!item) return null;
+        const rarityColor = RARITIES[item.rarity]?.color || '#888';
+        const isConsumable = item.slot === 'consumable';
+        const slotTaken = !isConsumable && !!equipment[item.slot];
+        // Va dans le sac si consommable ou slot occupé -> il faut une case libre
+        const needsBagRoom = isConsumable || slotTaken;
+        const bagFull = needsBagRoom && bag.filter(Boolean).length >= BAG_SIZE;
+        const canBuy = team.money >= item.price && !bagFull;
+
+        return (
+          <div className="shop-card" key={key}>
+            <div className="shop-card-inner">
+              <div className="shop-card-head">
+                <ItemIcon item={item} size={38} ring />
+                <div className="shop-card-titles">
+                  <div className="shop-card-name">{item.name}</div>
+                  <div className="shop-card-sub" style={{ color: rarityColor }}>
+                    {RARITIES[item.rarity]?.name} · {isConsumable ? 'Consommable' : SLOTS[item.slot]?.name}
+                  </div>
+                </div>
+              </div>
+              <div className="shop-card-desc">
+                {item.desc}
+                {slotTaken && !bagFull && (
+                  <div className="shop-card-warn">
+                    {SLOTS[item.slot]?.name} occupée {'→'} ira dans le sac
+                  </div>
+                )}
+                {bagFull && <div className="shop-card-warn is-danger">Sac plein !</div>}
+              </div>
+              <button
+                className="shop-buy"
+                disabled={!canBuy}
+                onClick={() => { soundClick(); onBuyItem(key); }}
+              >
+                {isConsumable || slotTaken ? 'Acheter' : 'Équiper'} <Price value={item.price} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </Stall>
+  );
+}
+
+/* ---------- Étal : recharger ---------- */
+function RechargeStall({ ownedPowers, money, onBuyCharge }) {
+  if (ownedPowers.length === 0) return null;
+  return (
+    <Stall banner={'⚡ Recharger'}>
+      {ownedPowers.map(([key, teamPower]) => {
+        const power = POWERS[key];
+        const charges = teamPower?.charges || 0;
+        const canBuy = money >= power.price;
+        return (
+          <div className="shop-card" key={key}>
+            <div className="shop-card-inner">
+              <div className="shop-card-head">
+                <CardIcon icon={power.icon} color={power.color} />
+                <div className="shop-card-titles">
+                  <div className="shop-card-name">{power.name}</div>
+                </div>
+                <ChargePips current={charges} />
+              </div>
+              <button
+                className="shop-buy"
+                disabled={!canBuy}
+                onClick={() => { soundClick(); onBuyCharge(key); }}
+              >
+                +1 Charge <Price value={power.price} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </Stall>
+  );
+}
+
+/* ---------- Étal : améliorer ---------- */
+function UpgradeStall({ ownedPowers, money, onUpgrade }) {
   const upgradeable = ownedPowers.filter(([key, tp]) => {
     const maxLevel = POWERS[key].levels.length;
     return (tp?.level || 1) < maxLevel;
@@ -81,206 +158,92 @@ function UpgradeSection({ ownedPowers, money, onUpgrade }) {
   if (upgradeable.length === 0) return null;
 
   return (
-    <div>
-      <SectionHeader icon={"\u2B06\uFE0F"} label="Améliorer" />
-      <div className="scroll-hidden" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
-        {upgradeable.map(([key, teamPower]) => {
-          const power = POWERS[key];
-          const level = teamPower?.level || 1;
-          const cost = power.upgradeCosts[level - 1];
-          const canUpgrade = money >= cost;
-          const currentDesc = power.levels[level - 1]?.desc;
-          const nextDesc = power.levels[level]?.desc;
+    <Stall banner={'⬆️ Améliorer'}>
+      {upgradeable.map(([key, teamPower]) => {
+        const power = POWERS[key];
+        const level = teamPower?.level || 1;
+        const cost = power.upgradeCosts[level - 1];
+        const canUpgrade = money >= cost;
+        const currentDesc = power.levels[level - 1]?.desc;
+        const nextDesc = power.levels[level]?.desc;
 
-          return (
-            <div
-              key={key}
-              style={{
-                flex: '0 0 300px',
-                borderRadius: 14,
-                border: `2px solid ${power.color}33`,
-                background: `linear-gradient(135deg, ${power.color}0a, ${power.color}14)`,
-                padding: '14px 16px',
-                display: 'flex', flexDirection: 'column', gap: 8,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <PowerIcon power={power} size={32} />
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--ink-900)' }}>
-                    {power.name}
-                  </span>
+        return (
+          <div className="shop-card shop-card--wide" key={key}>
+            <div className="shop-card-inner">
+              <div className="shop-card-head">
+                <CardIcon icon={power.icon} color={power.color} />
+                <div className="shop-card-titles">
+                  <div className="shop-card-name">{power.name}</div>
                 </div>
-                <span style={{
-                  padding: '2px 8px', borderRadius: 6,
-                  background: `${power.color}20`, border: `1px solid ${power.color}35`,
-                  fontFamily: 'var(--font-display)', fontSize: 12, color: power.color,
-                }}>
-                  Niv. {level} {"\u2192"} {level + 1}
+                <span className="shop-lvl" style={{ color: power.color }}>
+                  Niv. {level} {'→'} {level + 1}
                 </span>
               </div>
-
-              <div style={{ fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.4 }}>
+              <div className="shop-card-desc">
                 <div>Actuel : {currentDesc}</div>
-                <div style={{ color: 'var(--ink-700)', fontWeight: 600 }}>Suivant : {nextDesc}</div>
+                <div className="shop-card-next">Suivant : {nextDesc}</div>
               </div>
-
               <button
-                onClick={() => { soundClick(); onUpgrade(key); }}
+                className="shop-buy shop-buy--purple"
                 disabled={!canUpgrade}
-                style={{
-                  ...purpleBtnStyle(canUpgrade),
-                  padding: '6px 10px', fontSize: 13,
-                }}
+                onClick={() => { soundClick(); onUpgrade(key); }}
               >
-                Améliorer ({cost} <span className="coin" style={{ filter: 'brightness(1.3)' }} />)
+                Améliorer <Price value={cost} />
               </button>
             </div>
-          );
-        })}
-      </div>
-    </div>
+          </div>
+        );
+      })}
+    </Stall>
   );
 }
 
-// --- Section: Débloquer ---
-function UnlockSection({ unownedPowers, money, onBuyNew }) {
+/* ---------- Étal : débloquer ---------- */
+function UnlockStall({ unownedPowers, money, onBuyNew }) {
   if (unownedPowers.length === 0) return null;
   return (
-    <div>
-      <SectionHeader icon={"\u{1F513}"} label="Débloquer" />
-      <div className="scroll-hidden" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
-        {unownedPowers.map(([key, power]) => {
-          const canAfford = money >= power.price;
-          return (
-            <div
-              key={key}
-              style={{
-                flex: '0 0 190px',
-                borderRadius: 14,
-                border: `2px solid ${power.color}22`,
-                background: `linear-gradient(135deg, ${power.color}06, ${power.color}0d)`,
-                padding: '12px 14px',
-                display: 'flex', flexDirection: 'column', gap: 8,
-                opacity: canAfford ? 1 : 0.55,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <PowerIcon power={power} size={32} desaturate />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--ink-800)' }}>
-                    {power.name}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--ink-400)' }}>
+    <Stall banner={'\u{1F513} Débloquer'}>
+      {unownedPowers.map(([key, power]) => {
+        const canAfford = money >= power.price;
+        return (
+          <div className="shop-card" key={key} style={{ opacity: canAfford ? 1 : 0.65 }}>
+            <div className="shop-card-inner">
+              <div className="shop-card-head">
+                <CardIcon icon={power.icon} color={power.color} desaturate />
+                <div className="shop-card-titles">
+                  <div className="shop-card-name">{power.name}</div>
+                  <div className="shop-card-sub" style={{ color: power.color }}>
                     {power.category === 'def' ? 'Défensif' : 'Offensif'}
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.3 }}>
-                {power.desc}
-              </div>
+              <div className="shop-card-desc">{power.desc}</div>
               <button
-                onClick={() => { soundClick(); onBuyNew(key); }}
+                className="shop-buy"
                 disabled={!canAfford}
-                style={{
-                  padding: '6px 10px', borderRadius: 10, border: 'none',
-                  fontFamily: 'var(--font-display)', fontSize: 13,
-                  cursor: canAfford ? 'pointer' : 'not-allowed',
-                  background: canAfford
-                    ? `linear-gradient(180deg, ${power.color}cc, ${power.color})`
-                    : 'rgba(122, 94, 58, 0.15)',
-                  color: canAfford ? '#fff' : 'var(--ink-400)',
-                  boxShadow: canAfford
-                    ? 'inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 0 rgba(0,0,0,0.2)'
-                    : 'none',
-                  transition: 'all .15s',
-                }}
+                style={canAfford ? { background: `linear-gradient(180deg, ${power.color}cc, ${power.color})` } : undefined}
+                onClick={() => { soundClick(); onBuyNew(key); }}
               >
-                Débloquer ({power.price} <span className="coin" style={{ filter: 'brightness(1.3)' }} />)
+                Débloquer <Price value={power.price} />
               </button>
             </div>
-          );
-        })}
-      </div>
-    </div>
+          </div>
+        );
+      })}
+    </Stall>
   );
 }
 
-// --- Shared components ---
-
-function SectionHeader({ icon, label }) {
-  return (
-    <h3 style={{
-      fontFamily: 'var(--font-display)', fontSize: 13,
-      letterSpacing: '0.08em', textTransform: 'uppercase',
-      color: 'var(--ink-500)', marginBottom: 10,
-      display: 'flex', alignItems: 'center', gap: 6,
-    }}>
-      <span>{icon}</span> {label}
-    </h3>
-  );
-}
-
-function PowerIcon({ power, size = 36, desaturate = false }) {
-  return (
-    <span
-      style={{
-        width: size, height: size, borderRadius: size * 0.25,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.55,
-        background: `linear-gradient(180deg, ${power.color}cc, ${power.color})`,
-        boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.12)',
-        filter: desaturate ? 'saturate(0.6)' : 'none',
-        flexShrink: 0,
-      }}
-    >
-      {power.icon}
-    </span>
-  );
-}
-
-function goldBtnStyle(enabled) {
-  return {
-    borderRadius: 10, border: 'none',
-    fontFamily: 'var(--font-display)',
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    background: enabled
-      ? 'linear-gradient(180deg, #f3c969, #b8862c)'
-      : 'rgba(122, 94, 58, 0.15)',
-    color: enabled ? '#fff' : 'var(--ink-400)',
-    boxShadow: enabled
-      ? 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 0 rgba(110,78,16,0.4)'
-      : 'none',
-    opacity: enabled ? 1 : 0.5,
-    transition: 'all .15s',
-  };
-}
-
-function purpleBtnStyle(enabled) {
-  return {
-    borderRadius: 10, border: 'none',
-    fontFamily: 'var(--font-display)',
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    background: enabled
-      ? 'linear-gradient(180deg, #a86cda, #7434b0)'
-      : 'rgba(122, 94, 58, 0.15)',
-    color: enabled ? '#fff' : 'var(--ink-400)',
-    boxShadow: enabled
-      ? 'inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 0 rgba(80,30,120,0.4)'
-      : 'none',
-    opacity: enabled ? 1 : 0.5,
-    transition: 'all .15s',
-  };
-}
-
-// --- Main modal ---
-
+/* ---------- Modale ---------- */
 export default function ShopModal() {
   const showShop = useGameStore((s) => s.showShop);
   const closeShop = useGameStore((s) => s.closeShop);
   const buyPowerCharge = useGameStore((s) => s.buyPowerCharge);
   const upgradePowerLevel = useGameStore((s) => s.upgradePowerLevel);
   const buyNewPower = useGameStore((s) => s.buyNewPower);
+  const buyItem = useGameStore((s) => s.buyItem);
+  const shopStock = useGameStore((s) => s.shopStock);
+  const shopStockTurns = useGameStore((s) => s.shopStockTurns);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
 
@@ -297,60 +260,33 @@ export default function ShopModal() {
   return (
     <AnimatePresence>
       {showShop && team && (
-        <ModalOverlay onClose={closeShop} className="max-w-2xl">
-          {/* Header */}
-          <div
-            style={{
-              padding: '20px 26px 14px', textAlign: 'center',
-              background: 'linear-gradient(180deg, #fff3d4 0%, #f0e0b2 100%)',
-            }}
-          >
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, marginBottom: 6 }}>
-              {"\u{1F6D2}"} Boutique des pouvoirs
-            </h2>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <span className="text-lg">{team.emoji}</span>
-              <strong style={{ color: team.color, fontFamily: 'var(--font-display)' }}>{team.name}</strong>
-              <span
-                style={{
-                  padding: '3px 10px', borderRadius: 999,
-                  background: 'linear-gradient(180deg, #f3c969, #b8862c)',
-                  color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13,
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 0 rgba(110,78,16,0.4)',
-                }}
-              >
-                {team.money} <span className="coin" style={{ filter: 'brightness(1.2)' }} />
-              </span>
+        <TemplePanel title="BOUTIQUE" team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
+          <div className="inv-wood">
+            <div className="shop-scroll">
+              <ItemStall
+                team={team}
+                shopStock={shopStock}
+                shopStockTurns={shopStockTurns}
+                onBuyItem={buyItem}
+              />
+              <RechargeStall
+                ownedPowers={ownedPowers}
+                money={team.money}
+                onBuyCharge={buyPowerCharge}
+              />
+              <UpgradeStall
+                ownedPowers={ownedPowers}
+                money={team.money}
+                onUpgrade={upgradePowerLevel}
+              />
+              <UnlockStall
+                unownedPowers={unownedPowers}
+                money={team.money}
+                onBuyNew={buyNewPower}
+              />
             </div>
           </div>
-
-          {/* Body — sections */}
-          <div style={{ padding: '16px 22px 22px', maxHeight: '65vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <RechargeSection
-              ownedPowers={ownedPowers}
-              money={team.money}
-              onBuyCharge={buyPowerCharge}
-            />
-            <UpgradeSection
-              ownedPowers={ownedPowers}
-              money={team.money}
-              onUpgrade={upgradePowerLevel}
-            />
-            <UnlockSection
-              unownedPowers={unownedPowers}
-              money={team.money}
-              onBuyNew={buyNewPower}
-            />
-
-            <button
-              className="btn btn--ghost"
-              onClick={closeShop}
-              style={{ width: '100%' }}
-            >
-              Fermer
-            </button>
-          </div>
-        </ModalOverlay>
+        </TemplePanel>
       )}
     </AnimatePresence>
   );

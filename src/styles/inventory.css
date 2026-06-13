@@ -1,0 +1,542 @@
+/* ============================================
+   INVENTAIRE — Temple moussu (pierre & jungle)
+   Porté du design Claude Design « Inventaire —
+   Explorations », variante B (mousse).
+   Drag & drop : états .is-valid / .is-over,
+   fantôme .inv-ghost, retour .flyback.
+   ============================================ */
+
+/* ---------- Overlay plein écran ---------- */
+.inv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 28%, rgba(233, 230, 207, 0.18) 0%, transparent 60%),
+    rgba(20, 16, 6, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+/* ---------- Racine du panneau ---------- */
+.inv {
+  position: relative;
+  width: 1080px;
+  height: 850px;
+  font-family: var(--font-ui);
+  user-select: none;
+  --carve-o: 0.39;
+
+  /* Palette « Temple moussu » */
+  --stone-1: #d6d2ae; --stone-2: #b6b28b; --stone-3: #92906b;
+  --mortar: rgba(72, 76, 40, 0.5);
+  --wood-1: #5d4423; --wood-2: #41301a;
+  --wood-lite: #8a6a36; --wood-lite2: #6c5128;
+  --paper-0: #d9d0a8; --paper-1: #cdc193; --paper-2: #bfb182;
+  --carve-c: #6c6438; --engrave: #5d5526;
+  --rope: #9a8050;
+  --leaf-a: #4e8a33; --leaf-b: #2f6420; --leaf-c: #74ab4a;
+}
+
+/* ---------- Cadre de pierre ---------- */
+.inv-frame {
+  position: absolute;
+  inset: 34px 14px 18px 14px;
+  border-radius: 42px;
+  background:
+    radial-gradient(closest-side at 10% 6%, rgba(86, 118, 52, 0.32), transparent 42%),
+    radial-gradient(closest-side at 92% 92%, rgba(86, 118, 52, 0.28), transparent 46%),
+    linear-gradient(175deg, var(--stone-1) 0%, var(--stone-2) 55%, var(--stone-3) 100%);
+  box-shadow:
+    0 26px 50px rgba(40, 28, 10, 0.38),
+    0 7px 0 var(--stone-3),
+    inset 0 3px 0 rgba(255, 252, 235, 0.65),
+    inset 0 -7px 0 rgba(95, 68, 32, 0.28);
+}
+/* joints de blocs — anneau seulement */
+.inv-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 42px;
+  padding: 30px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 88px, var(--mortar) 88px 91px),
+    repeating-linear-gradient(0deg, transparent 0 62px, var(--mortar) 62px 65px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.45;
+  pointer-events: none;
+}
+/* grain pierre */
+.inv-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 42px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.25  0 0 0 0 0.18  0 0 0 0 0.08  0 0 0 0.07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  pointer-events: none;
+}
+
+/* ---------- Intérieur bois ---------- */
+.inv-wood {
+  position: absolute;
+  inset: 28px;
+  border-radius: 26px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.28' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.06  0 0 0 0 0.02  0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    repeating-linear-gradient(90deg, transparent 0 118px, rgba(20, 10, 2, 0.28) 118px 121px),
+    linear-gradient(180deg, var(--wood-1), var(--wood-2));
+  box-shadow:
+    inset 0 0 0 4px rgba(45, 27, 9, 0.5),
+    inset 0 12px 30px rgba(30, 17, 4, 0.55),
+    inset 0 -8px 20px rgba(30, 17, 4, 0.4);
+  display: flex;
+  gap: 26px;
+  padding: 58px 26px 26px 26px;
+}
+
+/* ---------- Plaque-titre ---------- */
+.inv-plaque {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 46px 15px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-2));
+  box-shadow:
+    0 0 0 5px var(--stone-3),
+    0 0 0 8px rgba(255, 250, 230, 0.22),
+    0 10px 20px rgba(40, 26, 8, 0.4),
+    inset 0 3px 0 rgba(255, 252, 235, 0.75),
+    inset 0 -5px 0 rgba(110, 80, 40, 0.32);
+  white-space: nowrap;
+}
+.inv-plaque-text {
+  font-family: var(--font-display);
+  font-size: 40px;
+  letter-spacing: 0.07em;
+  color: var(--engrave);
+  text-shadow: 0 2px 0 rgba(255, 252, 235, 0.6), 0 -1px 0 rgba(90, 60, 20, 0.45);
+}
+.inv-plaque .dia {
+  font-size: 17px;
+  color: var(--engrave);
+  opacity: 0.65;
+  text-shadow: 0 1px 0 rgba(255, 252, 235, 0.6);
+}
+
+/* ---------- Étiquette équipe ---------- */
+.inv-teamtag {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 6px 22px 12px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--team) 86%, white), var(--team));
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ---------- Bouton fermer + médaillon ---------- */
+.inv-close,
+.inv-medallion {
+  position: absolute;
+  top: -28px;
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 35% 28%, var(--stone-1), var(--stone-2) 72%);
+  box-shadow:
+    0 0 0 5px var(--rope),
+    0 0 0 10px var(--stone-3),
+    0 0 0 12px rgba(255, 250, 230, 0.2),
+    0 10px 18px rgba(40, 26, 8, 0.4),
+    inset 0 3px 0 rgba(255, 252, 235, 0.7),
+    inset 0 -4px 0 rgba(110, 80, 40, 0.3);
+  display: grid;
+  place-items: center;
+  z-index: 8;
+  color: var(--engrave);
+}
+.inv-close { right: -4px; cursor: pointer; font-family: var(--font-display); font-size: 36px;
+  text-shadow: 0 2px 0 rgba(255, 252, 235, 0.55); transition: transform 120ms ease; }
+.inv-close:hover { transform: scale(1.07) rotate(6deg); }
+.inv-close:active { transform: scale(0.92); }
+.inv-medallion { left: -4px; }
+.inv-medallion svg { width: 44px; height: 44px; filter: drop-shadow(0 1.5px 0 rgba(255, 252, 235, 0.55)); }
+
+/* ---------- Ornement bas + bourse ---------- */
+.inv-foot {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 158px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-2));
+  box-shadow:
+    0 0 0 4px var(--stone-3),
+    0 8px 14px rgba(40, 26, 8, 0.35),
+    inset 0 2px 0 rgba(255, 252, 235, 0.65),
+    inset 0 -4px 0 rgba(110, 80, 40, 0.3);
+  display: grid;
+  place-items: center;
+  z-index: 6;
+  color: var(--engrave);
+}
+.inv-foot svg { width: 30px; height: 30px; filter: drop-shadow(0 1.5px 0 rgba(255, 252, 235, 0.55)); }
+
+.inv-money {
+  position: absolute;
+  bottom: -14px;
+  left: 36px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 22px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-2));
+  box-shadow:
+    0 0 0 4px var(--stone-3),
+    0 8px 14px rgba(40, 26, 8, 0.35),
+    inset 0 2px 0 rgba(255, 252, 235, 0.65),
+    inset 0 -4px 0 rgba(110, 80, 40, 0.3);
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--engrave);
+  text-shadow: 0 1px 0 rgba(255, 252, 235, 0.55);
+}
+
+/* ---------- Panneau ÉQUIPEMENT ---------- */
+.inv-equip {
+  position: relative;
+  width: 238px;
+  flex: none;
+  border-radius: 18px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.02 0.3' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.12  0 0 0 0 0.07  0 0 0 0 0.02  0 0 0 0.12 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, var(--wood-lite), var(--wood-lite2));
+  box-shadow:
+    inset 0 0 0 3px rgba(70, 45, 15, 0.55),
+    inset 0 0 0 7px rgba(255, 235, 190, 0.16),
+    0 6px 14px rgba(30, 18, 5, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 34px 18px 18px;
+}
+.inv-equip-banner {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%) rotate(-2deg);
+  padding: 8px 24px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--wood-lite), var(--wood-lite2));
+  box-shadow:
+    0 5px 9px rgba(30, 18, 5, 0.4),
+    inset 0 2px 0 rgba(255, 235, 190, 0.35),
+    inset 0 -3px 0 rgba(60, 38, 14, 0.45);
+  font-family: var(--font-display);
+  font-size: 21px;
+  letter-spacing: 0.08em;
+  color: #432a0f;
+  text-shadow: 0 1px 0 rgba(255, 235, 190, 0.4);
+  z-index: 3;
+}
+.inv-equip-cell { display: flex; flex-direction: column; align-items: center; }
+.inv-equip-label {
+  margin-top: 7px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(46, 29, 10, 0.8);
+  text-shadow: 0 1px 0 rgba(255, 235, 190, 0.3);
+}
+
+/* ---------- Panneau SAC ---------- */
+.inv-sac {
+  position: relative;
+  flex: 1;
+  border-radius: 22px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.32  0 0 0 0 0.22  0 0 0 0 0.10  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, var(--paper-0), var(--paper-1));
+  box-shadow:
+    0 0 0 4px var(--stone-2),
+    0 0 0 7px var(--stone-3),
+    0 6px 16px rgba(30, 18, 5, 0.4),
+    inset 0 2px 0 rgba(255, 252, 235, 0.6),
+    inset 0 -4px 12px rgba(110, 80, 40, 0.2);
+  padding: 64px 26px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.inv-sac-head {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 6;
+}
+.inv-pack {
+  position: relative;
+  font-size: 56px;
+  line-height: 1;
+  z-index: 2;
+  margin-right: -16px;
+  filter: drop-shadow(0 4px 4px rgba(30, 18, 5, 0.35));
+}
+.inv-sac-plaque {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 30px 11px 36px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-2));
+  box-shadow:
+    0 0 0 4px var(--stone-3),
+    0 7px 12px rgba(40, 26, 8, 0.35),
+    inset 0 2px 0 rgba(255, 252, 235, 0.7),
+    inset 0 -4px 0 rgba(110, 80, 40, 0.3);
+  font-family: var(--font-display);
+  font-size: 25px;
+  letter-spacing: 0.1em;
+  color: var(--engrave);
+  text-shadow: 0 2px 0 rgba(255, 252, 235, 0.55);
+}
+.inv-sac-plaque .dia { font-size: 13px; opacity: 0.65; }
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 17px;
+  flex: 1;
+}
+
+/* ---------- Slots ---------- */
+.inv-slotframe {
+  padding: 7px;
+  border-radius: 17px;
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-3));
+  box-shadow:
+    0 3px 7px rgba(40, 26, 8, 0.3),
+    inset 0 1px 0 rgba(255, 250, 230, 0.6);
+  transition: box-shadow 140ms ease, transform 140ms ease;
+}
+.inv-equip-cell .inv-slotframe { width: 162px; }
+.inv-slot {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 11px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.08  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, var(--paper-2), var(--paper-1));
+  box-shadow:
+    inset 0 3px 9px rgba(80, 55, 20, 0.38),
+    inset 0 -2px 0 rgba(255, 250, 230, 0.5);
+  display: grid;
+  place-items: center;
+  touch-action: none;
+}
+
+/* États drag & drop */
+.inv-slotframe.is-valid {
+  box-shadow:
+    0 0 0 3px rgba(243, 201, 105, 0.95),
+    0 0 16px 4px rgba(243, 201, 105, 0.55),
+    inset 0 1px 0 rgba(255, 250, 230, 0.6);
+  animation: inv-breathe 1.1s ease-in-out infinite;
+}
+.inv-slotframe.is-over {
+  transform: scale(1.06);
+  box-shadow:
+    0 0 0 4px #f3c969,
+    0 0 26px 8px rgba(243, 201, 105, 0.7),
+    inset 0 1px 0 rgba(255, 250, 230, 0.7);
+}
+.inv-slotframe.is-over .inv-slot { background: linear-gradient(180deg, #efe1b4, #e8d6a0); }
+@keyframes inv-breathe {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.08); }
+}
+
+/* ---------- Glyphes gravés (slots d'équipement vides) ---------- */
+.inv-glyph { width: 60%; height: 60%; pointer-events: none; }
+.inv-glyph * { fill: currentColor; }
+.glyph-carve {
+  color: var(--carve-c);
+  opacity: var(--carve-o);
+  filter: drop-shadow(0 2px 0 rgba(255, 252, 235, 0.55));
+}
+
+/* ---------- Objets (émojis) ---------- */
+.inv-item {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  animation: inv-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.inv-item.is-away { opacity: 0.25; filter: saturate(0.2); }
+@keyframes inv-pop {
+  0% { transform: scale(0.5); }
+  60% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.inv-emoji {
+  font-size: 54px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 3px rgba(46, 31, 16, 0.35));
+}
+.inv-equip-cell .inv-emoji { font-size: 76px; }
+
+/* Visuel d'équipement (image détourée) — remplit la case du sac */
+.inv-item-img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(46, 31, 16, 0.45));
+}
+.inv-equip-cell .inv-item-img { width: 90%; height: 90%; }
+
+/* ---------- Fantôme de drag ---------- */
+.inv-ghost {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -58%) rotate(-5deg) scale(1.12);
+  filter: drop-shadow(0 16px 18px rgba(30, 18, 5, 0.45));
+}
+.inv-ghost.flyback {
+  transition: left 240ms cubic-bezier(0.3, 0.7, 0.4, 1), top 240ms cubic-bezier(0.3, 0.7, 0.4, 1),
+    transform 240ms ease;
+  transform: translate(-50%, -50%) rotate(0deg) scale(0.9);
+}
+.inv-ghost .inv-emoji { font-size: 64px; }
+.inv-ghost .inv-item-img { width: 88px; height: 88px; }
+
+/* ---------- Feuillage ---------- */
+.inv-sprig {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 3px 3px rgba(30, 20, 5, 0.3));
+}
+.inv-pack-sprig { z-index: 1; }
+
+/* ---------- Popover d'actions (clic sur un objet) ---------- */
+.inv-popover {
+  position: fixed;
+  z-index: 10000;
+  transform: translate(-50%, -100%) translateY(-12px);
+  width: 252px;
+  padding: 14px 16px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--stone-1, #d6d2ae), var(--stone-2, #b6b28b));
+  box-shadow:
+    0 0 0 4px var(--stone-3, #92906b),
+    0 14px 26px rgba(20, 14, 4, 0.45),
+    inset 0 2px 0 rgba(255, 252, 235, 0.65),
+    inset 0 -4px 0 rgba(110, 80, 40, 0.3);
+  /* animation dédiée : elle doit préserver le translate de positionnement
+     (inv-pop n'anime que scale et écraserait le translate) */
+  animation: inv-popover-in 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes inv-popover-in {
+  0% { transform: translate(-50%, -100%) translateY(-12px) scale(0.5); }
+  60% { transform: translate(-50%, -100%) translateY(-12px) scale(1.08); }
+  100% { transform: translate(-50%, -100%) translateY(-12px) scale(1); }
+}
+.inv-popover::after {
+  content: "";
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--stone-2, #b6b28b);
+  box-shadow: 4px 4px 0 0 var(--stone-3, #92906b);
+}
+.inv-popover-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: #3a3416;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inv-popover-rarity {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 252, 235, 0.4);
+}
+.inv-popover-desc {
+  margin-top: 7px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #4a431f;
+}
+.inv-popover-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 11px;
+}
+.inv-popover-actions button {
+  flex: 1;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 11px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 100ms ease;
+}
+.inv-popover-actions button:active { transform: scale(0.95); }
+.inv-btn-use {
+  color: #fff;
+  background: linear-gradient(180deg, #f3c969, #b8862c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 0 rgba(110, 78, 16, 0.5);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+.inv-btn-sell {
+  color: #4a431f;
+  background: rgba(255, 252, 235, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(110, 95, 50, 0.4);
+}

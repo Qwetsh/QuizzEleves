@@ -1,5 +1,7 @@
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
+import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { itemImg } from '../../logic/itemAssets';
 import { useGameStore } from '../../store/gameStore';
 import '../../styles/team-strip-hud.css';
 
@@ -34,6 +36,56 @@ function PowerBadge({ powerKey, charges, level, kindLabel }) {
         <div className="power-badge-kind">{kindLabel}</div>
         <div className="power-badge-name">{info.name}</div>
       </div>
+    </div>
+  );
+}
+
+// Mini-icones d'equipement (3 slots) + compteur de sac, sous les stats
+function EquipmentStrip({ team }) {
+  const equipment = team.equipment || {};
+  const bag = (team.bag || []).filter(Boolean);
+  const hasAnything = Object.values(equipment).some(Boolean) || bag.length > 0;
+  if (!hasAnything) return null;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+      {Object.keys(SLOTS).map((slot) => {
+        const item = ITEMS[equipment[slot]];
+        const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
+        return (
+          <span
+            key={slot}
+            title={item ? `${SLOTS[slot].name} : ${item.name}\n${item.desc}` : `${SLOTS[slot].name} : vide`}
+            style={{
+              width: 20, height: 20, borderRadius: 6,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, flexShrink: 0,
+              background: item ? `linear-gradient(180deg, ${color}cc, ${color})` : 'rgba(122,94,58,0.1)',
+              border: item ? `1px solid ${color}` : '1px dashed rgba(122,94,58,0.3)',
+              opacity: item ? 1 : 0.5,
+            }}
+          >
+            {item
+              ? (itemImg(item)
+                  ? <img src={itemImg(item)} alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
+                  : item.icon)
+              : SLOTS[slot].icon}
+          </span>
+        );
+      })}
+      {bag.length > 0 && (
+        <span
+          title={`Sac : ${bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}`}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 2,
+            padding: '1px 6px', borderRadius: 999,
+            fontSize: 11, color: 'var(--ink-600)',
+            background: 'rgba(122,94,58,0.12)', border: '1px solid rgba(122,94,58,0.25)',
+          }}
+        >
+          {'\u{1F9F3}'} {bag.length}
+        </span>
+      )}
     </div>
   );
 }
@@ -139,6 +191,8 @@ function TeamStripCard({ team, active, rank, total, compact }) {
             </div>
           )}
         </div>
+
+        <EquipmentStrip team={team} />
       </div>
 
       <div className="ts-card-powers scroll-hidden">

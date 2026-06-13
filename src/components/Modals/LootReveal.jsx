@@ -1,0 +1,101 @@
+// Révélation d'objet « visuel C » (porté du design « Carte d'équipement »,
+// CardModale) : fond radial sombre, rayons en conic-gradient teintés par la
+// rareté tournant derrière l'objet, halo sur l'objet, pastille de rareté,
+// nom et description. Piloté par le store (lootReveal) — déclenché par les
+// coffres, le butin de combat et le loot de bonne réponse.
+import { AnimatePresence, motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { useGameStore } from '../../store/gameStore';
+import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { itemImg } from '../../logic/itemAssets';
+import { soundClick } from '../../logic/sounds';
+import '../../styles/loot-reveal.css';
+
+// Rayons : conic-gradient alterné dans la teinte de rareté (12 secteurs)
+function raysGradient(hex) {
+  const stops = [];
+  for (let a = 0; a < 360; a += 30) {
+    stops.push(`${hex}33 ${a}deg ${a + 10}deg`, `transparent ${a + 10}deg ${a + 30}deg`);
+  }
+  return `conic-gradient(${stops.join(', ')})`;
+}
+
+/* Carte présentationnelle réutilisable (modale globale + autres contextes) */
+export function LootCard({ item, subtitle, compact = false }) {
+  if (!item) return null;
+  const r = RARITIES[item.rarity] || { color: '#888', soft: '#ddd', name: '' };
+  const img = itemImg(item);
+  const slotLabel = item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name;
+
+  return (
+    <div className={'loot-card' + (compact ? ' is-compact' : '')}>
+      {/* Rayons rotatifs */}
+      <div className="loot-rays" style={{ background: raysGradient(r.color) }} />
+      {/* Lueur radiale douce de la rareté */}
+      <div className="loot-glow" style={{ background: `radial-gradient(circle at 50% 42%, ${r.color}55, transparent 70%)` }} />
+
+      <motion.div
+        className="loot-item-wrap"
+        initial={{ scale: 0.3, y: 30, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
+      >
+        {img ? (
+          <img className="loot-item-img" src={img} alt={item.name}
+            style={{ filter: `drop-shadow(0 0 22px ${r.color}aa) drop-shadow(0 6px 8px rgba(0,0,0,.5))` }} />
+        ) : (
+          <span className="loot-item-emoji" style={{ filter: `drop-shadow(0 0 18px ${r.color}aa)` }}>{item.icon}</span>
+        )}
+      </motion.div>
+
+      <motion.div
+        className="loot-info"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <span className="loot-pill" style={{ background: r.color }}>{r.name} · {slotLabel}</span>
+        <div className="loot-name">{item.name}</div>
+        <p className="loot-desc">{item.desc}</p>
+        {subtitle && <div className="loot-subtitle">{subtitle}</div>}
+      </motion.div>
+    </div>
+  );
+}
+
+/* Modale globale pilotée par le store */
+export default function LootReveal() {
+  const lootReveal = useGameStore((s) => s.lootReveal);
+  const dismissLoot = useGameStore((s) => s.dismissLoot);
+  const item = lootReveal ? ITEMS[lootReveal.itemKey] : null;
+
+  return createPortal(
+    <AnimatePresence>
+      {item && (
+        <motion.div
+          className="loot-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onPointerDown={(e) => { if (e.target === e.currentTarget) { soundClick(); dismissLoot(); } }}
+        >
+          <motion.div
+            initial={{ scale: 0.85, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 240 }}
+          >
+            <div className="loot-modal">
+              <div className="loot-banner">{lootReveal.title || 'Objet obtenu !'}</div>
+              <LootCard item={item} subtitle={lootReveal.subtitle} />
+              <button className="loot-btn" onClick={() => { soundClick(); dismissLoot(); }}>
+                Super&nbsp;!
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}

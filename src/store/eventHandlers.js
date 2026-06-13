@@ -2,6 +2,22 @@ import { POWERS } from '../data/powers.js';
 import { moveForward, moveBack, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { randomSubject } from '../logic/turnHelpers.js';
+import { hasEffect, reducedSteal, reducedTax } from '../logic/itemEffects.js';
+import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
+import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount } from './itemHandlers.js';
+
+// Etal du marchand ambulant : 3 objets distincts parmi les objets actives,
+// ponderes par rarete (les legendaires sont rares mais possibles — contrairement
+// a la boutique)
+function generateMerchantStock(count = 3, enabledKeys = Object.keys(ITEMS)) {
+  return pickWeightedItems(count, enabledKeys, (item) =>
+    item.rarity === 'commun' ? 3 : item.rarity === 'rare' ? 2 : 1
+  );
+}
+
+export function merchantPrice(item) {
+  return Math.ceil(item.price * 0.7);
+}
 
 // --- Animation helpers ---
 
@@ -45,7 +61,16 @@ function backPathTo(board, from, target) {
 // --- Event flow actions ---
 
 export function triggerEvent(set, get, picked) {
-  set({ showEvent: { ...picked, phase: 'intro', data: {} }, eventApplied: false });
+  // Phase « roulette » : suspense avant la révélation (l'icône/le nom de
+  // l'événement sont masqués tant qu'on n'a pas révélé). Voir RoulettePhase.
+  set({ showEvent: { ...picked, phase: 'roulette', data: {} }, eventApplied: false });
+}
+
+// Fin de la roulette : on dévoile l'événement (passage à la phase d'intro).
+export function revealEvent(set, get) {
+  const { showEvent } = get();
+  if (!showEvent || showEvent.phase !== 'roulette') return;
+  set({ showEvent: { ...showEvent, phase: 'intro' } });
 }
 
 export function acceptEvent(set, get) {
@@ -53,9 +78,20 @@ export function acceptEvent(set, get) {
   if (!showEvent) return;
   const { key } = showEvent;
 
-  const needsTarget = ['decharge', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent'];
+  const needsTarget = ['decharge', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent', 'pillage'];
   if (needsTarget.includes(key)) {
     set({ showEvent: { ...showEvent, phase: 'target' } });
+    return;
+  }
+
+  if (key === 'marchandAmbulant') {
+    const merchandise = generateMerchantStock(3, get().enabledItems || Object.keys(ITEMS));
+    if (merchandise.length === 0) {
+      // Aucun objet active : le marchand n'a rien a vendre
+      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `\u{1F9D9} Le marchand n'a rien à vendre aujourd'hui...` } }, eventApplied: true });
+      return;
+    }
+    set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, merchandise } } });
     return;
   }
 
@@ -109,6 +145,17 @@ export function eventSelectTarget(set, get, targetIndex) {
     const target = teams[targetIndex];
     const hasCharges = Object.entries(target?.powers || {}).some(([pk, p]) => POWERS[pk] && p?.charges > 0);
     if (hasCharges) {
+      set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, targetIndex } } });
+      return;
+    }
+  }
+
+  // Pillage : si la cible possede au moins un objet, choix de l'objet vole ;
+  // sinon resultat direct ("rien a piller")
+  if (key === 'pillage') {
+    const target = teams[targetIndex];
+    const hasItems = Object.values(target?.equipment || {}).some(Boolean) || bagCount(target?.bag) > 0;
+    if (hasItems) {
       set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, targetIndex } } });
       return;
     }
@@ -228,6 +275,60 @@ export function eventMarcheNoirBuy(set, get, powerKey) {
   get().nextTurn();
 }
 
+// Marchand ambulant : achat d'un objet de l'etal a -30%.
+export function eventMerchantBuy(set, get, itemKey) {
+  const { teams, currentTeam, addLog } = get();
+  const team = teams[currentTeam];
+  const item = ITEMS[itemKey];
+  if (!item) return;
+  const price = merchantPrice(item);
+  if ((team.money ?? 0) < price) return;
+  // Pas de place (slot occupe ET sac plein) : grantItem revendrait l'objet a
+  // 50% alors qu'il vient d'etre paye 70% — on refuse l'achat (l'UI desactive)
+  if (!canReceiveItem(team, itemKey)) return;
+
+  const newTeams = [...teams];
+  newTeams[currentTeam] = { ...team, money: team.money - price };
+  set({ teams: newTeams });
+  addLog(`\u{1F9D9} ${team.emoji} ${team.name} achète ${item.icon} ${item.name} au marchand ambulant ! (-${price} \u{1F4B0})`);
+  grantItem(set, get, currentTeam, itemKey);
+  set({ showEvent: null });
+  get().nextTurn();
+}
+
+// Pillage : vole UN objet a la cible — pick = { kind: 'equipment', slot } ou { kind: 'bag', index }.
+export function eventPillageApply(set, get, pick) {
+  const { showEvent, teams, currentTeam, addLog } = get();
+  const targetIndex = showEvent?.data?.targetIndex;
+  if (targetIndex == null) return;
+  const team = teams[currentTeam];
+  const target = teams[targetIndex];
+  if (!target) return;
+
+  let itemKey = null;
+  const newTeams = [...teams];
+
+  if (pick.kind === 'equipment') {
+    itemKey = target.equipment?.[pick.slot];
+    // Clé absente du catalogue (objet retiré d'une version future) : ignorer
+    if (!itemKey || !ITEMS[itemKey]) return;
+    newTeams[targetIndex] = { ...target, equipment: { ...target.equipment, [pick.slot]: null } };
+  } else {
+    const bag = normalizeBag(target.bag);
+    itemKey = bag[pick.index];
+    if (!itemKey) return;
+    bag[pick.index] = null;
+    newTeams[targetIndex] = { ...target, bag };
+  }
+
+  const item = ITEMS[itemKey];
+  set({ teams: newTeams });
+  addLog(`\u{1F3F4}‍☠️ ${team.emoji} ${team.name} pille ${item.icon} ${item.name} à ${target.emoji} ${target.name} !`);
+  grantItem(set, get, currentTeam, itemKey);
+  set({ showEvent: null });
+  get().nextTurn();
+}
+
 // --- The big switch ---
 
 export function applyEventEffect(set, get) {
@@ -239,6 +340,8 @@ export function applyEventEffect(set, get) {
   const team = teams[currentTeam];
   const newTeams = [...teams];
   let message = '';
+  // Objet loote (coffre) — transmis au resultat pour la carte de revelation
+  let lootKey = null;
   // Animations a jouer : [{ teamIndex, waypoints, type }]
   const moves = [];
   const pushMove = (teamIndex, path, type) => {
@@ -272,6 +375,14 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'oubli': {
+      // Equipement (oubliProtect) : simple recul de 3 au lieu du retour au depart
+      if (hasEffect(team, 'oubliProtect')) {
+        const r = moveBack(board, team.pos, 3);
+        newTeams[currentTeam] = { ...team, pos: r.finalPos };
+        pushMove(currentTeam, r.path, 'back');
+        message = `\u{1FA9D} Le grappin retient ${team.emoji} ${team.name} : recul de 3 cases seulement !`;
+        break;
+      }
       const r = moveBack(board, team.pos, 9999);
       newTeams[currentTeam] = { ...team, pos: 'depart' };
       pushMove(currentTeam, r.path, 'back');
@@ -291,12 +402,19 @@ export function applyEventEffect(set, get) {
     }
     case 'tempete': {
       const dv = data?.diceValue || 1;
+      const immune = [];
       for (let i = 0; i < teams.length; i++) {
+        // Equipement (tempeteImmune) : l'equipe ne bouge pas
+        if (hasEffect(newTeams[i], 'tempeteImmune')) {
+          immune.push(`${newTeams[i].emoji} ${newTeams[i].name}`);
+          continue;
+        }
         const r = moveBack(board, newTeams[i].pos, dv);
         newTeams[i] = { ...newTeams[i], pos: r.finalPos };
         pushMove(i, r.path, 'back');
       }
       message = `\u{1F32A}️ Tempête ! TOUTES les équipes reculent de ${dv} case${dv > 1 ? 's' : ''}.`;
+      if (immune.length) message += ` ⚓ ${immune.join(', ')} tient${immune.length > 1 ? 'nent' : ''} bon !`;
       break;
     }
     case 'rejouer': {
@@ -437,27 +555,41 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'impot': {
-      const loss = Math.floor(team.money * 0.3);
+      // Equipement (taxReduction) : impot attenue voire annule
+      const loss = reducedTax(team, Math.floor(team.money * 0.3));
       newTeams[currentTeam] = { ...team, money: team.money - loss };
-      message = `\u{1F451} ${team.emoji} ${team.name} paie ${loss} pièces d'impôt !`;
+      message = loss > 0
+        ? `\u{1F451} ${team.emoji} ${team.name} paie ${loss} pièces d'impôt !`
+        : `\u{1F9FF} ${team.emoji} ${team.name} est exempté d'impôt grâce à son équipement !`;
       break;
     }
     case 'volArgent': {
       const targetIndex = data?.targetIndex;
       if (targetIndex != null && targetIndex >= 0 && targetIndex < teams.length) {
         const target = teams[targetIndex];
-        const stolen = Math.min(10, target.money ?? 0);
+        // Equipement de la cible (stealProtection) : vol attenue voire annule
+        const stolen = reducedSteal(target, Math.min(10, target.money ?? 0));
         newTeams[targetIndex] = { ...target, money: target.money - stolen };
         newTeams[currentTeam] = { ...team, money: team.money + stolen };
-        message = `\u{1F977} ${team.emoji} ${team.name} vole ${stolen} pièces à ${target.emoji} ${target.name} !`;
+        message = stolen > 0
+          ? `\u{1F977} ${team.emoji} ${team.name} vole ${stolen} pièces à ${target.emoji} ${target.name} !`
+          : `\u{1F9B9} ${target.emoji} ${target.name} protège ses pièces : rien à voler !`;
       }
       break;
     }
     case 'taxeCommune': {
+      const exempt = [];
+      const reduced = [];
       for (let i = 0; i < newTeams.length; i++) {
-        newTeams[i] = { ...newTeams[i], money: Math.max(0, newTeams[i].money - 5) };
+        // Equipement (taxReduction) : taxe attenuee par equipe
+        const tax = reducedTax(newTeams[i], 5);
+        if (tax <= 0) exempt.push(`${newTeams[i].emoji} ${newTeams[i].name}`);
+        else if (tax < 5) reduced.push(`${newTeams[i].emoji} ${newTeams[i].name} (-${tax})`);
+        newTeams[i] = { ...newTeams[i], money: Math.max(0, newTeams[i].money - tax) };
       }
       message = `\u{1F3E6} Taxe commune ! Toutes les équipes perdent 5 pièces.`;
+      if (reduced.length) message += ` \u{1F9FF} Taxe réduite pour ${reduced.join(', ')}.`;
+      if (exempt.length) message += ` \u{1F9FF} ${exempt.join(', ')} : exempté !`;
       break;
     }
     case 'jackpot': {
@@ -477,22 +609,59 @@ export function applyEventEffect(set, get) {
       message = `\u{1F3E6} Le banquier récompense ${team.emoji} ${team.name} : +${bonusAmount} pièces (${team.correct} bonnes réponses x3) !`;
       break;
     }
+    case 'coffre': {
+      lootKey = pickLootItem(0.2, get().enabledItems || Object.keys(ITEMS));
+      const item = ITEMS[lootKey];
+      if (!item) { message = `Le coffre est vide...`; break; }
+      const rarityName = RARITIES[item.rarity]?.name || '';
+
+      const r = placeItem(team, lootKey);
+      newTeams[currentTeam] = r.team;
+      if (r.outcome === 'equipped') {
+        message = `\u{1F9F0} ${team.emoji} ${team.name} trouve et équipe ${item.icon} ${item.name} (${rarityName} — ${SLOTS[item.slot].name}) !`;
+      } else if (r.outcome === 'refunded') {
+        message = `\u{1F9F0} ${item.icon} ${item.name} (${rarityName})... mais le sac est plein ! Revendu +${r.refund} \u{1F4B0}.`;
+        lootKey = null; // objet revendu : pas de révélation visuelle
+      } else {
+        message = `\u{1F9F0} ${team.emoji} ${team.name} trouve ${item.icon} ${item.name} (${rarityName}) !`;
+      }
+      break;
+    }
+    case 'pillage': {
+      // Cas "rien a piller" uniquement — le pillage effectif passe par eventPillageApply
+      const ti = data?.targetIndex;
+      if (ti != null && ti >= 0 && ti < teams.length) {
+        message = `\u{1F3F4}‍☠️ ${newTeams[ti].emoji} ${newTeams[ti].name} n'a aucun objet à piller !`;
+      }
+      break;
+    }
     default:
       message = `Événement appliqué.`;
   }
 
   addLog(message);
+
+  // Un evenement peut amener une equipe sur l'arrivee : la victoire prime.
+  const winnerIdx = newTeams.findIndex((t) => board[t.pos]?.type === 'arrivee');
+  if (winnerIdx !== -1) {
+    set({ teams: newTeams, ...(moves.length ? { movePath: moves } : {}) });
+    const winner = newTeams[winnerIdx];
+    addLog(`\u{1F3C6} ${winner.emoji} ${winner.name} atteint l'arrivée !`);
+    set({ finished: true, showEvent: null, eventApplied: false });
+    return;
+  }
+
+  // Objet conservé (coffre) : on ferme l'événement et on montre la révélation
+  // « visuel C » ; sa fermeture (dismissLoot) enchaîne sur le tour suivant.
+  if (lootKey) {
+    set({ teams: newTeams, showEvent: null, eventApplied: false, ...(moves.length ? { movePath: moves } : {}) });
+    get().showLoot(lootKey, { title: '\u{1F9F0} Coffre au trésor !', thenClose: true });
+    return;
+  }
+
   set({
     teams: newTeams,
     showEvent: { ...showEvent, phase: 'result', data: { ...data, message } },
     ...(moves.length ? { movePath: moves } : {}),
   });
-
-  // Un evenement peut amener une equipe sur l'arrivee : declarer la victoire.
-  const winnerIdx = newTeams.findIndex((t) => board[t.pos]?.type === 'arrivee');
-  if (winnerIdx !== -1) {
-    const winner = newTeams[winnerIdx];
-    addLog(`\u{1F3C6} ${winner.emoji} ${winner.name} atteint l'arrivée !`);
-    set({ finished: true });
-  }
 }

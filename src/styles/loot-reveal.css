@@ -1,0 +1,170 @@
+/* ============================================================
+   Révélation d'objet « visuel C » — fond sombre, rayons de
+   rareté rotatifs, objet en lévitation. Voir LootReveal.jsx.
+   ============================================================ */
+
+.loot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 40%, rgba(40, 26, 8, 0.7), rgba(20, 13, 4, 0.88));
+  backdrop-filter: blur(3px);
+}
+
+.loot-modal {
+  position: relative;
+  width: 360px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 32%, rgba(90, 62, 24, 0.92), rgba(38, 24, 8, 0.96) 75%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 2px 0 rgba(255, 240, 200, 0.15);
+  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loot-banner {
+  width: 100%;
+  text-align: center;
+  padding: 14px 0 10px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f6edd2;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Carte (rayons + objet + infos) ---------- */
+.loot-card {
+  position: relative;
+  width: 100%;
+  height: 290px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+.loot-card.is-compact { height: 250px; }
+
+.loot-rays {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  width: 460px;
+  height: 460px;
+  transform: translate(-50%, -50%);
+  -webkit-mask-image: radial-gradient(circle, #000 26%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 26%, transparent 66%);
+  animation: loot-spin 14s linear infinite;
+  opacity: 0.9;
+}
+@keyframes loot-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.loot-glow {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translate(-50%, -50%);
+  animation: loot-pulse 2.6s ease-in-out infinite;
+}
+@keyframes loot-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+
+.loot-item-wrap {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loot-item-wrap { animation: loot-float 3s ease-in-out infinite; }
+@keyframes loot-float {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: -8px; }
+}
+.loot-item-img {
+  max-height: 170px;
+  max-width: 210px;
+  object-fit: contain;
+}
+.loot-item-emoji {
+  font-size: 120px;
+  line-height: 1;
+}
+
+/* ---------- Bloc infos ---------- */
+.loot-info {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 24px;
+  text-align: center;
+}
+.loot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 13px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.loot-name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: #f6edd2;
+  margin-top: 9px;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.loot-desc {
+  margin: 9px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #d8c9a4;
+  text-wrap: pretty;
+}
+.loot-subtitle {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #b6a884;
+}
+
+/* ---------- Bouton ---------- */
+.loot-btn {
+  margin-top: 18px;
+  padding: 11px 34px;
+  border: none;
+  border-radius: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #f3c969, #b8862c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 3px 0 rgba(110, 78, 16, 0.5), 0 6px 12px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  transition: transform 100ms ease, filter 120ms ease;
+}
+.loot-btn:hover { filter: brightness(1.06); }
+.loot-btn:active { transform: scale(0.96); }

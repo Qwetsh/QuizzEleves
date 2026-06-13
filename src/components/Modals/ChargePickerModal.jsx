@@ -12,6 +12,9 @@ export default function ChargePickerModal() {
 
   const team = teams[currentTeam];
   const powerKeys = team?.powers ? Object.keys(team.powers) : [];
+  // Ouvert par le dé de 1 (gratuit + activation offensive immédiate possible)
+  // ou par un consommable (simple recharge)
+  const fromItem = showChargePicker?.source === 'item';
 
   return (
     <AnimatePresence>
@@ -28,11 +31,13 @@ export default function ChargePickerModal() {
                 boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -5px 0 rgba(0,0,0,0.18), 0 6px 0 rgba(150,100,10,0.4)',
               }}
             >
-              {"\u2728"}
+              {fromItem ? "\u{1F48E}" : "\u2728"}
             </div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>{"D\u00e9 de 1 !"}</h2>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>
+              {fromItem ? "Recharge !" : "D\u00e9 de 1 !"}
+            </h2>
             <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>
-              {"Choisis un pouvoir \u00e0 recharger gratuitement :"}
+              {fromItem ? "Choisis un pouvoir \u00e0 recharger :" : "Choisis un pouvoir \u00e0 recharger gratuitement :"}
             </p>
           </div>
 
@@ -82,7 +87,7 @@ export default function ChargePickerModal() {
                         </span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>
-                        {power.category === 'off' ? 'Offensif — utilisable imm\u00e9diatement' : power.desc}
+                        {!fromItem && power.category === 'off' ? 'Offensif — utilisable imm\u00e9diatement' : power.desc}
                       </div>
                     </div>
                     <span style={{ fontSize: 18, color: 'var(--gold-600)' }}>{"+1"}</span>
