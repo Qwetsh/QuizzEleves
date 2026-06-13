@@ -2,6 +2,7 @@ import { moveBack } from '../logic/pathfinding.js';
 import { getEffectValue, reducedRecul, reducedSteal } from '../logic/itemEffects.js';
 import { ITEMS } from '../data/items.js';
 import { pickLootItem, placeItem, normalizeBag } from './itemHandlers.js';
+import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 
 // Transfere un objet vers une equipe (cascade unique placeItem) et formate
@@ -142,7 +143,7 @@ function applyFightReward(set, get) {
 
     if (pool.length === 0) {
       // Le perdant n'a rien : on fouille le champ de bataille
-      const foundKey = pickLootItem(0.1, get().enabledItems || Object.keys(ITEMS));
+      const foundKey = pickLootItem(LOOT.fightLegendaryChance, get().enabledItems || Object.keys(ITEMS));
       if (!foundKey) {
         // Aucun objet active dans la partie : lot de consolation en pieces
         newTeams[winnerIdx] = { ...winner, money: winner.money + 10 };

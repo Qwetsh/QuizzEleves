@@ -34,19 +34,24 @@ export function LootCard({ item, subtitle, compact = false }) {
       {/* Lueur radiale douce de la rareté */}
       <div className="loot-glow" style={{ background: `radial-gradient(circle at 50% 42%, ${r.color}55, transparent 70%)` }} />
 
-      <motion.div
-        className="loot-item-wrap"
-        initial={{ scale: 0.3, y: 30, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
-      >
-        {img ? (
-          <img className="loot-item-img" src={img} alt={item.name}
-            style={{ filter: `drop-shadow(0 0 22px ${r.color}aa) drop-shadow(0 6px 8px rgba(0,0,0,.5))` }} />
-        ) : (
-          <span className="loot-item-emoji" style={{ filter: `drop-shadow(0 0 18px ${r.color}aa)` }}>{item.icon}</span>
-        )}
-      </motion.div>
+      {/* Ancre de centrage statique : Framer Motion écrase le transform de
+          l'élément animé, on ne peut donc PAS centrer l'objet via translate
+          sur le motion lui-même — le centrage vit sur ce wrapper. */}
+      <div className="loot-item-anchor">
+        <motion.div
+          className="loot-item-wrap"
+          initial={{ scale: 0.3, y: 30, opacity: 0 }}
+          animate={{ scale: 1, y: 0, opacity: 1 }}
+          transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
+        >
+          {img ? (
+            <img className="loot-item-img" src={img} alt={item.name}
+              style={{ filter: `drop-shadow(0 0 22px ${r.color}aa) drop-shadow(0 6px 8px rgba(0,0,0,.5))` }} />
+          ) : (
+            <span className="loot-item-emoji" style={{ filter: `drop-shadow(0 0 18px ${r.color}aa)` }}>{item.icon}</span>
+          )}
+        </motion.div>
+      </div>
 
       <motion.div
         className="loot-info"

@@ -3,6 +3,10 @@ import { useGameStore } from '../../store/gameStore';
 import { loadGame } from '../../store/persistence';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { getMinigame, getDefaultMinigame } from '../Fight/minigames';
+import { ITEMS } from '../../data/items';
+import LootReveal from '../Modals/LootReveal';
+import QuestionsEditor from './QuestionsEditor';
+import BalanceEditor from './BalanceEditor';
 import LevelSelect from './LevelSelect';
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
@@ -15,6 +19,16 @@ import ItemsChecklist from './ItemsChecklist';
 // à la sauvegarde (bac à sable). Quitter : bouton ✕ du jeu.
 function DevFightPanel() {
   const devStartFight = useGameStore((s) => s.devStartFight);
+  const showLoot = useGameStore((s) => s.showLoot);
+  const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
+  const [showBalanceEditor, setShowBalanceEditor] = useState(false);
+
+  const revealRandomLoot = () => {
+    const keys = Object.keys(ITEMS);
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    showLoot(key, { title: '\u{1F381} Objet obtenu !', subtitle: 'Aperçu (dev)' });
+  };
+
   return (
     <div className="panel" style={{ border: '2px dashed #c9472f', background: 'rgba(201,71,47,0.04)' }}>
       <div className="field-label" style={{ color: '#c9472f' }}>
@@ -46,6 +60,35 @@ function DevFightPanel() {
           {"⚡"} {getDefaultMinigame().name} (générique)
         </button>
       </div>
+
+      <div className="grid grid-cols-2 gap-2" style={{ marginTop: 10 }}>
+        <button
+          onClick={revealRandomLoot}
+          className="btn btn--green btn--sm"
+          style={{ justifyContent: 'center' }}
+        >
+          {"\u{1F381} Aperçu gain d'objet"}
+        </button>
+        <button
+          onClick={() => setShowQuestionsEditor(true)}
+          className="btn btn--blue btn--sm"
+          style={{ justifyContent: 'center' }}
+        >
+          {"\u{1F4DA} Éditer les questions"}
+        </button>
+        <button
+          onClick={() => setShowBalanceEditor(true)}
+          className="btn btn--blue btn--sm"
+          style={{ gridColumn: '1 / -1', justifyContent: 'center' }}
+        >
+          {"⚖️ Éditer l'équilibrage (objets…)"}
+        </button>
+      </div>
+
+      {/* La révélation se porte vers document.body (portal) : visible par-dessus le setup */}
+      <LootReveal />
+      {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
+      {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}
     </div>
   );
 }

@@ -14,6 +14,20 @@ const PROP_W = 84;      // largeur de rendu par défaut
 const DUP_RADIUS = 320; // pas deux fois le même prop à moins de cette distance
 const TILE_GUARD = 2;   // garde au-delà du rayon visuel de la tuile
 
+// --- Phase 3 : décor de bordure, ponts, bannières, fanions ---
+const SAND_INNER = 0.78; // au-delà de la frange d'herbe rendue (0.75)
+const SAND_OUTER = 0.90; // en deçà du bord d'île rogné par le filtre gooey
+const SAND_EDGE_CLEAR = 34;  // les éléments de plage tolèrent d'être plus près des chemins
+const SAND_PROP_CLEAR = 96;  // espacement entre éléments de bordure
+
+// Végétation/rochers de plage, posés sur la couronne de SABLE (jamais sur l'herbe)
+const BORDER_PROPS = [
+  'palmier-a', 'palmier-b', 'palmier-c',
+  'buisson-jaune', 'buisson-rose', 'buisson-rouge',
+  'rocher-a', 'rocher-b', 'rocher-c', 'rocher-corde', 'rocher-grave-a', 'rocher-grave-rune',
+];
+const BUNTING = ['fanion-jaune', 'fanion-rouge'];
+
 export const SUBJECT_PROPS = {
   francais: [
     'prop-francais-livres', 'prop-francais-livre-ouvert', 'prop-francais-plume', 'prop-francais-parchemin', 'prop-francais-pupitre', 'prop-francais-lettres',
@@ -73,6 +87,14 @@ const SIZES = {
   'prop-geographie-ile': 96,
   'prop-geographie-telescope': 90,
   'prop-geographie-dolmen': 88,
+  // Phase 3 : bordure / structures
+  'palmier-a': 104, 'palmier-b': 104, 'palmier-c': 104,
+  'buisson-jaune': 70, 'buisson-rose': 70, 'buisson-rouge': 70,
+  'rocher-a': 64, 'rocher-b': 64, 'rocher-c': 64,
+  'rocher-corde': 70, 'rocher-grave-a': 70, 'rocher-grave-rune': 70,
+  'fanion-jaune': 56, 'fanion-rouge': 56,
+  'banner-francais': 88, 'banner-maths': 88, 'banner-histoire': 88,
+  'banner-geographie': 88, 'banner-svt': 88, 'banner-anglais': 88,
 };
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -80,7 +102,7 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 export function generateDecor(board) {
   const nodes = Object.values(board);
 
-  // Cercles de l'île (test "suis-je sur l'herbe ?") et points de chemin
+  // Cercles de l'île (test "suis-je sur l'herbe / le sable ?") et points de chemin
   const circles = islandCircles(board);
   const edgePoints = [];
   for (const node of nodes) {
@@ -94,20 +116,26 @@ export function generateDecor(board) {
   }
 
   const grassRatio = GRASS_RENDER_RATIO - GRASS_MARGIN;
-  const onGrass = (x, y) =>
-    circles.some((c) => Math.hypot(c.x - x, c.y - y) < c.r * grassRatio);
+  const inIsland = (x, y, ratio) =>
+    circles.some((c) => Math.hypot(c.x - x, c.y - y) < c.r * ratio);
+  const onGrass = (x, y) => inIsland(x, y, grassRatio);
+  // Couronne de sable : dans l'île mais hors de l'herbe rendue (et de sa frange)
+  const onSand = (x, y) => inIsland(x, y, SAND_OUTER) && !inIsland(x, y, SAND_INNER);
 
   const placed = [];
+  const farFromPaths = (x, y, clear) =>
+    edgePoints.every((p) => Math.hypot(p.x - x, p.y - y) >= clear);
+  const farFromTiles = (x, y, w) =>
+    nodes.every((n) => Math.hypot(n.x - x, n.y - y) >= tileR(n) + w * 0.5 - 6);
   // Distance min au centre d'une case : rayon visuel de SA tuile + demi-prop,
   // pour qu'un prop ne soit jamais rogné par une tuile (socles compris)
   const tileR = (n) => tileRadius(n.type) + TILE_GUARD;
   const isValid = (x, y, w) =>
-    onGrass(x, y) &&
-    nodes.every((n) => Math.hypot(n.x - x, n.y - y) >= tileR(n) + w * 0.5 - 6) &&
-    edgePoints.every((p) => Math.hypot(p.x - x, p.y - y) >= EDGE_CLEAR) &&
+    onGrass(x, y) && farFromTiles(x, y, w) &&
+    farFromPaths(x, y, EDGE_CLEAR) &&
     placed.every((d) => Math.hypot(d.x - x, d.y - y) >= PROP_CLEAR);
 
-  // Un prop pour ~1 case de matière sur 2, posé en couronne autour de SA case
+  // 1) Props de matière : ~1 case sur 2, posé en couronne autour de SA case
   const subjectNodes = nodes.filter((n) => n.type === 'subject' && SUBJECT_PROPS[n.subject]);
   for (const n of subjectNodes) {
     if (Math.random() < 0.5) continue;
@@ -126,7 +154,67 @@ export function generateDecor(board) {
       const x = n.x + Math.cos(angle) * dist;
       const y = n.y + Math.sin(angle) * dist;
       if (isValid(x, y, w)) {
-        placed.push({ img, x: Math.round(x), y: Math.round(y), w, layer: 'standing' });
+        placed.push({ img, x: Math.round(x), y: Math.round(y), w });
+        break;
+      }
+    }
+  }
+
+  // 2) Bannières de matière : une par matière, plantée au-dessus d'une de ses cases
+  const seenSubjects = new Set();
+  for (const n of subjectNodes) {
+    if (seenSubjects.has(n.subject)) continue;
+    const img = `banner-${n.subject}`;
+    if (!SIZES[img]) continue;
+    const w = SIZES[img];
+    // au-dessus de la case (dy négatif), légèrement décalée
+    const ring = tileR(n) + w * 0.5 - 8;
+    const angles = [-Math.PI / 2, -Math.PI / 2.6, -Math.PI / 1.55];
+    for (const a of angles) {
+      const x = n.x + Math.cos(a) * ring;
+      const y = n.y + Math.sin(a) * ring;
+      if (isValid(x, y, w)) {
+        placed.push({ img, x: Math.round(x), y: Math.round(y), w });
+        seenSubjects.add(n.subject);
+        break;
+      }
+    }
+  }
+
+  // 3) Végétation et rochers de bordure : sur la couronne de SABLE
+  const sandValid = (x, y, w) =>
+    onSand(x, y) && farFromTiles(x, y, w) &&
+    farFromPaths(x, y, SAND_EDGE_CLEAR) &&
+    placed.every((d) => Math.hypot(d.x - x, d.y - y) >= SAND_PROP_CLEAR);
+  const nodeCircles = nodes.map((n) => ({ x: n.x, y: n.y }));
+  for (const c of nodeCircles) {
+    if (Math.random() < 0.45) continue; // densité modérée
+    const img = pick(BORDER_PROPS);
+    const w = SIZES[img] || PROP_W;
+    for (let i = 0; i < 16; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const ratio = SAND_INNER + Math.random() * (SAND_OUTER - SAND_INNER);
+      const x = c.x + Math.cos(angle) * 170 * ratio;
+      const y = c.y + Math.sin(angle) * 170 * ratio;
+      if (sandValid(x, y, w)) {
+        placed.push({ img, x: Math.round(x), y: Math.round(y), w });
+        break;
+      }
+    }
+  }
+
+  // 4) Fanions : petits accents festifs parsemés sur l'herbe
+  for (const n of subjectNodes) {
+    if (Math.random() < 0.85) continue;
+    const img = pick(BUNTING);
+    const w = SIZES[img] || PROP_W;
+    const ring = tileR(n) + w * 0.5;
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const x = n.x + Math.cos(angle) * (ring + Math.random() * 30);
+      const y = n.y + Math.sin(angle) * (ring + Math.random() * 30);
+      if (isValid(x, y, w)) {
+        placed.push({ img, x: Math.round(x), y: Math.round(y), w });
         break;
       }
     }

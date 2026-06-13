@@ -6,9 +6,21 @@ const ITEM_ASSETS = Object.fromEntries(
   Object.entries(ITEM_ASSET_URLS).map(([p, url]) => [p.split('/').pop().replace(/\.png$/, ''), url])
 );
 
-// URL de l'image d'un objet (via son champ `img`), ou null si pas de visuel.
+// Clés des images embarquées (pour le sélecteur d'image de l'éditeur).
+export const ITEM_ASSET_KEYS = Object.keys(ITEM_ASSETS);
+
+// URL d'une image embarquée à partir de sa clé.
+export function assetUrl(key) {
+  return ITEM_ASSETS[key] || null;
+}
+
+// URL de l'image d'un objet : soit une URL/Data directe (upload Supabase
+// Storage), soit la clé d'une image embarquée. null si pas de visuel.
 export function itemImg(item) {
-  return item?.img ? ITEM_ASSETS[item.img] || null : null;
+  const img = item?.img;
+  if (!img) return null;
+  if (/^(https?:|data:|blob:)/.test(img)) return img;
+  return ITEM_ASSETS[img] || null;
 }
 
 // Liseré de rareté : box-shadow d'anneau coloré (+ glow pour le légendaire).

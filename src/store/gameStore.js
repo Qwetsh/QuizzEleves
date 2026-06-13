@@ -17,6 +17,7 @@ import * as powerH from './powerHandlers.js';
 import * as fightH from './fightHandlers.js';
 import * as itemH from './itemHandlers.js';
 import { ITEMS } from '../data/items.js';
+import { LOOT } from '../logic/balanceConfig.js';
 import { getEffectValue } from '../logic/itemEffects.js';
 
 const INITIAL_CHARGES = 2;
@@ -106,6 +107,23 @@ export const useGameStore = create((set, get) => ({
     set({ enabledItems: enabledItems.includes(key) ? enabledItems.filter((k) => k !== key) : [...enabledItems, key] });
   },
   setAllItems: (enabled) => set({ enabledItems: enabled ? Object.keys(ITEMS) : [] }),
+  // Resynchronise la liste des objets activés sur le catalogue courant (après
+  // (re)chargement depuis Supabase). PRÉSERVE les choix manuels : retire les
+  // clés disparues, ajoute seulement les objets RÉELLEMENT nouveaux (jamais vus,
+  // suivis par knownItemKeys) — un objet décoché n'est donc pas re-coché. N'agit
+  // sur enabledItems qu'au setup, pour ne pas perturber une partie en cours.
+  itemsVersion: 0,
+  knownItemKeys: Object.keys(ITEMS),
+  syncEnabledItems: () => {
+    const all = Object.keys(ITEMS);
+    set((s) => {
+      if (s.phase !== 'setup') return { knownItemKeys: all, itemsVersion: s.itemsVersion + 1 };
+      const known = s.knownItemKeys || [];
+      const fresh = all.filter((k) => !known.includes(k)); // jamais vus → activés par défaut
+      const enabled = [...s.enabledItems.filter((k) => ITEMS[k]), ...fresh];
+      return { enabledItems: [...new Set(enabled)], knownItemKeys: all, itemsVersion: s.itemsVersion + 1 };
+    });
+  },
 
   // --- Game state ---
   teams: [],
@@ -152,6 +170,11 @@ export const useGameStore = create((set, get) => ({
   // --- Power selection ---
   powerSetupIndex: 0,
   powerSetupCategory: 'def',
+
+  // Incrémenté quand les questions sont (re)chargées depuis Supabase : permet au
+  // Setup de rafraîchir ses compteurs sans bloquer le boot. Voir questionsConfig.
+  questionsVersion: 0,
+  bumpQuestionsVersion: () => set((s) => ({ questionsVersion: s.questionsVersion + 1 })),
 
   // --- Log ---
   addLog: (msg) => set({ log: [...get().log, msg] }),
@@ -479,10 +502,10 @@ export const useGameStore = create((set, get) => ({
     // réponse du tour (une rafale Double y revient une seule fois), donc le
     // tirage a lieu au plus une fois par tour. Chance = 10 % × (temps restant
     // / temps max) — récompense la rapidité, plafonnée à 10 %.
-    const lootChance = 0.10 * Math.max(0, Math.min(1, timeLeft / maxTime));
+    const lootChance = LOOT.answerLootRate * Math.max(0, Math.min(1, timeLeft / maxTime));
     let lootKey = null;
     if (Math.random() < lootChance) {
-      const key = itemH.pickLootItem(0.1, get().enabledItems || Object.keys(ITEMS));
+      const key = itemH.pickLootItem(LOOT.answerLegendaryChance, get().enabledItems || Object.keys(ITEMS));
       if (key) {
         const nt = [...get().teams];
         const r = itemH.placeItem(nt[currentTeam], key);
@@ -685,10 +708,29 @@ export const useGameStore = create((set, get) => ({
     // Un tableau vide est un etat legitime (tout decoche au setup / etal vide)
     // et doit etre respecte — d'ou le test sur la presence, pas sur la longueur.
     if (!Array.isArray(saved.enabledItems)) set({ enabledItems: Object.keys(ITEMS) });
-    // Sauvegardes sans decor OU a l'ancien format (clairieres/vegetation) :
-    // regenerer avec le placement actuel (props thematiques sur l'herbe)
+    // Le catalogue ITEMS est dynamique (édité via l'éditeur) : purger des équipes
+    // les clés d'objets qui n'existent plus, sinon un slot reste occupé par un
+    // « fantôme » (objet invisible, effet perdu, slot bloqué). Le sac est filtré
+    // par normalizeBag ; on protège de même l'équipement.
+    const resumedTeams = get().teams;
+    if (Array.isArray(resumedTeams) && resumedTeams.length) {
+      set({
+        teams: resumedTeams.map((t) => {
+          const eq = t.equipment || { head: null, body: null, feet: null };
+          const cleaned = {};
+          for (const slot of ['head', 'body', 'feet']) cleaned[slot] = (eq[slot] && ITEMS[eq[slot]]) ? eq[slot] : null;
+          return { ...t, equipment: cleaned, bag: itemH.normalizeBag(t.bag) };
+        }),
+      });
+    }
+    // Sauvegardes sans decor OU a un ANCIEN format : regenerer. Le format
+    // actuel (phase 3) n'a plus de champ `layer` et peut contenir des
+    // bannieres/palmiers/buissons/rochers/fanions — on detecte donc l'ancien
+    // format par la presence du champ `layer` ou d'assets retires (pont/plage/
+    // clairiere/disc), PAS par "ne commence pas par prop-".
     const dec = get().boardDecor;
-    const oldFormat = !dec?.length || dec.some((d) => d.layer === 'ground' || !d.img?.startsWith('prop-'));
+    const oldFormat = !dec?.length
+      || dec.some((d) => ('layer' in d) || /^(pont|plage|bridge|clairiere|disc)-/.test(d.img || ''));
     if (get().board && oldFormat) {
       set({ boardDecor: generateDecor(get().board) });
     }

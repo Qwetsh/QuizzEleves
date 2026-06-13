@@ -8,14 +8,17 @@ const LEVELS = [
   { key: '3e', label: '3\u1d49', sub: null },
 ];
 
-// Nombre de questions qu'ajoute le pool Brevet (constant, ind\u00e9pendant du niveau)
-const BREVET_COUNT = countQuestions('3e', { brevet: true }) - countQuestions('3e');
-
 export default function LevelSelect() {
   const level = useGameStore((s) => s.level);
   const setLevel = useGameStore((s) => s.setLevel);
   const useBrevet = useGameStore((s) => s.useBrevet);
   const setUseBrevet = useGameStore((s) => s.setUseBrevet);
+  // Re-render quand les questions sont (re)charg\u00e9es depuis Supabase : les
+  // compteurs ci-dessous sont alors recalcul\u00e9s sur la source \u00e0 jour.
+  useGameStore((s) => s.questionsVersion);
+
+  // Nombre de questions qu'ajoute le pool Brevet (ind\u00e9pendant du niveau)
+  const BREVET_COUNT = countQuestions('3e', { brevet: true }) - countQuestions('3e');
 
   return (
     <div>

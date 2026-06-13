@@ -5,6 +5,7 @@ import { randomSubject } from '../logic/turnHelpers.js';
 import { hasEffect, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount } from './itemHandlers.js';
+import { LOOT } from '../logic/balanceConfig.js';
 
 // Etal du marchand ambulant : 3 objets distincts parmi les objets actives,
 // ponderes par rarete (les legendaires sont rares mais possibles — contrairement
@@ -610,7 +611,7 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'coffre': {
-      lootKey = pickLootItem(0.2, get().enabledItems || Object.keys(ITEMS));
+      lootKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS));
       const item = ITEMS[lootKey];
       if (!item) { message = `Le coffre est vide...`; break; }
       const rarityName = RARITIES[item.rarity]?.name || '';

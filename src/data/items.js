@@ -205,4 +205,17 @@ export const ITEMS = {
   },
 };
 
-export const ITEM_KEYS = Object.keys(ITEMS);
+// Remplace le contenu de ITEMS en gardant la MÊME référence (mutée en place),
+// pour que tout le code qui a importé ITEMS voie les nouvelles données.
+// Appelé par la couche de chargement (src/logic/itemsConfig.js).
+export function setItemsData(items) {
+  if (!items || !Object.keys(items).length) return;
+  for (const k of Object.keys(ITEMS)) delete ITEMS[k];
+  for (const [k, it] of Object.entries(items)) {
+    // Normalise effects en tableau (un cache d'un ancien schéma pourrait l'omettre)
+    ITEMS[k] = { ...it, effects: Array.isArray(it.effects) ? it.effects : [] };
+  }
+}
+
+// Snapshot des objets d'origine (fichier source) — fallback hors-ligne ultime.
+export const BASE_ITEMS = JSON.parse(JSON.stringify(ITEMS));

@@ -241,23 +241,25 @@ const Terrain = React.memo(function Terrain({ board, islandCircles, viewBox }) {
 // Props thématiques + tuiles des cases : une seule couche triée par Y pour
 // des chevauchements cohérents (prop devant une case → dessiné par-dessus,
 // prop derrière → masqué par la tuile)
+const DecorImage = ({ d, i }) => {
+  const src = bimg(d.img);
+  if (!src) return null;
+  return (
+    <image
+      key={`dp-${i}`}
+      href={src}
+      x={d.x - d.w / 2} y={d.y - d.w / 2}
+      width={d.w} height={d.w}
+      preserveAspectRatio="xMidYMid meet"
+    />
+  );
+};
+
 const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction }) {
   return [
     ...(boardDecor || []).flatMap((d, i) => {
-      const src = bimg(d.img);
-      if (!src) return [];
-      return [{
-        y: d.y,
-        el: (
-          <image
-            key={`dp-${i}`}
-            href={src}
-            x={d.x - d.w / 2} y={d.y - d.w / 2}
-            width={d.w} height={d.w}
-            preserveAspectRatio="xMidYMid meet"
-          />
-        ),
-      }];
+      if (!bimg(d.img)) return [];
+      return [{ y: d.y, el: <DecorImage key={`dp-${i}`} d={d} i={i} /> }];
     }),
     ...Object.entries(board).map(([id, node]) => {
       const r = NODE_RADIUS[node.type] || 32;

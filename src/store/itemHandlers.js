@@ -1,5 +1,6 @@
-import { ITEMS, ITEM_KEYS, SLOTS } from '../data/items.js';
+import { ITEMS, SLOTS } from '../data/items.js';
 import { moveForward } from '../logic/pathfinding.js';
+import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 
 export const BAG_SIZE = 12;
@@ -74,16 +75,16 @@ export function pickWeightedItems(count, enabledKeys, weightOf) {
 
 // Boutique : les objets lootOnly (légendaires) sont exclus pour que le loot
 // reste désirable.
-export function generateShopStock(count = SHOP_STOCK_SIZE, enabledKeys = ITEM_KEYS) {
+export function generateShopStock(count = SHOP_STOCK_SIZE, enabledKeys = Object.keys(ITEMS)) {
   return pickWeightedItems(count, enabledKeys, (item) =>
-    item.lootOnly ? 0 : item.rarity === 'commun' ? 3 : 2
+    item.lootOnly ? 0 : item.rarity === 'commun' ? LOOT.shopWeightCommon : LOOT.shopWeightOther
   );
 }
 
 // Tirage d'un objet de loot (coffres, récompense de duel...) parmi les objets
 // activés. legendaryChance : probabilité (0-1) de tomber sur un légendaire.
 // Retourne null si aucun objet n'est activé.
-export function pickLootItem(legendaryChance = 0.15, enabledKeys = ITEM_KEYS) {
+export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(ITEMS)) {
   const valid = enabledKeys.filter((k) => ITEMS[k]);
   if (valid.length === 0) return null;
   const isLegendary = Math.random() < legendaryChance;

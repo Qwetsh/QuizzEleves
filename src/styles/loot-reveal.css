@@ -81,7 +81,8 @@
   50% { opacity: 0.95; }
 }
 
-.loot-item-wrap {
+/* Ancre statique : porte le centrage (translate), jamais touchée par Framer */
+.loot-item-anchor {
   position: absolute;
   top: 118px;
   left: 50%;
@@ -90,7 +91,12 @@
   align-items: center;
   justify-content: center;
 }
-.loot-item-wrap { animation: loot-float 3s ease-in-out infinite; }
+.loot-item-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: loot-float 3s ease-in-out infinite;
+}
 @keyframes loot-float {
   0%, 100% { margin-top: 0; }
   50% { margin-top: -8px; }

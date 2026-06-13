@@ -16,7 +16,9 @@ function photoUrl(slug) {
 }
 
 // --- Scoring facon GeoGuessr ---
-export const GEO_TARGET_SCORE = 25000;
+// Course a 10 000 pts : 2 manches parfaites (<=100 km = 5000 pts) suffisent,
+// les matchs restent courts.
+export const GEO_TARGET_SCORE = 10000;
 
 // 5000 pts a moins de 100 km, puis decroissance exponentielle
 export function geoPoints(km) {
@@ -71,7 +73,7 @@ function ScoreBar({ team, score, align }) {
  * Tour du monde (géographie) — façon GeoGuessr : photo d'un lieu célèbre
  * SANS son nom, chaque équipe plante son drapeau (commit-reveal), et
  * marque des points selon la distance (≤100 km = 5 000 pts, dégressif).
- * PREMIER À 25 000 POINTS = victoire directe du combat.
+ * PREMIER À 10 000 POINTS = victoire directe du combat.
  */
 export default function GeoDuel({ attacker, defender, onRoundWin }) {
   const fightMatchWin = useGameStore((s) => s.fightMatchWin);
@@ -101,7 +103,7 @@ export default function GeoDuel({ attacker, defender, onRoundWin }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-      {/* Tableau de score : course a 25 000 points */}
+      {/* Tableau de score : course a 10 000 points */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '6px 14px', borderRadius: 12,
