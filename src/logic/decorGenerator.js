@@ -15,8 +15,8 @@ const DUP_RADIUS = 320; // pas deux fois le même prop à moins de cette distanc
 const TILE_GUARD = 2;   // garde au-delà du rayon visuel de la tuile
 
 // --- Phase 3 : décor de bordure, ponts, bannières, fanions ---
-const SAND_INNER = 0.78; // au-delà de la frange d'herbe rendue (0.75)
-const SAND_OUTER = 0.90; // en deçà du bord d'île rogné par le filtre gooey
+const SAND_INNER = 0.75; // au-delà de la frange d'herbe rendue (0.72)
+const SAND_OUTER = 0.83; // en deçà du bord d'île rogné par le filtre gooey (resserré : les palmiers mordaient l'eau)
 const SAND_EDGE_CLEAR = 34;  // les éléments de plage tolèrent d'être plus près des chemins
 const SAND_PROP_CLEAR = 96;  // espacement entre éléments de bordure
 
@@ -94,7 +94,7 @@ const SIZES = {
   'prop-geographie-telescope': 90,
   'prop-geographie-dolmen': 88,
   // Phase 3 : bordure / structures
-  'palmier-a': 104, 'palmier-b': 104, 'palmier-c': 104,
+  'palmier-a': 92, 'palmier-b': 92, 'palmier-c': 92,
   'buisson-jaune': 70, 'buisson-rose': 70, 'buisson-rouge': 70,
   'rocher-a': 64, 'rocher-b': 64, 'rocher-c': 64,
   'rocher-corde': 70, 'rocher-grave-a': 70, 'rocher-grave-rune': 70,
