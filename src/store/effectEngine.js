@@ -320,6 +320,11 @@ function stepHead(set, get, action, ctx) {
       for (const idx of t.indices) {
         const res = applyMoveOne(set, get, idx, action.dir, n, allowJunction);
         if (res.suspended) return 'suspend';
+        // Journalise le déplacement (sinon seul un toast transitoire le montrait).
+        if (res.moved) {
+          const tm = get().teams[idx];
+          get().addLog(`${action.dir === 'back' ? '⬅️' : '➡️'} ${tm.emoji} ${tm.name} ${action.dir === 'back' ? 'recule' : 'avance'} de ${n} case${n > 1 ? 's' : ''}.`);
+        }
         if (res.finalPos && get().board[res.finalPos]?.type === 'arrivee') {
           get().addLog(`🏆 ${get().teams[idx].emoji} ${get().teams[idx].name} atteint l'arrivée !`);
           set({ finished: true });
