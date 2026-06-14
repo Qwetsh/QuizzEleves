@@ -96,7 +96,7 @@ export function equipOnRollActions(team, value) {
   for (const slot of SLOTS_EQUIP) {
     const it = ITEMS[team?.equipment?.[slot]];
     for (const t of triggersOf(it, 'roll')) {
-      if ((t.values || []).includes(value)) out.push(...(t.do || []));
+      if ((t.values || []).includes(value) && passesChance(t.chance)) out.push(...(t.do || []));
     }
   }
   return out;
@@ -108,7 +108,9 @@ export function equipTriggerActions(team, on) {
   const out = [];
   for (const slot of SLOTS_EQUIP) {
     const it = ITEMS[team?.equipment?.[slot]];
-    for (const t of triggersOf(it, on)) out.push(...(t.do || []));
+    for (const t of triggersOf(it, on)) {
+      if (passesChance(t.chance)) out.push(...(t.do || [])); // chance optionnelle (ex. 20% à la bonne réponse)
+    }
   }
   return out;
 }
