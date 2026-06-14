@@ -130,6 +130,28 @@ function StatChips({ team, withRate = true }) {
   );
 }
 
+// Buffs/protections actifs (fumigène, bouclier, sablier) — visibles dans la bande.
+function TeamBuffs({ team }) {
+  const buffs = [];
+  if (team.itemShield > 0) buffs.push({ icon: '\u{1F6E1}️', n: team.itemShield > 1 ? team.itemShield : null, title: `Bouclier : annule ${team.itemShield} recul${team.itemShield > 1 ? 's' : ''}`, color: '#3b6cb3' });
+  if (team.itemFumigene) buffs.push({ icon: '\u{1F4A8}', n: team.itemFumigeneTurns || null, title: `Fumigène : prochain pouvoir offensif annulé${team.itemFumigeneTurns ? ` (${team.itemFumigeneTurns} tour${team.itemFumigeneTurns > 1 ? 's' : ''})` : ''}`, color: '#7a8a99' });
+  if (team.sablierActif) buffs.push({ icon: '⏱️', n: null, title: 'Timer réduit', color: '#8745d4' });
+  if (!buffs.length) return null;
+  return (
+    <div className="ts-buffs" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+      {buffs.map((b, i) => (
+        <span key={i} title={b.title} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 1,
+          padding: '1px 6px', borderRadius: 999, fontSize: 13, lineHeight: 1.4,
+          background: `${b.color}22`, border: `1px solid ${b.color}66`,
+        }}>
+          {b.icon}{b.n ? <small style={{ fontWeight: 700 }}>{b.n}</small> : ''}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function TeamLocation({ team }) {
   const board = useGameStore((s) => s.board);
   const node = board?.[team.pos];
@@ -182,6 +204,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
         <div className="ts-pop-rank">{rank}/{total}</div>
       </div>
       <StatChips team={team} />
+      <TeamBuffs team={team} />
       <div className="ts-pop-section">
         <div className="ts-pop-label">Équipement</div>
         {Object.keys(SLOTS).map((slot) => {
@@ -234,6 +257,7 @@ function ActiveCard({ team, rank, total }) {
         </div>
         <StatChips team={team} />
         <EquipmentStrip team={team} />
+        <TeamBuffs team={team} />
       </div>
       <div className="ts-card-powers scroll-hidden">
         {pKeys.map((key) => (
@@ -265,6 +289,7 @@ function CompactCard({ team, rank, total, open, onToggle }) {
           <span className="coin ts-stat-coin" /><span className="ts-stat-num">{team.money ?? 0}</span>
         </div>
         <EquipmentStrip team={team} className="ts-mini-eq" />
+        <TeamBuffs team={team} />
       </div>
       <div className="ts-mini-powers">
         {pKeys.map((key) => (
