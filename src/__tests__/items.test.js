@@ -312,6 +312,24 @@ describe('séries & déclencheurs de réponse', () => {
   });
 });
 
+// --- Loot de bonne réponse : canaux indépendants ---
+
+describe('loot de bonne réponse', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('consommable ET équipement peuvent tomber au même tour (canaux indépendants)', () => {
+    freshGame([{ equipment: { head: null, body: null, feet: null }, bag: [] }, {}]);
+    // random = 0 ⇒ les deux tirages passent (0 < 0.12 et 0 < 0.10), et pickLootItem
+    // choisit un objet de chaque catégorie.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 30); // bonne, temps plein ⇒ timeRatio ≈ 1
+    // deux objets révélés : le premier + un « rest » de longueur 1
+    expect(S().lootReveal).toBeTruthy();
+    expect(S().lootReveal.rest).toHaveLength(1);
+  });
+});
+
 // --- indiceBoost passif (élimine des mauvaises réponses à chaque question) ---
 
 describe('indiceBoost passif', () => {

@@ -203,6 +203,13 @@ export const useGameStore = create((set, get) => ({
   showLoot: (itemKey, opts = {}) => set({ lootReveal: { itemKey, ...opts } }),
   dismissLoot: () => {
     const lr = get().lootReveal;
+    // File de révélations (ex. consommable + équipement lootés au même tour) :
+    // on enchaîne sur l'objet suivant au lieu de fermer.
+    if (lr?.rest?.length) {
+      const [next, ...rest] = lr.rest;
+      set({ lootReveal: { ...next, rest, thenClose: lr.thenClose } });
+      return;
+    }
     set({ lootReveal: null });
     // Loot d'événement (coffre) : la révélation remplace le ResultPhase, donc
     // sa fermeture enchaîne sur le tour suivant (comme closeEvent).
@@ -605,8 +612,8 @@ export const useGameStore = create((set, get) => ({
     // Loot de bonne réponse : on n'atteint ce point qu'à la DERNIÈRE bonne
     // réponse du tour (une rafale Double y revient une seule fois), donc le
     // tirage a lieu au plus une fois par tour. Chance × (temps restant / temps
-    // max) — récompense la rapidité. Deux canaux INDÉPENDANTS, au plus 1 objet :
-    // le consommable est tenté d'abord, sinon l'équipement.
+    // max) — récompense la rapidité. Deux canaux INDÉPENDANTS : le consommable
+    // ET l'équipement peuvent tomber au même tour (l'un ne bloque pas l'autre).
     const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
     const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
     // Bonus de taux de loot (équipement) : % ajoutés au taux de base, par canal.
@@ -614,29 +621,41 @@ export const useGameStore = create((set, get) => ({
     const lootTeam = get().teams[currentTeam];
     const consumRate = (LOOT.answerConsumableRate || 0) + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
     const equipRate = LOOT.answerLootRate + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
-    let lootKey = null;
-    let key = null;
+    const drops = [];
     if (Math.random() < consumRate * timeRatio) {
-      key = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+      const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+      if (k) drops.push(k);
     }
-    if (!key && Math.random() < equipRate * timeRatio) {
-      key = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
+    if (Math.random() < equipRate * timeRatio) {
+      const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
+      if (k) drops.push(k);
     }
-    if (key) {
+    // Placement séquentiel (le sac se remplit objet par objet) + file de révélations.
+    const revealQueue = [];
+    if (drops.length) {
       const nt = [...get().teams];
-      const r = itemH.placeItem(nt[currentTeam], key);
-      nt[currentTeam] = r.team;
-      set({ teams: nt });
-      if (r.outcome === 'refunded') {
-        addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[key].icon} ${ITEMS[key].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
-      } else {
-        lootKey = key;
-        addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[key].icon} ${ITEMS[key].name} !`);
+      for (const k of drops) {
+        const r = itemH.placeItem(nt[currentTeam], k);
+        nt[currentTeam] = r.team;
+        if (r.outcome === 'refunded') {
+          addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[k].icon} ${ITEMS[k].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
+        } else {
+          addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[k].icon} ${ITEMS[k].name} !`);
+          revealQueue.push(k);
+        }
       }
+      set({ teams: nt });
     }
 
     get().nextTurn();
-    if (lootKey) get().showLoot(lootKey, { title: '✨ Bien joué !', subtitle: 'Récompense de bonne réponse' });
+    if (revealQueue.length) {
+      const [first, ...rest] = revealQueue;
+      get().showLoot(first, {
+        title: '✨ Bien joué !',
+        subtitle: rest.length ? 'Double butin ! (1/2)' : 'Récompense de bonne réponse',
+        rest: rest.map((k) => ({ itemKey: k, title: '✨ Et en plus…', subtitle: 'Double butin ! (2/2)' })),
+      });
+    }
   },
 
   timeoutQuestion: () => {
