@@ -13,7 +13,7 @@ import {
 } from '../../logic/itemsConfig';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { useGameStore } from '../../store/gameStore';
-import { TriggerCard, defaultTrigger, AmountInput, DEFAULT_DICE } from './EffectBuilder';
+import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger } from './EffectBuilder';
 import { describeItemEffects, itemEffectLines } from '../../logic/effectText';
 import '../../styles/questions-editor.css';
 import '../../styles/balance-editor.css';
@@ -124,6 +124,7 @@ export default function BalanceEditor({ onClose }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [picker, setPicker] = useState(false);
+  const [fxMenu, setFxMenu] = useState(false);
   const fileRef = useRef(null);
   const [ov, setOv] = useState(() => readCache());
   const [selPower, setSelPower] = useState('bouclier');
@@ -195,8 +196,19 @@ export default function BalanceEditor({ onClose }) {
     }),
   });
   const removeEffect = (i) => set({ effects: draft.effects.filter((_, j) => j !== i) });
-  const addEffect = () => set({ effects: [...draft.effects, { type: effectPool[0], value: 1 }] });
-  const addTrigger = () => set({ effects: [...draft.effects, defaultTrigger(draft.slot)] });
+  const addFx = (mk) => { set({ effects: [...draft.effects, mk()] }); setFxMenu(false); };
+  // Catégories d'effet en langage clair (le menu « + Ajouter un effet »).
+  const fxPresets = (slot) => slot === 'consumable' ? [
+    { label: '💥 Effet immédiat', sub: 'Gagne des pièces, avance, bouclier…', mk: () => ({ type: CONSUM_EFFECTS[0], value: 1 }) },
+    { label: "🎲 À l'utilisation (chance / dé)", sub: 'Une condition puis des effets', mk: () => makeTrigger('use') },
+    { label: '🔄 Bouton « Changer la question »', sub: 'Relance la question en jeu', mk: () => makeTrigger('question') },
+  ] : [
+    { label: '♾️ Bonus permanent', sub: 'Tant que l’objet est équipé', mk: () => ({ type: EQUIP_EFFECTS[0], value: 1 }) },
+    { label: '✅ Quand je réponds bien', sub: 'Récompense (option : par matière)', mk: () => makeTrigger('correct') },
+    { label: '❌ Quand je rate', sub: 'Malus / effet à l’erreur', mk: () => makeTrigger('wrong') },
+    { label: '🎲 Selon le dé (à mon tour)', sub: 'Si le dé fait certaines faces', mk: () => makeTrigger('roll') },
+    { label: '🔄 Bouton « Changer la question »', sub: 'Relance la question en jeu', mk: () => makeTrigger('question') },
+  ];
 
   function validate(d) { return !!(d && d.name.trim()); }
 
@@ -531,9 +543,19 @@ export default function BalanceEditor({ onClose }) {
                           </div>
                         )
                       ))}
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                        <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Effet simple</button>
-                        <button className="btn btn--ghost btn--sm" onClick={addTrigger}>{'+'} Effet déclenché (avancé)</button>
+                      <div style={{ marginTop: 8 }}>
+                        <button className="btn btn--green btn--sm" onClick={() => setFxMenu((m) => !m)}>
+                          {fxMenu ? '▾' : '+'} Ajouter un effet
+                        </button>
+                        {fxMenu && (
+                          <div className="fx-addmenu">
+                            {fxPresets(draft.slot).map((p) => (
+                              <button key={p.label} onClick={() => addFx(p.mk)}>
+                                {p.label}<small>{p.sub}</small>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

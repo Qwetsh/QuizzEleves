@@ -1,48 +1,54 @@
-// Constructeur d'effets composables pour l'éditeur d'objets.
-// Gère les déclencheurs `kind:'trigger'` (à l'usage / % chance / d6 / on:roll / en question)
-// et l'édition de listes d'ACTIONS atomiques. Voir src/store/effectEngine.js.
+// Constructeur d'effets composables — rendu en « PHRASE À TROUS » (façon no-code)
+// pour être lisible par un prof : chaque action se lit comme une phrase dont les
+// mots variables sont des champs. Schéma inchangé (cf. src/store/effectEngine.js) :
+// déclencheurs kind:'trigger' (use / chance / d6 / roll / correct / wrong / question)
+// + listes d'ACTIONS atomiques.
 import { SUBJECTS, SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../../data/subjects';
 
 const ACTIONS = [
-  { key: 'move', label: 'Déplacer' },
-  { key: 'money', label: 'Or (gagner/perdre/voler)' },
-  { key: 'rerollQuestion', label: 'Changer la question' },
-  { key: 'forceSubject', label: 'Forcer le thème de la question' },
-  { key: 'challenge', label: 'Défi (forcer mon thème + pari)' },
-  { key: 'placeTrap', label: 'Poser un piège' },
-  { key: 'gainCharge', label: 'Recharger un pouvoir' },
-  { key: 'shieldNext', label: 'Bouclier (annule 1 recul)' },
-  { key: 'fumigene', label: 'Fumigène (anti-pouvoir)' },
-  { key: 'extraTime', label: 'Temps en + (prochaine question)' },
+  { key: 'money', label: '💰 Or' },
+  { key: 'move', label: '🏃 Déplacer' },
+  { key: 'rerollQuestion', label: '🔄 Changer la question' },
+  { key: 'forceSubject', label: '🎯 Imposer un thème' },
+  { key: 'challenge', label: '🎲 Défi (mon thème + pari)' },
+  { key: 'placeTrap', label: '🪤 Poser un piège' },
+  { key: 'gainCharge', label: '⚡ Recharger un pouvoir' },
+  { key: 'shieldNext', label: '🛡️ Bouclier' },
+  { key: 'fumigene', label: '💨 Fumigène' },
+  { key: 'extraTime', label: '⏳ Temps en +' },
 ];
 const TARGETS = [
-  { key: 'self', label: 'Moi' }, { key: 'target', label: 'Une cible (au choix)' },
-  { key: 'randomOpponent', label: 'Un adversaire au hasard' }, { key: 'all', label: 'Toutes les équipes' },
+  { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
+  { key: 'randomOpponent', label: 'un adversaire au hasard' }, { key: 'all', label: 'toutes les équipes' },
 ];
-// Dans un piège (ou une rune), « soi » = l'équipe qui marche dessus / déclenche.
 const TRAP_TARGETS = [
-  { key: 'self', label: 'Celui qui marche dessus' }, { key: 'target', label: 'Une autre équipe (au choix)' },
-  { key: 'randomOpponent', label: 'Une autre équipe au hasard' }, { key: 'all', label: 'Toutes les équipes' },
+  { key: 'self', label: 'celui qui marche dessus' }, { key: 'target', label: 'une autre équipe' },
+  { key: 'randomOpponent', label: 'une autre équipe au hasard' }, { key: 'all', label: 'toutes les équipes' },
 ];
 
-const defaultAction = () => ({ action: 'money', mode: 'gain', target: 'self', n: 5, unit: 'flat' });
+export const defaultAction = () => ({ action: 'money', mode: 'gain', target: 'self', n: 5, unit: 'flat' });
 
 export function defaultTrigger(slot) {
   if (slot === 'consumable') return { kind: 'trigger', on: 'use', do: [defaultAction()] };
-  // équipement : par défaut un déclencheur lié au dé
   return { kind: 'trigger', on: 'roll', values: [6], do: [{ action: 'money', mode: 'gain', target: 'self', n: 10, unit: 'flat' }] };
 }
 
-// Étiquette lisible d'une quantité ('d6' ⇒ '1D6', objet ⇒ 'f×série', 3 ⇒ '3').
+// Crée un déclencheur d'un type donné (utilisé par le menu « + Ajouter un effet »).
+export function makeTrigger(on) {
+  if (on === 'roll') return { kind: 'trigger', on: 'roll', values: [6], do: [defaultAction()] };
+  if (on === 'question') return { kind: 'trigger', on: 'question', n: 1, do: [{ action: 'rerollQuestion', subject: 'same' }] };
+  if (on === 'use') return { kind: 'trigger', on: 'use', do: [defaultAction()] };
+  return { kind: 'trigger', on, do: [defaultAction()] }; // correct | wrong
+}
+
 const amountLabel = (n) => {
   if (typeof n === 'string') return `1${n.toUpperCase()}`;
   if (n != null && typeof n === 'object') return `${n.base ? `${n.base}+` : ''}${n.factor ?? 1}×${metricLabel(n.per)}`;
   return n;
 };
 
-// Résumé lisible d'une action (pour l'aperçu).
 export function describeAction(a) {
-  const who = TARGETS.find((t) => t.key === a.target)?.label.toLowerCase() || a.target;
+  const who = TARGETS.find((t) => t.key === a.target)?.label || a.target;
   switch (a.action) {
     case 'move': return `${a.dir === 'back' ? 'reculer' : 'avancer'} ${who} de ${amountLabel(a.n)}`;
     case 'money': return `${a.mode === 'steal' ? 'voler' : a.mode === 'lose' ? 'retirer' : 'donner'} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or à ${who}`;
@@ -57,19 +63,16 @@ export function describeAction(a) {
   }
 }
 
+// Mot fixe de la phrase (texte non éditable).
+const W = ({ children }) => <span className="fx-word">{children}</span>;
+
 const numInput = (value, onChange, { min = 0, max = 999 } = {}) => (
-  <input type="number" className="qed-input" style={{ width: 72 }} value={value ?? 0}
+  <input type="number" className="qed-input fx-blank" style={{ width: 58 }} value={value ?? 0}
     min={min} max={max} onChange={(e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || 0)))} />
 );
 
-// Quantité d'effet : valeur FIXE (nombre) ou ALÉATOIRE (dé).
-// La valeur aléatoire est stockée sous forme de chaîne ('d2'|'d3'|'d4'|'d6'|'d10')
-// et tirée à l'exécution par le moteur (resolveAmount).
-// `dice` adapte les faces proposées selon l'effet (ex. réponses éliminées :
-// d2/d3 seulement, car il n'y a que 3 mauvaises réponses).
 export const DEFAULT_DICE = ['d4', 'd6', 'd10'];
 const diceFaceLabel = (d) => `🎲 1${d.toUpperCase()}`;
-// Métriques d'équipe pour les valeurs « à l'échelle » (cf. itemEffects.teamMetric).
 const SCALE_METRICS = [
   { key: 'streak', label: 'série' },
   { key: 'precision', label: 'précision %' },
@@ -83,18 +86,17 @@ const metricLabel = (per) => SCALE_METRICS.find((s) => s.key === per)?.label || 
 export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAULT_DICE, scale = true }) {
   const isDice = typeof value === 'string';
   const isScale = value != null && typeof value === 'object';
-  // garde le dé courant affichable même s'il n'est pas dans `dice`
   const faces = isDice && !dice.includes(value) ? [value, ...dice] : dice;
   const mode = isScale ? `scale:${value.per}` : (isDice ? value : 'fixed');
   return (
     <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-      <select className="qed-select" value={mode} onChange={(e) => {
+      <select className="qed-select fx-blank" value={mode} onChange={(e) => {
         const m = e.target.value;
         if (m === 'fixed') onChange(Math.max(min, 1));
         else if (m.startsWith('scale:')) onChange({ per: m.slice(6), factor: 1, base: 0 });
-        else onChange(m); // dé
+        else onChange(m);
       }}>
-        <option value="fixed">fixe</option>
+        <option value="fixed">valeur fixe</option>
         {faces.map((d) => <option key={d} value={d}>{diceFaceLabel(d)}</option>)}
         {scale && SCALE_METRICS.map((s) => <option key={s.key} value={`scale:${s.key}`}>{`📈 × ${s.label}`}</option>)}
       </select>
@@ -102,7 +104,7 @@ export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAUL
       {isScale && (
         <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center', fontSize: 12, color: 'var(--ink-500)' }}>
           {numInput(value.factor ?? 1, (v) => onChange({ ...value, factor: v }), { min: 0, max: 99 })}
-          <span>{`× ${metricLabel(value.per)} +`}</span>
+          <W>{`× ${metricLabel(value.per)} +`}</W>
           {numInput(value.base ?? 0, (v) => onChange({ ...value, base: v }), { min: 0, max })}
         </span>
       )}
@@ -110,13 +112,35 @@ export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAUL
   );
 }
 
+// Sélecteur de thème réutilisable (matières + thèmes spéciaux), avec options en tête.
+function SubjectSelect({ value, onChange, extra }) {
+  return (
+    <select className="qed-select fx-blank" value={value} onChange={(e) => onChange(e.target.value)}>
+      {extra}
+      {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+      <optgroup label="Thèmes spéciaux">
+        {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+      </optgroup>
+    </select>
+  );
+}
+
+function TargetSelect({ value, onChange, opts }) {
+  return (
+    <select className="qed-select fx-blank" value={value} onChange={(e) => onChange(e.target.value)}>
+      {opts.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+    </select>
+  );
+}
+
+// Une ACTION rendue en phrase à trous.
 function ActionEditor({ action, onChange, allowTrap, inTrap }) {
   const a = action;
   const upd = (patch) => onChange({ ...a, ...patch });
   const targetOpts = inTrap ? TRAP_TARGETS : TARGETS;
   return (
-    <div className="bal-fx-action" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '6px 8px', background: 'rgba(122,94,58,0.06)', borderRadius: 8 }}>
-      <select className="qed-select" value={a.action} onChange={(e) => {
+    <div className="fx-sentence">
+      <select className="qed-select fx-blank fx-blank--verb" value={a.action} onChange={(e) => {
         const k = e.target.value;
         const base = { action: k };
         if (k === 'move') Object.assign(base, { target: 'self', dir: 'forward', n: 2 });
@@ -136,93 +160,82 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
 
       {a.action === 'move' && (
         <>
-          <select className="qed-select" value={a.dir} onChange={(e) => upd({ dir: e.target.value })}>
-            <option value="forward">Avancer</option><option value="back">Reculer</option>
+          <select className="qed-select fx-blank" value={a.dir} onChange={(e) => upd({ dir: e.target.value })}>
+            <option value="forward">avancer</option><option value="back">reculer</option>
           </select>
-          <select className="qed-select" value={a.target} onChange={(e) => upd({ target: e.target.value })}>
-            {targetOpts.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-          </select>
-          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><span className="bal-fx-unit">cases</span>
+          <TargetSelect value={a.target} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>de</W>
+          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
+          <W>cases</W>
         </>
       )}
 
       {a.action === 'money' && (
         <>
-          <select className="qed-select" value={a.mode} onChange={(e) => upd({ mode: e.target.value })}>
-            <option value="gain">Donner</option><option value="lose">Retirer</option><option value="steal">Voler</option>
-          </select>
-          <select className="qed-select" value={a.target} onChange={(e) => upd({ target: e.target.value })}>
-            {targetOpts.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+          <select className="qed-select fx-blank" value={a.mode} onChange={(e) => upd({ mode: e.target.value })}>
+            <option value="gain">donner</option><option value="lose">retirer</option><option value="steal">voler</option>
           </select>
           <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
-          <select className="qed-select" value={a.unit} onChange={(e) => upd({ unit: e.target.value })}>
-            <option value="flat">pièces</option><option value="percent">%</option>
+          <select className="qed-select fx-blank" value={a.unit} onChange={(e) => upd({ unit: e.target.value })}>
+            <option value="flat">pièces</option><option value="percent">% d'or</option>
           </select>
+          <W>à</W>
+          <TargetSelect value={a.target} onChange={(v) => upd({ target: v })} opts={targetOpts} />
         </>
       )}
 
       {a.action === 'rerollQuestion' && (
-        <select className="qed-select" value={a.subject || 'same'} onChange={(e) => upd({ subject: e.target.value })}>
-          <option value="same">Même thème</option>
-          <option value="choose">Thème au choix</option>
-          {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-          <optgroup label="Thèmes spéciaux">
-            {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-          </optgroup>
-        </select>
+        <>
+          <W>pour</W>
+          <SubjectSelect value={a.subject || 'same'} onChange={(v) => upd({ subject: v })}
+            extra={<><option value="same">le même thème</option><option value="choose">un thème au choix</option></>} />
+        </>
       )}
 
       {a.action === 'forceSubject' && (
         <>
-          <select className="qed-select" value={a.target} onChange={(e) => upd({ target: e.target.value })}>
-            {targetOpts.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-          </select>
-          <span className="bal-fx-unit">→</span>
-          <select className="qed-select" value={a.subject || 'hardcore'} onChange={(e) => upd({ subject: e.target.value })}>
-            {[...SUBJECT_KEYS, ...FORCED_SUBJECT_KEYS].map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-          </select>
+          <W>à</W>
+          <TargetSelect value={a.target} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>une question</W>
+          <SubjectSelect value={a.subject || 'hardcore'} onChange={(v) => upd({ subject: v })} />
         </>
       )}
 
-      {(a.action === 'shieldNext' || a.action === 'extraTime') && (
-        <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
-      )}
+      {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>recul(s)</W></>)}
+      {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>s à la prochaine question</W></>)}
+      {a.action === 'gainCharge' && <W>au choix du joueur</W>}
 
       {a.action === 'fumigene' && (
         <>
-          <span className="bal-fx-unit">durée</span>
+          <W>pendant</W>
           <AmountInput value={a.turns ?? 0} onChange={(v) => upd({ turns: v })} min={0} />
-          <span className="bal-fx-unit">tours (0 = jusqu'à utilisation)</span>
+          <W>tours (0 = jusqu'à utilisation)</W>
         </>
       )}
 
       {a.action === 'challenge' && (
-        <div style={{ flexBasis: '100%', marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #8a1f2e' }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-            <span className="bal-fx-unit">Force ma prochaine question en</span>
-            <select className="qed-select" value={a.subject || 'hardcore'} onChange={(e) => upd({ subject: e.target.value })}>
-              {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-              <optgroup label="Thèmes spéciaux">
-                {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-              </optgroup>
-            </select>
+        <div className="fx-nest" style={{ borderColor: '#8a1f2e' }}>
+          <div className="fx-sentence">
+            <W>force ma prochaine question en</W>
+            <SubjectSelect value={a.subject || 'hardcore'} onChange={(v) => upd({ subject: v })} />
           </div>
-          <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 4 }}>{'\u{1F381}'} Récompense si bonne réponse :</div>
+          <div className="fx-nest-label">{'\u{1F381}'} Si bonne réponse :</div>
           <ActionList actions={a.do || []} onChange={(d) => upd({ do: d })} allowTrap={false} />
-          <div style={{ fontSize: 12, color: 'var(--ink-500)', margin: '8px 0 4px' }}>{'\u{1F480}'} Malus si ratée (optionnel) :</div>
+          <div className="fx-nest-label">{'\u{1F480}'} Si ratée (optionnel) :</div>
           <ActionList actions={a.else || []} onChange={(d) => upd({ else: d })} allowTrap={false} />
         </div>
       )}
 
       {a.action === 'placeTrap' && (
-        <div style={{ flexBasis: '100%', marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #c9472f' }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
-            <input className="qed-input" style={{ width: 110 }} placeholder="Nom du piège"
+        <div className="fx-nest" style={{ borderColor: '#c9472f' }}>
+          <div className="fx-sentence">
+            <W>nommé</W>
+            <input className="qed-input fx-blank" style={{ width: 120 }} placeholder="Nom du piège"
               value={a.trap?.label || ''} onChange={(e) => upd({ trap: { ...a.trap, label: e.target.value } })} />
-            <input className="qed-input" style={{ width: 44, textAlign: 'center' }}
+            <input className="qed-input fx-blank" style={{ width: 44, textAlign: 'center' }}
               value={a.trap?.icon || '🪤'} onChange={(e) => upd({ trap: { ...a.trap, icon: e.target.value } })} />
-            <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Effets du piège (« celui qui marche dessus » = la victime) :</span>
           </div>
+          <div className="fx-nest-label">Effets sur « celui qui marche dessus » :</div>
           <ActionList actions={a.trap?.do || []} onChange={(do2) => upd({ trap: { ...a.trap, do: do2 } })} allowTrap={false} inTrap />
         </div>
       )}
@@ -237,7 +250,7 @@ export function ActionList({ actions, onChange, allowTrap = true, inTrap = false
       {actions.map((a, i) => (
         <div key={i} className="bal-fx-row">
           <div style={{ flex: 1, minWidth: 0 }}><ActionEditor action={a} onChange={(v) => upd(i, v)} allowTrap={allowTrap} inTrap={inTrap} /></div>
-          <button className="bal-fx-x" onClick={() => onChange(actions.filter((_, j) => j !== i))} title="Retirer">{'\u{1F5D1}'}</button>
+          <button className="bal-fx-x" onClick={() => onChange(actions.filter((_, j) => j !== i))} title="Retirer cette action">{'\u{1F5D1}'}</button>
         </div>
       ))}
       <button className="bal-fx-add" onClick={() => onChange([...actions, defaultAction()])}>+ action</button>
@@ -245,12 +258,24 @@ export function ActionList({ actions, onChange, allowTrap = true, inTrap = false
   );
 }
 
-// Carte d'un déclencheur composable.
+// Libellés (fragments de phrase) des déclencheurs : la carte préfixe « Quand ».
+const ON_FRAGMENTS_EQUIP = [
+  { k: 'roll', label: 'le dé fait… (à mon tour)' },
+  { k: 'correct', label: 'je réponds bien' },
+  { k: 'wrong', label: 'je rate (ou temps écoulé)' },
+  { k: 'question', label: "j'appuie sur « Changer la question »" },
+];
+const ON_FRAGMENTS_CONSUM = [
+  { k: 'use', label: "je l'utilise" },
+  { k: 'question', label: "j'appuie sur « Changer la question »" },
+];
+
+// Carte d'un déclencheur composable — en-tête en phrase « Quand … : ».
 export function TriggerCard({ fx, onChange, onRemove, slot }) {
   const upd = (patch) => onChange({ ...fx, ...patch });
   const isConsumable = slot === 'consumable';
-  // Sous-mode du déclencheur 'use'
   const useMode = fx.roll === 'd6' ? 'd6' : (typeof fx.chance === 'number' ? 'chance' : 'immediate');
+  const onOptions = isConsumable ? ON_FRAGMENTS_CONSUM : ON_FRAGMENTS_EQUIP;
 
   const setUseMode = (mode) => {
     if (mode === 'immediate') onChange({ kind: 'trigger', on: 'use', do: fx.do || [defaultAction()] });
@@ -258,48 +283,44 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
     else onChange({ kind: 'trigger', on: 'use', roll: 'd6', table: fx.table || { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] } });
   };
 
-  const onOptions = isConsumable
-    ? [{ k: 'use', label: "À l'utilisation" }, { k: 'question', label: 'Bouton « Changer la question »' }]
-    : [
-        { k: 'roll', label: 'Selon le dé (à mon tour)' },
-        { k: 'correct', label: 'Quand je réponds bien' },
-        { k: 'wrong', label: 'Quand je rate (ou temps écoulé)' },
-        { k: 'question', label: 'Bouton « Changer la question »' },
-      ];
-
   return (
-    <div className="bal-fx-trigger" style={{ border: '2px solid var(--gold-500, #e8b117)', borderRadius: 10, padding: 10, background: 'rgba(255,250,240,0.6)', marginBottom: 8 }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13 }}>Déclencheur :</span>
-        <select className="qed-select" value={fx.on} onChange={(e) => {
-          const on = e.target.value;
-          if (on === 'use') onChange({ kind: 'trigger', on: 'use', do: [defaultAction()] });
-          else if (on === 'roll') onChange({ kind: 'trigger', on: 'roll', values: [6], do: [defaultAction()] });
-          else if (on === 'question') onChange({ kind: 'trigger', on: 'question', n: 1, do: [{ action: 'rerollQuestion', subject: 'same' }] });
-          else onChange({ kind: 'trigger', on, do: [defaultAction()] }); // correct | wrong
-        }}>
+    <div className="bal-fx-trigger">
+      <div className="fx-trigger-head">
+        <W>Quand</W>
+        <select className="qed-select fx-blank fx-blank--verb" value={fx.on} onChange={(e) => onChange(makeTrigger(e.target.value))}>
           {onOptions.map((o) => <option key={o.k} value={o.k}>{o.label}</option>)}
         </select>
+        {(fx.on === 'correct' || fx.on === 'wrong') && (
+          <>
+            <W>en</W>
+            <select className="qed-select fx-blank" value={fx.subject || ''} onChange={(e) => upd({ subject: e.target.value || undefined })}>
+              <option value="">toute matière</option>
+              {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+              <optgroup label="Thèmes spéciaux">
+                {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+              </optgroup>
+            </select>
+          </>
+        )}
+        <W>{fx.on === 'question' ? ' →' : ' :'}</W>
         <button className="btn btn--ghost btn--sm" onClick={onRemove} style={{ marginLeft: 'auto', color: '#b5341f' }} title="Retirer ce déclencheur">{'\u{1F5D1}'}</button>
       </div>
 
       {fx.on === 'use' && (
         <>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Condition :</span>
-            <select className="qed-select" value={useMode} onChange={(e) => setUseMode(e.target.value)}>
-              <option value="immediate">Toujours</option>
+          <div className="fx-sentence" style={{ marginBottom: 6 }}>
+            <W>Condition :</W>
+            <select className="qed-select fx-blank" value={useMode} onChange={(e) => setUseMode(e.target.value)}>
+              <option value="immediate">toujours</option>
               <option value="chance">% de chance</option>
-              <option value="d6">Lancer un dé (table)</option>
+              <option value="d6">lancer un dé (table)</option>
             </select>
-            {useMode === 'chance' && (
-              <>{numInput(Math.round((fx.chance ?? 0.5) * 100), (v) => upd({ chance: v / 100 }), { max: 100 })}<span className="bal-fx-unit">%</span></>
-            )}
+            {useMode === 'chance' && (<>{numInput(Math.round((fx.chance ?? 0.5) * 100), (v) => upd({ chance: v / 100 }), { max: 100 })}<W>%</W></>)}
           </div>
           {useMode !== 'd6' && <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />}
           {useMode === 'chance' && (
             <div style={{ marginTop: 6 }}>
-              <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 4 }}>Sinon (échec) :</div>
+              <div className="fx-nest-label">Sinon (échec) :</div>
               <ActionList actions={fx.else || []} onChange={(d) => upd({ else: d })} />
             </div>
           )}
@@ -320,15 +341,13 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
 
       {fx.on === 'roll' && (
         <>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Si le dé fait :</span>
+          <div className="fx-sentence" style={{ marginBottom: 8 }}>
+            <W>Si le dé fait :</W>
             {[1, 2, 3, 4, 5, 6].map((v) => {
               const on = (fx.values || []).includes(v);
               return (
                 <button key={v} onClick={() => upd({ values: on ? fx.values.filter((x) => x !== v) : [...(fx.values || []), v] })}
-                  style={{ width: 30, height: 30, borderRadius: 8, cursor: 'pointer', fontWeight: 700,
-                    border: `2px solid ${on ? 'var(--gold-600)' : 'rgba(122,94,58,0.3)'}`,
-                    background: on ? 'var(--gold-400)' : '#fff', color: on ? '#3a2a14' : 'var(--ink-500)' }}>{v}</button>
+                  className={'fx-die' + (on ? ' is-on' : '')}>{v}</button>
               );
             })}
           </div>
@@ -337,42 +356,17 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
       )}
 
       {(fx.on === 'correct' || fx.on === 'wrong') && (
-        <>
-          <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 6 }}>
-            {fx.on === 'correct'
-              ? 'Effets déclenchés à CHAQUE bonne réponse de l’équipe :'
-              : 'Effets déclenchés à chaque mauvaise réponse (ou temps écoulé) :'}
-          </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-            <span className="bal-fx-unit">Seulement si la question est en</span>
-            <select className="qed-select" value={fx.subject || ''} onChange={(e) => upd({ subject: e.target.value || undefined })}>
-              <option value="">toute matière</option>
-              {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-              <optgroup label="Thèmes spéciaux">
-                {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-              </optgroup>
-            </select>
-          </div>
-          <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
-        </>
+        <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
       )}
 
       {fx.on === 'question' && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ flexBasis: '100%', fontSize: 11.5, color: 'var(--ink-500)', marginBottom: 2 }}>
-            Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur le thème choisi.
+        <>
+          <div className="fx-nest-label">Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur :</div>
+          <div className="fx-sentence">
+            <SubjectSelect value={fx.do?.[0]?.subject || 'same'} onChange={(v) => upd({ do: [{ action: 'rerollQuestion', subject: v }] })}
+              extra={<><option value="same">le même thème (autre question)</option><option value="choose">un thème au choix</option></>} />
           </div>
-          <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{'\u{1F504}'} Bouton « Changer la question » →</span>
-          <select className="qed-select" value={fx.do?.[0]?.subject || 'same'}
-            onChange={(e) => upd({ do: [{ action: 'rerollQuestion', subject: e.target.value }] })}>
-            <option value="same">Même thème (autre question)</option>
-            <option value="choose">Thème au choix</option>
-            {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-            <optgroup label="Thèmes spéciaux">
-              {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
-            </optgroup>
-          </select>
-        </div>
+        </>
       )}
     </div>
   );

@@ -318,4 +318,117 @@
 /* …sauf les micro-champs du constructeur d'effets (compacité voulue) */
 .bal-fx-action .qed-select,
 .bal-fx-action .qed-input,
-.bal-fx-chance .qed-input { min-height: 0; }
+.bal-fx-chance .qed-input,
+.fx-blank { min-height: 0 !important; }
+
+/* ─────────────────────────────────────────────────────────────
+   Phase 2 : constructeur d'effets en « phrase à trous »
+   ───────────────────────────────────────────────────────────── */
+/* Une action / un en-tête de déclencheur se lit comme une phrase : mots fixes
+   (.fx-word) entrecoupés de « trous » éditables (.fx-blank). */
+.fx-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 6px;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.fx-word { color: var(--ink-600, #5a4424); }
+
+/* Les « trous » : champs auto-dimensionnés, soulignés, mis en valeur */
+.fx-blank {
+  width: auto !important;
+  flex: 0 0 auto;
+  padding: 3px 8px !important;
+  border-radius: 7px !important;
+  border: 1.5px solid rgba(122, 94, 58, 0.28) !important;
+  border-bottom-width: 2.5px !important;
+  border-bottom-color: var(--gold-500, #c79120) !important;
+  background: #fff;
+  font-size: 13.5px !important;
+  font-weight: 600;
+  color: var(--ink-900, #3a2c14);
+  max-width: 240px;
+}
+select.fx-blank { cursor: pointer; }
+.fx-blank--verb {
+  background: rgba(199, 145, 32, 0.12);
+  border-bottom-color: var(--gold-600, #a8771a) !important;
+  font-family: var(--font-display);
+}
+
+/* Bloc imbriqué (défi / piège) : un liseré coloré à gauche */
+.fx-nest {
+  flex-basis: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-left: 3px solid #c9472f;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 8px 8px 0;
+}
+.fx-nest-label {
+  font-size: 11.5px;
+  color: var(--ink-500, #8a7858);
+  margin: 8px 0 4px;
+  font-weight: 600;
+}
+
+/* En-tête de déclencheur (« Quand … : ») */
+.fx-trigger-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 6px;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+/* Dés cliquables (déclencheur « selon le dé ») */
+.fx-die {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  border: 2px solid rgba(122, 94, 58, 0.3);
+  background: #fff;
+  color: var(--ink-500, #8a7858);
+}
+.fx-die.is-on { border-color: var(--gold-600, #a8771a); background: var(--gold-400, #e6b948); color: #3a2a14; }
+
+/* Carte déclencheur : un peu plus aérée que la version compacte d'origine */
+.bal-fx-trigger {
+  border: 2px solid var(--gold-500, #e8b117);
+  border-radius: 12px;
+  padding: 12px !important;
+  background: rgba(255, 250, 240, 0.7);
+  margin-bottom: 10px;
+}
+
+/* Menu « + Ajouter un effet » (popover de catégories en clair) */
+.fx-addmenu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(122, 94, 58, 0.3);
+  background: rgba(255, 250, 240, 0.95);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+  max-width: 360px;
+}
+.fx-addmenu button {
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  color: var(--ink-800, #4a3a1e);
+  cursor: pointer;
+}
+.fx-addmenu button:hover { border-color: var(--gold-500, #c79120); background: rgba(199, 145, 32, 0.08); }
+.fx-addmenu small { display: block; color: var(--ink-500, #8a7858); font-size: 11px; margin-top: 1px; }
