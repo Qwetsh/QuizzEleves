@@ -113,7 +113,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
   const upd = (patch) => onChange({ ...a, ...patch });
   const targetOpts = inTrap ? TRAP_TARGETS : TARGETS;
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '6px 8px', background: 'rgba(122,94,58,0.06)', borderRadius: 8 }}>
+    <div className="bal-fx-action" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '6px 8px', background: 'rgba(122,94,58,0.06)', borderRadius: 8 }}>
       <select className="qed-select" value={a.action} onChange={(e) => {
         const k = e.target.value;
         const base = { action: k };
@@ -244,7 +244,7 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
       ];
 
   return (
-    <div style={{ border: '2px solid var(--gold-500, #e8b117)', borderRadius: 10, padding: 10, background: 'rgba(255,250,240,0.6)', marginBottom: 8 }}>
+    <div className="bal-fx-trigger" style={{ border: '2px solid var(--gold-500, #e8b117)', borderRadius: 10, padding: 10, background: 'rgba(255,250,240,0.6)', marginBottom: 8 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 13 }}>Déclencheur :</span>
         <select className="qed-select" value={fx.on} onChange={(e) => {
