@@ -209,14 +209,14 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
 export function ActionList({ actions, onChange, allowTrap = true, inTrap = false }) {
   const upd = (i, v) => onChange(actions.map((a, j) => (j === i ? v : a)));
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="bal-fx-list">
       {actions.map((a, i) => (
-        <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}><ActionEditor action={a} onChange={(v) => upd(i, v)} allowTrap={allowTrap} inTrap={inTrap} /></div>
-          <button className="btn btn--ghost btn--sm" onClick={() => onChange(actions.filter((_, j) => j !== i))} title="Retirer">{'\u{1F5D1}'}</button>
+        <div key={i} className="bal-fx-row">
+          <div style={{ flex: 1, minWidth: 0 }}><ActionEditor action={a} onChange={(v) => upd(i, v)} allowTrap={allowTrap} inTrap={inTrap} /></div>
+          <button className="bal-fx-x" onClick={() => onChange(actions.filter((_, j) => j !== i))} title="Retirer">{'\u{1F5D1}'}</button>
         </div>
       ))}
-      <button className="btn btn--ghost btn--sm" onClick={() => onChange([...actions, defaultAction()])} style={{ alignSelf: 'flex-start' }}>+ action</button>
+      <button className="bal-fx-add" onClick={() => onChange([...actions, defaultAction()])}>+ action</button>
     </div>
   );
 }
@@ -280,11 +280,13 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
             </div>
           )}
           {useMode === 'd6' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {[1, 2, 3, 4, 5, 6].map((face) => (
-                <div key={face}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, marginBottom: 2 }}>{'\u{1F3B2}'} Face {face} :</div>
-                  <ActionList actions={fx.table?.[face] || []} onChange={(d) => upd({ table: { ...fx.table, [face]: d } })} />
+                <div key={face} className="bal-fx-face">
+                  <div className="bal-fx-face-label">{'\u{1F3B2}'} {face}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <ActionList actions={fx.table?.[face] || []} onChange={(d) => upd({ table: { ...fx.table, [face]: d } })} />
+                  </div>
                 </div>
               ))}
             </div>

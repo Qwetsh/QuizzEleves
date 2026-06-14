@@ -114,6 +114,51 @@
   max-width: 340px;
   flex: 0 1 auto;
 }
+.bal-fx-trigger { padding: 9px !important; }
+
+/* Liste d'actions : peu d'espace vertical */
+.bal-fx-list { display: flex; flex-direction: column; gap: 4px; }
+.bal-fx-row { display: flex; gap: 5px; align-items: center; }
+/* Ligne d'action = « puce » encadrée discrète */
+.bal-fx-action {
+  border: 1px solid rgba(122, 94, 58, 0.18);
+  background: rgba(255, 255, 255, 0.55) !important;
+}
+/* Bouton « + action » discret (petit lien encadré) */
+.bal-fx-add {
+  align-self: flex-start;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  color: var(--ink-600, #5a4424);
+  background: transparent;
+  border: 1px dashed rgba(122, 94, 58, 0.4);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.bal-fx-add:hover { background: rgba(122, 94, 58, 0.08); }
+/* Croix de suppression d'action : petite, sans cadre lourd */
+.bal-fx-x {
+  flex: 0 0 auto;
+  width: 26px; height: 26px;
+  padding: 0; font-size: 13px; line-height: 1;
+  background: transparent;
+  border: 1px solid rgba(181, 52, 31, 0.3);
+  border-radius: 7px; color: #b5341f; cursor: pointer;
+}
+.bal-fx-x:hover { background: rgba(181, 52, 31, 0.1); }
+
+/* Faces de dé : pastille numéro à gauche, actions à droite (sur une ligne) */
+.bal-fx-face { display: flex; align-items: flex-start; gap: 8px; }
+.bal-fx-face-label {
+  flex: 0 0 auto;
+  min-width: 30px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 12px;
+  color: var(--ink-700, #5a4424);
+  background: rgba(122, 94, 58, 0.08);
+  border-radius: 7px; padding: 0 7px; margin-top: 1px;
+}
 .bal-default {
   font-size: 11.5px;
   color: var(--ink-500, #8a7858);
