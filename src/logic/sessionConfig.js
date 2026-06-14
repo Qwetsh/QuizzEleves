@@ -22,17 +22,21 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, log }) {
   return {
     status,
     currentTeam,
     shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
+    // Historique : on n'envoie que les dernières entrées (l'onglet mobile les
+    // affiche du plus récent au plus ancien).
+    log: (log || []).slice(-60),
     teams: (teams || []).map((t, idx) => ({
       idx,
       name: t.name, emoji: t.emoji, color: t.color,
       money: t.money ?? 0,
       correct: t.correct ?? 0, wrong: t.wrong ?? 0,
       pos: t.pos,
+      forcedSubject: t.forcedSubject || null, // malus en attente (thème imposé)
       equipment: t.equipment || { head: null, body: null, feet: null },
       bag: (t.bag || []).filter(Boolean),
       powers: t.powers || {},

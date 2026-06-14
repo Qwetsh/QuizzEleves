@@ -8,6 +8,7 @@ import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
+import { getPendingMalus } from '../../logic/teamStatus';
 import '../../styles/mobile.css';
 
 function readInitialCode() {
@@ -139,6 +140,7 @@ function PowerRow({ powerKey, charges, level }) {
 function TeamView({ session, teamIdx, onSwitch }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
+  const malus = getPendingMalus(t);
   const myTurn = session.currentTeam === teamIdx && session.status !== 'finished';
   const bagKeys = (t.bag || []).filter((k) => ITEMS[k]);
   const shopKeys = (session.shop || []).filter((k) => ITEMS[k]);
@@ -147,7 +149,7 @@ function TeamView({ session, teamIdx, onSwitch }) {
   const rate = totalQ ? Math.round((t.correct / totalQ) * 100) : null;
 
   return (
-    <div className="mob-root mob-team" style={{ '--accent': t.color }}>
+    <div className="mob-root mob-team" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <header className="mob-header" style={{ background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)` }}>
         <span className="mob-header-emoji">{t.emoji}</span>
         <div className="mob-header-info">
@@ -167,6 +169,21 @@ function TeamView({ session, teamIdx, onSwitch }) {
         <div className="mob-stat mob-stat--bad">{'✗'} <b>{t.wrong ?? 0}</b></div>
         {rate !== null && <div className="mob-stat mob-stat--rate">{'◎'} <b>{rate}%</b></div>}
       </div>
+
+      {malus.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px', marginBottom: 4 }}>
+          {malus.map((m) => (
+            <div key={m.key} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 12px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+              color: '#7a1320', background: '#f7d7d2', border: '1.5px solid #c9472f',
+            }}>
+              <span style={{ fontSize: 18 }}>{m.icon}</span>
+              <span>{m.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <section className="mob-section">
         <h2 className="mob-section-title">Équipement</h2>
@@ -224,12 +241,64 @@ function TeamView({ session, teamIdx, onSwitch }) {
   );
 }
 
+// Onglet Historique : le journal publié par le TBI, du plus récent au plus ancien.
+function HistoryView({ session }) {
+  const log = session.log || [];
+  return (
+    <div className="mob-root" style={{ paddingBottom: 76 }}>
+      <div className="mob-pick-head">{'\u{1F4DC}'} Historique</div>
+      {log.length === 0 ? (
+        <div className="mob-empty" style={{ margin: 14 }}>Rien pour l'instant…</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px' }}>
+          {log.slice().reverse().map((line, i) => (
+            <div key={i} style={{
+              padding: '9px 12px', borderRadius: 10, fontSize: 13.5, lineHeight: 1.4,
+              background: i === 0 ? 'rgba(232,177,23,0.14)' : 'rgba(122,94,58,0.06)',
+              border: '1px solid rgba(122,94,58,0.14)', color: 'var(--ink-800, #4a3a1e)',
+            }}>{line}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Barre d'onglets fixe en bas (Mon équipe / Historique).
+function TabBar({ tab, setTab }) {
+  const Tab = ({ id, icon, label }) => (
+    <button
+      onClick={() => setTab(id)}
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        padding: '8px 0 10px', border: 'none', cursor: 'pointer', font: 'inherit',
+        background: 'transparent', color: tab === id ? 'var(--accent, #b8862c)' : '#9a8a6a',
+        fontWeight: tab === id ? 800 : 600, fontSize: 12,
+        borderTop: tab === id ? '2px solid var(--accent, #b8862c)' : '2px solid transparent',
+      }}
+    >
+      <span style={{ fontSize: 20 }}>{icon}</span>{label}
+    </button>
+  );
+  return (
+    <nav style={{
+      position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50, display: 'flex',
+      background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTop: '1px solid rgba(122,94,58,0.2)',
+      boxShadow: '0 -4px 16px rgba(0,0,0,0.12)',
+    }}>
+      <Tab id="team" icon={'\u{1F6E1}️'} label="Mon équipe" />
+      <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
+    </nav>
+  );
+}
+
 export default function MobileApp() {
   const [code, setCode] = useState(readInitialCode());
   const [session, setSession] = useState(null);
   const [error, setError] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [teamIdx, setTeamIdx] = useState(null);
+  const [tab, setTab] = useState('team');
 
   useEffect(() => {
     if (!code || code.length < 4) return;
@@ -263,5 +332,12 @@ export default function MobileApp() {
   }
   if (!session) return <Centered>Connexion à la partie {code}…</Centered>;
   if (teamIdx == null || !session.teams?.[teamIdx]) return <TeamPicker session={session} onPick={chooseTeam} />;
-  return <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} />;
+  return (
+    <>
+      {tab === 'team'
+        ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} />
+        : <HistoryView session={session} />}
+      <TabBar tab={tab} setTab={setTab} />
+    </>
+  );
 }

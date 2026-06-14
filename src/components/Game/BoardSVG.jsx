@@ -3,6 +3,7 @@ import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motio
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { NODE_RADIUS, TILE_SCALE, islandCircles as buildIslandCircles, bezierPoint } from '../../logic/boardGeometry';
+import { getPendingMalus } from '../../logic/teamStatus';
 
 // Assets du plateau (refonte pierre & jungle) — voir scripts/name-assets.mjs
 const BOARD_ASSET_URLS = import.meta.glob('../../assets/board/*.{png,jpg}', { eager: true, query: '?url', import: 'default' });
@@ -79,6 +80,9 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMov
   }, [px, py]);
 
   const isBack = move?.type === 'back';
+  // Malus en attente (ex. question imposée) : UNE seule aune, quel que soit le
+  // nombre de malus (pas de cumul d'animation).
+  const hasMalus = getPendingMalus(team).length > 0;
 
   return (
     <motion.g
@@ -86,6 +90,16 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMov
       animate={{ x: animPos.x, y: animPos.y }}
       transition={{ type: 'spring', damping: 22, stiffness: 180, mass: 0.6 }}
     >
+      {hasMalus && (
+        <motion.circle
+          cx={0} cy={0} r={34}
+          fill="none" stroke="#b5341f" strokeWidth={3} strokeDasharray="6 7"
+          initial={{ opacity: 0.45 }}
+          animate={{ opacity: [0.45, 0.95, 0.45], rotate: 360 }}
+          transition={{ opacity: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }, rotate: { duration: 9, repeat: Infinity, ease: 'linear' } }}
+          style={{ filter: 'drop-shadow(0 0 6px rgba(181,52,31,0.7))' }}
+        />
+      )}
       {isActive && !isBack && (
         <motion.circle
           cx={0} cy={0} r={30}

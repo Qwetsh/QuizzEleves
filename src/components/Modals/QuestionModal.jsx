@@ -190,11 +190,12 @@ export default function QuestionModal() {
 
   const isCorrect = revealed && selected != null && selected === question?.c;
   const isWrong = revealed && (selected == null || selected !== question?.c);
+  const isHardcore = subject === 'hardcore';
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''} ${isBurst ? 'quiz-cursed' : ''}`} panelStyle={STONE_PANEL}>
+        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''} ${isBurst ? 'quiz-cursed' : ''} ${isHardcore ? 'quiz-hardcore' : ''}`} panelStyle={STONE_PANEL}>
           <div className="tm-stone"><div className="tm-parch">
           {/* Quiz Header */}
           <div
@@ -223,6 +224,13 @@ export default function QuestionModal() {
               <div className="quiz-curse-badge">
                 <span className="quiz-curse-skull">{'\u{1F480}'}</span>
                 Malédiction · Question {multiIndex} / {multiTotal}
+              </div>
+            )}
+
+            {isHardcore && (
+              <div className="quiz-hell-badge">
+                <span className="quiz-hell-flame">{'\u{1F525}'}</span>
+                Épreuve infernale · niveau lycée
               </div>
             )}
 

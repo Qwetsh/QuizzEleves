@@ -3,6 +3,7 @@ import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
+import { getPendingMalus } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
 import '../../styles/team-strip-hud.css';
 
@@ -152,6 +153,26 @@ function TeamBuffs({ team }) {
   );
 }
 
+// Malus en attente (question imposée…) — bandeau rouge sur la fiche. Une ligne
+// par malus, mais l'animation/aura du pion ne se cumule pas (cf. getPendingMalus).
+function TeamMalus({ team }) {
+  const malus = getPendingMalus(team);
+  if (!malus.length) return null;
+  return (
+    <div className="ts-malus" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+      {malus.map((m) => (
+        <span key={m.key} title={m.label} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '1px 8px', borderRadius: 999, fontSize: 12, lineHeight: 1.5, fontWeight: 600,
+          color: '#7a1320', background: '#f7d7d2', border: '1px solid #c9472f',
+        }}>
+          <span>{m.icon}</span>{m.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function TeamLocation({ team }) {
   const board = useGameStore((s) => s.board);
   const node = board?.[team.pos];
@@ -205,6 +226,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
       </div>
       <StatChips team={team} />
       <TeamBuffs team={team} />
+      <TeamMalus team={team} />
       <div className="ts-pop-section">
         <div className="ts-pop-label">Équipement</div>
         {Object.keys(SLOTS).map((slot) => {
@@ -258,6 +280,7 @@ function ActiveCard({ team, rank, total }) {
         <StatChips team={team} />
         <EquipmentStrip team={team} />
         <TeamBuffs team={team} />
+        <TeamMalus team={team} />
       </div>
       <div className="ts-card-powers scroll-hidden">
         {pKeys.map((key) => (
@@ -290,6 +313,7 @@ function CompactCard({ team, rank, total, open, onToggle }) {
         </div>
         <EquipmentStrip team={team} className="ts-mini-eq" />
         <TeamBuffs team={team} />
+        <TeamMalus team={team} />
       </div>
       <div className="ts-mini-powers">
         {pKeys.map((key) => (
