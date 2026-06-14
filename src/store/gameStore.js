@@ -554,20 +554,25 @@ export const useGameStore = create((set, get) => ({
     // Meme echelle que le timer reellement affiche (QuestionModal) : le bonus
     // de temps d'equipement compte, sinon le ratio depasse 1 et gonfle le gain
     const maxTime = Math.floor(30 / effectiveDivisor) + (itemBonusTime || 0);
+    // Ratio de temps restant (0..100) fig\u00e9 pour cette r\u00e9ponse : alimente la
+    // m\u00e9trique d'\u00e9chelle 'timeleft' (ex. gain = 1\u00d7% temps restant). On l'attache
+    // \u00e0 l'\u00e9quipe pour que getEffectValue / les d\u00e9clencheurs puissent la lire.
+    const answerTimeRatio = Math.round(Math.max(0, Math.min(1, maxTime > 0 ? timeLeft / maxTime : 0)) * 100);
+    const tTeam = { ...team, answerTimeRatio };
 
     if (correct) {
       // Double/triple: money only on last question (or never if doubleNoBonus)
       const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleExtra || 0) > 0);
       // L'equipement (moneyPerCorrect) s'applique a chaque bonne reponse, meme sans bonus
-      const equipBonus = getEffectValue(team, 'moneyPerCorrect');
+      const equipBonus = getEffectValue(tTeam, 'moneyPerCorrect');
       const gain = (noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime)) + equipBonus;
       // s\u00e9rie (bonnes r\u00e9ponses d'affil\u00e9e) : +1, ne casse que sur erreur/timeout
-      newTeams[currentTeam] = { ...team, correct: team.correct + 1, streak: (team.streak || 0) + 1, money: team.money + gain };
+      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + 1, money: team.money + gain };
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
     } else {
       const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0
-      newTeams[currentTeam] = { ...updatedTeam, streak: 0 };
+      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0 };
       addLog(logMessage);
       if (bouclierAbsorbed(team, updatedTeam)) soundShield();
 
@@ -666,8 +671,8 @@ export const useGameStore = create((set, get) => ({
     const newTeams = [...teams];
 
     const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
-    // temps \u00e9coul\u00e9 = erreur : la s\u00e9rie repart de 0
-    newTeams[currentTeam] = { ...updatedTeam, streak: 0 };
+    // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, et 0% de temps restant
+    newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0 };
     addLog(logMessage);
     if (bouclierAbsorbed(team, updatedTeam)) soundShield();
 

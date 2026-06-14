@@ -11,6 +11,8 @@ const DICE_SIDES = { d2: 2, d3: 3, d4: 4, d6: 6, d10: 10 };
 // - streak : bonnes réponses d'affilée (cassé sur erreur, persiste entre tours)
 // - correct / wrong : totaux de la partie
 // - precision : bonnes / total en % (0 si aucune réponse) ; imprecision = 100 − precision
+// - timeleft : % de temps restant de la DERNIÈRE réponse (answerTimeRatio, figé
+//   par gameStore à la réponse ; n'a de sens que dans un contexte de réponse)
 export function teamMetric(team, per) {
   const correct = team?.correct || 0;
   const wrong = team?.wrong || 0;
@@ -21,6 +23,7 @@ export function teamMetric(team, per) {
     case 'wrong': return wrong;
     case 'precision': return total > 0 ? Math.round((correct / total) * 100) : 0;
     case 'imprecision': return total > 0 ? Math.round((wrong / total) * 100) : 0;
+    case 'timeleft': return team?.answerTimeRatio || 0;
     default: return 0;
   }
 }
@@ -39,7 +42,7 @@ export function resolveAmount(v, team) {
   return Number(v) || 0;
 }
 
-const METRIC_LABEL = { streak: 'série', correct: 'bonnes', wrong: 'ratées', precision: 'préc.%', imprecision: 'impréc.%' };
+const METRIC_LABEL = { streak: 'série', correct: 'bonnes', wrong: 'ratées', precision: 'préc.%', imprecision: 'impréc.%', timeleft: '%tps' };
 
 // Étiquette lisible d'une quantité ('d6' ⇒ '1D6', 3 ⇒ '3', objet ⇒ 'base+f×série').
 export function diceLabel(v) {

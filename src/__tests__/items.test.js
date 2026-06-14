@@ -265,6 +265,13 @@ describe('séries & déclencheurs de réponse', () => {
     expect(team(1).streak).toBe(0);
   });
 
+  it('answerTimeRatio (% temps restant) figé à la réponse', () => {
+    freshGame([{}, {}]);
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 15); // 15/30 ⇒ 50%
+    expect(team(0).answerTimeRatio).toBe(50);
+  });
+
   it('déclencheur on:wrong — coiffe qui fait perdre 5 PO à l’erreur', () => {
     const snapshot = { ...ITEMS };
     setItemsData({

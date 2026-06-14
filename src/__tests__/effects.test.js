@@ -388,6 +388,7 @@ describe('quantités aléatoires (1D4 / 1D6 / 1D10)', () => {
     expect(resolveAmount({ per: 'streak', factor: 5, base: 2 }, { streak: 3 })).toBe(17);
     expect(resolveAmount({ per: 'precision', factor: 0.5 }, { correct: 3, wrong: 1 })).toBe(38); // préc.75 → 37.5→38
     expect(resolveAmount({ per: 'imprecision', factor: 1 }, { correct: 1, wrong: 3 })).toBe(75);
+    expect(resolveAmount({ per: 'timeleft', factor: 0.1 }, { answerTimeRatio: 80 })).toBe(8); // 0.1 × 80%
     expect(resolveAmount({ per: 'streak', factor: 5 }, undefined)).toBe(0); // pas d'équipe → 0
   });
 

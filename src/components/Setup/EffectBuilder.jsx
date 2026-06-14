@@ -71,6 +71,7 @@ const SCALE_METRICS = [
   { key: 'streak', label: 'série' },
   { key: 'precision', label: 'précision %' },
   { key: 'imprecision', label: 'imprécision %' },
+  { key: 'timeleft', label: '% temps restant' },
   { key: 'correct', label: 'bonnes rép.' },
   { key: 'wrong', label: 'ratées' },
 ];
