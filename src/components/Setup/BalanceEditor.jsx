@@ -201,6 +201,18 @@ export default function BalanceEditor({ onClose }) {
     }),
   });
   const removeEffect = (i) => set({ effects: draft.effects.filter((_, j) => j !== i) });
+  const moveEffect = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= draft.effects.length) return;
+    const arr = [...draft.effects];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    set({ effects: arr });
+  };
+  const duplicateEffect = (i) => {
+    const arr = [...draft.effects];
+    arr.splice(i + 1, 0, clone(draft.effects[i]));
+    set({ effects: arr });
+  };
   const addFx = (mk) => { set({ effects: [...draft.effects, mk()] }); setFxMenu(false); };
   // Catégories d'effet en langage clair (le menu « + Ajouter un effet »).
   const fxPresets = (slot) => slot === 'consumable' ? [
@@ -525,10 +537,17 @@ export default function BalanceEditor({ onClose }) {
                         <div className="bal-empty-fx">Aucun effet. Ajoute-en un ci-dessous.</div>
                       )}
                       {draft.effects.map((fx, i) => (
-                        fx && fx.kind === 'trigger' ? (
-                          <TriggerCard key={i} fx={fx} slot={draft.slot} onChange={(v) => updateEffect(i, v)} onRemove={() => removeEffect(i)} />
+                        <div key={i} className="bal-fx-item">
+                          <div className="bal-fx-ctrl">
+                            <span className="bal-fx-num">#{i + 1}</span>
+                            <button className="bal-fx-move" disabled={i === 0} onClick={() => moveEffect(i, -1)} title="Monter">↑</button>
+                            <button className="bal-fx-move" disabled={i === draft.effects.length - 1} onClick={() => moveEffect(i, 1)} title="Descendre">↓</button>
+                            <button className="bal-fx-move" onClick={() => duplicateEffect(i)} title="Dupliquer">{'⧉'}</button>
+                          </div>
+                        {fx && fx.kind === 'trigger' ? (
+                          <TriggerCard fx={fx} slot={draft.slot} onChange={(v) => updateEffect(i, v)} onRemove={() => removeEffect(i)} />
                         ) : (
-                          <div key={i} className="bal-effect">
+                          <div className="bal-effect">
                             <select className="qed-select" value={fx.type} onChange={(ev) => {
                               const type = ev.target.value;
                               const patch = { type };
@@ -552,7 +571,8 @@ export default function BalanceEditor({ onClose }) {
                             </span>
                             <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
                           </div>
-                        )
+                        )}
+                        </div>
                       ))}
                       <div style={{ marginTop: 8 }}>
                         <button className="btn btn--green btn--sm" onClick={() => setFxMenu((m) => !m)}>
