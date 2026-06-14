@@ -62,7 +62,10 @@ function resetToDefaults() {
     p.price = d.price;
     p.activationCost = d.activationCost;
     p.upgradeCosts = d.upgradeCosts.slice();
-    p.levels = d.levels.map((lv) => ({ ...lv, effect: { ...lv.effect } }));
+    // Clone PROFOND (effet inclus) : deepAssign des overrides ne doit jamais
+    // muter les valeurs par défaut (idempotence préservée même si un effet
+    // contient un objet imbriqué à l'avenir).
+    p.levels = d.levels.map((lv) => JSON.parse(JSON.stringify(lv)));
   }
   Object.assign(LOOT, DEFAULT_LOOT);
 }

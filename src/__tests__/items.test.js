@@ -288,6 +288,30 @@ describe('séries & déclencheurs de réponse', () => {
     setItemsData(snapshot);
   });
 
+  it('on:wrong interactif (piège) DIFFÈRE le passage de tour jusqu’à résolution', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      casquePiege: {
+        name: 'Casque piégeur', icon: '🎩', slot: 'head', rarity: 'commun', price: 0,
+        effects: [{ kind: 'trigger', on: 'wrong', do: [{ action: 'placeTrap', trap: { label: 'X', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 1 }] } }] }],
+      },
+    });
+    freshGame([{ equipment: { head: 'casquePiege', body: null, feet: null } }, {}]);
+    S().askQuestion('maths');
+    S().answerQuestion((S().showQuestion.question.c + 1) % 4, 10); // mauvaise réponse
+    // sélecteur de case ouvert ET tour NON avancé (nextTurn différé)
+    expect(S().showTilePicker).toBeTruthy();
+    expect(S().pendingActions).toBeTruthy();
+    expect(S().currentTeam).toBe(0);
+    S().selectTile('n6');
+    // file vidée → le nextTurn différé s'exécute
+    expect(S().board.n6.trap).toBeTruthy();
+    expect(S().pendingActions).toBeNull();
+    expect(S().currentTeam).toBe(1);
+    setItemsData(snapshot);
+  });
+
   it('déclencheur on:correct — arme un bouclier à la bonne réponse', () => {
     const snapshot = { ...ITEMS };
     setItemsData({
@@ -379,6 +403,22 @@ describe('indiceBoost passif', () => {
     freshGame([{}, {}]);
     S().askQuestion('maths');
     expect(S().indiceHidden).toHaveLength(0);
+  });
+
+  it('le pouvoir Indice ne consomme PAS de charge si tout est déjà masqué', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      loupePro: { name: 'Loupe pro', icon: '🔍', slot: 'head', rarity: 'commun', price: 0, effects: [{ type: 'indiceBoost', value: 'd3' }] },
+    });
+    freshGame([{ equipment: { head: 'loupePro', body: null, feet: null }, powers: { indice: { charges: 2, level: 1 } } }, {}]);
+    vi.spyOn(Math, 'random').mockReturnValue(0.999); // d3 → 3 : les 3 mauvaises masquées
+    S().askQuestion('maths');
+    expect(S().indiceHidden).toHaveLength(3);
+    S().usePower('indice');
+    expect(team(0).powers.indice.charges).toBe(2); // charge intacte (rien à éliminer)
+    vi.restoreAllMocks();
+    setItemsData(snapshot);
   });
 });
 

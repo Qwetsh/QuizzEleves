@@ -34,6 +34,10 @@ export default function FlyingCoins() {
   const [animations, setAnimations] = useState([]);
   const prevMoneyRef = useRef(null);
   const idCounter = useRef(0);
+  const timers = useRef([]);
+
+  // Nettoie les timers de cleanup au démontage (évite setState sur composant démonté)
+  useEffect(() => () => { timers.current.forEach(clearTimeout); timers.current = []; }, []);
 
   useEffect(() => {
     if (!teams || teams.length === 0) return;
@@ -91,9 +95,11 @@ export default function FlyingCoins() {
         }
 
         setAnimations((a) => [...a, ...newCoins]);
-        setTimeout(() => {
+        const tid = setTimeout(() => {
+          timers.current = timers.current.filter((x) => x !== tid);
           setAnimations((a) => a.filter((c) => !c.id.startsWith(`${id}-`)));
         }, ANIMATION_DURATION + coinCount * 60 + 100);
+        timers.current.push(tid);
       });
 
       if (gained) soundMoney();

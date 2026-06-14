@@ -223,6 +223,7 @@ export function moveInventoryItem(set, get, fromKey, toKey) {
 // son propre message à partir de l'outcome.
 export function placeItem(team, itemKey) {
   const item = ITEMS[itemKey];
+  if (!item) return { team, outcome: 'refunded', refund: 0 }; // clé inconnue/supprimée : no-op sûr
   const equipment = { ...(team.equipment || { head: null, body: null, feet: null }) };
   if (item.slot !== 'consumable' && !equipment[item.slot]) {
     equipment[item.slot] = itemKey;
@@ -282,7 +283,7 @@ export function useConsumable(set, get, bagIndex) {
     // Aucun effet produit : soit une probabilité de déclenchement a échoué,
     // soit l'objet n'a aucun effet actionnable. On le signale visuellement
     // (sinon l'objet disparaît sans aucun retour).
-    const wasGamble = (item.effects || []).some((fx) => typeof fx.chance === 'number');
+    const wasGamble = (item.effects || []).some((fx) => typeof fx.chance === 'number'); // legacy ET triggers portent `chance`
     if (wasGamble) {
       addLog(`💨 ${item.name} : raté, aucun effet cette fois…`);
       announce(set, get, '💨', `Raté ! ${item.name} n'a rien fait`, '#9a8c7a');

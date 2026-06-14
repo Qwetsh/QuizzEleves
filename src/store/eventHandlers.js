@@ -155,7 +155,10 @@ export function eventSelectTarget(set, get, targetIndex) {
   // sinon resultat direct ("rien a piller")
   if (key === 'pillage') {
     const target = teams[targetIndex];
-    const hasItems = Object.values(target?.equipment || {}).some(Boolean) || bagCount(target?.bag) > 0;
+    // Ne compter que les objets EXISTANTS au catalogue (une clé périmée/supprimée
+    // ne se rend pas dans la liste → éviterait un soft-lock de la modale).
+    const hasItems = Object.values(target?.equipment || {}).some((k) => k && ITEMS[k])
+      || (target?.bag || []).some((k) => k && ITEMS[k]);
     if (hasItems) {
       set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, targetIndex } } });
       return;

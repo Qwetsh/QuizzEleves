@@ -8,7 +8,10 @@ function Toast({ toast, onDone }) {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const t = setTimeout(onDone, reduce ? 1100 : 1900);
     return () => clearTimeout(t);
-  }, [onDone]);
+    // dépend de l'id (stable) et non de onDone (recréé à chaque render parent),
+    // sinon le minuteur de disparition se ré-arme sans fin.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast.id]);
 
   return (
     <motion.div

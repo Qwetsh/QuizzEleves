@@ -77,6 +77,7 @@ const TURN_RESET = {
   rerollUsed: false,
   trapDepth: 0,
   forcedSubject: null,
+  deferredTurnEnd: null,
 };
 
 export const useGameStore = create((set, get) => ({
@@ -566,8 +567,10 @@ export const useGameStore = create((set, get) => ({
       // L'equipement (moneyPerCorrect) s'applique a chaque bonne reponse, meme sans bonus
       const equipBonus = getEffectValue(tTeam, 'moneyPerCorrect');
       const gain = (noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime)) + equipBonus;
-      // s\u00e9rie (bonnes r\u00e9ponses d'affil\u00e9e) : +1, ne casse que sur erreur/timeout
-      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + 1, money: team.money + gain };
+      // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
+      // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
+      const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
+      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + gain };
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
     } else {
       const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
@@ -584,85 +587,95 @@ export const useGameStore = create((set, get) => ({
 
       const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
-      // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (ex. perdre 5 PO)
+      // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (ex. perdre 5 PO).
+      // Si l'effet ouvre un s\u00e9lecteur (interactif), on DIFF\u00c8RE nextTurn jusqu'\u00e0 la
+      // fin de la file (sinon TURN_RESET \u00e9craserait la file + le picker).
+      const finishWrong = () => { if (!get().finished) get().nextTurn(); };
       const onWrong = effectH.equipTriggerActions(get().teams[currentTeam], 'wrong');
-      if (onWrong.length) effectH.runEffects(set, get, onWrong, { source: 'item' });
-      get().nextTurn();
+      if (onWrong.length) {
+        effectH.runEffects(set, get, onWrong, { source: 'item' });
+        if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
+      }
+      finishWrong();
       return;
     }
 
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
 
+    // Suite du tour (rafale Double / loot / nextTurn) encapsulée : peut être
+    // DIFFÉRÉE si un déclencheur on:correct ouvre un sélecteur interactif (sinon
+    // nextTurn/TURN_RESET écraserait la file d'effets en cours).
+    const finishCorrect = () => {
+      if (get().finished) return; // victoire déclenchée par un effet on:correct
+
+      // Double/triple question: continue only on correct answer
+      const updatedTeam = get().teams[currentTeam];
+      const doubleResult = resolveDoubleQuestion(updatedTeam);
+      if (doubleResult.shouldContinue) {
+        const nt = [...get().teams];
+        nt[currentTeam] = doubleResult.updatedTeam;
+        set({ teams: nt });
+        addLog(doubleResult.logMessage);
+        get().askQuestion(randomSubject());
+        if (get().phase === 'game') saveGame(get());
+        return;
+      } else if (doubleResult.updatedTeam !== updatedTeam) {
+        const nt = [...get().teams];
+        nt[currentTeam] = doubleResult.updatedTeam;
+        set({ teams: nt });
+      }
+
+      // Loot de bonne réponse : au plus une fois par tour (la rafale Double y
+      // revient une seule fois). Taux par canal = BASE × temps restant + BONUS
+      // d'objet FLAT (un « +100% » garantit le loot). Canaux INDÉPENDANTS.
+      const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
+      const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
+      const lootTeam = get().teams[currentTeam];
+      const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
+      const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
+      const drops = [];
+      if (Math.random() < consumRate) {
+        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+        if (k) drops.push(k);
+      }
+      if (Math.random() < equipRate) {
+        const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
+        if (k) drops.push(k);
+      }
+      const revealQueue = [];
+      if (drops.length) {
+        const nt = [...get().teams];
+        for (const k of drops) {
+          const r = itemH.placeItem(nt[currentTeam], k);
+          nt[currentTeam] = r.team;
+          if (r.outcome === 'refunded') {
+            addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[k].icon} ${ITEMS[k].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
+          } else {
+            addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[k].icon} ${ITEMS[k].name} !`);
+            revealQueue.push(k);
+          }
+        }
+        set({ teams: nt });
+      }
+
+      get().nextTurn();
+      if (revealQueue.length) {
+        const [first, ...rest] = revealQueue;
+        get().showLoot(first, {
+          title: '✨ Bien joué !',
+          subtitle: rest.length ? 'Double butin ! (1/2)' : 'Récompense de bonne réponse',
+          rest: rest.map((k) => ({ itemKey: k, title: '✨ Et en plus…', subtitle: 'Double butin ! (2/2)' })),
+        });
+      }
+    };
+
     // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…)
     const onCorrect = effectH.equipTriggerActions(get().teams[currentTeam], 'correct');
-    if (onCorrect.length) effectH.runEffects(set, get, onCorrect, { source: 'item' });
-
-    // Double/triple question: continue only on correct answer
-    const updatedTeam = get().teams[currentTeam];
-    const doubleResult = resolveDoubleQuestion(updatedTeam);
-    if (doubleResult.shouldContinue) {
-      const nt = [...get().teams];
-      nt[currentTeam] = doubleResult.updatedTeam;
-      set({ teams: nt });
-      addLog(doubleResult.logMessage);
-      get().askQuestion(randomSubject());
-      if (get().phase === 'game') saveGame(get());
-      return;
-    } else if (doubleResult.updatedTeam !== updatedTeam) {
-      const nt = [...get().teams];
-      nt[currentTeam] = doubleResult.updatedTeam;
-      set({ teams: nt });
+    if (onCorrect.length) {
+      effectH.runEffects(set, get, onCorrect, { source: 'item' });
+      if (get().pendingActions) { set({ deferredTurnEnd: finishCorrect }); return; }
     }
-
-    // Loot de bonne réponse : on n'atteint ce point qu'à la DERNIÈRE bonne
-    // réponse du tour (une rafale Double y revient une seule fois), donc le
-    // tirage a lieu au plus une fois par tour. Chance × (temps restant / temps
-    // max) — récompense la rapidité. Deux canaux INDÉPENDANTS : le consommable
-    // ET l'équipement peuvent tomber au même tour (l'un ne bloque pas l'autre).
-    const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
-    const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
-    // Taux par canal = taux de BASE (× temps restant, récompense la rapidité)
-    // + BONUS d'objet FLAT (non diminué par le temps). Ainsi un « +100% » garantit
-    // le loot quel que soit le temps restant. Bonus résolu sur l'équipe À JOUR
-    // (la valeur peut être à l'échelle, ex. +5%/série).
-    const lootTeam = get().teams[currentTeam];
-    const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
-    const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
-    const drops = [];
-    if (Math.random() < consumRate) {
-      const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
-      if (k) drops.push(k);
-    }
-    if (Math.random() < equipRate) {
-      const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
-      if (k) drops.push(k);
-    }
-    // Placement séquentiel (le sac se remplit objet par objet) + file de révélations.
-    const revealQueue = [];
-    if (drops.length) {
-      const nt = [...get().teams];
-      for (const k of drops) {
-        const r = itemH.placeItem(nt[currentTeam], k);
-        nt[currentTeam] = r.team;
-        if (r.outcome === 'refunded') {
-          addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[k].icon} ${ITEMS[k].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
-        } else {
-          addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[k].icon} ${ITEMS[k].name} !`);
-          revealQueue.push(k);
-        }
-      }
-      set({ teams: nt });
-    }
-
-    get().nextTurn();
-    if (revealQueue.length) {
-      const [first, ...rest] = revealQueue;
-      get().showLoot(first, {
-        title: '✨ Bien joué !',
-        subtitle: rest.length ? 'Double butin ! (1/2)' : 'Récompense de bonne réponse',
-        rest: rest.map((k) => ({ itemKey: k, title: '✨ Et en plus…', subtitle: 'Double butin ! (2/2)' })),
-      });
-    }
+    finishCorrect();
   },
 
   timeoutQuestion: () => {
@@ -683,10 +696,15 @@ export const useGameStore = create((set, get) => ({
 
     const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
-    // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris)
+    // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris).
+    // nextTurn diff\u00e9r\u00e9 si l'effet ouvre un s\u00e9lecteur (cf. answerQuestion).
+    const finishWrong = () => { if (!get().finished) get().nextTurn(); };
     const onWrong = effectH.equipTriggerActions(get().teams[currentTeam], 'wrong');
-    if (onWrong.length) effectH.runEffects(set, get, onWrong, { source: 'item' });
-    get().nextTurn();
+    if (onWrong.length) {
+      effectH.runEffects(set, get, onWrong, { source: 'item' });
+      if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
+    }
+    finishWrong();
   },
 
   // --- Events (delegated) ---
@@ -932,6 +950,10 @@ export const useGameStore = create((set, get) => ({
     // Un tableau vide est un etat legitime (tout decoche au setup / etal vide)
     // et doit etre respecte — d'ou le test sur la presence, pas sur la longueur.
     if (!Array.isArray(saved.enabledItems)) set({ enabledItems: Object.keys(ITEMS) });
+    // knownItemKeys : sans lui, des objets décochés réapparaîtraient cochés (la
+    // garde "objet jamais vu" se baserait sur le catalogue courant). Anciennes
+    // sauvegardes sans ce champ : on retombe sur le catalogue connu actuel.
+    if (!Array.isArray(saved.knownItemKeys)) set({ knownItemKeys: Object.keys(ITEMS) });
     // Le catalogue ITEMS est dynamique (édité via l'éditeur) : purger des équipes
     // les clés d'objets qui n'existent plus, sinon un slot reste occupé par un
     // « fantôme » (objet invisible, effet perdu, slot bloqué). Le sac est filtré

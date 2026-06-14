@@ -150,17 +150,21 @@ export default function QuestionModal() {
     slashTrack.current = { q: question, count };
   }, [question, indiceHidden]);
 
+  // Un SEUL intervalle par question (décrément régulier, pas de dérive ni de
+  // recréation à chaque tick) ; s'arrête à la révélation. Le bonus de temps
+  // (Indice niv.2) reste pris en compte via la mise à jour fonctionnelle.
   useEffect(() => {
     if (!showQuestion || revealed) return;
-    if (timeLeft <= 0) {
-      soundWrong();
-      setRevealed(true);
-      return;
-    }
+    const iv = setInterval(() => setTimeLeft((t) => (t <= 0 ? 0 : t - 1)), 1000);
+    return () => clearInterval(iv);
+  }, [question, revealed, showQuestion]);
+
+  // Sons (compte à rebours / temps écoulé) + bascule en révélation à 0.
+  useEffect(() => {
+    if (!showQuestion || revealed) return;
+    if (timeLeft <= 0) { soundWrong(); setRevealed(true); return; }
     if (timeLeft <= 5) soundTimer();
-    const timer = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [showQuestion, timeLeft, revealed]);
+  }, [timeLeft, revealed, showQuestion]);
 
   const handleAnswer = useCallback((idx) => {
     if (revealed) return;

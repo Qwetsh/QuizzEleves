@@ -9,6 +9,11 @@ import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
 
+// Compteur monotone pour l'id des VFX (foudre…) : garantit un id unique à chaque
+// émission, indépendamment du timing de clearVfx (sinon 2 casts pourraient
+// partager le même id et le 2e éclair serait avalé par la dep de l'overlay).
+let vfxCounter = 0;
+
 // Effet du niveau courant d'un pouvoir — seule source de verite : powers.js
 function levelEffect(powerKey, level) {
   return POWERS[powerKey]?.levels?.[level - 1]?.effect || {};
@@ -73,13 +78,20 @@ export function useIndice(set, get) {
   const hideMore = Math.min(effect.count ?? 2, fresh.length);
   const hidden = [...already, ...fresh.slice(0, hideMore)];
 
+  // Rien \u00e0 \u00e9liminer en plus (\u00e9quipement a d\u00e9j\u00e0 tout masqu\u00e9) ET pas de bonus de
+  // temps : on NE consomme PAS la charge (sinon perte s\u00e8che).
+  if (hideMore === 0 && !(effect.bonusTime > 0)) {
+    addLog(`\u{1F4A1} ${team.emoji} ${team.name} : toutes les mauvaises r\u00e9ponses sont d\u00e9j\u00e0 \u00e9limin\u00e9es.`);
+    return;
+  }
+
   const result = consumePowerCharge(team, 'indice');
   if (!result) return;
 
   const newTeams = [...teams];
   newTeams[currentTeam] = result.updatedTeam;
 
-  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hidden.length} r\u00e9ponses \u00e9limin\u00e9es.`);
+  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideMore} r\u00e9ponse${hideMore > 1 ? 's' : ''} \u00e9limin\u00e9e${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}.`);
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
 
   if (effect.bonusTime > 0) {
@@ -161,7 +173,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     if (r.path.length > 1) {
       foudreMove = [{ teamIndex: targetTeamIndex, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     }
-    vfx = { type: 'lightning', teamIndex: targetTeamIndex, id: (get().vfx?.id ?? 0) + 1 };
+    vfx = { type: 'lightning', teamIndex: targetTeamIndex, id: ++vfxCounter };
     soundThunder();
     addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.`);
   } else if (powerKey === 'sablier') {
@@ -252,17 +264,20 @@ export function buyNewPower(set, get, powerKey) {
 export function buyPowerCharge(set, get, powerKey) {
   const { teams, currentTeam, addLog } = get();
   const team = teams[currentTeam];
+  // On ne recharge qu'un pouvoir D\u00c9J\u00c0 poss\u00e9d\u00e9 (\u00e9vite une entr\u00e9e sans `level`).
+  if (!team.powers?.[powerKey]) return;
   const price = POWERS[powerKey]?.price || 15;
   if (team.money < price) return;
 
   const newTeams = [...teams];
-  const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
+  const currentCharges = team.powers[powerKey].charges ?? 0;
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
   newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
 
   const pName = POWERS[powerKey]?.name || powerKey;
   addLog(`\u{1F6D2} ${team.emoji} ${team.name} ach\u00e8te 1 charge de ${pName} (${price} \u{1F4B0})`);
   set({ teams: newTeams });
+  if (get().phase === 'game') saveGame(get());
 }
 
 export function upgradePowerLevel(set, get, powerKey) {

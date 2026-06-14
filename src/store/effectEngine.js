@@ -187,6 +187,7 @@ function applyMoveOne(set, get, idx, dir, n, allowJunction) {
 }
 
 function applyMoney(set, get, action, ctx, indices) {
+  if (!indices || !indices.length) return; // ex. randomOpponent sans adversaire : rien à faire
   const { teams, addLog } = get();
   const src = ctx.sourceTeam ?? 0;
   const nt = [...teams];
@@ -481,6 +482,11 @@ function finishQueue(set, get) {
   set({ pendingActions: null });
 
   if (get().finished) return;
+
+  // Suite de tour différée (déclencheur on:correct/on:wrong qui a ouvert un
+  // sélecteur) : on la reprend une fois la file vidée, AVANT tout le reste.
+  const deferred = get().deferredTurnEnd;
+  if (deferred) { set({ deferredTurnEnd: null }); deferred(); return; }
 
   if (ctx.source === 'roll') {
     // Reprend la résolution post-lancer (jonction / dé de 1 / atterrissage).
