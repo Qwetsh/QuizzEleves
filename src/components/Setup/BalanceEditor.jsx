@@ -495,7 +495,7 @@ export default function BalanceEditor({ onClose }) {
                         <span className="bal-fx-chance" title="Probabilité que l'effet se déclenche (100 % = toujours)"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--ink-500)' }}>
                           <span>déclenche</span>
-                          <input type="number" className="qed-input" style={{ width: 56 }} min={1} max={100}
+                          <input type="number" className="qed-input" style={{ width: 74 }} min={1} max={100}
                             value={Math.round((typeof fx.chance === 'number' ? fx.chance : 1) * 100)}
                             onChange={(ev) => {
                               const pct = Math.max(1, Math.min(100, Number(ev.target.value) || 0));

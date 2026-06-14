@@ -56,7 +56,7 @@ export function describeAction(a) {
 }
 
 const numInput = (value, onChange, { min = 0, max = 999 } = {}) => (
-  <input type="number" className="qed-input" style={{ width: 64 }} value={value ?? 0}
+  <input type="number" className="qed-input" style={{ width: 72 }} value={value ?? 0}
     min={min} max={max} onChange={(e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || 0)))} />
 );
 
