@@ -8,6 +8,7 @@ import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
+import { describeItemEffects } from '../../logic/effectText';
 import { TemplePanel, CoinRune } from './TempleDecor';
 import ItemIcon from './ItemIcon';
 import '../../styles/inventory.css';
@@ -93,6 +94,11 @@ function ItemStall({ team, shopStock, shopStockTurns, onBuyItem }) {
               </div>
               <div className="shop-card-desc">
                 {item.desc}
+                {describeItemEffects(item).length > 0 && (
+                  <ul style={{ margin: '5px 0 0', padding: '0 0 0 15px', fontSize: 11.5, color: 'var(--ink-600)', lineHeight: 1.4 }}>
+                    {describeItemEffects(item).map((l, i) => <li key={i}>{l}</li>)}
+                  </ul>
+                )}
                 {slotTaken && !bagFull && (
                   <div className="shop-card-warn">
                     {SLOTS[item.slot]?.name} occupée {'→'} ira dans le sac

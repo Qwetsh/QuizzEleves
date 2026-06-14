@@ -10,6 +10,7 @@ import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { sellPrice, isValidMove, normalizeBag } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
 import { itemImg, rarityRing } from '../../logic/itemAssets';
+import { describeItemEffects } from '../../logic/effectText';
 import { TemplePanel, Sprig as InvSprig, Rune as InvRune } from './TempleDecor';
 import '../../styles/inventory.css';
 
@@ -84,6 +85,11 @@ function ActionPopover({ pop, onUse, onSell, onClose }) {
         ◆ {rar?.name} · {item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name}
       </span>
       <div className="inv-popover-desc">{item.desc}</div>
+      {describeItemEffects(item).length > 0 && (
+        <ul className="inv-popover-fx" style={{ margin: '6px 0 0', padding: '0 0 0 16px', fontSize: 12, color: 'var(--ink-600)', lineHeight: 1.45 }}>
+          {describeItemEffects(item).map((l, i) => <li key={i}>{l}</li>)}
+        </ul>
+      )}
       <div className="inv-popover-actions">
         {canUse && (
           <button className="inv-btn-use" onClick={() => { soundClick(); onUse(pop); }}>

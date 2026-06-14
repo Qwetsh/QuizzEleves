@@ -13,6 +13,7 @@ import {
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { useGameStore } from '../../store/gameStore';
 import { TriggerCard, defaultTrigger, AmountInput, DEFAULT_DICE } from './EffectBuilder';
+import { describeItemEffects } from '../../logic/effectText';
 import '../../styles/questions-editor.css';
 import '../../styles/balance-editor.css';
 
@@ -510,6 +511,15 @@ export default function BalanceEditor({ onClose }) {
                     <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Effet simple</button>
                     <button className="btn btn--ghost btn--sm" onClick={addTrigger}>{'+'} Effet déclenché (avancé)</button>
                   </div>
+                  {/* Aperçu en clair : ce que liront les joueurs (au tap) en jeu */}
+                  {describeItemEffects(draft).length > 0 && (
+                    <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(91,140,58,0.08)', border: '1px solid rgba(91,140,58,0.25)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>👁️ Aperçu joueur</div>
+                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.5 }}>
+                        {describeItemEffects(draft).map((l, i) => <li key={i}>{l}</li>)}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <label className="bal-toggle" style={{ marginTop: 6 }}>
