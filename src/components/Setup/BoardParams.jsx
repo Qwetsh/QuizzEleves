@@ -13,7 +13,7 @@ export default function BoardParams() {
           {"Cases par voie : "}<strong>{params.casesParVoie}</strong>
         </div>
         <input
-          type="range" min={3} max={6} value={params.casesParVoie}
+          type="range" min={3} max={12} value={params.casesParVoie}
           onChange={(e) => setBoardParam('casesParVoie', Number(e.target.value))}
           style={{ accentColor: '#b8862c', width: '100%' }}
         />
@@ -49,7 +49,7 @@ export default function BoardParams() {
           {"Couloirs mix : "}<strong>{params.couloirsMix}</strong>
         </div>
         <input
-          type="range" min={0} max={3} value={params.couloirsMix}
+          type="range" min={0} max={8} value={params.couloirsMix}
           onChange={(e) => setBoardParam('couloirsMix', Number(e.target.value))}
           style={{ accentColor: '#b8862c', width: '100%' }}
         />
