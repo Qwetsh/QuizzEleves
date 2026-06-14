@@ -177,7 +177,7 @@ export default function QuestionsEditor({ onClose }) {
                     <label className="qed-label">Niveau</label>
                     <select className="qed-select" value={draft.level}
                       onChange={(e) => set({ level: e.target.value })}>
-                      {['5e', '4e', '3e'].map((l) => <option key={l} value={l}>{l}</option>)}
+                      {['6e', '5e', '4e', '3e'].map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </div>
                 )}

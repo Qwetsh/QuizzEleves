@@ -382,6 +382,22 @@ function stepHead(set, get, action, ctx) {
       clearCtxResolution(set, get, 'subject');
       return 'done';
     }
+    case 'forceSubject': {
+      // Force le THÈME de la prochaine question d'une (ou plusieurs) équipe(s).
+      // Stocké par équipe (team.forcedSubject), consommé à leur prochain askQuestion.
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const subj = action.subject;
+      const nt = [...get().teams];
+      for (const idx of t.indices) nt[idx] = { ...nt[idx], forcedSubject: subj };
+      set({ teams: nt });
+      const sname = SUBJECTS[subj]?.name || subj;
+      const whoLabel = action.target === 'self' ? 'ta prochaine question' : 'la prochaine question de la cible';
+      get().addLog(`🎯 ${SUBJECTS[subj]?.icon || ''} ${whoLabel} forcée en ${sname} !`);
+      announce(set, get, SUBJECTS[subj]?.icon || '🎯', `Question forcée → ${sname}`, SUBJECTS[subj]?.color || '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
     case 'placeTrap': {
       if (ctx.tile == null) { set({ showTilePicker: { label: action.trap?.label, icon: action.trap?.icon } }); return 'suspend'; }
       placeTrapAt(set, get, ctx.tile, action.trap, ctx.sourceTeam);

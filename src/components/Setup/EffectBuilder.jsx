@@ -1,12 +1,13 @@
 // Constructeur d'effets composables pour l'éditeur d'objets.
 // Gère les déclencheurs `kind:'trigger'` (à l'usage / % chance / d6 / on:roll / en question)
 // et l'édition de listes d'ACTIONS atomiques. Voir src/store/effectEngine.js.
-import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { SUBJECTS, SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../../data/subjects';
 
 const ACTIONS = [
   { key: 'move', label: 'Déplacer' },
   { key: 'money', label: 'Or (gagner/perdre/voler)' },
   { key: 'rerollQuestion', label: 'Changer la question' },
+  { key: 'forceSubject', label: 'Forcer le thème de la question' },
   { key: 'placeTrap', label: 'Poser un piège' },
   { key: 'gainCharge', label: 'Recharger un pouvoir' },
   { key: 'shieldNext', label: 'Bouclier (annule 1 recul)' },
@@ -121,6 +122,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'shieldNext') base.n = 1;
         if (k === 'extraTime') base.n = 5;
         if (k === 'rerollQuestion') base.subject = 'same';
+        if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -162,6 +164,18 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <option value="choose">Thème au choix</option>
           {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
         </select>
+      )}
+
+      {a.action === 'forceSubject' && (
+        <>
+          <select className="qed-select" value={a.target} onChange={(e) => upd({ target: e.target.value })}>
+            {targetOpts.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+          </select>
+          <span className="bal-fx-unit">→</span>
+          <select className="qed-select" value={a.subject || 'hardcore'} onChange={(e) => upd({ subject: e.target.value })}>
+            {[...SUBJECT_KEYS, ...FORCED_SUBJECT_KEYS].map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+          </select>
+        </>
       )}
 
       {(a.action === 'shieldNext' || a.action === 'extraTime') && (

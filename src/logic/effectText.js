@@ -39,6 +39,7 @@ export function describeAction(a) {
       return `${verb} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or ${a.mode === 'gain' ? 'à' : 'à'} ${who}`;
     }
     case 'rerollQuestion': return `change la question (${subjectLabel(a.subject)})`;
+    case 'forceSubject': return `force ${who} à une question ${SUBJECTS[a.subject]?.name || a.subject}`;
     case 'placeTrap': {
       const inner = (a.trap?.do || []).map(describeAction).join(', ');
       return `pose un piège${a.trap?.label ? ` « ${a.trap.label} »` : ''}${inner ? ` : ${inner}` : ''}`;

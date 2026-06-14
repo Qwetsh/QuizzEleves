@@ -271,6 +271,28 @@ describe('actions : reroll de question', () => {
   });
 });
 
+// --- forceSubject (question forcée à l'adversaire) ---------------------
+
+describe('forceSubject', () => {
+  it('pose un thème forcé sur la cible, consommé à son prochain askQuestion', () => {
+    exec([{ action: 'forceSubject', target: 'target', subject: 'hardcore' }], { source: 'item', targetTeam: 1 });
+    expect(team(1).forcedSubject).toBe('hardcore');
+    // l'équipe 1 joue : sa question est forcée en hardcore puis le forçage se consomme
+    useGameStore.setState({ currentTeam: 1, questions: { ...QUESTIONS, hardcore: [{ q: 'HC ?', a: ['A', 'B', 'C', 'D'], c: 0 }] } });
+    S().askQuestion('maths');
+    expect(S().showQuestion.subject).toBe('hardcore');
+    expect(team(1).forcedSubject).toBeNull();
+  });
+
+  it('cible self : force sa propre prochaine question', () => {
+    exec([{ action: 'forceSubject', target: 'self', subject: 'cultureG' }], { source: 'item' });
+    expect(team(0).forcedSubject).toBe('cultureG');
+    useGameStore.setState({ questions: { ...QUESTIONS, cultureG: [{ q: 'CG ?', a: ['A', 'B', 'C', 'D'], c: 0 }] } });
+    S().askQuestion('maths');
+    expect(S().showQuestion.subject).toBe('cultureG');
+  });
+});
+
 // --- d6 (table) --------------------------------------------------------
 
 describe('d6 table', () => {

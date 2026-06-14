@@ -1,6 +1,6 @@
 import { CYCLE4_QUESTIONS } from './_cycle4.js';
 import { BREVET_QUESTIONS } from './_brevet.js';
-import { SUBJECT_KEYS } from '../subjects.js';
+import { SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../subjects.js';
 
 // Store mutable des questions. Initialisé avec les fichiers JS embarqués (donc
 // dispo immédiatement et hors-ligne), il peut être REMPLACÉ par les données
@@ -43,6 +43,11 @@ export function getQuestions(level = 'cycle4', opts = {}) {
     // Pool Brevet ajoute tel quel (déjà ciblé 3e/DNB, hors filtrage par niveau)
     result[key] = opts.brevet ? base.concat(STORE.brevet[key] || []) : base;
   }
+  // Matières « forcé-only » (culture générale, hardcore) : transverses, jamais
+  // filtrées par niveau — disponibles quel que soit le niveau choisi.
+  for (const key of FORCED_SUBJECT_KEYS) {
+    result[key] = (STORE.cycle4[key] || []).concat(STORE.brevet[key] || []);
+  }
   return result;
 }
 
@@ -51,7 +56,9 @@ export function getQuestions(level = 'cycle4', opts = {}) {
  */
 export function countQuestions(level = 'cycle4', opts = {}) {
   const qs = getQuestions(level, opts);
-  return Object.values(qs).reduce((sum, arr) => sum + arr.length, 0);
+  // Compte par niveau = matières du plateau seulement (les forcé-only sont
+  // transverses et fausseraient le compteur affiché au setup).
+  return SUBJECT_KEYS.reduce((sum, key) => sum + (qs[key]?.length || 0), 0);
 }
 
 // Accès direct aux pools courants (lecture seule) — utile aux éditeurs.

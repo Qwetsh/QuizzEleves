@@ -8,6 +8,14 @@ export const SUBJECTS = {
   svt:        { name: 'SVT',           short: 'SV',  icon: '\u{1F33F}', color: '#779313', colorSoft: '#e1e7cb', colorDeep: '#3f4e0a', biome: 'La For\u00eat Vivante' },
   anglais:    { name: 'Anglais',       short: 'EN',  icon: '\u{1F339}', color: '#3160a5', colorSoft: '#d2dceb', colorDeep: '#1a3357', biome: 'Les Cours Tudor' },
   multi:      { name: 'Multi-mati\u00e8re', short: '?', icon: '\u{1F3B2}', color: '#e0a458', colorSoft: '#f0e0b2', colorDeep: '#8a5f1a', biome: 'Carrefour' },
+  // Mati\u00e8res \u00ab forc\u00e9-only \u00bb : jamais sur le plateau, seulement d\u00e9clench\u00e9es par un
+  // effet \u00ab question forc\u00e9e \u00bb. Pas de filtrage par niveau (transverses).
+  cultureG:   { name: 'Culture g\u00e9n\u00e9rale', short: 'CG', icon: '\u{1F9E0}', color: '#7a5ea8', colorSoft: '#e2d9f0', colorDeep: '#41306b', biome: 'La Grande Biblioth\u00e8que' },
+  hardcore:   { name: 'Hardcore',      short: 'HC',  icon: '\u{1F480}', color: '#8a1f2e', colorSoft: '#ecc9cd', colorDeep: '#4d0f17', biome: "L'Antre du D\u00e9fi" },
 };
 
+// Mati\u00e8res du PLATEAU (cases). cultureG/hardcore en sont volontairement exclues.
 export const SUBJECT_KEYS = ['francais', 'maths', 'histoire', 'geographie', 'svt', 'anglais'];
+// Mati\u00e8res suppl\u00e9mentaires \u00ab forc\u00e9-only \u00bb (jamais tir\u00e9es par une case, uniquement
+// via un effet). Charg\u00e9es dans les pools de questions, hors filtrage par niveau.
+export const FORCED_SUBJECT_KEYS = ['cultureG', 'hardcore'];

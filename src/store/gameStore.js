@@ -469,10 +469,22 @@ export const useGameStore = create((set, get) => ({
 
   // --- Questions ---
   askQuestion: (subject) => {
-    // Thème forcé par un effet d'objet (ex. déclencheur « Selon le dé » →
-    // changer la question) : s'applique à la PROCHAINE question, puis se consomme.
-    const forced = get().forcedSubject;
-    if (forced) { subject = forced; set({ forcedSubject: null }); }
+    // Thème forcé : per-équipe (posé par un adversaire ou par un on:roll de cette
+    // équipe) prioritaire, sinon le forçage global historique. Consommé ici, et
+    // s'applique à la PROCHAINE question de l'équipe concernée.
+    const cur = get().currentTeam;
+    const teamForced = get().teams[cur]?.forcedSubject;
+    const forced = teamForced || get().forcedSubject;
+    if (forced) {
+      subject = forced;
+      if (teamForced) {
+        const nt = [...get().teams];
+        nt[cur] = { ...nt[cur], forcedSubject: null };
+        set({ teams: nt, forcedSubject: null });
+      } else {
+        set({ forcedSubject: null });
+      }
+    }
     const { questions, askedQuestions, teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const pool = questions[subject] || [];

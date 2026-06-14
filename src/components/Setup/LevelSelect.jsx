@@ -2,6 +2,7 @@ import { useGameStore } from '../../store/gameStore';
 import { countQuestions } from '../../data/questions/index.js';
 
 const LEVELS = [
+  { key: '6e', label: '6\u1d49', sub: null },
   { key: 'cycle4', label: 'Cycle 4', sub: '5e+4e+3e' },
   { key: '5e', label: '5\u1d49', sub: null },
   { key: '4e', label: '4\u1d49', sub: null },
