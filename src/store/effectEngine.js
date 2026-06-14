@@ -104,11 +104,14 @@ export function equipOnRollActions(team, value) {
 
 // Actions des déclencheurs d'équipement liés à une réponse ('correct' | 'wrong').
 // Tirés après qu'une question soit résolue (cf. answerQuestion / timeoutQuestion).
-export function equipTriggerActions(team, on) {
+// `subject` = thème de la question résolue : un déclencheur portant `subject`
+// (ex. « seulement si SVT ») n'est joué que s'il correspond.
+export function equipTriggerActions(team, on, subject) {
   const out = [];
   for (const slot of SLOTS_EQUIP) {
     const it = ITEMS[team?.equipment?.[slot]];
     for (const t of triggersOf(it, on)) {
+      if (t.subject && t.subject !== subject) continue; // condition de thème non remplie
       if (passesChance(t.chance)) out.push(...(t.do || [])); // chance optionnelle (ex. 20% à la bonne réponse)
     }
   }

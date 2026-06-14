@@ -113,9 +113,11 @@ function describeTrigger(fx) {
     return joinDo(fx.do);
   }
   const chancePrefix = typeof fx.chance === 'number' ? `${pct(fx.chance)} de chance — ` : '';
+  // Condition de thème (déclencheurs de réponse) : « … en Histoire ».
+  const onSubj = fx.subject ? ` en ${SUBJECTS[fx.subject]?.name || fx.subject}` : '';
   if (fx.on === 'roll') return `${chancePrefix}si le dé fait ${(fx.values || []).join('/')} : ${joinDo(fx.do)}`;
-  if (fx.on === 'correct') return `${chancePrefix}à chaque bonne réponse : ${joinDo(fx.do)}`;
-  if (fx.on === 'wrong') return `${chancePrefix}à chaque erreur (ou temps écoulé) : ${joinDo(fx.do)}`;
+  if (fx.on === 'correct') return `${chancePrefix}à chaque bonne réponse${onSubj} : ${joinDo(fx.do)}`;
+  if (fx.on === 'wrong') return `${chancePrefix}à chaque erreur${onSubj} (ou temps écoulé) : ${joinDo(fx.do)}`;
   if (fx.on === 'question') return `bouton « Changer la question » → ${subjectLabel(fx.do?.[0]?.subject)}`;
   return joinDo(fx.do);
 }

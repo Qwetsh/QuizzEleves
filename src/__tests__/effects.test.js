@@ -5,7 +5,7 @@ import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, setItemsData } from '../data/items.js';
 import {
   runEffects, resumeQueue, legacyToActions, consumableActions,
-  equipOnRollActions, questionRerollOptions, d6Branch, expandUseTriggers,
+  equipOnRollActions, equipTriggerActions, questionRerollOptions, d6Branch, expandUseTriggers,
   resolveAmount, diceLabel,
 } from '../store/effectEngine.js';
 
@@ -290,6 +290,29 @@ describe('forceSubject', () => {
     useGameStore.setState({ questions: { ...QUESTIONS, cultureG: [{ q: 'CG ?', a: ['A', 'B', 'C', 'D'], c: 0 }] } });
     S().askQuestion('maths');
     expect(S().showQuestion.subject).toBe('cultureG');
+  });
+});
+
+// --- déclencheurs de réponse conditionnés par le thème de la question ---
+
+describe('equipTriggerActions : condition de thème', () => {
+  const gain = (n) => ({ action: 'money', mode: 'gain', target: 'self', n, unit: 'flat' });
+  it('ne joue le déclencheur que si la matière correspond', () => {
+    setItemsData({
+      coiffeNature: { name: 'Coiffe nature', slot: 'head', rarity: 'rare', price: 10,
+        effects: [{ kind: 'trigger', on: 'correct', subject: 'svt', do: [gain(5)] }] },
+    });
+    const team = { equipment: { head: 'coiffeNature', body: null, feet: null } };
+    expect(equipTriggerActions(team, 'correct', 'svt')).toHaveLength(1);   // SVT → joue
+    expect(equipTriggerActions(team, 'correct', 'maths')).toHaveLength(0); // autre → rien
+  });
+  it('sans subject : joue pour toute matière', () => {
+    setItemsData({
+      anneauTout: { name: 'Anneau', slot: 'feet', rarity: 'commun', price: 5,
+        effects: [{ kind: 'trigger', on: 'correct', do: [gain(2)] }] },
+    });
+    const team = { equipment: { head: null, body: null, feet: 'anneauTout' } };
+    expect(equipTriggerActions(team, 'correct', 'histoire')).toHaveLength(1);
   });
 });
 

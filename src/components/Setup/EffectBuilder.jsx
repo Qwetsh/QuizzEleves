@@ -259,12 +259,12 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
   };
 
   const onOptions = isConsumable
-    ? [{ k: 'use', label: "À l'utilisation" }, { k: 'question', label: 'Bouton en question' }]
+    ? [{ k: 'use', label: "À l'utilisation" }, { k: 'question', label: 'Bouton « Changer la question »' }]
     : [
         { k: 'roll', label: 'Selon le dé (à mon tour)' },
         { k: 'correct', label: 'Quand je réponds bien' },
         { k: 'wrong', label: 'Quand je rate (ou temps écoulé)' },
-        { k: 'question', label: 'Bouton en question' },
+        { k: 'question', label: 'Bouton « Changer la question »' },
       ];
 
   return (
@@ -343,12 +343,25 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
               ? 'Effets déclenchés à CHAQUE bonne réponse de l’équipe :'
               : 'Effets déclenchés à chaque mauvaise réponse (ou temps écoulé) :'}
           </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            <span className="bal-fx-unit">Seulement si la question est en</span>
+            <select className="qed-select" value={fx.subject || ''} onChange={(e) => upd({ subject: e.target.value || undefined })}>
+              <option value="">toute matière</option>
+              {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+              <optgroup label="Thèmes spéciaux">
+                {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+              </optgroup>
+            </select>
+          </div>
           <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
         </>
       )}
 
       {fx.on === 'question' && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ flexBasis: '100%', fontSize: 11.5, color: 'var(--ink-500)', marginBottom: 2 }}>
+            Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur le thème choisi.
+          </div>
           <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{'\u{1F504}'} Bouton « Changer la question » →</span>
           <select className="qed-select" value={fx.do?.[0]?.subject || 'same'}
             onChange={(e) => upd({ do: [{ action: 'rerollQuestion', subject: e.target.value }] })}>

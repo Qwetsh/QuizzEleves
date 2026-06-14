@@ -667,7 +667,7 @@ export const useGameStore = create((set, get) => ({
       // Si l'effet ouvre un s\u00e9lecteur (interactif), on DIFF\u00c8RE nextTurn jusqu'\u00e0 la
       // fin de la file (sinon TURN_RESET \u00e9craserait la file + le picker).
       const finishWrong = () => { if (!get().finished) get().nextTurn(); };
-      const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong'), ...(team.wager?.else || [])];
+      const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', showQuestion.subject), ...(team.wager?.else || [])];
       if (onWrong.length) {
         effectH.runEffects(set, get, onWrong, { source: 'item' });
         if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
@@ -748,7 +748,7 @@ export const useGameStore = create((set, get) => ({
 
     // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…),
     // précédés de la récompense d'un éventuel pari « Défi » (team.wager.do).
-    const onCorrect = [...(team.wager?.do || []), ...effectH.equipTriggerActions(get().teams[currentTeam], 'correct')];
+    const onCorrect = [...(team.wager?.do || []), ...effectH.equipTriggerActions(get().teams[currentTeam], 'correct', showQuestion.subject)];
     if (onCorrect.length) {
       effectH.runEffects(set, get, onCorrect, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishCorrect }); return; }
@@ -759,6 +759,7 @@ export const useGameStore = create((set, get) => ({
   timeoutQuestion: () => {
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
+    const timedSubject = get().showQuestion?.subject; // thème (pour les déclencheurs conditionnés)
     const newTeams = [...teams];
 
     const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
@@ -778,7 +779,7 @@ export const useGameStore = create((set, get) => ({
     // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris).
     // nextTurn diff\u00e9r\u00e9 si l'effet ouvre un s\u00e9lecteur (cf. answerQuestion).
     const finishWrong = () => { if (!get().finished) get().nextTurn(); };
-    const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong'), ...(team.wager?.else || [])];
+    const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', timedSubject), ...(team.wager?.else || [])];
     if (onWrong.length) {
       effectH.runEffects(set, get, onWrong, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
