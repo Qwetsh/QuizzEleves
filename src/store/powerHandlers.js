@@ -9,10 +9,6 @@ import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
 
-// Compteur monotone pour l'id des VFX (foudre…) : garantit un id unique à chaque
-// émission, indépendamment du timing de clearVfx (sinon 2 casts pourraient
-// partager le même id et le 2e éclair serait avalé par la dep de l'overlay).
-let vfxCounter = 0;
 
 // Effet du niveau courant d'un pouvoir — seule source de verite : powers.js
 function levelEffect(powerKey, level) {
@@ -93,6 +89,7 @@ export function useIndice(set, get) {
 
   addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideMore} r\u00e9ponse${hideMore > 1 ? 's' : ''} \u00e9limin\u00e9e${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}.`);
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
+  announce(set, get, '💡', `Indice — ${hideMore} réponse${hideMore > 1 ? 's' : ''} éliminée${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}`, POWERS.indice?.color || '#e8b117');
 
   if (effect.bonusTime > 0) {
     set({ showQuestion: { ...get().showQuestion, bonusTime: effect.bonusTime } });
@@ -113,6 +110,7 @@ export function useRelance(set, get) {
 
   addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !`);
   soundDice();
+  announce(set, get, '🎲', `${team.emoji} ${team.name} relance le dé !`, POWERS.relance?.color || '#e8b117');
   // Nettoie aussi un éventuel choix de jonction en cours (on relance depuis le départ du lancer).
   set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false, awaitingChoice: false, pendingMove: null });
 
@@ -165,7 +163,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   const level = team.powers?.[powerKey]?.level ?? 1;
   const effect = levelEffect(powerKey, level);
   let foudreMove = null;
-  let vfx = null;
+  let lightning = false;
 
   if (powerKey === 'foudre') {
     // Equipement de la cible (reculReduction) : recul attenue
@@ -175,14 +173,16 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     if (r.path.length > 1) {
       foudreMove = [{ teamIndex: targetTeamIndex, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     }
-    vfx = { type: 'lightning', teamIndex: targetTeamIndex, id: ++vfxCounter };
+    lightning = true;
     soundThunder();
     addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.`);
+    announce(set, get, '⚡', `Foudre sur ${target.emoji} ${target.name} — −${reculAmount} case${reculAmount > 1 ? 's' : ''}`, POWERS[powerKey].color);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
     newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
     soundPower();
     addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level}) sur ${target.emoji} ${target.name} ! Timer /${divisor} au prochain tour.`);
+    announce(set, get, '⏱️', `Sablier sur ${target.emoji} ${target.name} — timer /${divisor}`, POWERS[powerKey].color);
   } else if (powerKey === 'double') {
     // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
     const add = effect.add ?? 1;
@@ -195,9 +195,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure };
     soundPower();
     addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
+    announce(set, get, '❓', `Double sur ${target.emoji} ${target.name} — ${1 + newExtra} questions`, POWERS[powerKey].color);
   }
 
-  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}), ...(vfx ? { vfx } : {}) });
+  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
+  if (lightning) get().emitVfx('lightning', targetTeamIndex);
   // Stay in pendingLanding so player can use more powers before clicking "Continuer"
 }
 

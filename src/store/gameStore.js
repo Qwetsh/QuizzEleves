@@ -42,6 +42,10 @@ function createDefaultTeams(n) {
   }));
 }
 
+// Compteur monotone d'id de VFX (foudre/bouclier) — un seul, partagé par tous
+// les overlays, pour qu'un id ne se répète jamais d'affilée sur le champ `vfx`.
+let vfxSeq = 0;
+
 // Vrai si le Bouclier (pouvoir) ou un Bouclier de bois (consommable) a absorbe
 // le recul entre l'etat avant/apres resolveWrongAnswer (declenche le son).
 function bouclierAbsorbed(before, after) {
@@ -581,7 +585,7 @@ export const useGameStore = create((set, get) => ({
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0 };
       addLog(logMessage);
-      if (bouclierAbsorbed(team, updatedTeam)) soundShield();
+      if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
       // Double/triple: wrong answer stops immediately, clear double state
       if (team.doubleActive) {
@@ -691,7 +695,7 @@ export const useGameStore = create((set, get) => ({
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, et 0% de temps restant
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0 };
     addLog(logMessage);
-    if (bouclierAbsorbed(team, updatedTeam)) soundShield();
+    if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
     if (team.doubleActive) {
       newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };
@@ -741,7 +745,9 @@ export const useGameStore = create((set, get) => ({
     set({ movePath: rest.length ? rest : null });
   },
 
-  // Effet visuel transitoire (foudre...) consomme par l'overlay LightningStrike.
+  // Effet visuel transitoire (foudre/bouclier...) consomme par les overlays.
+  // id monotone via un compteur unique → jamais deux fois le meme id d'affilee.
+  emitVfx: (type, teamIndex) => set({ vfx: { type, teamIndex, id: ++vfxSeq } }),
   clearVfx: () => set({ vfx: null }),
 
   // Toasts d'effet animes (moteur d'effets composable) — auto-retires par l'overlay.
