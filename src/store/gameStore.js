@@ -205,6 +205,57 @@ export const useGameStore = create((set, get) => ({
   addLog: (msg) => set({ log: [...get().log, msg] }),
 
   // --- Révélation d'objet (visuel C) ---
+  // Coffre de départ : ouvert une fois par équipe à son premier tour (20 PO +
+  // un consommable). La récompense est tirée à l'avance (lastStarterReward) pour
+  // que l'aperçu de la modale corresponde au butin réellement accordé.
+  showStarterChest: false,
+  lastStarterReward: null,
+  triggerStarterChest: () => {
+    const { teams, currentTeam } = get();
+    const t = teams[currentTeam];
+    if (!t || t.starterChestOpened) { set({ showStarterChest: false, lastStarterReward: null }); return; }
+    const item = itemH.pickLootItem(0, get().enabledItems || Object.keys(ITEMS), { category: 'consumable' });
+    set({ showStarterChest: true, lastStarterReward: { gold: 20, item } });
+  },
+  closeStarterChest: () => {
+    const { teams, currentTeam, lastStarterReward, addLog } = get();
+    const t = teams[currentTeam];
+    if (!t) { set({ showStarterChest: false, lastStarterReward: null }); return; }
+    const gold = lastStarterReward?.gold || 0;
+    const itemKey = lastStarterReward?.item || null;
+    let placed = { ...t, money: (t.money ?? 0) + gold, starterChestOpened: true };
+    if (itemKey) placed = itemH.placeItem(placed, itemKey).team; // sac vide au départ → placé
+    const nt = [...teams];
+    nt[currentTeam] = placed;
+    set({ teams: nt, showStarterChest: false, lastStarterReward: null });
+    addLog(`\u{1F9F0} ${t.emoji} ${t.name} ouvre son coffre de départ : +${gold} 🪙${itemKey ? ` et ${ITEMS[itemKey].icon} ${ITEMS[itemKey].name} !` : ' !'}`);
+    get().checkMoneyMilestone(currentTeam); // les pièces volent (FlyingCoins) au changement d'or
+    if (get().phase === 'game') saveGame(get());
+  },
+
+  // Paliers d'or : un message motivant la première fois qu'une équipe franchit
+  // 20 / 40 / 60 pièces, pour l'inviter à dépenser en boutique.
+  checkMoneyMilestone: (teamIdx) => {
+    const teams = get().teams;
+    const t = teams[teamIdx];
+    if (!t) return;
+    const THRESHOLDS = [20, 40, 60];
+    const last = t.moneyMilestone || 0;
+    const reached = THRESHOLDS.filter((th) => th > last && (t.money ?? 0) >= th);
+    if (!reached.length) return;
+    const th = Math.max(...reached);
+    const nt = [...teams];
+    nt[teamIdx] = { ...t, moneyMilestone: th };
+    set({ teams: nt });
+    const MSG = {
+      20: 'Déjà 20 pièces ! File à la boutique t’offrir un objet.',
+      40: '40 pièces en poche — de quoi t’équiper sérieusement !',
+      60: 'Le magot enfle : 60 pièces ! Un objet rare t’attend à la boutique.',
+    };
+    effectH.announce(set, get, '💰', `${t.emoji} ${MSG[th]}`, '#c8911f');
+    get().addLog(`💰 ${t.emoji} ${t.name} : ${MSG[th]}`);
+  },
+
   showLoot: (itemKey, opts = {}) => set({ lootReveal: { itemKey, ...opts } }),
   dismissLoot: () => {
     const lr = get().lootReveal;
@@ -277,6 +328,7 @@ export const useGameStore = create((set, get) => ({
         });
         addLog(`\u{1F3B2} D\u00e9but de la partie ! ${finalTeams.length} \u00e9quipes en lice.`);
         set({ teams: finalTeams, phase: 'game' });
+        get().triggerStarterChest(); // 1re \u00e9quipe : coffre de d\u00e9part
       }
     } else {
       set({ powerSetupIndex: nextIndex });
@@ -285,8 +337,8 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent } = get();
-    if (finished || rolling || showDiceModal || showFight) return;
+    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest } = get();
+    if (finished || rolling || showDiceModal || showFight || showStarterChest) return;
     // Bloque le dé pendant une séquence d'effet (choix de case/cible/d6...) ou
     // tant que le tour n'est pas résolu (atterrissage, jonction, question).
     if (pendingActions || pendingLanding || awaitingChoice || showQuestion || showEvent) return;
@@ -395,7 +447,9 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    get().handleLanding();
+    // Atterrissage différé : on passe par « Continuer » (comme un déplacement
+    // sans jonction) pour laisser un moment d'achat / de pouvoirs avant la case.
+    set({ pendingLanding: true });
   },
 
   // --- Landing ---
@@ -623,6 +677,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+    get().checkMoneyMilestone(currentTeam); // palier d'or franchi par le gain ?
 
     // Suite du tour (rafale Double / loot / nextTurn) encapsulée : peut être
     // DIFFÉRÉE si un déclencheur on:correct ouvre un sélecteur interactif (sinon
@@ -962,6 +1017,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET });
+    get().triggerStarterChest(); // coffre de départ au 1er tour de cette équipe
     if (get().phase === 'game') saveGame(get());
   },
 
@@ -976,7 +1032,10 @@ export const useGameStore = create((set, get) => ({
       ...TURN_RESET,
       movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      showStarterChest: false, lastStarterReward: null,
     });
+    // Coffre de départ : si l'équipe courante ne l'a pas encore ouvert, le reproposer.
+    if (get().phase === 'game') get().triggerStarterChest();
     // Sauvegardes anterieures au systeme d'objets : le CHAMP est absent.
     // Un tableau vide est un etat legitime (tout decoche au setup / etal vide)
     // et doit etre respecte — d'ou le test sur la presence, pas sur la longueur.

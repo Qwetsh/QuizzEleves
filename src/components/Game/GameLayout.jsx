@@ -15,6 +15,7 @@ import InventoryModal from '../Modals/InventoryModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
 import LootReveal from '../Modals/LootReveal';
+import StarterChest from '../Modals/StarterChest';
 import FightModal from '../Fight/FightModal';
 import FlyingCoins from './FlyingCoins';
 import LightningStrike from './LightningStrike';
@@ -278,6 +279,7 @@ export default function GameLayout() {
       <InventoryModal />
       <FightModal />
       <LootReveal />
+      <StarterChest />
     </div>
   );
 }
