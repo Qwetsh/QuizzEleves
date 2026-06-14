@@ -590,13 +590,15 @@ export const useGameStore = create((set, get) => ({
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
-      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + gain };
+      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + gain, wager: undefined };
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
+      if (team.wager) addLog(`\u{1F3B2} D\u00e9fi r\u00e9ussi ! R\u00e9compense \u00e0 la cl\u00e9.`);
     } else {
       const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
-      // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0
-      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0 };
+      // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
+      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
       addLog(logMessage);
+      if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
       if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
       // Double/triple: wrong answer stops immediately, clear double state
@@ -611,7 +613,7 @@ export const useGameStore = create((set, get) => ({
       // Si l'effet ouvre un s\u00e9lecteur (interactif), on DIFF\u00c8RE nextTurn jusqu'\u00e0 la
       // fin de la file (sinon TURN_RESET \u00e9craserait la file + le picker).
       const finishWrong = () => { if (!get().finished) get().nextTurn(); };
-      const onWrong = effectH.equipTriggerActions(get().teams[currentTeam], 'wrong');
+      const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong'), ...(team.wager?.else || [])];
       if (onWrong.length) {
         effectH.runEffects(set, get, onWrong, { source: 'item' });
         if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
@@ -689,8 +691,9 @@ export const useGameStore = create((set, get) => ({
       }
     };
 
-    // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…)
-    const onCorrect = effectH.equipTriggerActions(get().teams[currentTeam], 'correct');
+    // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…),
+    // précédés de la récompense d'un éventuel pari « Défi » (team.wager.do).
+    const onCorrect = [...(team.wager?.do || []), ...effectH.equipTriggerActions(get().teams[currentTeam], 'correct')];
     if (onCorrect.length) {
       effectH.runEffects(set, get, onCorrect, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishCorrect }); return; }
@@ -704,9 +707,10 @@ export const useGameStore = create((set, get) => ({
     const newTeams = [...teams];
 
     const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
-    // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, et 0% de temps restant
-    newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0 };
+    // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
+    newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
     addLog(logMessage);
+    if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
     if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
     if (team.doubleActive) {
@@ -719,7 +723,7 @@ export const useGameStore = create((set, get) => ({
     // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris).
     // nextTurn diff\u00e9r\u00e9 si l'effet ouvre un s\u00e9lecteur (cf. answerQuestion).
     const finishWrong = () => { if (!get().finished) get().nextTurn(); };
-    const onWrong = effectH.equipTriggerActions(get().teams[currentTeam], 'wrong');
+    const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong'), ...(team.wager?.else || [])];
     if (onWrong.length) {
       effectH.runEffects(set, get, onWrong, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }

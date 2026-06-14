@@ -8,6 +8,7 @@ const ACTIONS = [
   { key: 'money', label: 'Or (gagner/perdre/voler)' },
   { key: 'rerollQuestion', label: 'Changer la question' },
   { key: 'forceSubject', label: 'Forcer le thème de la question' },
+  { key: 'challenge', label: 'Défi (forcer mon thème + pari)' },
   { key: 'placeTrap', label: 'Poser un piège' },
   { key: 'gainCharge', label: 'Recharger un pouvoir' },
   { key: 'shieldNext', label: 'Bouclier (annule 1 recul)' },
@@ -46,6 +47,7 @@ export function describeAction(a) {
     case 'move': return `${a.dir === 'back' ? 'reculer' : 'avancer'} ${who} de ${amountLabel(a.n)}`;
     case 'money': return `${a.mode === 'steal' ? 'voler' : a.mode === 'lose' ? 'retirer' : 'donner'} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or à ${who}`;
     case 'rerollQuestion': return `changer la question (${a.subject === 'choose' ? 'thème au choix' : a.subject === 'same' || !a.subject ? 'même thème' : SUBJECTS[a.subject]?.name || a.subject})`;
+    case 'challenge': return `défi (${SUBJECTS[a.subject]?.name || a.subject}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
     case 'placeTrap': return `poser un piège (${a.trap?.do?.length || 0} effet·s)`;
     case 'gainCharge': return 'recharger un pouvoir';
     case 'shieldNext': return 'bouclier (annule 1 recul)';
@@ -123,10 +125,11 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'extraTime') base.n = 5;
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
+        if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
-        {ACTIONS.filter((opt) => allowTrap || opt.key !== 'placeTrap').map((opt) => (
+        {ACTIONS.filter((opt) => allowTrap || (opt.key !== 'placeTrap' && opt.key !== 'challenge')).map((opt) => (
           <option key={opt.key} value={opt.key}>{opt.label}</option>
         ))}
       </select>
@@ -191,6 +194,24 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <AmountInput value={a.turns ?? 0} onChange={(v) => upd({ turns: v })} min={0} />
           <span className="bal-fx-unit">tours (0 = jusqu'à utilisation)</span>
         </>
+      )}
+
+      {a.action === 'challenge' && (
+        <div style={{ flexBasis: '100%', marginTop: 6, paddingLeft: 10, borderLeft: '2px solid #8a1f2e' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+            <span className="bal-fx-unit">Force ma prochaine question en</span>
+            <select className="qed-select" value={a.subject || 'hardcore'} onChange={(e) => upd({ subject: e.target.value })}>
+              {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+              <optgroup label="Thèmes spéciaux">
+                {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+              </optgroup>
+            </select>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 4 }}>{'\u{1F381}'} Récompense si bonne réponse :</div>
+          <ActionList actions={a.do || []} onChange={(d) => upd({ do: d })} allowTrap={false} />
+          <div style={{ fontSize: 12, color: 'var(--ink-500)', margin: '8px 0 4px' }}>{'\u{1F480}'} Malus si ratée (optionnel) :</div>
+          <ActionList actions={a.else || []} onChange={(d) => upd({ else: d })} allowTrap={false} />
+        </div>
       )}
 
       {a.action === 'placeTrap' && (

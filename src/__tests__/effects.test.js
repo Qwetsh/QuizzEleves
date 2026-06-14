@@ -293,6 +293,37 @@ describe('forceSubject', () => {
   });
 });
 
+// --- challenge (pari « Défi » : thème forcé sur soi + récompense/malus) ---
+
+describe('challenge', () => {
+  const HC = { q: 'HC ?', a: ['A', 'B', 'C', 'D'], c: 0 };
+  it('force le thème, pose le pari, et verse la récompense sur bonne réponse', () => {
+    exec([{ action: 'challenge', subject: 'hardcore',
+      do: [{ action: 'money', mode: 'gain', target: 'self', n: 40, unit: 'flat' }],
+      else: [{ action: 'money', mode: 'lose', target: 'self', n: 10, unit: 'flat' }] }], { source: 'item' });
+    expect(team(0).forcedSubject).toBe('hardcore');
+    expect(team(0).wager).toBeTruthy();
+    useGameStore.setState({ questions: { ...QUESTIONS, hardcore: [HC] } });
+    S().askQuestion('maths');
+    expect(S().showQuestion.subject).toBe('hardcore');
+    S().answerQuestion(S().showQuestion.question.c); // bonne réponse (index affiché)
+    expect(team(0).money).toBe(90); // 50 + 40 de récompense (gain de base nul à 0s)
+    expect(team(0).wager).toBeUndefined();
+  });
+
+  it('applique le malus sur mauvaise réponse et consomme le pari', () => {
+    exec([{ action: 'challenge', subject: 'hardcore',
+      do: [{ action: 'money', mode: 'gain', target: 'self', n: 40, unit: 'flat' }],
+      else: [{ action: 'money', mode: 'lose', target: 'self', n: 10, unit: 'flat' }] }], { source: 'item' });
+    useGameStore.setState({ questions: { ...QUESTIONS, hardcore: [HC] } });
+    S().askQuestion('maths');
+    const wrong = (S().showQuestion.question.c + 1) % 4; // un index faux
+    S().answerQuestion(wrong);
+    expect(team(0).money).toBe(40); // 50 − 10 de malus (le recul ne touche pas l'or)
+    expect(team(0).wager).toBeUndefined();
+  });
+});
+
 // --- d6 (table) --------------------------------------------------------
 
 describe('d6 table', () => {

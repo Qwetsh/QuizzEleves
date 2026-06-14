@@ -403,6 +403,18 @@ function stepHead(set, get, action, ctx) {
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
+    case 'challenge': {
+      // « Défi » : force MON prochain thème + mise un pari one-shot. La
+      // récompense (do) est versée si je réponds juste à cette question, le
+      // malus (else) si je rate/laisse filer le temps. Consommé par answerQuestion
+      // / timeoutQuestion (team.wager).
+      const subj = action.subject;
+      patchSource(set, get, () => ({ forcedSubject: subj, wager: { do: action.do || [], else: action.else || [] } }));
+      const sname = SUBJECTS[subj]?.name || subj;
+      get().addLog(`🎲 Défi lancé ! Ta prochaine question sera en ${sname}.`);
+      announce(set, get, SUBJECTS[subj]?.icon || '🎲', `Défi → ${sname}`, SUBJECTS[subj]?.color || '#8a1f2e');
+      return 'done';
+    }
     case 'placeTrap': {
       if (ctx.tile == null) { set({ showTilePicker: { label: action.trap?.label, icon: action.trap?.icon } }); return 'suspend'; }
       placeTrapAt(set, get, ctx.tile, action.trap, ctx.sourceTeam);

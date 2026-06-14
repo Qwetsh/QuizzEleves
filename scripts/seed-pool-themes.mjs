@@ -24,6 +24,22 @@ const DEFS = [
   ['peGrimoireCG', 'Almanach des curieux', '📚', 'grimoire07', 'body', 'rare', 24,
     'Te permet de transformer ta question en culture générale.',
     [{ kind: 'trigger', on: 'question', n: 1, do: [{ action: 'rerollQuestion', subject: 'cultureG' }] }]],
+
+  // Défi (high-risk/high-reward) : force TA prochaine question + pari one-shot.
+  ['peDefiCG', 'Quitte ou double culturel', '🎲', null, 'consumable', 'commun', 8,
+    'Ta prochaine question sera de culture générale : réussis-la pour une récompense.',
+    [{ kind: 'trigger', on: 'use', do: [{ action: 'challenge', subject: 'cultureG',
+      do: [{ action: 'money', mode: 'gain', target: 'self', n: 15, unit: 'flat' }], else: [] }] }]],
+  ['peDefiHC', 'Pari du téméraire', '💀', null, 'consumable', 'rare', 16,
+    'Impose-toi une question de niveau lycée : grosse récompense si tu réussis, gage sinon.',
+    [{ kind: 'trigger', on: 'use', do: [{ action: 'challenge', subject: 'hardcore',
+      do: [{ action: 'money', mode: 'gain', target: 'self', n: 30, unit: 'flat' }, { action: 'move', target: 'self', dir: 'forward', n: 2 }],
+      else: [{ action: 'money', mode: 'lose', target: 'self', n: 10, unit: 'flat' }] }] }]],
+  ['peDefiHCL', "Va-tout de l'érudit", '🏆', null, 'consumable', 'legendaire', 30,
+    'Le pari ultime : une question de niveau lycée pour un trésor… ou la sanction.',
+    [{ kind: 'trigger', on: 'use', do: [{ action: 'challenge', subject: 'hardcore',
+      do: [{ action: 'money', mode: 'gain', target: 'self', n: 50, unit: 'flat' }, { action: 'gainCharge' }],
+      else: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] }] }]],
 ];
 
 const rows = DEFS.map(([key, name, icon, img, slot, rarity, price, desc, effects], i) => ({

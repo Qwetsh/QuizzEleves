@@ -40,6 +40,11 @@ export function describeAction(a) {
     }
     case 'rerollQuestion': return `change la question (${subjectLabel(a.subject)})`;
     case 'forceSubject': return `force ${who} à une question ${SUBJECTS[a.subject]?.name || a.subject}`;
+    case 'challenge': {
+      const win = (a.do || []).map(describeAction).filter(Boolean).join(', ') || 'rien';
+      const lose = (a.else || []).map(describeAction).filter(Boolean).join(', ');
+      return `défi : ta question forcée en ${SUBJECTS[a.subject]?.name || a.subject} — si juste : ${win}${lose ? ` ; si raté : ${lose}` : ''}`;
+    }
     case 'placeTrap': {
       const inner = (a.trap?.do || []).map(describeAction).join(', ');
       return `pose un piège${a.trap?.label ? ` « ${a.trap.label} »` : ''}${inner ? ` : ${inner}` : ''}`;
