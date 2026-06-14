@@ -163,6 +163,9 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <option value="same">Même thème</option>
           <option value="choose">Thème au choix</option>
           {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+          <optgroup label="Thèmes spéciaux">
+            {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+          </optgroup>
         </select>
       )}
 
@@ -331,6 +334,9 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
             <option value="same">Même thème (autre question)</option>
             <option value="choose">Thème au choix</option>
             {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+            <optgroup label="Thèmes spéciaux">
+              {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+            </optgroup>
           </select>
         </div>
       )}
