@@ -28,6 +28,12 @@ const BORDER_PROPS = [
 ];
 const BUNTING = ['fanion-jaune', 'fanion-rouge'];
 
+// Arbres / bosquets posés sur l'HERBE (intérieur de l'île) pour densifier le
+// décor et combler les vides. Distincts des palmiers de bordure (sur le sable).
+const FOREST_PROPS = ['arbre-01', 'arbre-02', 'arbre-03', 'arbre-04', 'arbre-05', 'arbre-06', 'arbre-07', 'arbre-08', 'arbre-09', 'arbre-10', 'arbre-11', 'arbre-12'];
+const TREE_W = 128;       // taille de rendu d'un arbre (boîte carrée, ratio préservé)
+const TREE_CLEAR = 112;   // espacement min autour d'un arbre
+
 export const SUBJECT_PROPS = {
   francais: [
     'prop-francais-livres', 'prop-francais-livre-ouvert', 'prop-francais-plume', 'prop-francais-parchemin', 'prop-francais-pupitre', 'prop-francais-lettres',
@@ -216,6 +222,29 @@ export function generateDecor(board) {
       if (isValid(x, y, w)) {
         placed.push({ img, x: Math.round(x), y: Math.round(y), w });
         break;
+      }
+    }
+  }
+
+  // 5) Forêt : arbres/bosquets parsemés sur l'herbe pour densifier l'île.
+  //    Posés après tout le reste → ils comblent les vides restants.
+  const treeValid = (x, y, w) =>
+    onGrass(x, y) && farFromTiles(x, y, w) &&
+    farFromPaths(x, y, EDGE_CLEAR) &&
+    placed.every((d) => Math.hypot(d.x - x, d.y - y) >= (d.tree ? TREE_CLEAR : PROP_CLEAR));
+  for (const n of nodes) {
+    for (let t = 0; t < 2; t++) { // jusqu'à 2 arbres tentés par case
+      if (Math.random() < 0.45) continue;
+      const img = pick(FOREST_PROPS);
+      for (let i = 0; i < 18; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = tileR(n) + 46 + Math.random() * 130;
+        const x = n.x + Math.cos(angle) * dist;
+        const y = n.y + Math.sin(angle) * dist;
+        if (treeValid(x, y, TREE_W)) {
+          placed.push({ img, x: Math.round(x), y: Math.round(y), w: TREE_W, tree: true });
+          break;
+        }
       }
     }
   }
