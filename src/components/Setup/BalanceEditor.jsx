@@ -145,8 +145,8 @@ export default function BalanceEditor({ onClose }) {
   const chooseRow = (r) => { if (confirmIfDirty('Modifications non enregistrées — changer d’objet et les perdre ?')) loadDraft(rowToDraft(r)); };
   const chooseNew = () => { if (confirmIfDirty('Modifications non enregistrées — créer un objet et les perdre ?')) loadDraft(newDraft(rows?.length || 0)); };
   const handleClose = () => {
-    const unsaved = (tab === 'items' && dirty) || (tab !== 'items' && ovDirty);
-    if (!unsaved || window.confirm('Modifications non enregistrées — fermer et les perdre ?')) onClose();
+    // Prévient quel que soit l'onglet : un brouillon d'objet OU des overrides non sauvés.
+    if (!(dirty || ovDirty) || window.confirm('Modifications non enregistrées — fermer et les perdre ?')) onClose();
   };
 
   // --- Pouvoirs ---
