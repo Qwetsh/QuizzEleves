@@ -30,13 +30,21 @@ const subjectLabel = (s) => (s === 'choose' ? 'thème au choix' : !s || s === 's
 // Une action atomique (do[]) en clair.
 export function describeAction(a) {
   if (!a) return '';
+  const self = !a.target || a.target === 'self';
   const who = TARGET_LABEL[a.target] || a.target || 'soi';
   switch (a.action) {
-    case 'move':
-      return `${a.dir === 'back' ? 'recule' : 'avance'} ${who} de ${amountLabel(a.n)} case${a.n === 1 ? '' : 's'}`;
+    case 'move': {
+      const cases = `${amountLabel(a.n)} case${a.n === 1 ? '' : 's'}`;
+      // Point de vue du porteur quand c'est « soi » : « avance de 2 cases ».
+      if (self) return `${a.dir === 'back' ? 'recule' : 'avance'} de ${cases}`;
+      return `fait ${a.dir === 'back' ? 'reculer' : 'avancer'} ${who} de ${cases}`;
+    }
     case 'money': {
-      const verb = a.mode === 'steal' ? 'vole' : a.mode === 'lose' ? 'retire' : 'donne';
-      return `${verb} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or ${a.mode === 'gain' ? 'à' : 'à'} ${who}`;
+      const amt = `${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''}`;
+      const unit = a.unit === 'percent' ? " d'or" : ` pièce${a.n === 1 ? '' : 's'}`;
+      if (a.mode === 'steal') return `vole ${amt}${unit} à ${who}`;
+      if (a.mode === 'lose') return self ? `perds ${amt}${unit}` : `retire ${amt}${unit} à ${who}`;
+      return self ? `gagne ${amt}${unit}` : `donne ${amt}${unit} à ${who}`;
     }
     case 'rerollQuestion': return `change la question (${subjectLabel(a.subject)})`;
     case 'forceSubject': return `force ${who} à une question ${SUBJECTS[a.subject]?.name || a.subject}`;
