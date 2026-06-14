@@ -461,8 +461,9 @@ export default function BalanceEditor({ onClose }) {
                 </div>
 
                 <div className="qed-field" style={{ marginTop: 8 }}>
-                  <label className="qed-label">Description (texte affiché)</label>
-                  <textarea className="qed-textarea" value={draft.desc} onChange={(ev) => set({ desc: ev.target.value })} />
+                  <label className="qed-label">Description simple (vue par les élèves)</label>
+                  <textarea className="qed-textarea" value={draft.desc} onChange={(ev) => set({ desc: ev.target.value })}
+                    placeholder="Effet en clair, sans chiffres (le détail exact est sous le bouton « Détail de l'effet »)." />
                 </div>
 
                 <div className="qed-field">
@@ -514,7 +515,7 @@ export default function BalanceEditor({ onClose }) {
                   {/* Aperçu en clair : ce que liront les joueurs (au tap) en jeu */}
                   {describeItemEffects(draft).length > 0 && (
                     <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(91,140,58,0.08)', border: '1px solid rgba(91,140,58,0.25)' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>👁️ Aperçu joueur</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>👁️ Détail de l'effet (bouton « Détail » en jeu)</div>
                       <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.5 }}>
                         {describeItemEffects(draft).map((l, i) => <li key={i}>{l}</li>)}
                       </ul>
