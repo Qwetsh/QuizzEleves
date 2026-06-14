@@ -844,6 +844,9 @@ export const useGameStore = create((set, get) => ({
     set({ teams: newTeams });
   },
 
+  // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---
+  devGiveItem: (key) => { if (get().teams.length) itemH.grantItem(set, get, get().currentTeam, key); },
+
   // --- Dev : simulateur de combat (localhost uniquement, voir Setup) ---
   devStartFight: (subject, forceDefault = false) => {
     const { setupTeams, boardParams, level, useBrevet } = get();

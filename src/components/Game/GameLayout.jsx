@@ -6,6 +6,7 @@ import PowerButtons from './Sidebar/PowerButtons';
 import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
 import MobileSessionPanel from './MobileSessionPanel';
+import DevItemGiver from './DevItemGiver';
 import QuestionModal from '../Modals/QuestionModal';
 import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
@@ -175,6 +176,7 @@ export default function GameLayout() {
                 {"\u{1F6E0}️"} +10 <span className="coin" />
               </button>
             )}
+            {import.meta.env.DEV && <DevItemGiver />}
           </div>
         )}
       </div>
