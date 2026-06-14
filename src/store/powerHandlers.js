@@ -4,7 +4,7 @@ import { consumePowerCharge } from '../logic/turnHelpers.js';
 import { reducedRecul } from '../logic/itemEffects.js';
 import { saveGame } from './persistence.js';
 import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
-import { resumeQueue as resumeEngineQueue } from './effectEngine.js';
+import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
 
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
@@ -141,9 +141,10 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   // Consommable Bombe fumigene : la cible annule le pouvoir offensif
   // (la charge de l'attaquant est quand meme consommee — le coup est esquive)
   if (target.itemFumigene) {
-    newTeams[targetTeamIndex] = { ...target, itemFumigene: false };
+    newTeams[targetTeamIndex] = { ...target, itemFumigene: false, itemFumigeneTurns: undefined };
     addLog(`\u{1F4A8} La bombe fumigène de ${target.emoji} ${target.name} annule ${POWERS[powerKey].name} !`);
     set({ teams: newTeams, showTargetPicker: null });
+    announce(set, get, '💨', `${target.emoji} Contré par le fumigène !`, '#7a8a99');
     return;
   }
 

@@ -357,9 +357,14 @@ function stepHead(set, get, action, ctx) {
       return 'done';
     }
     case 'fumigene': {
-      patchSource(set, get, () => ({ itemFumigene: true }));
-      get().addLog(`💨 Le prochain pouvoir offensif subi sera annulé.`);
-      announce(set, get, '💨', 'Fumigène armé', '#7a8a99');
+      // `turns` optionnel : le fumigène expire après X tours (fixe/dé/échelle).
+      // Absent ⇒ comportement historique (jusqu'à utilisation).
+      const ft = action.turns != null ? resolveAmount(action.turns, srcTeam) : 0;
+      patchSource(set, get, () => ({ itemFumigene: true, ...(ft > 0 ? { itemFumigeneTurns: ft } : {}) }));
+      get().addLog(ft > 0
+        ? `💨 Fumigène actif pendant ${ft} tour${ft > 1 ? 's' : ''}.`
+        : `💨 Le prochain pouvoir offensif subi sera annulé.`);
+      announce(set, get, '💨', `Fumigène armé${ft > 0 ? ` (${ft}T)` : ''}`, '#7a8a99');
       return 'done';
     }
     case 'gainCharge': {
@@ -424,9 +429,10 @@ function consumeFumigene(set, get, targetIdx, action) {
   const t = get().teams[targetIdx];
   if (!t?.itemFumigene) return false;
   const nt = [...get().teams];
-  nt[targetIdx] = { ...t, itemFumigene: false };
+  nt[targetIdx] = { ...t, itemFumigene: false, itemFumigeneTurns: undefined };
   set({ teams: nt });
   get().addLog(`💨 ${t.emoji} ${t.name} esquive l'effet (bombe fumigène) !`);
+  announce(set, get, '💨', `${t.emoji} Contré par le fumigène !`, '#7a8a99');
   return true;
 }
 

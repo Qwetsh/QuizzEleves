@@ -48,7 +48,7 @@ export function describeAction(a) {
     case 'placeTrap': return `poser un piège (${a.trap?.do?.length || 0} effet·s)`;
     case 'gainCharge': return 'recharger un pouvoir';
     case 'shieldNext': return 'bouclier (annule 1 recul)';
-    case 'fumigene': return 'fumigène';
+    case 'fumigene': return `fumigène${a.turns ? ` (${amountLabel(a.turns)} tours)` : ''}`;
     case 'extraTime': return `+${amountLabel(a.n)}s à la prochaine question`;
     default: return a.action;
   }
@@ -166,6 +166,14 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
 
       {(a.action === 'shieldNext' || a.action === 'extraTime') && (
         <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
+      )}
+
+      {a.action === 'fumigene' && (
+        <>
+          <span className="bal-fx-unit">durée</span>
+          <AmountInput value={a.turns ?? 0} onChange={(v) => upd({ turns: v })} min={0} />
+          <span className="bal-fx-unit">tours (0 = jusqu'à utilisation)</span>
+        </>
       )}
 
       {a.action === 'placeTrap' && (

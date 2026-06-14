@@ -898,10 +898,21 @@ export const useGameStore = create((set, get) => ({
       set({ shopStockTurns: turnsLeft });
     }
 
-    set({
-      currentTeam: (currentTeam + 1) % teams.length,
-      ...TURN_RESET,
-    });
+    const newCurrent = (currentTeam + 1) % teams.length;
+    // Buffs à durée (tours) : on décrémente quand l'équipe REGAGNE la main ;
+    // expiration à 0. (Fumigène posé avec une durée X ; autres buffs à venir.)
+    let nt = get().teams;
+    const ct = nt[newCurrent];
+    if (ct?.itemFumigeneTurns > 0) {
+      const left = ct.itemFumigeneTurns - 1;
+      nt = [...nt];
+      nt[newCurrent] = left > 0
+        ? { ...ct, itemFumigeneTurns: left }
+        : { ...ct, itemFumigene: false, itemFumigeneTurns: undefined };
+      if (left <= 0) addLog(`💨 Le fumigène de ${ct.emoji} ${ct.name} s'est dissipé.`);
+    }
+
+    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET });
     if (get().phase === 'game') saveGame(get());
   },
 

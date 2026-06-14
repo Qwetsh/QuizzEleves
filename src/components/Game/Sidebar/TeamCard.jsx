@@ -40,6 +40,16 @@ export default function TeamCard({ team, index }) {
           ))}
           {(team.sablierActif || (team.doubleActive && team.doubleTimerDivisor)) && <span title="Timer /2">{"\u23F1\uFE0F"}</span>}
           {team.doubleActive && <span title="Double question">{"\u2753"}</span>}
+          {team.itemShield > 0 && (
+            <span title={`Bouclier : annule ${team.itemShield} recul${team.itemShield > 1 ? 's' : ''}`}>
+              {"\u{1F6E1}\uFE0F"}{team.itemShield > 1 ? team.itemShield : ''}
+            </span>
+          )}
+          {team.itemFumigene && (
+            <span title={`Fumig\u00E8ne : prochain pouvoir offensif annul\u00E9${team.itemFumigeneTurns ? ` (${team.itemFumigeneTurns} tour${team.itemFumigeneTurns > 1 ? 's' : ''})` : ''}`}>
+              {"\u{1F4A8}"}{team.itemFumigeneTurns ? team.itemFumigeneTurns : ''}
+            </span>
+          )}
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', fontSize: 12, fontWeight: 600 }}>

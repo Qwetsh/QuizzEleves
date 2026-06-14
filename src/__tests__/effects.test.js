@@ -216,6 +216,18 @@ describe('actions : one-shots & recharge', () => {
     expect(S().pendingActions).toBeNull();
   });
 
+  it('fumigène à durée (turns) expire après X tours', () => {
+    exec([{ action: 'fumigene', turns: 2 }], { source: 'item' });
+    expect(team(0).itemFumigene).toBe(true);
+    expect(team(0).itemFumigeneTurns).toBe(2);
+    S().nextTurn(); // 0 → 1
+    S().nextTurn(); // 1 → 0 : l'équipe 0 regagne la main → 2 → 1
+    expect(team(0).itemFumigeneTurns).toBe(1);
+    expect(team(0).itemFumigene).toBe(true);
+    S().nextTurn(); S().nextTurn(); // retour à 0 : 1 → 0 → dissipé
+    expect(team(0).itemFumigene).toBe(false);
+  });
+
   it('fumigène annule une action offensive (steal target)', () => {
     freshGame([{}, { itemFumigene: true }]);
     exec([{ action: 'money', mode: 'steal', target: 'target', n: 20, unit: 'flat' }], { source: 'item' });
