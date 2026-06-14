@@ -317,6 +317,25 @@ describe('séries & déclencheurs de réponse', () => {
 describe('loot de bonne réponse', () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it('lootBonusEquipment 100% garantit le loot même en répondant lentement', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      casqueExplo: {
+        name: "Casque d'explorateur", icon: '🪖', slot: 'head', rarity: 'commun', price: 0,
+        effects: [{ type: 'lootBonusEquipment', value: 100 }],
+      },
+    });
+    freshGame([{ equipment: { head: 'casqueExplo', body: null, feet: null }, bag: [] }, {}]);
+    // random élevé ⇒ le taux de BASE (× petit timeRatio) échouerait ; seul le
+    // bonus flat de 100% garantit le drop.
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 1); // réponse lente ⇒ timeRatio ≈ 0.03
+    expect(S().lootReveal).toBeTruthy();
+    setItemsData(snapshot);
+  });
+
   it('consommable ET équipement peuvent tomber au même tour (canaux indépendants)', () => {
     freshGame([{ equipment: { head: null, body: null, feet: null }, bag: [] }, {}]);
     // random = 0 ⇒ les deux tirages passent (0 < 0.12 et 0 < 0.10), et pickLootItem

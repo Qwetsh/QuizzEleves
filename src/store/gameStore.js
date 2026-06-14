@@ -616,17 +616,19 @@ export const useGameStore = create((set, get) => ({
     // ET l'équipement peuvent tomber au même tour (l'un ne bloque pas l'autre).
     const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
     const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
-    // Bonus de taux de loot (équipement) : % ajoutés au taux de base, par canal.
-    // La valeur peut être à l'échelle (ex. +5%/série) → résolue sur l'équipe À JOUR.
+    // Taux par canal = taux de BASE (× temps restant, récompense la rapidité)
+    // + BONUS d'objet FLAT (non diminué par le temps). Ainsi un « +100% » garantit
+    // le loot quel que soit le temps restant. Bonus résolu sur l'équipe À JOUR
+    // (la valeur peut être à l'échelle, ex. +5%/série).
     const lootTeam = get().teams[currentTeam];
-    const consumRate = (LOOT.answerConsumableRate || 0) + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
-    const equipRate = LOOT.answerLootRate + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
+    const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
+    const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
     const drops = [];
-    if (Math.random() < consumRate * timeRatio) {
+    if (Math.random() < consumRate) {
       const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
       if (k) drops.push(k);
     }
-    if (Math.random() < equipRate * timeRatio) {
+    if (Math.random() < equipRate) {
       const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
       if (k) drops.push(k);
     }
