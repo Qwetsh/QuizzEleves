@@ -96,15 +96,15 @@ const MINIGAMES = {
   geographie: {
     Component: GeoDuel,
     name: 'Tour du monde',
-    rules: 'Une photo mystère : plantez votre drapeau sur la carte, puis validez. Moins de 100 km = 5 000 points, puis dégressif. Premier à 10 000 points !',
+    rules: 'En alternance : une photo mystère, puis une capitale à placer. Plantez votre drapeau sur la carte, puis validez. Moins de 100 km = 5 000 points, puis dégressif. Premier à 10 000 points !',
     persistent: true,
     pointsBased: true,
     winLabel: 'Premier à 10 000 points',
     howto: {
       demo: 'geo',
-      goal: 'Devinez où la photo a été prise',
+      goal: 'Placez le lieu (photo) ou la capitale demandée',
       steps: [
-        'Observez la photo mystère',
+        'Une manche sur deux : photo mystère ; sinon, une capitale à placer',
         'Plantez votre drapeau sur la carte, puis validez',
         'Moins de 100 km = 5 000 points (puis dégressif)',
         'Premier à 10 000 points !',

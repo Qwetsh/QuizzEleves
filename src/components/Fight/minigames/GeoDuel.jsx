@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import PlacementDuel from './PlacementDuel.jsx';
-import { GEO_PLACES, lonLatToXY, haversineKm } from './placementData.jsx';
+import { GEO_PLACES, GEO_CAPITALS, lonLatToXY, haversineKm } from './placementData.jsx';
 import { shuffle } from '../../../data/fightData';
 import worldMap from '../../../assets/world-equirect.jpg';
 
@@ -80,11 +80,16 @@ export default function GeoDuel({ attacker, defender, onRoundWin }) {
   const [scores, setScores] = useState({ attacker: 0, defender: 0 });
   const [geoRound, setGeoRound] = useState(1);
 
+  // Alterne : manche impaire = PHOTO d'un lieu, manche paire = NOM d'une capitale
+  // à placer (pas de photo → PlacementDuel affiche « Place : <capitale> »).
   const pickTarget = (usedIds) => {
-    const remaining = GEO_PLACES.filter((p) => !usedIds.includes(p.name));
-    const pool = remaining.length ? remaining : GEO_PLACES;
+    const isCapital = geoRound % 2 === 0;
+    const source = isCapital ? GEO_CAPITALS : GEO_PLACES;
+    const remaining = source.filter((p) => !usedIds.includes(p.name));
+    const pool = remaining.length ? remaining : source;
     const place = shuffle(pool)[0];
     const { x, y } = lonLatToXY(place.lon, place.lat);
+    if (isCapital) return { id: place.name, label: place.name, x, y };
     return { id: place.name, label: place.name, x, y, photo: photoUrl(place.photo), showName: place.showName };
   };
 
