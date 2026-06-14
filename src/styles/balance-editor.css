@@ -200,3 +200,122 @@
 .bal-thumb:hover { border-color: rgba(199, 145, 32, 0.5); }
 .bal-thumb.is-sel { border-color: var(--gold-500, #c79120); }
 .bal-upload { font-size: 22px; background: rgba(109, 199, 125, 0.18); }
+
+/* ─────────────────────────────────────────────────────────────
+   Refonte UX (Phase 1) : recherche/filtres, maître-détail en
+   sous-onglets, aperçu + actions collés, garde-fou « non sauvé ».
+   ───────────────────────────────────────────────────────────── */
+
+/* Outils de liste : recherche + puces de filtre, collés en haut de la liste */
+.bal-listtools {
+  position: sticky;
+  top: -8px;
+  z-index: 2;
+  margin: -8px -8px 6px;
+  padding: 10px 8px 8px;
+  background: var(--parch-100, #f6efdd);
+  border-bottom: 1px solid rgba(122, 94, 58, 0.18);
+}
+.bal-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.bal-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(122, 94, 58, 0.28);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-700, #5a4424);
+  cursor: pointer;
+}
+.bal-chip.is-active {
+  background: var(--gold-500, #c79120);
+  border-color: var(--gold-600, #a8771a);
+  color: #fff;
+}
+
+/* Pastille « modifications non enregistrées » */
+.bal-dirty-dot {
+  flex-shrink: 0;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #c9472f;
+  box-shadow: 0 0 0 3px rgba(201, 71, 47, 0.18);
+}
+
+/* Détail = colonne : haut (aperçu+onglets) fixe · centre défilant · pied fixe */
+.bal-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bal-detail-top {
+  flex: 0 0 auto;
+  padding: 12px 18px 0;
+  border-bottom: 1px solid rgba(122, 94, 58, 0.16);
+  background: var(--parch-100, #f6efdd);
+}
+.bal-detail-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px 18px; }
+.bal-detail-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-top: 1.5px solid rgba(122, 94, 58, 0.22);
+  background: rgba(255, 250, 240, 0.96);
+  box-shadow: 0 -6px 14px rgba(0, 0, 0, 0.06);
+}
+
+/* Carte d'aperçu compacte (en-tête détail) : horizontale */
+.bal-card--mini {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+/* Sous-onglets de la fiche (Infos / Effets / Textes) */
+.bal-subtabs { display: flex; gap: 4px; }
+.bal-subtab {
+  padding: 8px 16px;
+  border: 1.5px solid transparent;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  color: var(--ink-500, #8a7858);
+  cursor: pointer;
+}
+.bal-subtab:hover { color: var(--ink-800, #4a3a1e); }
+.bal-subtab.is-active {
+  background: #fff;
+  border-color: rgba(122, 94, 58, 0.22);
+  color: var(--ink-900, #3a2c14);
+  font-weight: 700;
+}
+
+.bal-empty-fx {
+  padding: 18px;
+  text-align: center;
+  color: var(--ink-500, #8a7858);
+  font-size: 13.5px;
+  border: 1.5px dashed rgba(122, 94, 58, 0.3);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+/* Cibles tactiles (TBI) : champs et steppers plus hauts dans l'éditeur */
+.qed-overlay .qed-select,
+.qed-overlay .qed-input { min-height: 38px; }
+.qed-overlay .bal-stepper button { width: 38px; min-height: 36px; }
+.qed-overlay .bal-stepper .bal-val { min-width: 46px; }
+/* …sauf les micro-champs du constructeur d'effets (compacité voulue) */
+.bal-fx-action .qed-select,
+.bal-fx-action .qed-input,
+.bal-fx-chance .qed-input { min-height: 0; }

@@ -1,6 +1,7 @@
 // Éditeur d'équilibrage in-game (outil DEV). Onglet Objets : CRUD complet sur
-// la table Supabase quete_items (création, modification, suppression, image),
-// en « carte vivante » (aperçu temps réel). Onglets Pouvoirs/Loot : à venir.
+// la table Supabase quete_items, en maître-détail avec recherche/filtres, fiche
+// en sous-onglets (Infos / Effets / Textes), aperçu « carte vivante » sticky et
+// garde-fou anti-perte de modifications. Onglets Pouvoirs/Loot : overrides.
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { RARITIES, SLOTS } from '../../data/items';
@@ -26,27 +27,22 @@ const TABS = [
 const EFFECT_LABELS = {
   timerBonus: 'Timer (+s)', indiceBoost: 'Indice (+rép. éliminées)', moneyPerCorrect: 'Pièces / bonne réponse',
   taxReduction: 'Impôts/taxes (−%)', stealProtection: 'Anti-vol (−%)', reculReduction: 'Recul subi (−cases)',
-  tempeteImmune: 'Immunité Tempête (0/1)', oubliProtect: "Anti Trou de l'oubli (0/1)", fightStealBonus: 'Vol de duel (+pièces)',
+  tempeteImmune: 'Immunité Tempête', oubliProtect: "Anti Trou de l'oubli", fightStealBonus: 'Vol de duel (+pièces)',
   lootBonusConsumable: 'Chance loot consommable (+%)', lootBonusEquipment: 'Chance loot équipement (+%)',
   gainMoney: 'Gagne des pièces', gainMoneyAll: 'Pièces à toutes les équipes', moveForward: 'Avance (cases)',
-  extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule prochain recul (0/1)',
-  gainCharge: 'Recharge un pouvoir (0/1)', fumigene: 'Annule pouvoir offensif (0/1)',
+  extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule le prochain recul',
+  gainCharge: 'Recharge un pouvoir', fumigene: 'Annule un pouvoir offensif',
 };
 const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
-// Effets simples dont la quantité peut être ALÉATOIRE (dé) : résolus par
-// resolveAmount au moment de l'usage. Pour l'équipement passif, le dé est
-// relancé à chaque consommation (ex. timer 1D4 = +1D4 s à chaque question).
-// Exclus : les effets binaires d'immunité (0/1) et les déclencheurs (0/1).
+// Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([
-  // consommables
   'gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext',
-  // équipement passif (numérique)
   'timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'fightStealBonus',
   'lootBonusConsumable', 'lootBonusEquipment',
 ]);
-// Faces de dé proposées par type d'effet. Réponses éliminées : seulement d2/d3
-// (3 mauvaises réponses max → d3 peut toutes les retirer).
+// Effets binaires (immunités / déclencheurs simples) : pas de quantité.
+const BINARY_EFFECTS = new Set(['tempeteImmune', 'oubliProtect', 'gainCharge', 'fumigene']);
 const diceFor = (type) => (type === 'indiceBoost' ? ['d2', 'd3'] : DEFAULT_DICE);
 const isDynamicVal = (v) => typeof v === 'string' || (v != null && typeof v === 'object');
 
@@ -56,13 +52,13 @@ const GROUPS = [
   { slot: 'feet', label: '\u{1F4FF} Amulettes' },
   { slot: 'consumable', label: '\u{1F9F3} Consommables' },
 ];
+// Filtres de la liste (puces) — « Tout » + un par slot.
+const SLOT_FILTERS = [{ slot: 'all', label: 'Tout' }, ...GROUPS.map((g) => ({ slot: g.slot, label: g.label }))];
 
-// Libellés des champs numériques des effets de pouvoir
 const FX_LABELS = {
   amount: 'Valeur', count: 'Nombre', bonusTime: 'Bonus temps (s)', bonusMoney: 'Bonus pièces',
   divisor: 'Diviseur du timer', timerDivisor: 'Diviseur timer (rafale)',
 };
-// Réglages de loot (LOOT) : pct = valeur 0-1 affichée en %
 const LOOT_FIELDS = [
   { k: 'chestLegendaryChance', label: 'Chance légendaire — coffre', pct: true },
   { k: 'fightLegendaryChance', label: 'Chance légendaire — duel', pct: true },
@@ -99,7 +95,6 @@ const slugify = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(' ')
   .map((w, i) => (i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join('');
 
-// Génère une clé identifiant UNIQUE à partir du nom (suffixe numérique si collision).
 const uniqueKey = (name, rows) => {
   const base = slugify(name) || 'objet';
   const taken = new Set((rows || []).map((r) => r.key));
@@ -109,29 +104,51 @@ const uniqueKey = (name, rows) => {
   return `${base}${n}`;
 };
 
+const clone = (v) => JSON.parse(JSON.stringify(v));
+
+const ITEM_SUBTABS = [
+  { key: 'infos', label: '\u{1F4CB} Infos' },
+  { key: 'effets', label: '✨ Effets' },
+  { key: 'textes', label: '\u{1F4DD} Textes' },
+];
+
 export default function BalanceEditor({ onClose }) {
   const syncEnabled = useGameStore((s) => s.syncEnabledItems);
   const [tab, setTab] = useState('items');
   const [rows, setRows] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [baseline, setBaseline] = useState(null); // copie de référence → détection « non sauvé »
+  const [subtab, setSubtab] = useState('infos');
+  const [search, setSearch] = useState('');
+  const [slotFilter, setSlotFilter] = useState('all');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [picker, setPicker] = useState(false);
   const fileRef = useRef(null);
-  // Overrides d'équilibrage (pouvoirs + loot), pilotés par balanceConfig
   const [ov, setOv] = useState(() => readCache());
   const [selPower, setSelPower] = useState('bouclier');
 
-  // --- Pouvoirs : valeurs effectives (override ?? défaut) et setters ---
+  // Modifications non enregistrées de l'objet courant ?
+  const dirty = !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline);
+
+  // Charge un brouillon comme référence « propre » (réinitialise le garde-fou).
+  const loadDraft = (d, { keepSubtab = false } = {}) => {
+    setStatus(null);
+    setDraft(d);
+    setBaseline(d ? clone(d) : null);
+    if (!keepSubtab) setSubtab('infos');
+  };
+  const confirmIfDirty = (msg) => !dirty || window.confirm(msg);
+  const chooseRow = (r) => { if (confirmIfDirty('Modifications non enregistrées — changer d’objet et les perdre ?')) loadDraft(rowToDraft(r)); };
+  const chooseNew = () => { if (confirmIfDirty('Modifications non enregistrées — créer un objet et les perdre ?')) loadDraft(newDraft(rows?.length || 0)); };
+  const handleClose = () => { if (confirmIfDirty('Modifications non enregistrées — fermer et les perdre ?')) onClose(); };
+
+  // --- Pouvoirs ---
   const pVal = (key, field) => ov.powers?.[key]?.[field] ?? DEFAULTS.powers[key][field];
   const lvFx = (key, i, fxKey) => ov.powers?.[key]?.levels?.[i]?.[fxKey] ?? DEFAULTS.powers[key].levels[i].effect[fxKey];
   const setPowerField = (key, field, value) => {
     setStatus(null);
-    setOv((prev) => {
-      const powers = { ...(prev.powers || {}) };
-      powers[key] = { ...(powers[key] || {}), [field]: value };
-      return { ...prev, powers };
-    });
+    setOv((prev) => { const powers = { ...(prev.powers || {}) }; powers[key] = { ...(powers[key] || {}), [field]: value }; return { ...prev, powers }; });
   };
   const setLevelFx = (key, i, fxKey, value) => {
     setStatus(null);
@@ -140,15 +157,11 @@ export default function BalanceEditor({ onClose }) {
       const cur = { ...(powers[key] || {}) };
       const levels = cur.levels ? cur.levels.map((l) => ({ ...l })) : [{}, {}, {}];
       levels[i] = { ...levels[i], [fxKey]: value };
-      cur.levels = levels;
-      powers[key] = cur;
+      cur.levels = levels; powers[key] = cur;
       return { ...prev, powers };
     });
   };
-  const resetPower = (key) => {
-    setStatus(null);
-    setOv((prev) => { const powers = { ...(prev.powers || {}) }; delete powers[key]; return { ...prev, powers }; });
-  };
+  const resetPower = (key) => { setStatus(null); setOv((prev) => { const powers = { ...(prev.powers || {}) }; delete powers[key]; return { ...prev, powers }; }); };
 
   // --- Loot ---
   const lootVal = (k) => ov.loot?.[k] ?? DEFAULTS.loot[k];
@@ -168,15 +181,13 @@ export default function BalanceEditor({ onClose }) {
     try {
       const r = await fetchItemRows();
       setRows(r);
-      setDraft((d) => d || (r[0] ? rowToDraft(r[0]) : null));
+      if (!draft && r[0]) loadDraft(rowToDraft(r[0]));
     } catch (e) { setStatus('Erreur : ' + (e.message || 'Supabase injoignable')); setRows([]); }
   }
 
   const set = (patch) => { setStatus(null); setDraft((d) => ({ ...d, ...patch })); };
   const effectPool = draft?.slot === 'consumable' ? CONSUM_EFFECTS : EQUIP_EFFECTS;
 
-  // Effet simple (legacy {type,value}) : fusion. Déclencheur composable : remplacement complet
-  // (changer de type de déclencheur ne doit pas laisser de champs résiduels).
   const updateEffect = (i, patch) => set({
     effects: draft.effects.map((fx, j) => {
       if (j !== i) return fx;
@@ -187,16 +198,11 @@ export default function BalanceEditor({ onClose }) {
   const addEffect = () => set({ effects: [...draft.effects, { type: effectPool[0], value: 1 }] });
   const addTrigger = () => set({ effects: [...draft.effects, defaultTrigger(draft.slot)] });
 
-  function validate(d) {
-    if (!d) return false;
-    if (!d.name.trim()) return false; // la clé est générée automatiquement à la sauvegarde
-    return true;
-  }
+  function validate(d) { return !!(d && d.name.trim()); }
 
   async function handleSave() {
     if (busy || !validate(draft)) return;
     setBusy(true); setStatus(null);
-    // Clé identifiant générée automatiquement (unique) pour un nouvel objet.
     const toSave = { ...draft, key: draft._isNew ? uniqueKey(draft.name, rows) : draft.key };
     try {
       const saved = await saveItemRow(toSave, { isNew: draft._isNew });
@@ -205,7 +211,7 @@ export default function BalanceEditor({ onClose }) {
         const i = rs.findIndex((r) => r.key === saved.key);
         return i >= 0 ? rs.map((r) => (r.key === saved.key ? saved : r)) : [...rs, saved];
       });
-      setDraft(rowToDraft(saved));
+      loadDraft(rowToDraft(saved), { keepSubtab: true });
       setStatus('Enregistré ✓');
     } catch (e) { setStatus('Erreur : ' + e.message); }
     setBusy(false);
@@ -219,7 +225,7 @@ export default function BalanceEditor({ onClose }) {
       await deleteItemRow(draft.key);
       await refreshItems(); syncEnabled();
       setRows((rs) => rs.filter((r) => r.key !== draft.key));
-      setDraft(null);
+      loadDraft(null);
       setStatus('Supprimé');
     } catch (e) { setStatus('Erreur : ' + e.message); }
     setBusy(false);
@@ -228,11 +234,8 @@ export default function BalanceEditor({ onClose }) {
   async function handleUpload(file) {
     if (!file || busy) return;
     setBusy(true); setStatus(null);
-    try {
-      const url = await uploadItemImage(file, draft.key || slugify(draft.name));
-      set({ img: url }); setPicker(false);
-    } catch (e) { setStatus('Upload échec : ' + e.message); }
-    // Réinitialise l'input pour autoriser la re-sélection du même fichier
+    try { const url = await uploadItemImage(file, draft.key || slugify(draft.name)); set({ img: url }); setPicker(false); }
+    catch (e) { setStatus('Upload échec : ' + e.message); }
     if (fileRef.current) fileRef.current.value = '';
     setBusy(false);
   }
@@ -244,8 +247,14 @@ export default function BalanceEditor({ onClose }) {
   const rar = draft ? (RARITIES[draft.rarity] || { color: '#888', name: '' }) : null;
   const slotLabel = draft && (draft.slot === 'consumable' ? 'Consommable' : SLOTS[draft.slot]?.name);
 
+  // Liste filtrée (recherche + slot)
+  const q = search.trim().toLowerCase();
+  const matches = (r) => (slotFilter === 'all' || r.slot === slotFilter) && (!q || r.name.toLowerCase().includes(q));
+
+  const statusColor = status && (status.startsWith('Erreur') || status.includes('échec')) ? '#b5341f' : '#2f9d5a';
+
   return createPortal(
-    <div className="qed-overlay" onPointerDown={(ev) => { if (ev.target === ev.currentTarget) onClose(); }}>
+    <div className="qed-overlay" onPointerDown={(ev) => { if (ev.target === ev.currentTarget) handleClose(); }}>
       <div className="qed-panel">
         <div className="qed-head">
           <span className="qed-title">{'⚖️'} Éditeur d'équilibrage</span>
@@ -255,7 +264,7 @@ export default function BalanceEditor({ onClose }) {
               : `${Object.keys(ov.loot || {}).length} réglage(s) modifié(s)`}
             {status && <span style={{ marginLeft: 6, color: status.startsWith('Erreur') || status.includes('échec') ? '#ffd9d0' : '#d6ffe0' }}>· {status}</span>}
           </span>
-          <button className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }} onClick={onClose}>{'✕'} Fermer</button>
+          <button className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }} onClick={handleClose}>{'✕'} Fermer</button>
         </div>
 
         <div className="qed-toolbar">
@@ -265,8 +274,7 @@ export default function BalanceEditor({ onClose }) {
             ))}
           </div>
           {tab === 'items' && (
-            <button className="btn btn--green btn--sm" style={{ marginLeft: 'auto' }}
-              onClick={() => setDraft(newDraft(rows?.length || 0))}>{'+'} Nouvel objet</button>
+            <button className="btn btn--green btn--sm" style={{ marginLeft: 'auto' }} onClick={chooseNew}>{'+'} Nouvel objet</button>
           )}
         </div>
 
@@ -325,7 +333,7 @@ export default function BalanceEditor({ onClose }) {
                     <div className="qed-actions">
                       <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
                       <button className="btn btn--ghost" onClick={() => resetPower(k)} disabled={!ov.powers?.[k]}>{'↺'} Valeurs d'origine</button>
-                      {status && <span className="qed-err" style={{ color: status.startsWith('Erreur') ? '#b5341f' : '#2f9d5a' }}>{status}</span>}
+                      {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
                     </div>
                   </>
                 );
@@ -356,215 +364,227 @@ export default function BalanceEditor({ onClose }) {
               <div className="qed-actions">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
                 <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, loot: {} }))}>{'↺'} Valeurs d'origine</button>
-                {status && <span className="qed-err" style={{ color: status.startsWith('Erreur') ? '#b5341f' : '#2f9d5a' }}>{status}</span>}
+                {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>
             </div>
           </div>
         ) : (
           <div className="qed-body">
             <div className="qed-list">
+              {/* Recherche + filtres de slot */}
+              <div className="bal-listtools">
+                <input className="qed-search" placeholder="🔎 Rechercher un objet…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <div className="bal-chips">
+                  {SLOT_FILTERS.map((f) => (
+                    <button key={f.slot} className={`bal-chip ${slotFilter === f.slot ? 'is-active' : ''}`} onClick={() => setSlotFilter(f.slot)}>{f.label}</button>
+                  ))}
+                </div>
+              </div>
               {rows == null && <div style={{ padding: 12, color: 'var(--ink-500)' }}>Chargement…</div>}
-              {GROUPS.map((g) => {
-                const list = (rows || []).filter((r) => r.slot === g.slot);
+              {rows != null && GROUPS.map((g) => {
+                if (slotFilter !== 'all' && slotFilter !== g.slot) return null;
+                const list = (rows || []).filter((r) => r.slot === g.slot && matches(r));
                 if (!list.length) return null;
                 return (
                   <div key={g.slot}>
-                    <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{g.label}</div>
-                    {list.map((r) => (
-                      <button key={r.key}
-                        className={`qed-item ${draft && draft.key === r.key && !draft._isNew ? 'is-active' : ''} ${r.enabled === false ? 'is-disabled' : ''}`}
-                        onClick={() => setDraft(rowToDraft(r))}>
-                        <ItemIcon item={{ name: r.name, img: r.img, icon: r.icon, rarity: r.rarity, slot: r.slot }} size={30} ring />
-                        <span style={{ flex: 1 }}>{r.name}</span>
-                      </button>
-                    ))}
+                    <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{g.label} <span className="bal-default">({list.length})</span></div>
+                    {list.map((r) => {
+                      const active = draft && draft.key === r.key && !draft._isNew;
+                      return (
+                        <button key={r.key}
+                          className={`qed-item ${active ? 'is-active' : ''} ${r.enabled === false ? 'is-disabled' : ''}`}
+                          onClick={() => chooseRow(r)}>
+                          <ItemIcon item={{ name: r.name, img: r.img, icon: r.icon, rarity: r.rarity, slot: r.slot }} size={30} ring />
+                          <span style={{ flex: 1 }}>{r.name}</span>
+                          {active && dirty && <span className="bal-dirty-dot" title="Modifications non enregistrées" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 );
               })}
+              {rows != null && !rows.some(matches) && (
+                <div style={{ padding: 12, color: 'var(--ink-500)', fontSize: 13 }}>Aucun objet ne correspond.</div>
+              )}
             </div>
 
             {draft ? (
-              <div className="qed-form">
-                {/* Aperçu carte vivante */}
-                <div className="bal-card">
-                  <ItemIcon item={preview} size={92} radius={20} ring />
-                  <span className="bal-pill" style={{ background: rar.color }}>{rar.name} · {slotLabel}</span>
-                  <div className="bal-card-name">{draft.name || '—'}</div>
-                  <div className="bal-card-desc">{draft.desc}</div>
-                </div>
-
-                <div style={{ height: 14 }} />
-
-                <div className="qed-field">
-                  <label className="qed-label">Nom</label>
-                  <input className="qed-input" value={draft.name} onChange={(ev) => set({ name: ev.target.value })} />
-                </div>
-
-
-                {/* Image */}
-                <div className="bal-row">
-                  <span className="bal-label">Image</span>
-                  <button className="btn btn--ghost btn--sm" onClick={() => setPicker((p) => !p)}>
-                    {draft.img ? 'Changer l’image' : 'Choisir une image'}
-                  </button>
-                  {draft.img && <button className="btn btn--ghost btn--sm" onClick={() => set({ img: '' })}>Retirer</button>}
-                  <span className="bal-default">ou emoji :</span>
-                  <input className="qed-input" style={{ width: 64, textAlign: 'center' }} value={draft.icon}
-                    onChange={(ev) => set({ icon: ev.target.value })} />
-                </div>
-
-                {picker && (
-                  <div className="bal-picker">
-                    {ITEM_ASSET_KEYS.map((k) => (
-                      <button key={k} className={`bal-thumb ${draft.img === k ? 'is-sel' : ''}`}
-                        title={k} onClick={() => { set({ img: k }); setPicker(false); }}>
-                        <img src={assetUrl(k)} alt={k} />
+              <div className="bal-detail">
+                {/* Aperçu carte vivante + sous-onglets (collés en haut) */}
+                <div className="bal-detail-top">
+                  <div className="bal-card bal-card--mini">
+                    <ItemIcon item={preview} size={64} radius={16} ring />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
+                      <span className="bal-pill" style={{ background: rar.color, alignSelf: 'flex-start' }}>{rar.name} · {slotLabel}</span>
+                      <div className="bal-card-name" style={{ fontSize: 17 }}>{draft.name || '—'}</div>
+                      <div className="bal-card-desc" style={{ minHeight: 0, textAlign: 'left' }}>{draft.desc || <em style={{ opacity: 0.5 }}>Pas de description</em>}</div>
+                    </div>
+                  </div>
+                  <div className="bal-subtabs">
+                    {ITEM_SUBTABS.map((s) => (
+                      <button key={s.key} className={`bal-subtab ${subtab === s.key ? 'is-active' : ''}`} onClick={() => setSubtab(s.key)}>
+                        {s.label}{s.key === 'effets' && draft.effects.length ? ` (${draft.effects.length})` : ''}
                       </button>
                     ))}
-                    <button className="bal-thumb bal-upload" onClick={() => fileRef.current?.click()} title="Uploader une image">
-                      {busy ? '…' : '⬆️'}
-                    </button>
-                    <input ref={fileRef} type="file" accept="image/*" hidden
-                      onChange={(ev) => handleUpload(ev.target.files?.[0])} />
                   </div>
-                )}
-
-                <div className="bal-row" style={{ marginTop: 10 }}>
-                  <span className="bal-label">Emplacement</span>
-                  <select className="qed-select" style={{ width: 160 }} value={draft.slot}
-                    onChange={(ev) => set({ slot: ev.target.value, effects: [] })}>
-                    <option value="head">Coiffe</option>
-                    <option value="body">Armure</option>
-                    <option value="feet">Amulette</option>
-                    <option value="consumable">Consommable</option>
-                  </select>
                 </div>
 
-                <div className="bal-row">
-                  <span className="bal-label">Rareté</span>
-                  <select className="qed-select" style={{ width: 160 }} value={draft.rarity}
-                    onChange={(ev) => set({ rarity: ev.target.value })}>
-                    {Object.entries(RARITIES).map(([k, r]) => <option key={k} value={k}>{r.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="bal-row">
-                  <span className="bal-label">Prix</span>
-                  <Stepper value={draft.price} onChange={(v) => set({ price: v })} max={999} />
-                </div>
-
-                <div className="bal-row">
-                  <span className="bal-label">Loot only</span>
-                  <label className="bal-toggle">
-                    <input type="checkbox" checked={!!draft.lootOnly} onChange={(ev) => set({ lootOnly: ev.target.checked })} />
-                    introuvable en boutique (reste en loot : coffres, duels…)
-                  </label>
-                </div>
-
-                <div className="qed-field" style={{ marginTop: 8 }}>
-                  <label className="qed-label">Description simple (vue par les élèves)</label>
-                  <textarea className="qed-textarea" value={draft.desc} onChange={(ev) => set({ desc: ev.target.value })}
-                    placeholder="Effet en clair, sans chiffres (le détail exact est sous le bouton « Détail de l'effet »)." />
-                </div>
-
-                <div className="qed-field">
-                  <label className="qed-label">Effets</label>
-                  {draft.effects.map((fx, i) => (
-                    fx && fx.kind === 'trigger' ? (
-                      <TriggerCard key={i} fx={fx} slot={draft.slot}
-                        onChange={(v) => updateEffect(i, v)} onRemove={() => removeEffect(i)} />
-                    ) : (
-                      <div key={i} className="bal-effect">
-                        <select className="qed-select" value={fx.type} onChange={(ev) => {
-                          const type = ev.target.value;
-                          const patch = { type };
-                          // si la valeur courante est dynamique (dé ou « à l'échelle ») et
-                          // incompatible avec le nouveau type, on rétablit un nombre fixe :
-                          // - type non aléatoire-able, ou
-                          // - dé absent des faces autorisées pour ce type
-                          if (isDynamicVal(fx.value)
-                            && (!DICEABLE_EFFECTS.has(type)
-                              || (typeof fx.value === 'string' && !diceFor(type).includes(fx.value)))) patch.value = 1;
-                          updateEffect(i, patch);
-                        }}>
-                          {(effectPool.includes(fx.type) ? effectPool : [fx.type, ...effectPool]).map((t) => (
-                            <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>
-                          ))}
-                        </select>
-                        {DICEABLE_EFFECTS.has(fx.type)
-                          ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} />
-                          : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />}
-                        <span className="bal-fx-chance" title="Probabilité que l'effet se déclenche (100 % = toujours)"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--ink-500)' }}>
-                          <span>déclenche</span>
-                          <input type="number" className="qed-input" style={{ width: 74 }} min={1} max={100}
-                            value={Math.round((typeof fx.chance === 'number' ? fx.chance : 1) * 100)}
-                            onChange={(ev) => {
-                              const pct = Math.max(1, Math.min(100, Number(ev.target.value) || 0));
-                              updateEffect(i, { chance: pct >= 100 ? undefined : pct / 100 });
-                            }} />
-                          <span>%</span>
-                        </span>
-                        <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
+                {/* Contenu défilant du sous-onglet courant */}
+                <div className="bal-detail-scroll">
+                  {subtab === 'infos' && (
+                    <>
+                      <div className="qed-field">
+                        <label className="qed-label">Nom</label>
+                        <input className="qed-input" value={draft.name} onChange={(ev) => set({ name: ev.target.value })} />
                       </div>
-                    )
-                  ))}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                    <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Effet simple</button>
-                    <button className="btn btn--ghost btn--sm" onClick={addTrigger}>{'+'} Effet déclenché (avancé)</button>
-                  </div>
-                </div>
 
-                {/* Détail de l'effet (bouton « Détail » en jeu). Éditable :
-                    vide = texte auto-généré depuis les effets ; rempli = override
-                    manuel (une ligne = une puce). */}
-                <div className="qed-field" style={{ marginTop: 8 }}>
-                  <label className="qed-label" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    Détail de l'effet (bouton « Détail » en jeu)
-                    <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }}
-                      onClick={() => set({ descExpert: describeItemEffects(draft).join('\n') })}
-                      disabled={describeItemEffects(draft).length === 0}>
-                      {'↻'} Générer depuis les effets
-                    </button>
-                    {draft.descExpert?.trim() && (
-                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => set({ descExpert: '' })}>
-                        {'↺'} Auto
-                      </button>
-                    )}
-                  </label>
-                  <textarea className="qed-textarea" value={draft.descExpert}
-                    onChange={(ev) => set({ descExpert: ev.target.value })}
-                    placeholder={describeItemEffects(draft).join('\n') || "Texte détaillé… (une ligne = une puce). Laisse vide pour le texte auto-généré."} />
-                  <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 2 }}>
-                    {draft.descExpert?.trim()
-                      ? 'Override manuel actif (le texte ci-dessus prime sur l’auto-généré).'
-                      : 'Vide → texte auto-généré depuis les effets (aperçu ci-dessous).'}
-                  </div>
-                  {/* Aperçu EXACT de ce que liront les joueurs (au tap) en jeu */}
-                  {itemEffectLines(draft).length > 0 && (
-                    <div style={{ marginTop: 6, padding: '8px 10px', borderRadius: 8, background: 'rgba(91,140,58,0.08)', border: '1px solid rgba(91,140,58,0.25)' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>{'👁️'} Aperçu en jeu</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.5 }}>
-                        {itemEffectLines(draft).map((l, i) => <li key={i}>{l}</li>)}
-                      </ul>
+                      <div className="bal-row">
+                        <span className="bal-label">Image</span>
+                        <button className="btn btn--ghost btn--sm" onClick={() => setPicker((p) => !p)}>
+                          {draft.img ? 'Changer l’image' : 'Choisir une image'}
+                        </button>
+                        {draft.img && <button className="btn btn--ghost btn--sm" onClick={() => set({ img: '' })}>Retirer</button>}
+                        <span className="bal-default">ou emoji :</span>
+                        <input className="qed-input" style={{ width: 64, textAlign: 'center' }} value={draft.icon} onChange={(ev) => set({ icon: ev.target.value })} />
+                      </div>
+
+                      {picker && (
+                        <div className="bal-picker">
+                          {ITEM_ASSET_KEYS.map((k) => (
+                            <button key={k} className={`bal-thumb ${draft.img === k ? 'is-sel' : ''}`} title={k} onClick={() => { set({ img: k }); setPicker(false); }}>
+                              <img src={assetUrl(k)} alt={k} />
+                            </button>
+                          ))}
+                          <button className="bal-thumb bal-upload" onClick={() => fileRef.current?.click()} title="Uploader une image">{busy ? '…' : '⬆️'}</button>
+                          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(ev) => handleUpload(ev.target.files?.[0])} />
+                        </div>
+                      )}
+
+                      <div className="bal-row" style={{ marginTop: 10 }}>
+                        <span className="bal-label">Emplacement</span>
+                        <select className="qed-select" style={{ width: 170 }} value={draft.slot}
+                          onChange={(ev) => set({ slot: ev.target.value, effects: [] })}>
+                          <option value="head">Coiffe</option>
+                          <option value="body">Armure</option>
+                          <option value="feet">Amulette</option>
+                          <option value="consumable">Consommable</option>
+                        </select>
+                        <span className="bal-default">change d’emplacement = remet les effets à zéro</span>
+                      </div>
+
+                      <div className="bal-row">
+                        <span className="bal-label">Rareté</span>
+                        <select className="qed-select" style={{ width: 170 }} value={draft.rarity} onChange={(ev) => set({ rarity: ev.target.value })}>
+                          {Object.entries(RARITIES).map(([k, r]) => <option key={k} value={k}>{r.name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="bal-row">
+                        <span className="bal-label">Prix</span>
+                        <Stepper value={draft.price} onChange={(v) => set({ price: v })} max={999} />
+                        <span className="bal-default">pièces en boutique</span>
+                      </div>
+
+                      <label className="bal-toggle" style={{ marginTop: 4 }}>
+                        <input type="checkbox" checked={!!draft.lootOnly} onChange={(ev) => set({ lootOnly: ev.target.checked })} />
+                        Loot only — introuvable en boutique (reste en loot : coffres, duels…)
+                      </label>
+                      <label className="bal-toggle" style={{ marginTop: 8 }}>
+                        <input type="checkbox" checked={draft.enabled} onChange={(ev) => set({ enabled: ev.target.checked })} />
+                        Activé (décocher = retiré du jeu sans le supprimer)
+                      </label>
+                    </>
+                  )}
+
+                  {subtab === 'effets' && (
+                    <div className="qed-field">
+                      {draft.effects.length === 0 && (
+                        <div className="bal-empty-fx">Aucun effet. Ajoute-en un ci-dessous.</div>
+                      )}
+                      {draft.effects.map((fx, i) => (
+                        fx && fx.kind === 'trigger' ? (
+                          <TriggerCard key={i} fx={fx} slot={draft.slot} onChange={(v) => updateEffect(i, v)} onRemove={() => removeEffect(i)} />
+                        ) : (
+                          <div key={i} className="bal-effect">
+                            <select className="qed-select" value={fx.type} onChange={(ev) => {
+                              const type = ev.target.value;
+                              const patch = { type };
+                              if (isDynamicVal(fx.value) && (!DICEABLE_EFFECTS.has(type) || (typeof fx.value === 'string' && !diceFor(type).includes(fx.value)))) patch.value = 1;
+                              updateEffect(i, patch);
+                            }}>
+                              {(effectPool.includes(fx.type) ? effectPool : [fx.type, ...effectPool]).map((t) => (
+                                <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>
+                              ))}
+                            </select>
+                            {!BINARY_EFFECTS.has(fx.type) && (DICEABLE_EFFECTS.has(fx.type)
+                              ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} />
+                              : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />)}
+                            <span className="bal-fx-chance" title="Probabilité que l'effet se déclenche (100 % = toujours)"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--ink-500)' }}>
+                              <span>déclenche</span>
+                              <input type="number" className="qed-input" style={{ width: 74 }} min={1} max={100}
+                                value={Math.round((typeof fx.chance === 'number' ? fx.chance : 1) * 100)}
+                                onChange={(ev) => { const pct = Math.max(1, Math.min(100, Number(ev.target.value) || 0)); updateEffect(i, { chance: pct >= 100 ? undefined : pct / 100 }); }} />
+                              <span>%</span>
+                            </span>
+                            <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
+                          </div>
+                        )
+                      ))}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                        <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Effet simple</button>
+                        <button className="btn btn--ghost btn--sm" onClick={addTrigger}>{'+'} Effet déclenché (avancé)</button>
+                      </div>
                     </div>
+                  )}
+
+                  {subtab === 'textes' && (
+                    <>
+                      <div className="qed-field">
+                        <label className="qed-label">Description simple (vue par les élèves)</label>
+                        <textarea className="qed-textarea" value={draft.desc} onChange={(ev) => set({ desc: ev.target.value })}
+                          placeholder="Effet en clair, sans chiffres (le détail exact est sous le bouton « Détail de l'effet »)." />
+                      </div>
+
+                      <div className="qed-field">
+                        <label className="qed-label" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          Détail de l'effet (bouton « Détail » en jeu)
+                          <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }}
+                            onClick={() => set({ descExpert: describeItemEffects(draft).join('\n') })}
+                            disabled={describeItemEffects(draft).length === 0}>{'↻'} Générer depuis les effets</button>
+                          {draft.descExpert?.trim() && (
+                            <button type="button" className="btn btn--ghost btn--sm" onClick={() => set({ descExpert: '' })}>{'↺'} Auto</button>
+                          )}
+                        </label>
+                        <textarea className="qed-textarea" value={draft.descExpert} onChange={(ev) => set({ descExpert: ev.target.value })}
+                          placeholder={describeItemEffects(draft).join('\n') || "Texte détaillé… (une ligne = une puce). Laisse vide pour le texte auto-généré."} />
+                        <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 2 }}>
+                          {draft.descExpert?.trim() ? 'Override manuel actif (le texte ci-dessus prime sur l’auto-généré).' : 'Vide → texte auto-généré depuis les effets (aperçu ci-dessous).'}
+                        </div>
+                        {itemEffectLines(draft).length > 0 && (
+                          <div style={{ marginTop: 6, padding: '8px 10px', borderRadius: 8, background: 'rgba(91,140,58,0.08)', border: '1px solid rgba(91,140,58,0.25)' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>{'👁️'} Aperçu en jeu</div>
+                            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.5 }}>
+                              {itemEffectLines(draft).map((l, i) => <li key={i}>{l}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
 
-                <label className="bal-toggle" style={{ marginTop: 6 }}>
-                  <input type="checkbox" checked={draft.enabled} onChange={(ev) => set({ enabled: ev.target.checked })} />
-                  Activé (décocher = retiré du jeu sans le supprimer)
-                </label>
-
-                <div className="qed-actions">
-                  <button className="btn btn--green" onClick={handleSave} disabled={busy || !validate(draft)}>
-                    {busy ? 'Enregistrement…' : (draft._isNew ? 'Créer' : 'Enregistrer')}
+                {/* Pied d'action collé en bas */}
+                <div className="bal-detail-foot">
+                  <button className="btn btn--green" onClick={handleSave} disabled={busy || !validate(draft) || !dirty}>
+                    {busy ? 'Enregistrement…' : (draft._isNew ? 'Créer' : (dirty ? 'Enregistrer' : 'Enregistré ✓'))}
                   </button>
                   {!draft._isNew && (
                     <button className="btn btn--ghost" onClick={handleDelete} disabled={busy} style={{ color: '#b5341f' }}>Supprimer</button>
                   )}
+                  {dirty && <span className="bal-default" style={{ color: '#b5341f' }}>● modifications non enregistrées</span>}
                   {!validate(draft) && <span className="qed-err">Un nom est requis.</span>}
-                  {status && <span className="qed-err" style={{ color: status.startsWith('Erreur') || status.includes('échec') ? '#b5341f' : '#2f9d5a' }}>{status}</span>}
+                  {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
                 </div>
               </div>
             ) : (
