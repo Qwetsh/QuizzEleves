@@ -829,7 +829,12 @@ export const useGameStore = create((set, get) => ({
     if (finished || rolling || showQuestion || showEvent || showFight || awaitingChoice) return;
     set({ showShop: true });
   },
-  closeShop: () => set({ showShop: false }),
+  closeShop: () => {
+    // Marché Noir : la boutique a été ouverte par un événement → fermer = fin du tour.
+    const mn = typeof get().showShop === 'object' && get().showShop?.marcheNoir;
+    set({ showShop: false });
+    if (mn) get().nextTurn(); // nextTurn sauvegarde déjà
+  },
   buyNewPower: (pk) => powerH.buyNewPower(set, get, pk),
   buyPowerCharge: (pk) => powerH.buyPowerCharge(set, get, pk),
   upgradePowerLevel: (pk) => powerH.upgradePowerLevel(set, get, pk),

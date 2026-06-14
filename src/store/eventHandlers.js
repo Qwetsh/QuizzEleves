@@ -4,7 +4,7 @@ import { pickQuestion } from '../logic/questionPicker.js';
 import { randomSubject } from '../logic/turnHelpers.js';
 import { hasEffect, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
-import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount } from './itemHandlers.js';
+import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock } from './itemHandlers.js';
 import { LOOT } from '../logic/balanceConfig.js';
 
 // Etal du marchand ambulant : 3 objets distincts parmi les objets actives,
@@ -106,8 +106,17 @@ export function acceptEvent(set, get) {
     return;
   }
 
-  if (key === 'recharge' || key === 'marcheNoir') {
+  if (key === 'recharge') {
     set({ showEvent: { ...showEvent, phase: 'choice' } });
+    return;
+  }
+
+  if (key === 'marcheNoir') {
+    // Ouvre la BOUTIQUE en mode « marché noir » : stock louche (objets rares/
+    // légendaires normalement introuvables) + remise. Fermer la boutique
+    // termine le tour (cf. closeShop). On clôt l'event tout de suite.
+    const stock = generateBlackMarketStock(5, get().enabledItems || Object.keys(ITEMS));
+    set({ showEvent: null, eventApplied: true, showShop: { marcheNoir: true, stock, discount: 0.7 } });
     return;
   }
 

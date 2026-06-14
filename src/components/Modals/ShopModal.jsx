@@ -58,18 +58,18 @@ function Price({ value }) {
   );
 }
 
-/* ---------- Étal : objets (stock rotatif) ---------- */
-function ItemStall({ team, shopStock, shopStockTurns, onBuyItem }) {
+/* ---------- Étal : objets (stock rotatif ou marché noir) ---------- */
+function ItemStall({ team, shopStock, shopStockTurns, onBuyItem, discount = 1, banner, note }) {
   if (!shopStock || shopStock.length === 0) return null;
   const bag = team.bag || [];
   const equipment = team.equipment || {};
 
   return (
     <Stall
-      banner={'\u{1F4E6} Arrivage du moment'}
-      note={`Nouvel arrivage dans ${shopStockTurns} tour${shopStockTurns > 1 ? 's' : ''}`}
+      banner={banner || '\u{1F4E6} Arrivage du moment'}
+      note={note != null ? note : `Nouvel arrivage dans ${shopStockTurns} tour${shopStockTurns > 1 ? 's' : ''}`}
     >
-      {shopStock.map((key) => {
+      {shopStock.map((key, idx) => {
         const item = ITEMS[key];
         if (!item) return null;
         const rarityColor = RARITIES[item.rarity]?.color || '#888';
@@ -78,10 +78,11 @@ function ItemStall({ team, shopStock, shopStockTurns, onBuyItem }) {
         // Va dans le sac si consommable ou slot occupé -> il faut une case libre
         const needsBagRoom = isConsumable || slotTaken;
         const bagFull = needsBagRoom && bag.filter(Boolean).length >= BAG_SIZE;
-        const canBuy = team.money >= item.price && !bagFull;
+        const price = discount < 1 ? Math.max(1, Math.round(item.price * discount)) : item.price;
+        const canBuy = team.money >= price && !bagFull;
 
         return (
-          <div className="shop-card" key={key}>
+          <div className="shop-card" key={`${key}-${idx}`}>
             <div className="shop-card-inner">
               <div className="shop-card-head">
                 <ItemIcon item={item} size={38} ring />
@@ -111,7 +112,9 @@ function ItemStall({ team, shopStock, shopStockTurns, onBuyItem }) {
                 disabled={!canBuy}
                 onClick={() => { soundClick(); onBuyItem(key); }}
               >
-                {isConsumable || slotTaken ? 'Acheter' : 'Équiper'} <Price value={item.price} />
+                {isConsumable || slotTaken ? 'Acheter' : 'Équiper'}{' '}
+                {discount < 1 && <s style={{ opacity: 0.6, marginRight: 4 }}>{item.price}</s>}
+                <Price value={price} />
               </button>
             </div>
           </div>
@@ -263,36 +266,55 @@ export default function ShopModal() {
     ? Object.entries(POWERS).filter(([key]) => !team.powers?.[key])
     : [];
 
+  const marcheNoir = typeof showShop === 'object' && showShop?.marcheNoir;
+
   return (
     <AnimatePresence>
       {showShop && team && (
-        <TemplePanel title="BOUTIQUE" team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
-          <div className="inv-wood">
-            <div className="shop-scroll">
-              <ItemStall
-                team={team}
-                shopStock={shopStock}
-                shopStockTurns={shopStockTurns}
-                onBuyItem={buyItem}
-              />
-              <RechargeStall
-                ownedPowers={ownedPowers}
-                money={team.money}
-                onBuyCharge={buyPowerCharge}
-              />
-              <UpgradeStall
-                ownedPowers={ownedPowers}
-                money={team.money}
-                onUpgrade={upgradePowerLevel}
-              />
-              <UnlockStall
-                unownedPowers={unownedPowers}
-                money={team.money}
-                onBuyNew={buyNewPower}
-              />
+        marcheNoir ? (
+          <TemplePanel title="MARCHÉ NOIR" team={team} onClose={closeShop} medallion={<span style={{ fontSize: 22 }}>🕯️</span>} className="shop shop--marche-noir">
+            <div className="inv-wood">
+              <div className="shop-scroll">
+                <ItemStall
+                  team={team}
+                  shopStock={showShop.stock}
+                  onBuyItem={buyItem}
+                  discount={showShop.discount ?? 1}
+                  banner={'🕯️ Étals clandestins'}
+                  note={`Marchandise « tombée du camion » — ${Math.round((1 - (showShop.discount ?? 1)) * 100)}% sur tout. Pars quand tu veux.`}
+                />
+              </div>
             </div>
-          </div>
-        </TemplePanel>
+          </TemplePanel>
+        ) : (
+          <TemplePanel title="BOUTIQUE" team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
+            <div className="inv-wood">
+              <div className="shop-scroll">
+                <ItemStall
+                  team={team}
+                  shopStock={shopStock}
+                  shopStockTurns={shopStockTurns}
+                  onBuyItem={buyItem}
+                />
+                <RechargeStall
+                  ownedPowers={ownedPowers}
+                  money={team.money}
+                  onBuyCharge={buyPowerCharge}
+                />
+                <UpgradeStall
+                  ownedPowers={ownedPowers}
+                  money={team.money}
+                  onUpgrade={upgradePowerLevel}
+                />
+                <UnlockStall
+                  unownedPowers={unownedPowers}
+                  money={team.money}
+                  onBuyNew={buyNewPower}
+                />
+              </div>
+            </div>
+          </TemplePanel>
+        )
       )}
     </AnimatePresence>
   );

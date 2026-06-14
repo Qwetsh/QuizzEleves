@@ -5,7 +5,7 @@ import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, RARITIES, SLOTS, setItemsData } from '../data/items.js';
 import { getEffectValue, reducedRecul, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { resolveWrongAnswer } from '../logic/turnHelpers.js';
-import { generateShopStock, pickLootItem, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
+import { generateShopStock, generateBlackMarketStock, pickLootItem, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
 import { EVENTS } from '../data/events.js';
 
 // Le sac est positionnel (BAG_SIZE cases, null = vide) : on compare le contenu
@@ -340,6 +340,29 @@ describe('séries & déclencheurs de réponse', () => {
     const t = mkTeam(0, { streak: 3, equipment: { head: null, body: 'besace', feet: null } });
     expect(getEffectValue(t, 'lootBonusConsumable')).toBe(15); // 5 × 3
     setItemsData(snapshot);
+  });
+});
+
+// --- Marché Noir ---
+
+describe('marché noir', () => {
+  it('generateBlackMarketStock peut inclure des légendaires (lootOnly)', () => {
+    let sawLegendary = false;
+    for (let i = 0; i < 50 && !sawLegendary; i++) {
+      const stock = generateBlackMarketStock(5);
+      if (stock.some((k) => ITEMS[k]?.rarity === 'legendaire')) sawLegendary = true;
+    }
+    expect(sawLegendary).toBe(true); // exclus de la boutique normale, dispo au marché noir
+  });
+
+  it('buyItem applique la remise en mode marché noir', () => {
+    freshGame([{ money: 1000, bag: [], equipment: { head: null, body: null, feet: null } }, {}]);
+    const consK = Object.keys(ITEMS).find((k) => ITEMS[k].slot === 'consumable');
+    useGameStore.setState({ showShop: { marcheNoir: true, stock: [consK], discount: 0.5 } });
+    const before = team(0).money;
+    S().buyItem(consK);
+    expect(team(0).money).toBe(before - Math.max(1, Math.round(ITEMS[consK].price * 0.5)));
+    expect(S().showShop.stock).not.toContain(consK); // retiré du stock marché noir
   });
 });
 

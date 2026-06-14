@@ -100,12 +100,24 @@ export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(I
 
 // --- Achat / revente ---
 
+// Stock du Marché Noir : INCLUT les objets lootOnly/légendaires (introuvables en
+// boutique normale) avec un fort poids — l'attrait « louche » de l'event.
+export function generateBlackMarketStock(count = 5, enabledKeys = Object.keys(ITEMS)) {
+  return pickWeightedItems(count, enabledKeys, (item) =>
+    item.rarity === 'legendaire' ? 4 : item.rarity === 'rare' ? 3 : 1
+  );
+}
+
 export function buyItem(set, get, itemKey) {
-  const { teams, currentTeam, shopStock, addLog } = get();
+  const { teams, currentTeam, shopStock, showShop, addLog } = get();
   const team = teams[currentTeam];
   const item = ITEMS[itemKey];
-  if (!item || !shopStock?.includes(itemKey)) return;
-  if ((team.money ?? 0) < item.price) return;
+  // Mode Marché Noir : stock + remise portés par showShop ; sinon boutique normale.
+  const mn = showShop && typeof showShop === 'object' && showShop.marcheNoir;
+  const stock = mn ? (showShop.stock || []) : shopStock;
+  if (!item || !stock.includes(itemKey)) return;
+  const price = mn ? Math.max(1, Math.round(item.price * (showShop.discount ?? 1))) : item.price;
+  if ((team.money ?? 0) < price) return;
 
   const newTeams = [...teams];
   const equipment = { ...(team.equipment || { head: null, body: null, feet: null }) };
@@ -114,16 +126,19 @@ export function buyItem(set, get, itemKey) {
   // consommable) : va dans le sac — le joueur gere son equipement par drag & drop
   if (item.slot !== 'consumable' && !equipment[item.slot]) {
     equipment[item.slot] = itemKey;
-    newTeams[currentTeam] = { ...team, money: team.money - item.price, equipment };
-    addLog(`🛒 ${team.emoji} ${team.name} équipe ${item.icon} ${item.name} ! (-${item.price} 💰)`);
+    newTeams[currentTeam] = { ...team, money: team.money - price, equipment };
+    addLog(`🛒 ${team.emoji} ${team.name} équipe ${item.icon} ${item.name} ! (-${price} 💰)`);
   } else {
     const bag = bagWith(team.bag, itemKey);
     if (!bag) return; // sac plein
-    newTeams[currentTeam] = { ...team, money: team.money - item.price, bag };
-    addLog(`🛒 ${team.emoji} ${team.name} achète ${item.icon} ${item.name} ! (-${item.price} 💰)`);
+    newTeams[currentTeam] = { ...team, money: team.money - price, bag };
+    addLog(`🛒 ${team.emoji} ${team.name} achète ${item.icon} ${item.name} ! (-${price} 💰)`);
   }
 
-  set({ teams: newTeams, shopStock: shopStock.filter((k) => k !== itemKey) });
+  const restStock = stock.filter((k) => k !== itemKey);
+  set(mn
+    ? { teams: newTeams, showShop: { ...showShop, stock: restStock } }
+    : { teams: newTeams, shopStock: restStock });
   saveGame(get());
 }
 

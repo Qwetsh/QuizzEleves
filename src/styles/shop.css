@@ -235,3 +235,34 @@
   background: rgba(110, 95, 50, 0.18);
   box-shadow: inset 0 0 0 2px rgba(110, 95, 50, 0.25);
 }
+
+/* ============================================
+   Skin « MARCHÉ NOIR » — ambiance louche (sur .shop)
+   ============================================ */
+.shop--marche-noir .inv-wood {
+  background-image: linear-gradient(180deg, rgba(24, 10, 34, 0.62), rgba(8, 4, 14, 0.78));
+  filter: saturate(0.82) contrast(1.04);
+}
+.shop--marche-noir .shop-stall-banner {
+  background: linear-gradient(180deg, #3a2350, #241335);
+  color: #e2cdf6;
+  border-color: #5b3d7a;
+  text-shadow: 0 0 10px rgba(160, 100, 230, 0.55);
+}
+.shop--marche-noir .shop-stall-note {
+  color: #b59ad0;
+  font-style: italic;
+}
+.shop--marche-noir .shop-card {
+  background: linear-gradient(180deg, #2a2238, #181122);
+  border-color: #4a3a5e;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(150, 110, 200, 0.12);
+}
+.shop--marche-noir .shop-card-name { color: #f0e7fb; }
+.shop--marche-noir .shop-card-desc { color: #cdbfe0; }
+.shop--marche-noir .shop-buy {
+  background: linear-gradient(180deg, #7a44b8, #4d2680);
+  color: #fdf6ff;
+  border-color: #8a5fc0;
+}
+.shop--marche-noir .shop-buy:disabled { filter: grayscale(0.5) brightness(0.7); }
