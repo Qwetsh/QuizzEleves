@@ -22,10 +22,11 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock }) {
   return {
     status,
     currentTeam,
+    shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
     teams: (teams || []).map((t, idx) => ({
       idx,
       name: t.name, emoji: t.emoji, color: t.color,
