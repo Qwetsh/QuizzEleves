@@ -29,8 +29,9 @@ const DEFAULT_POWERS = clone(POWERS);
 const DEFAULT_LOOT = {
   chestLegendaryChance: 0.2,   // coffre au trésor (événement)
   fightLegendaryChance: 0.1,   // butin de duel
-  answerLegendaryChance: 0.1,  // loot de bonne réponse
-  answerLootRate: 0.1,         // proba max du loot de bonne réponse (× temps restant)
+  answerLegendaryChance: 0.1,  // loot d'ÉQUIPEMENT de bonne réponse
+  answerLootRate: 0.1,         // proba max du loot d'ÉQUIPEMENT de bonne réponse (× temps restant)
+  answerConsumableRate: 0.12,  // proba max du loot de CONSOMMABLE de bonne réponse (× temps restant, indépendant)
   shopWeightCommon: 3,         // poids d'un objet commun dans le stock boutique
   shopWeightOther: 2,          // poids d'un objet rare/légendaire (hors lootOnly)
 };

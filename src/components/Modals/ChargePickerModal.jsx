@@ -13,8 +13,8 @@ export default function ChargePickerModal() {
   const team = teams[currentTeam];
   const powerKeys = team?.powers ? Object.keys(team.powers) : [];
   // Ouvert par le dé de 1 (gratuit + activation offensive immédiate possible)
-  // ou par un consommable (simple recharge)
-  const fromItem = showChargePicker?.source === 'item';
+  // ou par un objet/consommable (simple recharge : source 'item' ou 'engine')
+  const fromItem = showChargePicker?.source === 'item' || showChargePicker?.source === 'engine';
 
   return (
     <AnimatePresence>

@@ -5,11 +5,16 @@ import { POWERS } from '../data/powers.js';
  * Using charges is free — players pay only to buy charges in the shop.
  */
 export function canUsePowerInContext(key, context) {
-  const { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding } = context;
+  const { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding, pendingActions } = context;
   const info = POWERS[key];
   if (!info) return false;
 
-  if (key === 'relance') return !!diceValue && !showQuestion && !rolling && !showEvent && !!pendingLanding;
+  // Une séquence d'effet d'objet en cours (choix de case/cible/d6...) bloque tout.
+  if (pendingActions) return false;
+
+  // Relance : possible après le lancer (pendingLanding) ET pendant un choix de
+  // jonction (awaitingChoice) — on n'a pas encore validé son déplacement.
+  if (key === 'relance') return !!diceValue && !showQuestion && !rolling && !showEvent && (!!pendingLanding || !!awaitingChoice);
   if (key === 'indice') return !!showQuestion && !rolling;
   if (key === 'bouclier') return false; // passive, auto-triggered
   if (info.category === 'off') return !showQuestion && !rolling && !showEvent && !awaitingChoice && !finished && (!diceValue || !!pendingLanding);

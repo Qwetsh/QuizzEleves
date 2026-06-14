@@ -2,6 +2,7 @@ import { ITEMS, SLOTS } from '../data/items.js';
 import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
+import { runEffects, consumableActions, announce } from './effectEngine.js';
 
 export const BAG_SIZE = 12;
 export const SHOP_STOCK_SIZE = 4;
@@ -83,9 +84,12 @@ export function generateShopStock(count = SHOP_STOCK_SIZE, enabledKeys = Object.
 
 // Tirage d'un objet de loot (coffres, récompense de duel...) parmi les objets
 // activés. legendaryChance : probabilité (0-1) de tomber sur un légendaire.
-// Retourne null si aucun objet n'est activé.
-export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(ITEMS)) {
-  const valid = enabledKeys.filter((k) => ITEMS[k]);
+// opts.category : 'all' (défaut), 'consumable' ou 'equipment' pour restreindre le pool.
+// Retourne null si aucun objet n'est activé dans la catégorie.
+export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(ITEMS), { category = 'all' } = {}) {
+  let valid = enabledKeys.filter((k) => ITEMS[k]);
+  if (category === 'consumable') valid = valid.filter((k) => ITEMS[k].slot === 'consumable');
+  else if (category === 'equipment') valid = valid.filter((k) => ITEMS[k].slot !== 'consumable');
   if (valid.length === 0) return null;
   const isLegendary = Math.random() < legendaryChance;
   let pool = valid.filter((k) => (ITEMS[k].rarity === 'legendaire') === isLegendary);
@@ -257,8 +261,9 @@ export function grantItem(set, get, teamIndex, itemKey) {
 // --- Consommables ---
 
 export function useConsumable(set, get, bagIndex) {
-  const { teams, currentTeam, board, finished, rolling, showQuestion, showEvent, showFight, addLog } = get();
+  const { teams, currentTeam, finished, rolling, showQuestion, showEvent, showFight, pendingActions, addLog } = get();
   if (finished || rolling || showQuestion || showEvent || showFight) return;
+  if (pendingActions) return; // une séquence d'effets est déjà en cours
   const team = teams[currentTeam];
   const bag = normalizeBag(team.bag);
   const itemKey = bag[bagIndex];
@@ -267,77 +272,26 @@ export function useConsumable(set, get, bagIndex) {
 
   bag[bagIndex] = null;
   const newTeams = [...teams];
-  let updated = { ...team, bag };
-  let openChargePicker = false;
-  let junctionRemaining = 0;
-  const moves = [];
-
+  newTeams[currentTeam] = { ...team, bag };
+  set({ teams: newTeams, showInventory: false });
   addLog(`${item.icon} ${team.emoji} ${team.name} utilise ${item.name} !`);
 
-  for (const fx of item.effects) {
-    switch (fx.type) {
-      case 'gainMoney':
-        updated = { ...updated, money: updated.money + fx.value };
-        addLog(`💰 +${fx.value} pièces !`);
-        break;
-      case 'gainMoneyAll':
-        for (let i = 0; i < newTeams.length; i++) {
-          if (i !== currentTeam) newTeams[i] = { ...newTeams[i], money: newTeams[i].money + fx.value };
-        }
-        updated = { ...updated, money: updated.money + fx.value };
-        addLog(`🍲 Toutes les équipes gagnent ${fx.value} pièces !`);
-        break;
-      case 'moveForward': {
-        // Comme le deplacement au de : on s'arrete aux jonctions pour laisser
-        // le joueur choisir sa voie (chooseJunction reprend avec noLanding)
-        const result = moveForward(board, updated.pos, fx.value);
-        if (result.path.length > 1) {
-          moves.push({
-            teamIndex: currentTeam,
-            waypoints: result.path.map((id) => ({ x: board[id].x, y: board[id].y })),
-            type: 'forward',
-          });
-        }
-        updated = { ...updated, pos: result.finalPos };
-        if (result.stoppedAtJunction) junctionRemaining = result.remaining;
-        addLog(`🚀 ${team.emoji} avance de ${fx.value} cases !`);
-        break;
-      }
-      case 'extraTime':
-        updated = { ...updated, itemTimerBonus: (updated.itemTimerBonus || 0) + fx.value };
-        addLog(`⌛ +${fx.value}s à la prochaine question.`);
-        break;
-      case 'shieldNext':
-        updated = { ...updated, itemShield: (updated.itemShield || 0) + fx.value };
-        addLog(`🪵 Le prochain recul sera annulé.`);
-        break;
-      case 'gainCharge':
-        openChargePicker = true;
-        break;
-      case 'fumigene':
-        updated = { ...updated, itemFumigene: true };
-        addLog(`💨 Le prochain pouvoir offensif subi sera annulé.`);
-        break;
-      default:
-        break;
+  // Tout (legacy {type,value} + composable {kind:'trigger'}) passe par le moteur.
+  const actions = consumableActions(item);
+  if (!actions.length) {
+    // Aucun effet produit : soit une probabilité de déclenchement a échoué,
+    // soit l'objet n'a aucun effet actionnable. On le signale visuellement
+    // (sinon l'objet disparaît sans aucun retour).
+    const wasGamble = (item.effects || []).some((fx) => typeof fx.chance === 'number');
+    if (wasGamble) {
+      addLog(`💨 ${item.name} : raté, aucun effet cette fois…`);
+      announce(set, get, '💨', `Raté ! ${item.name} n'a rien fait`, '#9a8c7a');
+    } else {
+      addLog(`💨 ${item.name} n'a eu aucun effet.`);
+      announce(set, get, '🤷', `${item.name} : aucun effet`, '#9a8c7a');
     }
+    if (get().phase === 'game') saveGame(get());
+    return;
   }
-
-  newTeams[currentTeam] = updated;
-  set({
-    teams: newTeams,
-    showInventory: false,
-    ...(moves.length ? { movePath: moves } : {}),
-    ...(openChargePicker ? { showChargePicker: { source: 'item' } } : {}),
-    ...(junctionRemaining ? { awaitingChoice: true, pendingMove: { remaining: junctionRemaining, noLanding: true } } : {}),
-  });
-  if (junctionRemaining) addLog(`↔️ Choisis une voie !`);
-
-  // Un consommable de déplacement peut amener sur l'arrivée.
-  if (board[updated.pos]?.type === 'arrivee') {
-    addLog(`🏆 ${team.emoji} ${team.name} atteint l'arrivée !`);
-    set({ finished: true });
-  }
-
-  saveGame(get());
+  runEffects(set, get, actions, { source: 'item', itemKey, bagIndex });
 }

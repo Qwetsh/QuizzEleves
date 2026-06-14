@@ -17,6 +17,10 @@ import ChargePickerModal from '../Modals/ChargePickerModal';
 import LootReveal from '../Modals/LootReveal';
 import FightModal from '../Fight/FightModal';
 import FlyingCoins from './FlyingCoins';
+import LightningStrike from './LightningStrike';
+import ActionDiceOverlay from './ActionDiceOverlay';
+import SubjectPickerModal from '../Modals/SubjectPickerModal';
+import EffectToast from './EffectToast';
 
 function useFullscreen() {
   const [isFs, setIsFs] = useState(false);
@@ -258,6 +262,10 @@ export default function GameLayout() {
 
       {/* Animations */}
       <FlyingCoins />
+      <LightningStrike />
+      <ActionDiceOverlay />
+      <SubjectPickerModal />
+      <EffectToast />
 
       {/* Modals */}
       <DiceRollModal />

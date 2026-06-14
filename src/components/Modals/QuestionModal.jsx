@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
-import { soundCorrect, soundWrong, soundTimer } from '../../logic/sounds';
+import { questionRerollOptions } from '../../store/effectEngine';
+import { soundCorrect, soundWrong, soundTimer, soundKatana } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
 import '../../styles/temple-modal.css';
 
@@ -10,6 +11,73 @@ const TIMER_DURATION = 30;
 
 // Cadre de pierre (panelStyle de ModalOverlay) — rappelle l'inventaire
 const STONE_PANEL = { background: 'transparent', border: 'none', boxShadow: 'none', borderRadius: 24, overflow: 'visible' };
+
+// Réponse éliminée (pouvoir Indice ou objet) : le coup de katana joue À LA POSE
+// (montage du composant = instant où la réponse entre dans indiceHidden).
+function EliminatedAnswer({ idx, answer }) {
+  const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  return (
+    <motion.div
+      className="quiz-answer-eliminated"
+      initial={{ scale: reduce ? 1 : 1.02 }}
+      animate={{ scale: 1 }}
+      transition={{ duration: 0.25 }}
+      style={{
+        position: 'relative', overflow: 'hidden',
+        padding: '16px 18px', borderRadius: 14,
+        border: '2px solid rgba(122,94,58,0.12)', background: 'var(--parch-100)',
+        fontSize: 16, color: 'var(--ink-500)',
+        display: 'flex', alignItems: 'center', gap: 12,
+      }}
+    >
+      {!reduce && (
+        <>
+          {/* lame brillante qui balaie en diagonale */}
+          <motion.span
+            aria-hidden
+            initial={{ left: '-65%', opacity: 0 }}
+            animate={{ left: '125%', opacity: [0, 1, 1, 0] }}
+            transition={{ duration: 0.34, ease: 'easeIn' }}
+            style={{
+              position: 'absolute', top: '-40%', height: '180%', width: '42%',
+              transform: 'rotate(18deg)', pointerEvents: 'none', mixBlendMode: 'screen',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.95) 50%, transparent)',
+              filter: 'drop-shadow(0 0 7px #fff)',
+            }}
+          />
+          {/* trait de coupe rouge qui reste après le passage de la lame */}
+          <motion.span
+            aria-hidden
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ delay: 0.17, duration: 0.16 }}
+            style={{
+              position: 'absolute', left: 10, right: 10, top: '52%', height: 2,
+              transformOrigin: 'left', pointerEvents: 'none',
+              background: 'linear-gradient(90deg, #c9472f, #e89898)',
+              boxShadow: '0 0 6px #c9472f',
+            }}
+          />
+        </>
+      )}
+      <span style={{
+        width: 30, height: 30, borderRadius: 8, background: 'var(--parch-200)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-400)', flexShrink: 0,
+      }}>
+        {String.fromCharCode(65 + idx)}
+      </span>
+      <motion.span
+        initial={{ x: 0 }}
+        animate={reduce ? { x: 0 } : { x: [0, -3, 4, -2, 0] }}
+        transition={{ delay: 0.16, duration: 0.24 }}
+        style={{ textDecoration: 'line-through' }}
+      >
+        {answer}
+      </motion.span>
+    </motion.div>
+  );
+}
 
 export default function QuestionModal() {
   const showQuestion = useGameStore((s) => s.showQuestion);
@@ -20,6 +88,8 @@ export default function QuestionModal() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const indiceUsed = useGameStore((s) => s.indiceUsed);
   const indiceHidden = useGameStore((s) => s.indiceHidden);
+  const rerollUsedState = useGameStore((s) => s.rerollUsed);
+  const useQuestionReroll = useGameStore((s) => s.useQuestionReroll);
 
   const [selected, setSelected] = useState(null);
   const [revealed, setRevealed] = useState(false);
@@ -37,7 +107,14 @@ export default function QuestionModal() {
   const subjectInfo = SUBJECTS[subject] || {};
   const duration = Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime;
 
+  // Rafale de questions (Double cumulable) : « Question X / N » + ambiance maudite
+  const multiIndex = showQuestion?.multiIndex;
+  const multiTotal = showQuestion?.multiTotal;
+  const isBurst = !!multiTotal && multiTotal > 1;
+
   const canUseIndice = !indiceUsed && !revealed && team?.powers?.indice?.charges > 0;
+  // Objets « changer la question » (équipement plafonné + consommables du sac)
+  const rerollOptions = !revealed ? questionRerollOptions(team, rerollUsedState) : [];
 
   // Reset uniquement quand la QUESTION change (pas quand showQuestion est
   // re-cree par l'ajout de bonusTime apres usage de l'Indice).
@@ -58,6 +135,20 @@ export default function QuestionModal() {
       setTimeLeft((t) => t + bonusTime);
     }
   }, [bonusTime]);
+
+  // Son de katana à chaque NOUVELLE réponse barrée (ouverture avec éliminations
+  // passives, ou ajout par le pouvoir Indice). On compare au compte précédent
+  // de la MÊME question (sinon le passage à une nouvelle question repart de 0).
+  const slashTrack = useRef({ q: null, count: 0 });
+  useEffect(() => {
+    const t = slashTrack.current;
+    const base = t.q === question ? t.count : 0;
+    const count = indiceHidden.length;
+    if (count > base) {
+      for (let i = 0; i < count - base; i++) setTimeout(() => soundKatana(), i * 110);
+    }
+    slashTrack.current = { q: question, count };
+  }, [question, indiceHidden]);
 
   useEffect(() => {
     if (!showQuestion || revealed) return;
@@ -99,7 +190,7 @@ export default function QuestionModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''}`} panelStyle={STONE_PANEL}>
+        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''} ${isBurst ? 'quiz-cursed' : ''}`} panelStyle={STONE_PANEL}>
           <div className="tm-stone"><div className="tm-parch">
           {/* Quiz Header */}
           <div
@@ -123,6 +214,13 @@ export default function QuestionModal() {
               <span className="text-xl">{team?.emoji}</span>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, opacity: 0.85 }}>{team?.name}</span>
             </div>
+
+            {isBurst && (
+              <div className="quiz-curse-badge">
+                <span className="quiz-curse-skull">{'\u{1F480}'}</span>
+                Malédiction · Question {multiIndex} / {multiTotal}
+              </div>
+            )}
 
             <div
               style={{
@@ -172,30 +270,7 @@ export default function QuestionModal() {
           <div className="grid gap-3 p-5 grid-cols-1 sm:grid-cols-2">
             {question.a.map((answer, idx) => {
               if (indiceHidden.includes(idx)) {
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '16px 18px', borderRadius: 14,
-                      border: '2px solid rgba(122,94,58,0.12)',
-                      background: 'var(--parch-100)',
-                      opacity: 0.25, textDecoration: 'line-through',
-                      fontSize: 16, color: 'var(--ink-500)',
-                      display: 'flex', alignItems: 'center', gap: 12,
-                    }}
-                  >
-                    <span style={{
-                      width: 30, height: 30, borderRadius: 8,
-                      background: 'var(--parch-200)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-400)',
-                      flexShrink: 0,
-                    }}>
-                      {String.fromCharCode(65 + idx)}
-                    </span>
-                    {answer}
-                  </div>
-                );
+                return <EliminatedAnswer key={idx} idx={idx} answer={answer} />;
               }
 
               // Base = .tm-choice (parchemin + liseré pierre) ; surcharge à la révélation
@@ -245,19 +320,24 @@ export default function QuestionModal() {
               {canUseIndice && !revealed && (
                 <button
                   onClick={() => usePower('indice')}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '6px 12px', borderRadius: 999,
-                    background: '#fffefb',
-                    border: '1px solid rgba(122,94,58,0.22)',
-                    fontSize: 13, color: 'var(--ink-700)',
-                    cursor: 'pointer', fontWeight: 500,
-                    fontFamily: 'var(--font-ui)',
-                  }}
+                  className="quiz-indice-btn"
                 >
-                  {"\u{1F4A1} Indice"} <span style={{ opacity: 0.6 }}>(x{team.powers.indice.charges})</span>
+                  <span className="quiz-indice-bulb">{'\u{1F4A1}'}</span>
+                  <span className="quiz-indice-label">Indice</span>
+                  <span className="quiz-indice-count">x{team.powers.indice.charges}</span>
                 </button>
               )}
+              {rerollOptions.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => useQuestionReroll(opt)}
+                  className="quiz-reroll-btn"
+                  title={`Changer la question (${opt.itemName})`}
+                >
+                  <span style={{ fontSize: 17 }}>{'\u{1F504}'}</span>
+                  <span>Changer</span>
+                </button>
+              ))}
               <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
                 {revealed && selected != null && selected === question.c ? (
                   <strong style={{ color: '#2f9d5a' }}>{"Bonne r\u00e9ponse !"}</strong>

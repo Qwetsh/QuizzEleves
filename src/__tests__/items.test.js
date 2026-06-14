@@ -2,7 +2,7 @@
 // achats/reventes, consommables, hooks événements et combat.
 // On pilote le vrai store zustand (pas de mock de la logique métier).
 import { useGameStore } from '../store/gameStore.js';
-import { ITEMS, RARITIES, SLOTS } from '../data/items.js';
+import { ITEMS, RARITIES, SLOTS, setItemsData } from '../data/items.js';
 import { getEffectValue, reducedRecul, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { resolveWrongAnswer } from '../logic/turnHelpers.js';
 import { generateShopStock, pickLootItem, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
@@ -134,6 +134,50 @@ describe('itemEffects', () => {
     expect(getEffectValue({ name: 'old' }, 'timerBonus')).toBe(0);
   });
 
+  it('getEffectValue résout un bonus aléatoire (timer 1D4) et le rejoue à chaque appel', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      sablierFee: {
+        name: 'Sablier féérique', icon: '⏳', slot: 'head', rarity: 'commun', price: 0,
+        effects: [{ type: 'timerBonus', value: 'd4' }],
+      },
+    });
+    const t = mkTeam(0, { equipment: { head: 'sablierFee', body: null, feet: null } });
+    vi.spyOn(Math, 'random').mockReturnValue(0);     // d4 → 1
+    expect(getEffectValue(t, 'timerBonus')).toBe(1);
+    vi.spyOn(Math, 'random').mockReturnValue(0.999); // d4 → 4 (nouveau tirage)
+    expect(getEffectValue(t, 'timerBonus')).toBe(4);
+    vi.restoreAllMocks();
+    // bornes : toujours dans 1..4 sur plusieurs tirages
+    for (let i = 0; i < 20; i++) {
+      const v = getEffectValue(t, 'timerBonus');
+      expect(v).toBeGreaterThanOrEqual(1);
+      expect(v).toBeLessThanOrEqual(4);
+    }
+    setItemsData(snapshot);
+  });
+
+  it('getEffectValue applique la probabilité (chance) de l’effet passif', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      bourseChanceuse: {
+        name: 'Bourse chanceuse', icon: '🪙', slot: 'body', rarity: 'commun', price: 0,
+        effects: [{ type: 'fightStealBonus', value: 'd10', chance: 0.2 }],
+      },
+    });
+    const t = mkTeam(0, { equipment: { head: null, body: 'bourseChanceuse', feet: null } });
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);  // ≥ 0.2 → raté
+    expect(getEffectValue(t, 'fightStealBonus')).toBe(0);
+    // < 0.2 → déclenche, puis 2e random pour le d10 (0 → 1)
+    let calls = 0;
+    vi.spyOn(Math, 'random').mockImplementation(() => (calls++ === 0 ? 0.1 : 0));
+    expect(getEffectValue(t, 'fightStealBonus')).toBe(1);
+    vi.restoreAllMocks();
+    setItemsData(snapshot);
+  });
+
   it('reducedRecul / reducedSteal / reducedTax', () => {
     const t = mkTeam(0, { equipment: { head: null, body: 'capeOmbre', feet: 'bottesMontagne' } });
     expect(reducedRecul(t, 2)).toBe(0);
@@ -204,6 +248,96 @@ describe('boutique : buyItem / revente', () => {
   });
 });
 
+// --- Séries, précision & déclencheurs de réponse ---
+
+describe('séries & déclencheurs de réponse', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('la série +1 sur bonne réponse, repart de 0 sur erreur', () => {
+    freshGame([{ streak: 4 }, {}]);
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 10); // bonne
+    expect(team(0).streak).toBe(5);
+
+    useGameStore.setState({ currentTeam: 1, teams: S().teams.map((t, i) => (i === 1 ? { ...t, streak: 3 } : t)) });
+    S().askQuestion('maths');
+    S().answerQuestion((S().showQuestion.question.c + 1) % 4, 10); // mauvaise
+    expect(team(1).streak).toBe(0);
+  });
+
+  it('déclencheur on:wrong — coiffe qui fait perdre 5 PO à l’erreur', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      coiffeMaudite: {
+        name: 'Coiffe maudite', icon: '👑', slot: 'head', rarity: 'commun', price: 0,
+        effects: [{ kind: 'trigger', on: 'wrong', do: [{ action: 'money', mode: 'lose', target: 'self', n: 5 }] }],
+      },
+    });
+    freshGame([{ money: 50, equipment: { head: 'coiffeMaudite', body: null, feet: null } }, {}]);
+    S().askQuestion('maths');
+    S().answerQuestion((S().showQuestion.question.c + 1) % 4, 10); // mauvaise
+    expect(team(0).money).toBe(45);
+    setItemsData(snapshot);
+  });
+
+  it('déclencheur on:correct — arme un bouclier à la bonne réponse', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      talisman: {
+        name: 'Talisman', icon: '🔮', slot: 'feet', rarity: 'commun', price: 0,
+        effects: [{ kind: 'trigger', on: 'correct', do: [{ action: 'shieldNext', n: 1 }] }],
+      },
+    });
+    freshGame([{ equipment: { head: null, body: null, feet: 'talisman' } }, {}]);
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 10); // bonne
+    expect(team(0).itemShield).toBe(1);
+    setItemsData(snapshot);
+  });
+
+  it('lootBonusConsumable à l’échelle de la série (5%/série)', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      besace: {
+        name: 'Besace', icon: '🎒', slot: 'body', rarity: 'commun', price: 0,
+        effects: [{ type: 'lootBonusConsumable', value: { per: 'streak', factor: 5 } }],
+      },
+    });
+    const t = mkTeam(0, { streak: 3, equipment: { head: null, body: 'besace', feet: null } });
+    expect(getEffectValue(t, 'lootBonusConsumable')).toBe(15); // 5 × 3
+    setItemsData(snapshot);
+  });
+});
+
+// --- indiceBoost passif (élimine des mauvaises réponses à chaque question) ---
+
+describe('indiceBoost passif', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('élimine des mauvaises réponses dès l’ouverture de la question (dé résolu)', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      loupe: { name: 'Loupe', icon: '🔍', slot: 'head', rarity: 'commun', price: 0, effects: [{ type: 'indiceBoost', value: 'd3' }] },
+    });
+    freshGame([{ equipment: { head: 'loupe', body: null, feet: null } }, {}]);
+    vi.spyOn(Math, 'random').mockReturnValue(0.999); // d3 → 3 : retire toutes les mauvaises réponses
+    S().askQuestion('maths');
+    expect(S().indiceHidden).toHaveLength(3); // 3 mauvaises (c=1)
+    expect(S().indiceHidden).not.toContain(1); // jamais la bonne réponse
+    setItemsData(snapshot);
+  });
+
+  it('sans indiceBoost, aucune réponse masquée d’office', () => {
+    freshGame([{}, {}]);
+    S().askQuestion('maths');
+    expect(S().indiceHidden).toHaveLength(0);
+  });
+});
+
 // --- Consommables ---
 
 describe('consommables : useConsumable', () => {
@@ -258,9 +392,15 @@ describe('consommables : useConsumable', () => {
   });
 
   it('gainCharge ouvre le sélecteur de charge (contexte objet, pas dé de 1)', () => {
+    // L'équipe doit posséder au moins un pouvoir, sinon gainCharge est sauté.
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { foudre: { charges: 0, level: 1 } } };
+    useGameStore.setState({ teams });
     giveBag(['cristalEnergie']);
     S().useConsumable(0);
-    expect(S().showChargePicker?.source).toBe('item');
+    // Passe désormais par le moteur d'effets : source 'engine' (recharge simple,
+    // sans enchaînement offensif contrairement au dé de 1).
+    expect(S().showChargePicker?.source).toBe('engine');
   });
 
   it('refusé pendant une question', () => {

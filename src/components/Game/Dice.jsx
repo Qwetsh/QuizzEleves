@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
-import { soundDice } from '../../logic/sounds';
 import { canUsePowerInContext } from '../../logic/powerActivator';
 import Dice3D from './Dice3D';
 
@@ -18,14 +17,17 @@ export default function Dice() {
   const usePower = useGameStore((s) => s.usePower);
 
   const pendingLanding = useGameStore((s) => s.pendingLanding);
-  const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal;
+  // Une séquence d'effet d'objet en cours (choix de case, d6, cible...) bloque le dé.
+  const pendingActions = useGameStore((s) => s.pendingActions);
+  const showChargePicker = useGameStore((s) => s.showChargePicker);
+  const showTargetPicker = useGameStore((s) => s.showTargetPicker);
+  const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker;
   const team = teams[currentTeam];
-  const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding };
+  const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding, pendingActions };
   const canRelance = team?.powers?.relance?.charges > 0 && canUsePowerInContext('relance', ctx);
 
   const handleRoll = () => {
-    soundDice();
-    rollDice();
+    rollDice(); // le son de dé est joué par la cérémonie (DiceRollModal)
   };
 
   return (

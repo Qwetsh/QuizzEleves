@@ -76,7 +76,9 @@ export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse'
  */
 export const BURST_RESET = {
   doubleActive: false,
-  doubleCount: 0,
+  doubleExtra: 0,
+  doubleTotal: 0,
+  doubleAsked: 0,
   doubleNoBonus: false,
   doubleTimerDivisor: undefined,
   sablierActif: false,
@@ -84,18 +86,21 @@ export const BURST_RESET = {
 };
 
 /**
- * Handle double/triple question continuation.
+ * Handle multi-question continuation (Double cumulable).
+ * `doubleExtra` = nombre de questions EXTRA encore a poser apres celle qu'on
+ * vient de resoudre. Tant qu'il en reste, on enchaine et on decremente ;
+ * sinon on solde la rafale (BURST_RESET).
  * Returns { shouldContinue, updatedTeam, logMessage } or { shouldContinue: false }.
  */
 export function resolveDoubleQuestion(team) {
   if (!team.doubleActive) return { shouldContinue: false, updatedTeam: team };
 
-  const remainingCount = (team.doubleCount || 0) - 1;
-  if (remainingCount > 0) {
+  const remainingExtra = team.doubleExtra || 0;
+  if (remainingExtra > 0) {
     return {
       shouldContinue: true,
-      updatedTeam: { ...team, doubleCount: remainingCount },
-      logMessage: `\u2753 Question multiple ! Encore ${remainingCount} question(s)...`,
+      updatedTeam: { ...team, doubleExtra: remainingExtra - 1 },
+      logMessage: `\u2753 Question multiple ! Encore ${remainingExtra} question(s)...`,
     };
   }
   return {

@@ -96,25 +96,37 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     S().applyOffensivePower(1);
   };
 
-  it('niv.1 : double question sans bonus pièces', () => {
+  it('niv.1 : +1 question extra sans bonus pièces', () => {
     castDouble(1);
     expect(team(1).doubleActive).toBe(true);
-    expect(team(1).doubleCount).toBe(2);
+    expect(team(1).doubleExtra).toBe(1);
     expect(team(1).doubleNoBonus).toBe(true);
     expect(team(1).sablierActif).toBe(false);
   });
 
-  it('niv.2 : triple question', () => {
+  it('niv.2 : +2 questions extra', () => {
     castDouble(2);
-    expect(team(1).doubleCount).toBe(3);
+    expect(team(1).doubleExtra).toBe(2);
     expect(team(1).sablierActif).toBe(false);
   });
 
-  it('niv.3 : triple question + timer /2 (champ séparé du Sablier)', () => {
+  it('niv.3 : +2 questions + timer /2 (champ séparé du Sablier)', () => {
     castDouble(3);
-    expect(team(1).doubleCount).toBe(3);
+    expect(team(1).doubleExtra).toBe(2);
     expect(team(1).doubleTimerDivisor).toBe(2);
     expect(team(1).sablierActif).toBe(false);
+  });
+
+  it('cumul Double + Double : les questions extra s’additionnent', () => {
+    castDouble(1);
+    castDouble(1);
+    expect(team(1).doubleExtra).toBe(2); // 1 + 1
+    expect(team(1).doubleNoBonus).toBe(true);
+  });
+
+  it('plafond : doubleExtra ne dépasse pas 4 (5 questions max)', () => {
+    for (let i = 0; i < 5; i++) castDouble(2); // +2 chacun
+    expect(team(1).doubleExtra).toBe(4);
   });
 
   it('niv.3 : le timer réduit persiste sur TOUTE la rafale puis se nettoie', () => {
@@ -124,23 +136,44 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     // Question 1 : timer /2, la réduction persiste pendant la rafale
     S().askQuestion('maths');
     expect(S().showQuestion.timerDivisor).toBe(2);
+    expect(S().showQuestion.multiIndex).toBe(1);
+    expect(S().showQuestion.multiTotal).toBe(3); // 1 base + 2 extra
     expect(team(1).doubleTimerDivisor).toBe(2);
     S().answerQuestion(S().showQuestion.question.c, 10);
 
     // Question 2 (enchaînée automatiquement) : toujours /2
     expect(S().showQuestion).toBeTruthy();
     expect(S().showQuestion.timerDivisor).toBe(2);
+    expect(S().showQuestion.multiIndex).toBe(2);
     S().answerQuestion(S().showQuestion.question.c, 10);
 
     // Question 3 : toujours /2, puis fin de rafale -> tout est nettoyé
     expect(S().showQuestion.timerDivisor).toBe(2);
+    expect(S().showQuestion.multiIndex).toBe(3);
     S().answerQuestion(S().showQuestion.question.c, 10);
     expect(S().showQuestion).toBeNull();
     expect(team(1).doubleActive).toBe(false);
     expect(team(1).doubleTimerDivisor).toBeUndefined();
+    expect(team(1).doubleExtra).toBe(0);
+    expect(team(1).doubleTotal).toBe(0);
+    expect(team(1).doubleAsked).toBe(0);
     // Sans bonus : aucune pièce gagnée malgré 3 bonnes réponses
     expect(team(1).money).toBe(50);
     expect(team(1).correct).toBe(3);
+  });
+
+  it('bonus pièces sur la DERNIÈRE question seulement quand noBonus=false', () => {
+    // Simule une rafale issue d'un futur objet « bonus » (doubleNoBonus=false)
+    const teams = [...S().teams];
+    teams[1] = { ...teams[1], money: 50, doubleActive: true, doubleExtra: 1, doubleNoBonus: false };
+    useGameStore.setState({ teams, currentTeam: 1 });
+
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 10); // Q1 : pas de bonus (extra restant)
+    expect(team(1).money).toBe(50);
+    S().answerQuestion(S().showQuestion.question.c, 10); // Q2 (dernière) : bonus
+    expect(team(1).money).toBeGreaterThan(50);
+    expect(team(1).correct).toBe(2);
   });
 
   it('rafale interrompue par une erreur : timer réduit nettoyé aussi', () => {
@@ -151,6 +184,8 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     S().answerQuestion(wrong, 10);
     expect(team(1).doubleActive).toBe(false);
     expect(team(1).doubleTimerDivisor).toBeUndefined();
+    expect(team(1).doubleExtra).toBe(0);
+    expect(team(1).doubleAsked).toBe(0);
   });
 
   it('Sablier adverse + rafale Double : consommé sur UNE seule question', () => {
@@ -163,6 +198,7 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
 
     S().askQuestion('maths');
     expect(S().showQuestion.timerDivisor).toBe(2);
+    expect(S().showQuestion.multiTotal).toBe(2); // 1 base + 1 extra
     expect(team(1).sablierActif).toBe(false); // consommé immédiatement
     S().answerQuestion(S().showQuestion.question.c, 10);
 

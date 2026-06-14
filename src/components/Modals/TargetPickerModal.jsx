@@ -4,18 +4,35 @@ import { POWERS } from '../../data/powers';
 import ModalOverlay from './ModalOverlay';
 import TeamTargetButton from './TeamTargetButton';
 
+// Décrit l'entête du picker selon la source (pouvoir legacy ou moteur d'effets).
+function pickerInfo(stp) {
+  if (!stp) return null;
+  if (stp.source === 'engine') {
+    const a = stp.action || {};
+    const isMoney = a.action === 'money';
+    return {
+      icon: isMoney ? '💰' : '🎯',
+      color: isMoney ? '#e8b117' : '#c9472f',
+      name: isMoney ? 'Cible du vol/effet' : 'Cible du déplacement',
+      desc: 'Choisis une équipe à viser.',
+    };
+  }
+  const p = POWERS[stp.powerKey];
+  return p ? { icon: p.icon, color: p.color, name: p.name, desc: p.desc } : null;
+}
+
 export default function TargetPickerModal() {
   const showTargetPicker = useGameStore((s) => s.showTargetPicker);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
-  const applyOffensivePower = useGameStore((s) => s.applyOffensivePower);
+  const selectTarget = useGameStore((s) => s.selectTarget);
   const cancelTargetPicker = useGameStore((s) => s.cancelTargetPicker);
 
-  const power = showTargetPicker ? POWERS[showTargetPicker.powerKey] : null;
+  const info = pickerInfo(showTargetPicker);
 
   return (
     <AnimatePresence>
-      {showTargetPicker && power && (
+      {showTargetPicker && info && (
         <ModalOverlay onClose={cancelTargetPicker} className="max-w-sm">
           <div style={{ padding: '26px 26px 4px', textAlign: 'center' }}>
             <div
@@ -24,20 +41,18 @@ export default function TargetPickerModal() {
                 margin: '0 auto 14px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 40,
-                background: power.color
-                  ? `linear-gradient(180deg, ${power.color}cc, ${power.color})`
-                  : 'linear-gradient(180deg, #e85d6b, #c9472f)',
+                background: `linear-gradient(180deg, ${info.color}cc, ${info.color})`,
                 boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -5px 0 rgba(0,0,0,0.18), 0 6px 0 rgba(110,30,18,0.4)',
               }}
             >
-              {power.icon}
+              {info.icon}
             </div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>{power.name}</h2>
-            <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>{power.desc}</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>{info.name}</h2>
+            <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>{info.desc}</p>
           </div>
 
           <div style={{ padding: '10px 26px 24px' }}>
-            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{"Choisir une \u00e9quipe cible :"}</p>
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{"Choisir une équipe cible :"}</p>
             <div className="space-y-2">
               {teams.map((team, i) => {
                 if (i === currentTeam) return null;
@@ -45,7 +60,7 @@ export default function TargetPickerModal() {
                   <TeamTargetButton
                     key={i}
                     team={team}
-                    onClick={() => applyOffensivePower(i)}
+                    onClick={() => selectTarget(i)}
                   />
                 );
               })}

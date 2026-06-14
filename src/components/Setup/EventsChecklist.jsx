@@ -1,27 +1,32 @@
+import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { EVENTS } from '../../data/events';
+import { EVENT_IMG } from '../../data/eventAssets';
 
 export default function EventsChecklist() {
   const enabledEvents = useGameStore((s) => s.enabledEvents);
   const toggleEvent = useGameStore((s) => s.toggleEvent);
   const setAllEvents = useGameStore((s) => s.setAllEvents);
+  const [open, setOpen] = useState(false);
 
   const allKeys = Object.keys(EVENTS);
   const allChecked = enabledEvents.length === allKeys.length;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="field-label" style={{ marginBottom: 0 }}>
+      <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
+        <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'\u25b6'}</span>
           {`\u00c9v\u00e9nements (${enabledEvents.length}/${allKeys.length})`}
         </div>
         <button
-          onClick={() => setAllEvents(!allChecked)}
+          onClick={(e) => { e.stopPropagation(); setAllEvents(!allChecked); }}
           style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
         >
           {allChecked ? 'Tout d\u00e9cocher' : 'Tout cocher'}
         </button>
       </div>
+      {open && (
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {allKeys.map((key) => {
           const ev = EVENTS[key];
@@ -51,7 +56,12 @@ export default function EventsChecklist() {
                 {on ? '\u2713' : ''}
               </div>
               <div className="min-w-0">
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.icon} {ev.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {EVENT_IMG[key]
+                    ? <img src={EVENT_IMG[key]} alt="" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
+                    : <span>{ev.icon}</span>}
+                  <span>{ev.name}</span>
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.35, marginTop: 1 }}>
                   {ev.desc}
                 </div>
@@ -60,6 +70,7 @@ export default function EventsChecklist() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

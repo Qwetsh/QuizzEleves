@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
+import FightBriefing from './FightBriefing';
 
 // Le simulateur dev peut forcer le duel generique via fight.forceDefault
 function resolveMinigame(fight) {
@@ -41,6 +42,9 @@ export default function FightModal() {
       >
         {showFight.phase === 'versus' && (
           <VersusScreen fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'briefing' && (
+          <FightBriefing fight={showFight} attacker={attacker} defender={defender} />
         )}
         {showFight.phase === 'minigame' && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
@@ -151,7 +155,7 @@ function VersusScreen({ fight, attacker, defender }) {
           {minigame.rules}
         </div>
         <div style={{ fontSize: 11, color: 'var(--ink-400)', marginTop: 6, fontFamily: 'var(--font-ui)' }}>
-          {minigame.winLabel || `Premier à ${FIGHT_ROUNDS_TO_WIN} manches`} — touche l'écran pour commencer
+          {minigame.winLabel || `Premier à ${FIGHT_ROUNDS_TO_WIN} manches`} — touche l'écran pour voir les règles
         </div>
       </motion.div>
     </div>

@@ -12,6 +12,7 @@ import {
 } from '../../logic/itemsConfig';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { useGameStore } from '../../store/gameStore';
+import { TriggerCard, defaultTrigger, AmountInput, DEFAULT_DICE } from './EffectBuilder';
 import '../../styles/questions-editor.css';
 import '../../styles/balance-editor.css';
 
@@ -25,12 +26,28 @@ const EFFECT_LABELS = {
   timerBonus: 'Timer (+s)', indiceBoost: 'Indice (+rép. éliminées)', moneyPerCorrect: 'Pièces / bonne réponse',
   taxReduction: 'Impôts/taxes (−%)', stealProtection: 'Anti-vol (−%)', reculReduction: 'Recul subi (−cases)',
   tempeteImmune: 'Immunité Tempête (0/1)', oubliProtect: "Anti Trou de l'oubli (0/1)", fightStealBonus: 'Vol de duel (+pièces)',
+  lootBonusConsumable: 'Chance loot consommable (+%)', lootBonusEquipment: 'Chance loot équipement (+%)',
   gainMoney: 'Gagne des pièces', gainMoneyAll: 'Pièces à toutes les équipes', moveForward: 'Avance (cases)',
   extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule prochain recul (0/1)',
   gainCharge: 'Recharge un pouvoir (0/1)', fumigene: 'Annule pouvoir offensif (0/1)',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus'];
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
+// Effets simples dont la quantité peut être ALÉATOIRE (dé) : résolus par
+// resolveAmount au moment de l'usage. Pour l'équipement passif, le dé est
+// relancé à chaque consommation (ex. timer 1D4 = +1D4 s à chaque question).
+// Exclus : les effets binaires d'immunité (0/1) et les déclencheurs (0/1).
+const DICEABLE_EFFECTS = new Set([
+  // consommables
+  'gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext',
+  // équipement passif (numérique)
+  'timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'fightStealBonus',
+  'lootBonusConsumable', 'lootBonusEquipment',
+]);
+// Faces de dé proposées par type d'effet. Réponses éliminées : seulement d2/d3
+// (3 mauvaises réponses max → d3 peut toutes les retirer).
+const diceFor = (type) => (type === 'indiceBoost' ? ['d2', 'd3'] : DEFAULT_DICE);
+const isDynamicVal = (v) => typeof v === 'string' || (v != null && typeof v === 'object');
 
 const GROUPS = [
   { slot: 'head', label: '\u{1F3A9} Coiffes' },
@@ -48,8 +65,9 @@ const FX_LABELS = {
 const LOOT_FIELDS = [
   { k: 'chestLegendaryChance', label: 'Chance légendaire — coffre', pct: true },
   { k: 'fightLegendaryChance', label: 'Chance légendaire — duel', pct: true },
-  { k: 'answerLegendaryChance', label: 'Chance légendaire — bonne réponse', pct: true },
-  { k: 'answerLootRate', label: 'Taux de loot — bonne réponse (max)', pct: true },
+  { k: 'answerLegendaryChance', label: 'Chance légendaire — bonne réponse (équipement)', pct: true },
+  { k: 'answerLootRate', label: 'Taux de loot ÉQUIPEMENT — bonne réponse (max)', pct: true },
+  { k: 'answerConsumableRate', label: 'Taux de loot CONSOMMABLE — bonne réponse (max)', pct: true },
   { k: 'shopWeightCommon', label: 'Poids boutique — commun', pct: false },
   { k: 'shopWeightOther', label: 'Poids boutique — rare/légendaire', pct: false },
 ];
@@ -78,6 +96,16 @@ const newDraft = (ord) => ({
 const slugify = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(' ')
   .map((w, i) => (i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join('');
+
+// Génère une clé identifiant UNIQUE à partir du nom (suffixe numérique si collision).
+const uniqueKey = (name, rows) => {
+  const base = slugify(name) || 'objet';
+  const taken = new Set((rows || []).map((r) => r.key));
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base}${n}`)) n++;
+  return `${base}${n}`;
+};
 
 export default function BalanceEditor({ onClose }) {
   const syncEnabled = useGameStore((s) => s.syncEnabledItems);
@@ -145,23 +173,29 @@ export default function BalanceEditor({ onClose }) {
   const set = (patch) => { setStatus(null); setDraft((d) => ({ ...d, ...patch })); };
   const effectPool = draft?.slot === 'consumable' ? CONSUM_EFFECTS : EQUIP_EFFECTS;
 
-  const updateEffect = (i, patch) => set({ effects: draft.effects.map((fx, j) => (j === i ? { ...fx, ...patch } : fx)) });
+  // Effet simple (legacy {type,value}) : fusion. Déclencheur composable : remplacement complet
+  // (changer de type de déclencheur ne doit pas laisser de champs résiduels).
+  const updateEffect = (i, patch) => set({
+    effects: draft.effects.map((fx, j) => {
+      if (j !== i) return fx;
+      return (patch && patch.kind === 'trigger') || (fx && fx.kind === 'trigger') ? patch : { ...fx, ...patch };
+    }),
+  });
   const removeEffect = (i) => set({ effects: draft.effects.filter((_, j) => j !== i) });
   const addEffect = () => set({ effects: [...draft.effects, { type: effectPool[0], value: 1 }] });
+  const addTrigger = () => set({ effects: [...draft.effects, defaultTrigger(draft.slot)] });
 
   function validate(d) {
     if (!d) return false;
-    if (!d.name.trim()) return false;
-    const key = d._isNew ? slugify(d.key || d.name) : d.key;
-    if (!key) return false;
-    if (d._isNew && rows?.some((r) => r.key === key)) return false;
+    if (!d.name.trim()) return false; // la clé est générée automatiquement à la sauvegarde
     return true;
   }
 
   async function handleSave() {
     if (busy || !validate(draft)) return;
     setBusy(true); setStatus(null);
-    const toSave = { ...draft, key: draft._isNew ? slugify(draft.key || draft.name) : draft.key };
+    // Clé identifiant générée automatiquement (unique) pour un nouvel objet.
+    const toSave = { ...draft, key: draft._isNew ? uniqueKey(draft.name, rows) : draft.key };
     try {
       const saved = await saveItemRow(toSave, { isNew: draft._isNew });
       await refreshItems(); syncEnabled();
@@ -364,14 +398,6 @@ export default function BalanceEditor({ onClose }) {
                   <input className="qed-input" value={draft.name} onChange={(ev) => set({ name: ev.target.value })} />
                 </div>
 
-                {draft._isNew && (
-                  <div className="qed-field">
-                    <label className="qed-label">Clé (identifiant unique)</label>
-                    <input className="qed-input" value={draft.key}
-                      placeholder={slugify(draft.name)} onChange={(ev) => set({ key: ev.target.value })} />
-                    <span className="bal-default">générée : {slugify(draft.key || draft.name) || '—'}</span>
-                  </div>
-                )}
 
                 {/* Image */}
                 <div className="bal-row">
@@ -425,15 +451,13 @@ export default function BalanceEditor({ onClose }) {
                   <Stepper value={draft.price} onChange={(v) => set({ price: v })} max={999} />
                 </div>
 
-                {draft.slot !== 'consumable' && (
-                  <div className="bal-row">
-                    <span className="bal-label">Loot only</span>
-                    <label className="bal-toggle">
-                      <input type="checkbox" checked={!!draft.lootOnly} onChange={(ev) => set({ lootOnly: ev.target.checked })} />
-                      introuvable en boutique
-                    </label>
-                  </div>
-                )}
+                <div className="bal-row">
+                  <span className="bal-label">Loot only</span>
+                  <label className="bal-toggle">
+                    <input type="checkbox" checked={!!draft.lootOnly} onChange={(ev) => set({ lootOnly: ev.target.checked })} />
+                    introuvable en boutique (reste en loot : coffres, duels…)
+                  </label>
+                </div>
 
                 <div className="qed-field" style={{ marginTop: 8 }}>
                   <label className="qed-label">Description (texte affiché)</label>
@@ -443,17 +467,49 @@ export default function BalanceEditor({ onClose }) {
                 <div className="qed-field">
                   <label className="qed-label">Effets</label>
                   {draft.effects.map((fx, i) => (
-                    <div key={i} className="bal-effect">
-                      <select className="qed-select" value={fx.type} onChange={(ev) => updateEffect(i, { type: ev.target.value })}>
-                        {(effectPool.includes(fx.type) ? effectPool : [fx.type, ...effectPool]).map((t) => (
-                          <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>
-                        ))}
-                      </select>
-                      <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />
-                      <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
-                    </div>
+                    fx && fx.kind === 'trigger' ? (
+                      <TriggerCard key={i} fx={fx} slot={draft.slot}
+                        onChange={(v) => updateEffect(i, v)} onRemove={() => removeEffect(i)} />
+                    ) : (
+                      <div key={i} className="bal-effect">
+                        <select className="qed-select" value={fx.type} onChange={(ev) => {
+                          const type = ev.target.value;
+                          const patch = { type };
+                          // si la valeur courante est dynamique (dé ou « à l'échelle ») et
+                          // incompatible avec le nouveau type, on rétablit un nombre fixe :
+                          // - type non aléatoire-able, ou
+                          // - dé absent des faces autorisées pour ce type
+                          if (isDynamicVal(fx.value)
+                            && (!DICEABLE_EFFECTS.has(type)
+                              || (typeof fx.value === 'string' && !diceFor(type).includes(fx.value)))) patch.value = 1;
+                          updateEffect(i, patch);
+                        }}>
+                          {(effectPool.includes(fx.type) ? effectPool : [fx.type, ...effectPool]).map((t) => (
+                            <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>
+                          ))}
+                        </select>
+                        {DICEABLE_EFFECTS.has(fx.type)
+                          ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} />
+                          : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />}
+                        <span className="bal-fx-chance" title="Probabilité que l'effet se déclenche (100 % = toujours)"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--ink-500)' }}>
+                          <span>déclenche</span>
+                          <input type="number" className="qed-input" style={{ width: 56 }} min={1} max={100}
+                            value={Math.round((typeof fx.chance === 'number' ? fx.chance : 1) * 100)}
+                            onChange={(ev) => {
+                              const pct = Math.max(1, Math.min(100, Number(ev.target.value) || 0));
+                              updateEffect(i, { chance: pct >= 100 ? undefined : pct / 100 });
+                            }} />
+                          <span>%</span>
+                        </span>
+                        <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
+                      </div>
+                    )
                   ))}
-                  <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Ajouter un effet</button>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                    <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Effet simple</button>
+                    <button className="btn btn--ghost btn--sm" onClick={addTrigger}>{'+'} Effet déclenché (avancé)</button>
+                  </div>
                 </div>
 
                 <label className="bal-toggle" style={{ marginTop: 6 }}>
@@ -468,7 +524,7 @@ export default function BalanceEditor({ onClose }) {
                   {!draft._isNew && (
                     <button className="btn btn--ghost" onClick={handleDelete} disabled={busy} style={{ color: '#b5341f' }}>Supprimer</button>
                   )}
-                  {!validate(draft) && <span className="qed-err">Nom et clé unique requis.</span>}
+                  {!validate(draft) && <span className="qed-err">Un nom est requis.</span>}
                   {status && <span className="qed-err" style={{ color: status.startsWith('Erreur') || status.includes('échec') ? '#b5341f' : '#2f9d5a' }}>{status}</span>}
                 </div>
               </div>

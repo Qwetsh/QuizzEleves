@@ -82,7 +82,7 @@ export const POWERS = {
   double: {
     name: 'Double question',
     icon: '\u2753',
-    desc: 'Impose une double question.',
+    desc: 'Ajoute des questions au prochain tour de la cible (cumulable).',
     type: 'target',
     category: 'off',
     price: 15,
@@ -90,9 +90,9 @@ export const POWERS = {
     activationCost: 10,
     upgradeCosts: [20, 30],
     levels: [
-      { desc: 'Double question (sans bonus pieces)', effect: { type: 'multiQuestion', count: 2, noBonus: true } },
-      { desc: 'Triple question (sans bonus pieces)', effect: { type: 'multiQuestion', count: 3, noBonus: true } },
-      { desc: 'Triple question + timer divise par 2', effect: { type: 'multiQuestion', count: 3, noBonus: true, timerDivisor: 2 } },
+      { desc: '+1 question au prochain tour (cumulable, sans bonus pieces)', effect: { type: 'multiQuestion', add: 1, noBonus: true } },
+      { desc: '+2 questions au prochain tour (cumulable, sans bonus)', effect: { type: 'multiQuestion', add: 2, noBonus: true } },
+      { desc: '+2 questions (cumulable) + timer divise par 2', effect: { type: 'multiQuestion', add: 2, noBonus: true, timerDivisor: 2 } },
     ],
   },
 };

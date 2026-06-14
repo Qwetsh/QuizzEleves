@@ -1,8 +1,13 @@
 import { POWERS } from '../data/powers.js';
 import { moveBack } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
-import { getEffectValue, reducedRecul } from '../logic/itemEffects.js';
+import { reducedRecul } from '../logic/itemEffects.js';
 import { saveGame } from './persistence.js';
+import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
+import { resumeQueue as resumeEngineQueue } from './effectEngine.js';
+
+// Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
+const MAX_DOUBLE_EXTRA = 4;
 
 // Effet du niveau courant d'un pouvoir — seule source de verite : powers.js
 function levelEffect(powerKey, level) {
@@ -13,7 +18,6 @@ function levelEffect(powerKey, level) {
 
 export function usePower(set, get, powerKey) {
   const { teams, currentTeam, rolling, finished, showQuestion, showEvent, awaitingChoice, diceValue, pendingLanding } = get();
-  if (finished || rolling || showEvent || awaitingChoice) return;
   const team = teams[currentTeam];
   const charges = team.powers?.[powerKey]?.charges ?? 0;
   if (charges <= 0) return;
@@ -21,15 +25,19 @@ export function usePower(set, get, powerKey) {
   const power = POWERS[powerKey];
   if (!power) return;
 
-  if (powerKey === 'indice') {
-    if (!showQuestion || get().indiceUsed) return;
-    useIndice(set, get);
+  // Relance : traitée AVANT le garde général car elle est aussi permise pendant
+  // un choix de jonction (awaitingChoice), où les autres pouvoirs sont bloqués.
+  if (powerKey === 'relance') {
+    if (!diceValue || showQuestion || rolling || showEvent || finished || !(pendingLanding || awaitingChoice)) return;
+    useRelance(set, get);
     return;
   }
 
-  if (powerKey === 'relance') {
-    if (!diceValue || showQuestion || !pendingLanding) return;
-    useRelance(set, get);
+  if (finished || rolling || showEvent || awaitingChoice) return;
+
+  if (powerKey === 'indice') {
+    if (!showQuestion || get().indiceUsed) return;
+    useIndice(set, get);
     return;
   }
 
@@ -57,10 +65,13 @@ export function useIndice(set, get) {
     const j = Math.floor(Math.random() * (i + 1));
     [wrongIndices[i], wrongIndices[j]] = [wrongIndices[j], wrongIndices[i]];
   }
-  // Equipement (indiceBoost) : reponses supplementaires eliminees
-  const boost = getEffectValue(team, 'indiceBoost');
-  const hideCount = Math.min((effect.count ?? 2) + boost, wrongIndices.length);
-  const hidden = wrongIndices.slice(0, hideCount);
+  // L'equipement (indiceBoost) elimine deja passivement des reponses a l'ouverture
+  // de la question : le pouvoir ajoute SES eliminations par-dessus (sans re-tirer
+  // le boost), pour ne pas masquer deux fois la meme reponse.
+  const already = get().indiceHidden || [];
+  const fresh = wrongIndices.filter((i) => !already.includes(i));
+  const hideMore = Math.min(effect.count ?? 2, fresh.length);
+  const hidden = [...already, ...fresh.slice(0, hideMore)];
 
   const result = consumePowerCharge(team, 'indice');
   if (!result) return;
@@ -68,7 +79,7 @@ export function useIndice(set, get) {
   const newTeams = [...teams];
   newTeams[currentTeam] = result.updatedTeam;
 
-  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideCount} r\u00e9ponses \u00e9limin\u00e9es.`);
+  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hidden.length} r\u00e9ponses \u00e9limin\u00e9es.`);
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
 
   if (effect.bonusTime > 0) {
@@ -89,7 +100,9 @@ export function useRelance(set, get) {
   newTeams[currentTeam] = { ...result.updatedTeam, pos: preRollPos || team.pos };
 
   addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !`);
-  set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false });
+  soundDice();
+  // Nettoie aussi un éventuel choix de jonction en cours (on relance depuis le départ du lancer).
+  set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false, awaitingChoice: false, pendingMove: null });
 
   const finalValue = Math.floor(Math.random() * 6) + 1;
   let count = 0;
@@ -137,6 +150,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   const level = team.powers?.[powerKey]?.level ?? 1;
   const effect = levelEffect(powerKey, level);
   let foudreMove = null;
+  let vfx = null;
 
   if (powerKey === 'foudre') {
     // Equipement de la cible (reculReduction) : recul attenue
@@ -146,24 +160,29 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     if (r.path.length > 1) {
       foudreMove = [{ teamIndex: targetTeamIndex, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     }
+    vfx = { type: 'lightning', teamIndex: targetTeamIndex, id: (get().vfx?.id ?? 0) + 1 };
+    soundThunder();
     addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.`);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
     newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
+    soundPower();
     addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level}) sur ${target.emoji} ${target.name} ! Timer /${divisor} au prochain tour.`);
   } else if (powerKey === 'double') {
-    const questionCount = effect.count ?? 2;
-    const noBonus = !!effect.noBonus;
+    // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
+    const add = effect.add ?? 1;
+    const newExtra = Math.min((target.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
+    const noBonus = !!effect.noBonus || !!target.doubleNoBonus; // collant
     // Niv.3 : timer reduit persistant sur la rafale — champ separe du Sablier
     // (un Sablier adverse one-shot ne doit pas heriter de cette persistance)
-    const pressure = effect.timerDivisor
-      ? { doubleTimerDivisor: effect.timerDivisor }
-      : {};
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleCount: questionCount, doubleNoBonus: noBonus, ...pressure };
-    addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! ${questionCount} questions au prochain tour.${noBonus ? ' (sans bonus)' : ''}${effect.timerDivisor ? ` Timer /${effect.timerDivisor} !` : ''}`);
+    const newDiv = Math.max(target.doubleTimerDivisor || 1, effect.timerDivisor || 1);
+    const pressure = newDiv > 1 ? { doubleTimerDivisor: newDiv } : {};
+    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure };
+    soundPower();
+    addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
   }
 
-  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
+  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}), ...(vfx ? { vfx } : {}) });
   // Stay in pendingLanding so player can use more powers before clicking "Continuer"
 }
 
@@ -176,8 +195,9 @@ export function cancelTargetPicker(set, get) {
 
 export function chargePickerChoice(set, get, powerKey) {
   const { teams, currentTeam, addLog } = get();
-  // Ouvert par le dé de 1 (source 'dice') ou par un consommable (source 'item')
-  const fromDice = get().showChargePicker?.source !== 'item';
+  // Source : 'dice' (dé de 1), 'item' (consommable legacy) ou 'engine' (moteur d'effets)
+  const source = get().showChargePicker?.source;
+  const fromDice = source !== 'item' && source !== 'engine';
   const team = teams[currentTeam];
   const newTeams = [...teams];
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
@@ -185,7 +205,11 @@ export function chargePickerChoice(set, get, powerKey) {
   newTeams[currentTeam] = { ...team, powers: newPowers };
   const pName = POWERS[powerKey]?.name || powerKey;
   addLog(`\u2728 ${team.emoji} ${team.name} gagne 1 charge de ${pName} !`);
+  soundCharge();
   set({ teams: newTeams, showChargePicker: false });
+
+  // Moteur d'effets : reprendre la file après la recharge (l'action gainCharge est résolue).
+  if (source === 'engine') { resumeEngineQueue(set, get, { chargeDone: true }); return; }
 
   // Seul le flux "dé de 1" enchaîne sur une activation offensive immédiate ;
   // un consommable (Cristal d'énergie...) ne fait que recharger.
@@ -198,7 +222,10 @@ export function chargePickerChoice(set, get, powerKey) {
 }
 
 export function chargePickerSkip(set, get) {
+  const source = get().showChargePicker?.source;
   set({ showChargePicker: false });
+  // Moteur d'effets : sauter la recharge mais poursuivre la file.
+  if (source === 'engine') { resumeEngineQueue(set, get, { chargeDone: true }); return; }
   // Stay in pendingLanding — player clicks "Continuer" when ready
 }
 

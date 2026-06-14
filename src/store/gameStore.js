@@ -12,10 +12,12 @@ import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
 import { randomSubject, resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET } from '../logic/turnHelpers.js';
+import { soundShield, soundTrap } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
 import * as powerH from './powerHandlers.js';
 import * as fightH from './fightHandlers.js';
 import * as itemH from './itemHandlers.js';
+import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { getEffectValue } from '../logic/itemEffects.js';
@@ -31,12 +33,22 @@ function createDefaultTeams(n) {
     pos: 'depart',
     correct: 0,
     wrong: 0,
+    streak: 0,
     money: 0,
     powerDef: null,
     powerOff: null,
     sablierActif: false,
     doubleActive: false,
   }));
+}
+
+// Vrai si le Bouclier (pouvoir) ou un Bouclier de bois (consommable) a absorbe
+// le recul entre l'etat avant/apres resolveWrongAnswer (declenche le son).
+function bouclierAbsorbed(before, after) {
+  return (
+    (before.powers?.bouclier?.charges ?? 0) > (after.powers?.bouclier?.charges ?? 0) ||
+    (before.itemShield ?? 0) > (after.itemShield ?? 0)
+  );
 }
 
 // UI state reset shared by nextTurn, resumeGame, reset.
@@ -57,6 +69,14 @@ const TURN_RESET = {
   indiceHidden: [],
   freeActivation: false,
   showChargePicker: false,
+  // Moteur d'effets composable (objets) : file + interrupts transitoires
+  pendingActions: null,
+  showTilePicker: null,
+  showActionDice: null,
+  showSubjectPicker: false,
+  rerollUsed: false,
+  trapDepth: 0,
+  forcedSubject: null,
 };
 
 export const useGameStore = create((set, get) => ({
@@ -253,8 +273,11 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling, showDiceModal, showFight } = get();
+    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent } = get();
     if (finished || rolling || showDiceModal || showFight) return;
+    // Bloque le dé pendant une séquence d'effet (choix de case/cible/d6...) ou
+    // tant que le tour n'est pas résolu (atterrissage, jonction, question).
+    if (pendingActions || pendingLanding || awaitingChoice || showQuestion || showEvent) return;
     const finalValue = Math.floor(Math.random() * 6) + 1;
     set({ rolling: true, diceValue: finalValue, showDiceModal: true });
   },
@@ -278,20 +301,33 @@ export const useGameStore = create((set, get) => ({
     const waypoints = result.path.map((id) => ({ x: board[id].x, y: board[id].y }));
     set({ teams: newTeams, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
 
-    if (result.stoppedAtJunction) {
-      set({ awaitingChoice: true, pendingMove: { remaining: result.remaining } });
+    // D\u00E9clencheurs on:roll de l'\u00E9quipement : ils d\u00E9pendent de la VALEUR du d\u00E9,
+    // PAS de l'endroit o\u00F9 l'on s'arr\u00EAte. On les d\u00E9clenche donc AVANT de g\u00E9rer la
+    // jonction/atterrissage ; finishQueue encha\u00EEne ensuite resolvePostRoll.
+    const postRoll = { stoppedAtJunction: result.stoppedAtJunction, remaining: result.remaining };
+    const onRoll = effectH.equipOnRollActions(team, value);
+    if (onRoll.length) {
+      effectH.runEffects(set, get, onRoll, { source: 'roll', diceValue: value, postRoll });
+      return;
+    }
+    get().resolvePostRoll(value, postRoll);
+  },
+
+  // R\u00E9solution apr\u00E8s le lancer (jonction / d\u00E9 de 1 / atterrissage), ex\u00E9cut\u00E9e
+  // APR\u00C8S les \u00E9ventuels effets on:roll de l'\u00E9quipement.
+  resolvePostRoll: (value, postRoll) => {
+    const { teams, currentTeam, addLog } = get();
+    const team = teams[currentTeam];
+    if (postRoll?.stoppedAtJunction) {
+      set({ awaitingChoice: true, pendingMove: { remaining: postRoll.remaining } });
       addLog(`\u2194\uFE0F Choisis une voie !`);
       return;
     }
-
-    // Rolling a 1: open charge picker
     if (value === 1) {
       addLog(`\u2728 ${team.emoji} A fait 1 ! Choisis un pouvoir \u00e0 recharger gratuitement !`);
       set({ showChargePicker: { source: 'dice' }, freeActivation: true, pendingLanding: true });
       return;
     }
-
-    // Wait for player to use powers or click "Continuer"
     set({ pendingLanding: true });
   },
 
@@ -303,6 +339,7 @@ export const useGameStore = create((set, get) => ({
     // Deplacement d'objet (potion) : pas d'action de case a l'atterrissage,
     // et on ne touche pas au pendingLanding du tour en cours
     const noLanding = !!pendingMove?.noLanding;
+    const resumeEngine = !!pendingMove?.resumeEngine; // move issu du moteur d'effets
     if (!noLanding) set({ pendingLanding: false });
 
     const newTeams = [...teams];
@@ -318,7 +355,7 @@ export const useGameStore = create((set, get) => ({
       set({ teams: updatedTeams, pendingMove: null, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
 
       if (result.stoppedAtJunction) {
-        set({ awaitingChoice: true, pendingMove: { remaining: result.remaining, noLanding } });
+        set({ awaitingChoice: true, pendingMove: { remaining: result.remaining, noLanding, resumeEngine } });
         return;
       }
     } else {
@@ -332,6 +369,11 @@ export const useGameStore = create((set, get) => ({
       if (board[pos]?.type === 'arrivee') {
         get().addLog(`\u{1F3C6} ${get().teams[currentTeam].emoji} ${get().teams[currentTeam].name} atteint l'arrivée !`);
         set({ finished: true });
+      }
+      // Move issu du moteur d'effets : reprendre la file (l'action move est terminee)
+      if (resumeEngine && get().pendingActions) {
+        effectH.resumeQueue(set, get, { junctionDone: true });
+        return;
       }
       saveGame(get());
       return;
@@ -353,6 +395,22 @@ export const useGameStore = create((set, get) => ({
       set({ finished: true });
       saveGame(get());
       return;
+    }
+
+    // Piege sur la case : declenche pour TOUTE equipe (poseur compris), one-shot.
+    // Resolu AVANT le combat (un recul peut sortir la victime de la case adverse).
+    if (node.trap) {
+      const depth = get().trapDepth || 0;
+      const trap = node.trap;
+      const nb = { ...board };
+      nb[team.pos] = { ...node }; delete nb[team.pos].trap; // nettoyage avant execution (idempotence)
+      set({ board: nb, trapDepth: depth + 1 });
+      soundTrap();
+      addLog(`\u{1FAA4} ${team.emoji} ${team.name} declenche un piege${trap.label ? ` : ${trap.label}` : ''} !`);
+      if (depth < 3) {
+        effectH.runEffects(set, get, trap.do, { source: 'trap' });
+        return;
+      }
     }
 
     // Combat : la case (hors depart) est occupee par une autre equipe.
@@ -395,6 +453,10 @@ export const useGameStore = create((set, get) => ({
 
   // --- Questions ---
   askQuestion: (subject) => {
+    // Thème forcé par un effet d'objet (ex. déclencheur « Selon le dé » →
+    // changer la question) : s'applique à la PROCHAINE question, puis se consomme.
+    const forced = get().forcedSubject;
+    if (forced) { subject = forced; set({ forcedSubject: null }); }
     const { questions, askedQuestions, teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const pool = questions[subject] || [];
@@ -434,10 +496,42 @@ export const useGameStore = create((set, get) => ({
       set({ teams: nt });
     }
 
+    // Suivi de rafale Double (cumulable) : on lit l'equipe A JOUR (apres les set
+    // partiels ci-dessus). doubleTotal est fige au demarrage de la rafale, doubleAsked
+    // s'incremente a chaque question. Exposes a la modale pour l'affichage « X / N ».
+    let multiIndex = null, multiTotal = null;
+    const curTeam = get().teams[currentTeam];
+    if (curTeam.doubleActive) {
+      const started = (curTeam.doubleAsked || 0) > 0;
+      multiTotal = started ? curTeam.doubleTotal : 1 + (curTeam.doubleExtra || 0);
+      multiIndex = started ? curTeam.doubleAsked + 1 : 1;
+      const nt = [...get().teams];
+      nt[currentTeam] = { ...curTeam, doubleTotal: multiTotal, doubleAsked: multiIndex };
+      set({ teams: nt });
+    }
+
+    // Equipement (indiceBoost) : elimine passivement des mauvaises reponses a
+    // CHAQUE question. getEffectValue resout le de et la probabilite a chaque
+    // appel (ex. 'd3' a 100% => 1 a 3 reponses retirees ; un 3 les retire toutes).
+    const indiceBoost = getEffectValue(team, 'indiceBoost');
+    let indiceHidden = [];
+    if (indiceBoost > 0) {
+      const wrong = q.a.map((_, i) => i).filter((i) => i !== q.c);
+      for (let i = wrong.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
+      }
+      indiceHidden = wrong.slice(0, Math.min(indiceBoost, wrong.length));
+      if (indiceHidden.length) {
+        const n = indiceHidden.length;
+        addLog(`\u{1F4A1} Équipement : ${n} mauvaise${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''} éliminée${n > 1 ? 's' : ''} d'office !`);
+      }
+    }
+
     set({
-      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime },
+      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
-      indiceUsed: false, indiceHidden: [],
+      indiceUsed: false, indiceHidden, rerollUsed: false,
     });
   },
 
@@ -456,16 +550,19 @@ export const useGameStore = create((set, get) => ({
 
     if (correct) {
       // Double/triple: money only on last question (or never if doubleNoBonus)
-      const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleCount || 0) > 1);
+      const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleExtra || 0) > 0);
       // L'equipement (moneyPerCorrect) s'applique a chaque bonne reponse, meme sans bonus
       const equipBonus = getEffectValue(team, 'moneyPerCorrect');
       const gain = (noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime)) + equipBonus;
-      newTeams[currentTeam] = { ...team, correct: team.correct + 1, money: team.money + gain };
+      // s\u00e9rie (bonnes r\u00e9ponses d'affil\u00e9e) : +1, ne casse que sur erreur/timeout
+      newTeams[currentTeam] = { ...team, correct: team.correct + 1, streak: (team.streak || 0) + 1, money: team.money + gain };
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
     } else {
       const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
-      newTeams[currentTeam] = updatedTeam;
+      // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0
+      newTeams[currentTeam] = { ...updatedTeam, streak: 0 };
       addLog(logMessage);
+      if (bouclierAbsorbed(team, updatedTeam)) soundShield();
 
       // Double/triple: wrong answer stops immediately, clear double state
       if (team.doubleActive) {
@@ -475,11 +572,18 @@ export const useGameStore = create((set, get) => ({
 
       const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
+      // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (ex. perdre 5 PO)
+      const onWrong = effectH.equipTriggerActions(get().teams[currentTeam], 'wrong');
+      if (onWrong.length) effectH.runEffects(set, get, onWrong, { source: 'item' });
       get().nextTurn();
       return;
     }
 
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+
+    // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…)
+    const onCorrect = effectH.equipTriggerActions(get().teams[currentTeam], 'correct');
+    if (onCorrect.length) effectH.runEffects(set, get, onCorrect, { source: 'item' });
 
     // Double/triple question: continue only on correct answer
     const updatedTeam = get().teams[currentTeam];
@@ -500,23 +604,34 @@ export const useGameStore = create((set, get) => ({
 
     // Loot de bonne réponse : on n'atteint ce point qu'à la DERNIÈRE bonne
     // réponse du tour (une rafale Double y revient une seule fois), donc le
-    // tirage a lieu au plus une fois par tour. Chance = 10 % × (temps restant
-    // / temps max) — récompense la rapidité, plafonnée à 10 %.
-    const lootChance = LOOT.answerLootRate * Math.max(0, Math.min(1, timeLeft / maxTime));
+    // tirage a lieu au plus une fois par tour. Chance × (temps restant / temps
+    // max) — récompense la rapidité. Deux canaux INDÉPENDANTS, au plus 1 objet :
+    // le consommable est tenté d'abord, sinon l'équipement.
+    const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
+    const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
+    // Bonus de taux de loot (équipement) : % ajoutés au taux de base, par canal.
+    // La valeur peut être à l'échelle (ex. +5%/série) → résolue sur l'équipe À JOUR.
+    const lootTeam = get().teams[currentTeam];
+    const consumRate = (LOOT.answerConsumableRate || 0) + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
+    const equipRate = LOOT.answerLootRate + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
     let lootKey = null;
-    if (Math.random() < lootChance) {
-      const key = itemH.pickLootItem(LOOT.answerLegendaryChance, get().enabledItems || Object.keys(ITEMS));
-      if (key) {
-        const nt = [...get().teams];
-        const r = itemH.placeItem(nt[currentTeam], key);
-        nt[currentTeam] = r.team;
-        set({ teams: nt });
-        if (r.outcome === 'refunded') {
-          addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[key].icon} ${ITEMS[key].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
-        } else {
-          lootKey = key;
-          addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[key].icon} ${ITEMS[key].name} !`);
-        }
+    let key = null;
+    if (Math.random() < consumRate * timeRatio) {
+      key = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+    }
+    if (!key && Math.random() < equipRate * timeRatio) {
+      key = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
+    }
+    if (key) {
+      const nt = [...get().teams];
+      const r = itemH.placeItem(nt[currentTeam], key);
+      nt[currentTeam] = r.team;
+      set({ teams: nt });
+      if (r.outcome === 'refunded') {
+        addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[key].icon} ${ITEMS[key].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
+      } else {
+        lootKey = key;
+        addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[key].icon} ${ITEMS[key].name} !`);
       }
     }
 
@@ -530,8 +645,10 @@ export const useGameStore = create((set, get) => ({
     const newTeams = [...teams];
 
     const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
-    newTeams[currentTeam] = updatedTeam;
+    // temps \u00e9coul\u00e9 = erreur : la s\u00e9rie repart de 0
+    newTeams[currentTeam] = { ...updatedTeam, streak: 0 };
     addLog(logMessage);
+    if (bouclierAbsorbed(team, updatedTeam)) soundShield();
 
     if (team.doubleActive) {
       newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };
@@ -540,6 +657,9 @@ export const useGameStore = create((set, get) => ({
 
     const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
+    // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris)
+    const onWrong = effectH.equipTriggerActions(get().teams[currentTeam], 'wrong');
+    if (onWrong.length) effectH.runEffects(set, get, onWrong, { source: 'item' });
     get().nextTurn();
   },
 
@@ -572,6 +692,13 @@ export const useGameStore = create((set, get) => ({
     const rest = mp.filter((m) => m.teamIndex !== teamIndex);
     set({ movePath: rest.length ? rest : null });
   },
+
+  // Effet visuel transitoire (foudre...) consomme par l'overlay LightningStrike.
+  clearVfx: () => set({ vfx: null }),
+
+  // Toasts d'effet animes (moteur d'effets composable) — auto-retires par l'overlay.
+  effectToasts: [],
+  dismissFx: (id) => set({ effectToasts: (get().effectToasts || []).filter((t) => t.id !== id) }),
 
   // --- Confirm landing (player done using powers) ---
   confirmLanding: () => {
@@ -621,6 +748,7 @@ export const useGameStore = create((set, get) => ({
 
   // --- Fight (delegated) ---
   fightBegin: () => fightH.fightBegin(set, get),
+  fightStart: () => fightH.fightStart(set, get),
   fightRoundWin: (side) => fightH.fightRoundWin(set, get, side),
   fightMatchWin: (side) => fightH.fightMatchWin(set, get, side),
   fightChooseReward: (choice) => fightH.fightChooseReward(set, get, choice),
@@ -670,6 +798,65 @@ export const useGameStore = create((set, get) => ({
   sellBagItem: (i) => itemH.sellBagItem(set, get, i),
   useConsumable: (i) => itemH.useConsumable(set, get, i),
   moveInventoryItem: (fromKey, toKey) => itemH.moveInventoryItem(set, get, fromKey, toKey),
+
+  // --- Moteur d'effets composable (objets) : routeurs des interruptions ---
+  // Sélecteur de cible générique : route vers le pouvoir (legacy) ou le moteur.
+  selectTarget: (i) => {
+    const stp = get().showTargetPicker;
+    if (stp?.source === 'engine') {
+      set({ showTargetPicker: null });
+      effectH.resumeQueue(set, get, { targetTeam: i });
+      return;
+    }
+    powerH.applyOffensivePower(set, get, i);
+  },
+  cancelTargetPicker: () => {
+    const stp = get().showTargetPicker;
+    if (stp?.source === 'engine') {
+      // Annuler = sauter l'action ciblée et continuer le reste de la file
+      set({ showTargetPicker: null });
+      const pa = get().pendingActions;
+      if (pa) {
+        set({ pendingActions: { ...pa, queue: pa.queue.slice(1) } });
+        effectH.runQueue(set, get);
+      }
+      return;
+    }
+    powerH.cancelTargetPicker(set, get);
+  },
+  // Sélecteur de case (pose de piège)
+  selectTile: (nodeId) => {
+    if (!get().showTilePicker) return;
+    set({ showTilePicker: null });
+    effectH.resumeQueue(set, get, { tile: nodeId });
+  },
+  cancelTilePicker: () => {
+    if (!get().showTilePicker) return;
+    set({ showTilePicker: null });
+    const pa = get().pendingActions;
+    if (pa) { set({ pendingActions: { ...pa, queue: pa.queue.slice(1) } }); effectH.runQueue(set, get); }
+  },
+  // Sélecteur de thème (reroll de question « au choix »)
+  selectSubject: (key) => {
+    if (!get().showSubjectPicker) return;
+    set({ showSubjectPicker: false });
+    effectH.resumeQueue(set, get, { subject: key });
+  },
+  // Bouton « changer la question » : exécute le reroll fourni par un objet
+  useQuestionReroll: (opt) => {
+    const { showQuestion, pendingActions, rerollUsed, teams, currentTeam } = get();
+    if (!showQuestion || pendingActions || !opt) return;
+    if (opt.fromBag) {
+      const bag = itemH.normalizeBag(teams[currentTeam].bag);
+      bag[opt.bagIndex] = null;
+      const nt = [...teams];
+      nt[currentTeam] = { ...nt[currentTeam], bag };
+      set({ teams: nt });
+    } else if (rerollUsed) {
+      return; // équipement : un seul reroll par question
+    }
+    effectH.runEffects(set, get, opt.actions, { source: 'question' });
+  },
 
   // --- Turn management ---
   nextTurn: () => {
@@ -764,4 +951,6 @@ export const useGameStore = create((set, get) => ({
 // Accès au store depuis la console en développement (debug / tests manuels)
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__store = useGameStore;
+  window.__ITEMS = ITEMS;
+  window.__effectH = effectH;
 }

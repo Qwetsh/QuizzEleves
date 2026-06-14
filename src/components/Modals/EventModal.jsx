@@ -7,6 +7,7 @@ import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { merchantPrice } from '../../store/eventHandlers';
 import { canReceiveItem } from '../../store/itemHandlers';
 import { EVENTS } from '../../data/events';
+import { EVENT_IMG, EVENT_IMG_LIST } from '../../data/eventAssets';
 import ItemIcon from './ItemIcon';
 import { soundEvent, soundClick } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
@@ -53,7 +54,7 @@ export default function EventModal() {
       <AnimatePresence>
         <ModalOverlay className="max-w-md" panelStyle={STONE_PANEL}>
           <div className="tm-stone"><div className="tm-parch">
-            <RoulettePhase event={event} team={team} onDone={revealEvent} />
+            <RoulettePhase event={event} eventKey={key} team={team} onDone={revealEvent} />
           </div></div>
         </ModalOverlay>
       </AnimatePresence>
@@ -66,8 +67,12 @@ export default function EventModal() {
         <ModalOverlay className="max-w-md" panelStyle={STONE_PANEL}>
           <div className="tm-stone"><div className="tm-parch">
           <div style={{ padding: '26px 26px 4px', textAlign: 'center' }}>
-            {/* M\u00e9daillon de pierre */}
-            <div className="tm-medallion is-event">{event?.icon}</div>
+            {/* M\u00e9daillon : asset dessin\u00e9 si dispo, sinon disque de pierre + emoji */}
+            {EVENT_IMG[key] ? (
+              <img src={EVENT_IMG[key]} alt="" className="tm-event-badge" />
+            ) : (
+              <div className="tm-medallion is-event">{event?.icon}</div>
+            )}
             <div className="tm-banner" style={{ marginBottom: 12 }}>
               {"\u00c9v\u00e9nement sp\u00e9cial"}
             </div>
@@ -114,9 +119,14 @@ export default function EventModal() {
 
 // Roulette de révélation : l'icône défile vite puis ralentit (ease-out) et
 // s'arrête sur l'événement tiré. Ajoute de la tension avant de dévoiler.
-function RoulettePhase({ event, team, onDone }) {
-  const [icon, setIcon] = useState(EVENT_ICONS[0]);
+function RoulettePhase({ event, eventKey, team, onDone }) {
+  // Roulette en images si dispo, sinon emojis. Chaque « frame » = url image ou emoji.
+  const useImg = EVENT_IMG_LIST.length > 0;
+  const finalFrame = (useImg && EVENT_IMG[eventKey]) || event.icon;
+  const pool = useImg ? EVENT_IMG_LIST : EVENT_ICONS;
+  const [icon, setIcon] = useState(pool[0]);
   const [stopped, setStopped] = useState(false);
+  const isImg = (v) => typeof v === 'string' && v.includes('/');
 
   useEffect(() => {
     let cancelled = false;
@@ -126,13 +136,13 @@ function RoulettePhase({ event, team, onDone }) {
       if (cancelled) return;
       i++;
       if (i < TOTAL) {
-        setIcon(EVENT_ICONS[Math.floor(Math.random() * EVENT_ICONS.length)]);
+        setIcon(pool[Math.floor(Math.random() * pool.length)]);
         soundClick();
         // délai croissant -> ralentissement progressif
         const delay = 45 + Math.pow(i / TOTAL, 3) * 340;
         timer = setTimeout(tick, delay);
       } else {
-        setIcon(event.icon);
+        setIcon(finalFrame);
         setStopped(true);
         soundEvent();
         timer = setTimeout(() => { if (!cancelled) onDone(); }, 1000);
@@ -170,7 +180,9 @@ function RoulettePhase({ event, team, onDone }) {
             : 'inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -6px 0 rgba(0,0,0,0.18), 0 8px 0 rgba(60,25,110,0.5)',
         }}
       >
-        {icon}
+        {isImg(icon)
+          ? <img src={icon} alt="" style={{ width: '92%', height: '92%', objectFit: 'contain', filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.45))' }} />
+          : icon}
       </motion.div>
 
       <div style={{

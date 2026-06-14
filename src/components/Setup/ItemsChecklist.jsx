@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
@@ -13,25 +14,27 @@ export default function ItemsChecklist() {
   const enabledItems = useGameStore((s) => s.enabledItems);
   const toggleItem = useGameStore((s) => s.toggleItem);
   const setAllItems = useGameStore((s) => s.setAllItems);
+  const [open, setOpen] = useState(false);
 
   const allKeys = Object.keys(ITEMS);
   const allChecked = enabledItems.length === allKeys.length;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="field-label" style={{ marginBottom: 0 }}>
+      <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
+        <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'▶'}</span>
           {`Objets (${enabledItems.length}/${allKeys.length})`}
         </div>
         <button
-          onClick={() => setAllItems(!allChecked)}
+          onClick={(e) => { e.stopPropagation(); setAllItems(!allChecked); }}
           style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
         >
           {allChecked ? 'Tout décocher' : 'Tout cocher'}
         </button>
       </div>
 
-      {GROUPS.map(({ slot, label }) => (
+      {open && GROUPS.map(({ slot, label }) => (
         <div key={slot} style={{ marginBottom: 10 }}>
           <div style={{
             fontSize: 11, fontWeight: 700, color: 'var(--ink-500)',

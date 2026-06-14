@@ -1,5 +1,6 @@
 import { useGameStore } from '../../../store/gameStore';
 import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
+import '../../../styles/power-cast.css';
 
 export default function PowerButtons() {
   const teams = useGameStore((s) => s.teams);
@@ -19,42 +20,37 @@ export default function PowerButtons() {
   const team = teams[currentTeam];
   if (!team?.powers) return null;
 
-  const powerEntries = getAvailablePowers(team);
   const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding };
+
+  // Pouvoirs OFFENSIFS utilisables MAINTENANT (fenetre de cast).
+  // Le Bouclier (passif) et l'Indice (reserve aux questions) ne s'affichent pas ici ;
+  // la Relance a son propre bouton sous le de.
+  const castable = getAvailablePowers(team).filter(
+    (p) => p.category === 'off' && canUsePowerInContext(p.key, ctx)
+  );
 
   // Show "Continuer" when waiting for player action after dice roll
   const showContinue = pendingLanding && !rolling && !showChargePicker && !showTargetPicker && !showQuestion && !showEvent;
 
   return (
     <div className="flex flex-col items-center gap-3 mt-3">
-      {powerEntries.length > 0 && (
-        <div className="flex flex-wrap gap-2 justify-center">
-          {powerEntries.map(({ key, icon, name, charges }) => {
-            const canUse = canUsePowerInContext(key, ctx);
-            return (
-              <button
-                key={key}
-                onClick={() => usePower(key)}
-                disabled={!canUse}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  background: canUse ? '#fffefb' : 'var(--parch-100)',
-                  border: `1px solid ${canUse ? 'var(--gold-500)' : 'rgba(122, 94, 58, 0.22)'}`,
-                  fontSize: 13, color: canUse ? 'var(--ink-700)' : 'var(--ink-400)',
-                  cursor: canUse ? 'pointer' : 'not-allowed',
-                  fontWeight: 500,
-                  fontFamily: 'var(--font-ui)',
-                  opacity: canUse ? 1 : 0.4,
-                  transition: 'all 100ms ease',
-                }}
-                title={`${name} (${charges} charge${charges > 1 ? 's' : ''})`}
-              >
-                {icon} {name} <span style={{ opacity: 0.6 }}>x{charges}</span>
-              </button>
-            );
-          })}
+      {castable.length > 0 && (
+        <div className="power-cast-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', width: '100%' }}>
+          {castable.map(({ key, icon, name, charges, color }) => (
+            <button
+              key={key}
+              onClick={() => usePower(key)}
+              className="power-cast-btn"
+              style={{ '--cast-color': color }}
+              title={`${name} (${charges} charge${charges > 1 ? 's' : ''})`}
+            >
+              <span className="power-cast-disc">
+                <span className="power-cast-icon">{icon}</span>
+                <span className="power-cast-count">{charges}</span>
+              </span>
+              <span className="power-cast-name">{name}</span>
+            </button>
+          ))}
         </div>
       )}
 

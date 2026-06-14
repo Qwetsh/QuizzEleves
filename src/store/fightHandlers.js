@@ -34,7 +34,7 @@ export function startFight(set, get, defenderIndex, subject) {
       attackerIndex: currentTeam,
       defenderIndex,
       subject,
-      phase: 'versus',          // versus -> minigame -> reward -> result
+      phase: 'versus',          // versus -> briefing -> minigame -> reward -> result
       round: 1,
       wins: { attacker: 0, defender: 0 },
       winnerSide: null,
@@ -44,10 +44,17 @@ export function startFight(set, get, defenderIndex, subject) {
   });
 }
 
-// Fin de l'ecran de presentation versus
+// Fin de l'ecran versus -> ecran d'explication (briefing) du mini-jeu
 export function fightBegin(set, get) {
   const f = get().showFight;
   if (!f || f.phase !== 'versus') return;
+  set({ showFight: { ...f, phase: 'briefing' } });
+}
+
+// Les deux equipes ont confirme « Je suis pret » -> lancement du mini-jeu
+export function fightStart(set, get) {
+  const f = get().showFight;
+  if (!f || f.phase !== 'briefing') return;
   set({ showFight: { ...f, phase: 'minigame' } });
 }
 

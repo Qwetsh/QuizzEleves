@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import Dice3D from '../Game/Dice3D';
+import { soundDice } from '../../logic/sounds';
 import '../../styles/dice-roll-modal.css';
 
 function DustParticles({ active, count = 26 }) {
@@ -91,7 +92,7 @@ export default function DiceRollModal() {
     if (!showDiceModal) return;
     setPhase('intro');
     const timers = [];
-    timers.push(setTimeout(() => setPhase('rolling'), 350));
+    timers.push(setTimeout(() => { setPhase('rolling'); soundDice(); }, 350));
     timers.push(setTimeout(() => setPhase('reveal'), 350 + 1200));
     timers.push(setTimeout(() => setPhase('outro'), 350 + 1200 + 1100));
     timers.push(setTimeout(() => completeDiceRoll(), 350 + 1200 + 1100 + 280));

@@ -82,6 +82,7 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMov
 
   return (
     <motion.g
+      data-pawn-idx={idx}
       animate={{ x: animPos.x, y: animPos.y }}
       transition={{ type: 'spring', damping: 22, stiffness: 180, mass: 0.6 }}
     >
@@ -255,7 +256,7 @@ const DecorImage = ({ d, i }) => {
   );
 };
 
-const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction }) {
+const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon }) {
   return [
     ...(boardDecor || []).flatMap((d, i) => {
       if (!bimg(d.img)) return [];
@@ -286,13 +287,33 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
         tile = { src: bimg(name), w: r * TILE_SCALE.subject, dy: 0 };
       }
 
+      const pickable = tilePicking && node.type !== 'arrivee';
       return { y: node.y, el: (
         <g
           key={id}
-          onClick={isChoice ? () => chooseJunction(id) : undefined}
-          style={{ cursor: isChoice ? 'pointer' : 'default' }}
+          className={pickable ? 'tile-pick' : undefined}
+          onClick={isChoice ? () => chooseJunction(id) : (pickable ? () => selectTile(id) : undefined)}
+          style={{ cursor: (isChoice || pickable) ? 'pointer' : 'default' }}
         >
           {isChoice && <ChoiceHighlight cx={node.x} cy={node.y} r={r} />}
+          {pickable && (
+            <>
+              {/* anneau pulsant : case sélectionnable */}
+              <circle cx={node.x} cy={node.y} r={r + 4} fill="rgba(201,71,47,0.12)"
+                stroke="#c9472f" strokeWidth={3} strokeDasharray="7 5">
+                <animate attributeName="stroke-dashoffset" from="0" to="24" dur="1s" repeatCount="indefinite" />
+              </circle>
+              {/* survol : halo plein + aperçu de l'icône du piège */}
+              <g className="tile-pick-hover" style={{ pointerEvents: 'none' }}>
+                <circle cx={node.x} cy={node.y} r={r + 10} fill="rgba(201,71,47,0.22)" stroke="#c9472f" strokeWidth={4} />
+                <circle cx={node.x} cy={node.y} r={r + 16} fill="none" stroke="#f3c969" strokeWidth={2.5} opacity={0.8} />
+                <text x={node.x} y={node.y - r - 14} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.85}
+                  style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.5))' }}>
+                  {tilePickIcon || '\u{1FAA4}'}
+                </text>
+              </g>
+            </>
+          )}
 
           {tile && tile.src ? (
             <image
@@ -318,6 +339,15 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
               </text>
             </>
           )}
+
+          {node.trap && (
+            <g style={{ pointerEvents: 'none' }}>
+              <circle cx={node.x} cy={node.y - r * 0.9} r={r * 0.42} fill="#2b1c10" stroke="#c9472f" strokeWidth={2} opacity={0.92} />
+              <text x={node.x} y={node.y - r * 0.9 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.5}>
+                {node.trap.icon || '\u{1FAA4}'}
+              </text>
+            </g>
+          )}
         </g>
       ) };
     }),
@@ -335,6 +365,8 @@ export default function BoardSVG() {
   const awaitingChoice = useGameStore((s) => s.awaitingChoice);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const chooseJunction = useGameStore((s) => s.chooseJunction);
+  const showTilePicker = useGameStore((s) => s.showTilePicker);
+  const selectTile = useGameStore((s) => s.selectTile);
   const movePath = useGameStore((s) => s.movePath);
   const clearTeamMove = useGameStore((s) => s.clearTeamMove);
 
@@ -415,6 +447,27 @@ export default function BoardSVG() {
         backgroundSize: '460px 460px',
       }}
     >
+      <style>{`
+        .tile-pick-hover { opacity: 0; transition: opacity 120ms ease; }
+        .tile-pick:hover .tile-pick-hover { opacity: 1; }
+        .tile-pick:hover { filter: drop-shadow(0 0 10px rgba(201,71,47,0.8)); }
+      `}</style>
+      {showTilePicker && (
+        <div style={{
+          position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 70,
+          padding: '10px 20px', borderRadius: 999,
+          background: 'linear-gradient(180deg, #fff3d4, #f0d99a)',
+          border: '2px solid #c9472f', color: '#7a2218',
+          fontFamily: 'var(--font-display)', fontSize: 16,
+          boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
+        }}>
+          {'\u{1FAA4}'} Choisis une case pour poser ton piège{showTilePicker.label ? ` « ${showTilePicker.label} »` : ''}
+          <button onClick={() => useGameStore.getState().cancelTilePicker()}
+            style={{ marginLeft: 14, background: 'none', border: 'none', color: '#7a2218', cursor: 'pointer', fontWeight: 700 }}>
+            Annuler
+          </button>
+        </div>
+      )}
       <svg
         ref={svgRef}
         viewBox={`-70 -12 ${viewBox.w + 110} ${viewBox.h + 24}`}
@@ -423,7 +476,7 @@ export default function BoardSVG() {
       >
         <Terrain board={board} islandCircles={islandCircles} viewBox={viewBox} />
 
-        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} />
+        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} />
 
         {/* Animated Pawns */}
         {teams.map((team, idx) => {
