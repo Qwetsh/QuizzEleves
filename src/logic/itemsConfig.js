@@ -5,7 +5,9 @@
 import { supabase } from './supabaseClient.js';
 import { setItemsData } from '../data/items.js';
 
-const LS_KEY = 'quete_items_v1';
+// v2 : schéma d'effets étendu (dés, valeurs à l'échelle, déclencheurs) — bumper
+// cette clé invalide les anciens caches au format périmé.
+const LS_KEY = 'quete_items_v2';
 const BUCKET = 'quete-items';
 
 // Ligne DB -> objet interne du jeu (clés en camelCase, lootOnly).
@@ -63,7 +65,7 @@ export function applyCachedItems() {
     const items = Object.values(cached);
     // N'applique le cache que s'il est bien formé (sinon on garde le fallback
     // = objets du code), pour ne pas casser l'affichage avec un schéma périmé.
-    if (items.length && items.every((it) => it && it.slot && it.rarity)) setItemsData(cached);
+    if (items.length && items.every((it) => it && it.slot && it.rarity && Array.isArray(it.effects))) setItemsData(cached);
   } catch { /* cache illisible */ }
 }
 

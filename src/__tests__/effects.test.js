@@ -372,6 +372,42 @@ describe('on:roll équipement', () => {
     expect(S().forcedSubject).toBe('francais');  // ET le on:roll a tiré malgré la jonction
     setItemsData(snapshot);
   });
+
+  it('on:roll qui déplace HORS de la jonction n’ouvre pas le choix de voie', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      ringBack: {
+        name: 'Anneau recul', icon: '💍', slot: 'head', rarity: 'commun', price: 0,
+        effects: [{ kind: 'trigger', on: 'roll', values: [3], do: [{ action: 'move', target: 'self', dir: 'back', n: 1 }] }],
+      },
+    });
+    // 3 depuis depart → s'arrête à la jonction n2, puis l'effet recule en n1.
+    freshGame([{ pos: 'depart', equipment: { head: 'ringBack', body: null, feet: null } }, {}], JUNCTION);
+    S().handleDiceResult(3);
+    expect(team(0).pos).toBe('n1');           // reculé hors de la jonction
+    expect(S().awaitingChoice).toBe(false);   // donc PAS de choix de voie (bug corrigé)
+    expect(S().pendingLanding).toBe(true);
+    setItemsData(snapshot);
+  });
+
+  it('skipOnRoll (Relance) ne re-déclenche pas le bonus on:roll', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      ...ITEMS,
+      ringGold: {
+        name: 'Anneau doré', icon: '💍', slot: 'head', rarity: 'commun', price: 0,
+        effects: [{ kind: 'trigger', on: 'roll', values: [6], do: [{ action: 'money', mode: 'gain', target: 'self', n: 10, unit: 'flat' }] }],
+      },
+    });
+    freshGame([{ pos: 'depart', money: 50, equipment: { head: 'ringGold', body: null, feet: null } }, {}]);
+    S().handleDiceResult(6, { skipOnRoll: true });
+    expect(team(0).money).toBe(50);           // bonus ignoré (relance)
+    freshGame([{ pos: 'depart', money: 50, equipment: { head: 'ringGold', body: null, feet: null } }, {}]);
+    S().handleDiceResult(6);
+    expect(team(0).money).toBe(60);           // lancer normal : +10
+    setItemsData(snapshot);
+  });
 });
 
 // --- Quantités aléatoires (dés) ----------------------------------------

@@ -132,7 +132,9 @@ export function useRelance(set, get) {
       else effectiveValue = finalValue;
 
       addLog(`\u{1F3B2} Relance : ${finalValue} !${mode !== 'replace' ? ` (effectif: ${effectiveValue})` : ''}`);
-      get().handleDiceResult(effectiveValue);
+      // skipOnRoll : ne pas re-déclencher le bonus on:roll de l'équipement (déjà
+      // accordé au lancer initial) → pas de double bonus via la Relance.
+      get().handleDiceResult(effectiveValue, { skipOnRoll: true });
     }
   }, 80);
 }

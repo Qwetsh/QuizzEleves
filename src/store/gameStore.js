@@ -296,11 +296,11 @@ export const useGameStore = create((set, get) => ({
     if (diceValue) get().handleDiceResult(diceValue);
   },
 
-  handleDiceResult: (value) => {
+  handleDiceResult: (value, opts = {}) => {
     const { teams, currentTeam, board, addLog } = get();
     const team = teams[currentTeam];
     set({ preRollPos: team.pos, preRollValue: value, freeActivation: false });
-    addLog(`${team.emoji} ${team.name} lance le d\u00e9 : ${value}`);
+    addLog(`${team.emoji} ${team.name} lance le d\u00E9 : ${value}`);
 
     const result = moveForward(board, team.pos, value);
     const newTeams = [...teams];
@@ -312,8 +312,10 @@ export const useGameStore = create((set, get) => ({
     // D\u00E9clencheurs on:roll de l'\u00E9quipement : ils d\u00E9pendent de la VALEUR du d\u00E9,
     // PAS de l'endroit o\u00F9 l'on s'arr\u00EAte. On les d\u00E9clenche donc AVANT de g\u00E9rer la
     // jonction/atterrissage ; finishQueue encha\u00EEne ensuite resolvePostRoll.
-    const postRoll = { stoppedAtJunction: result.stoppedAtJunction, remaining: result.remaining };
-    const onRoll = effectH.equipOnRollActions(team, value);
+    // opts.skipOnRoll : une Relance ne re-d\u00E9clenche pas le bonus on:roll (d\u00E9j\u00E0
+    // accord\u00E9 au 1er lancer) \u2192 \u00E9vite un double bonus.
+    const postRoll = { stoppedAtJunction: result.stoppedAtJunction, remaining: result.remaining, junctionPos: result.finalPos };
+    const onRoll = opts.skipOnRoll ? [] : effectH.equipOnRollActions(team, value);
     if (onRoll.length) {
       effectH.runEffects(set, get, onRoll, { source: 'roll', diceValue: value, postRoll });
       return;
@@ -326,7 +328,9 @@ export const useGameStore = create((set, get) => ({
   resolvePostRoll: (value, postRoll) => {
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
-    if (postRoll?.stoppedAtJunction) {
+    // Un effet on:roll a pu d\u00E9placer l'\u00E9quipe HORS de la jonction o\u00F9 le d\u00E9 s'\u00E9tait
+    // arr\u00EAt\u00E9 : on ne propose le choix de voie que si elle s'y trouve toujours.
+    if (postRoll?.stoppedAtJunction && team.pos === postRoll.junctionPos) {
       set({ awaitingChoice: true, pendingMove: { remaining: postRoll.remaining } });
       addLog(`\u2194\uFE0F Choisis une voie !`);
       return;
