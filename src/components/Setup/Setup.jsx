@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { loadGame } from '../../store/persistence';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
@@ -20,8 +20,6 @@ import ItemsChecklist from './ItemsChecklist';
 function DevFightPanel() {
   const devStartFight = useGameStore((s) => s.devStartFight);
   const showLoot = useGameStore((s) => s.showLoot);
-  const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
-  const [showBalanceEditor, setShowBalanceEditor] = useState(false);
 
   const revealRandomLoot = () => {
     const keys = Object.keys(ITEMS);
@@ -65,43 +63,81 @@ function DevFightPanel() {
         <button
           onClick={revealRandomLoot}
           className="btn btn--green btn--sm"
-          style={{ justifyContent: 'center' }}
-        >
-          {"\u{1F381} Aperçu gain d'objet"}
-        </button>
-        <button
-          onClick={() => setShowQuestionsEditor(true)}
-          className="btn btn--blue btn--sm"
-          style={{ justifyContent: 'center' }}
-        >
-          {"\u{1F4DA} Éditer les questions"}
-        </button>
-        <button
-          onClick={() => setShowBalanceEditor(true)}
-          className="btn btn--blue btn--sm"
           style={{ gridColumn: '1 / -1', justifyContent: 'center' }}
         >
-          {"⚖️ Éditer l'équilibrage (objets…)"}
+          {"\u{1F381} Aperçu gain d'objet"}
         </button>
       </div>
 
       {/* La révélation se porte vers document.body (portal) : visible par-dessus le setup */}
       <LootReveal />
+    </div>
+  );
+}
+
+// Outils d'édition (questions + équilibrage). Disponibles en dev (npm run dev)
+// OU déverrouillés en prod via le triple-clic sur le dé + code de validation
+// (voir Setup). Les éditeurs écrivent directement dans Supabase.
+function EditorTools() {
+  const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
+  const [showBalanceEditor, setShowBalanceEditor] = useState(false);
+  return (
+    <div className="panel" style={{ border: '2px dashed #2f6dc9', background: 'rgba(47,109,201,0.04)' }}>
+      <div className="field-label" style={{ color: '#2f6dc9' }}>{'\u{1F6E0}️'} Outils d'édition</div>
+      <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 10 }}>
+        Édition des questions et de l'équilibrage (objets, pouvoirs, loot) — écrit dans Supabase.
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setShowQuestionsEditor(true)} className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
+          {"\u{1F4DA} Éditer les questions"}
+        </button>
+        <button onClick={() => setShowBalanceEditor(true)} className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
+          {"⚖️ Éditer l'équilibrage"}
+        </button>
+      </div>
       {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
       {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}
     </div>
   );
 }
 
+const TOOLS_UNLOCK_KEY = 'quete_tools_unlock';
+const TOOLS_CODE = '54150';
+
 export default function Setup() {
   const startGame = useGameStore((s) => s.startGame);
   const resumeGame = useGameStore((s) => s.resumeGame);
   const [hasSave, setHasSave] = useState(false);
+  // Accès aux outils d'édition hors dev : triple-clic sur le dé + code.
+  const [toolsUnlocked, setToolsUnlocked] = useState(() => {
+    try { return localStorage.getItem(TOOLS_UNLOCK_KEY) === '1'; } catch { return false; }
+  });
+  const diceClicks = useRef({ n: 0, t: 0 });
 
   useEffect(() => {
     const saved = loadGame();
     setHasSave(saved !== null);
   }, []);
+
+  // Triple-clic (< 700 ms entre chaque) sur le dé → demande le code de validation.
+  const handleDiceClick = () => {
+    const now = Date.now();
+    const c = diceClicks.current;
+    if (now - c.t > 700) c.n = 0;
+    c.t = now; c.n += 1;
+    if (c.n < 3) return;
+    c.n = 0;
+    if (toolsUnlocked) return;
+    const code = window.prompt("Code d'accès aux outils d'édition :");
+    if (code == null) return;
+    if (code.trim() === TOOLS_CODE) {
+      try { localStorage.setItem(TOOLS_UNLOCK_KEY, '1'); } catch { /* quota */ }
+      setToolsUnlocked(true);
+    } else {
+      window.alert('Code incorrect.');
+    }
+  };
+  const showTools = import.meta.env.DEV || toolsUnlocked;
 
   return (
     <div className="absolute inset-0 overflow-y-auto" style={{ padding: '36px 24px 80px' }}>
@@ -110,12 +146,15 @@ export default function Setup() {
         <div className="col-span-1 lg:col-span-2 flex items-center gap-6 flex-wrap mb-2">
           <div
             className="flex items-center justify-center text-5xl"
+            onClick={handleDiceClick}
             style={{
               width: 96, height: 96, borderRadius: 24,
               background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
               boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.6), inset 0 -6px 0 rgba(0,0,0,0.18), 0 8px 0 rgba(110,78,16,0.55), 0 16px 30px rgba(0,0,0,0.25)',
               transform: 'rotate(-6deg)',
+              cursor: 'default', userSelect: 'none',
             }}
+            title={toolsUnlocked ? 'Outils déverrouillés' : undefined}
           >
             {"\u{1F3B2}"}
           </div>
@@ -174,6 +213,7 @@ export default function Setup() {
           <div className="panel">
             <ItemsChecklist />
           </div>
+          {showTools && <EditorTools />}
           {import.meta.env.DEV && <DevFightPanel />}
         </div>
 
