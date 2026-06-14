@@ -164,12 +164,46 @@
   color: var(--ink-500, #8a7858);
 }
 .bal-toggle {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   font-size: 13.5px;
   cursor: pointer;
+  color: var(--ink-700, #5a4424);
 }
+/* Interrupteur (switch) doré à la place de la checkbox native */
+.bal-toggle input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  flex-shrink: 0;
+  width: 42px;
+  height: 23px;
+  border-radius: 999px;
+  background: rgba(122, 94, 58, 0.22);
+  border: 1.5px solid rgba(122, 94, 58, 0.35);
+  position: relative;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.bal-toggle input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 150ms ease;
+}
+.bal-toggle input[type="checkbox"]:checked {
+  background: var(--gold-500, #c79120);
+  border-color: var(--gold-600, #a8771a);
+}
+.bal-toggle input[type="checkbox"]:checked::after { transform: translateX(19px); }
+.bal-toggle input[type="checkbox"]:focus-visible { outline: 2px solid var(--gold-600, #a8771a); outline-offset: 2px; }
 
 /* Sélecteur d'image : galerie d'assets + bouton upload */
 .bal-picker {
