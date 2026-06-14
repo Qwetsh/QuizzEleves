@@ -56,7 +56,9 @@ export async function refreshQuestions() {
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from('quete_questions')
-      .select('pool,subject,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord')
+      // `level` est INDISPENSABLE : sans lui, rowToQuestion met level=null et le
+      // filtrage par niveau retombe sur le préfixe de `t` (qui ne couvre pas le 6e).
+      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord')
       .order('id', { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) throw error;
