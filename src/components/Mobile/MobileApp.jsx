@@ -8,7 +8,7 @@ import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
-import { getPendingMalus } from '../../logic/teamStatus';
+import { getTeamEffects } from '../../logic/teamStatus';
 import '../../styles/mobile.css';
 
 function readInitialCode() {
@@ -140,7 +140,7 @@ function PowerRow({ powerKey, charges, level }) {
 function TeamView({ session, teamIdx, onSwitch }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
-  const malus = getPendingMalus(t);
+  const effects = getTeamEffects(t);
   const myTurn = session.currentTeam === teamIdx && session.status !== 'finished';
   const bagKeys = (t.bag || []).filter((k) => ITEMS[k]);
   const shopKeys = (session.shop || []).filter((k) => ITEMS[k]);
@@ -170,18 +170,23 @@ function TeamView({ session, teamIdx, onSwitch }) {
         {rate !== null && <div className="mob-stat mob-stat--rate">{'◎'} <b>{rate}%</b></div>}
       </div>
 
-      {malus.length > 0 && (
+      {effects.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px', marginBottom: 4 }}>
-          {malus.map((m) => (
-            <div key={m.key} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '8px 12px', borderRadius: 12, fontSize: 14, fontWeight: 600,
-              color: '#7a1320', background: '#f7d7d2', border: '1.5px solid #c9472f',
-            }}>
-              <span style={{ fontSize: 18 }}>{m.icon}</span>
-              <span>{m.label}</span>
-            </div>
-          ))}
+          {effects.map((e) => {
+            const malus = e.tone === 'malus';
+            return (
+              <div key={e.key} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                color: malus ? '#7a1320' : '#3a2e10',
+                background: malus ? '#f7d7d2' : `${e.color}22`,
+                border: `1.5px solid ${malus ? '#c9472f' : e.color}`,
+              }}>
+                <span style={{ fontSize: 18 }}>{e.icon}</span>
+                <span>{e.label}</span>
+              </div>
+            );
+          })}
         </div>
       )}
 

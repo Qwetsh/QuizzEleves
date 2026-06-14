@@ -36,7 +36,16 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       money: t.money ?? 0,
       correct: t.correct ?? 0, wrong: t.wrong ?? 0,
       pos: t.pos,
-      forcedSubject: t.forcedSubject || null, // malus en attente (thème imposé)
+      // Effets transitoires (rappel visuel côté élève) — cf. getTeamEffects.
+      forcedSubject: t.forcedSubject || null,
+      itemShield: t.itemShield || 0,
+      itemFumigene: !!t.itemFumigene,
+      itemFumigeneTurns: t.itemFumigeneTurns || 0,
+      itemTimerBonus: t.itemTimerBonus || 0,
+      doubleActive: !!t.doubleActive,
+      doubleExtra: t.doubleExtra || 0,
+      sablierActif: !!t.sablierActif,
+      wager: t.wager ? true : null,
       equipment: t.equipment || { head: null, body: null, feet: null },
       bag: (t.bag || []).filter(Boolean),
       powers: t.powers || {},

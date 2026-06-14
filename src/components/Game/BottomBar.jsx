@@ -3,7 +3,7 @@ import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
-import { getPendingMalus } from '../../logic/teamStatus';
+import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
 import '../../styles/team-strip-hud.css';
 
@@ -131,17 +131,15 @@ function StatChips({ team, withRate = true }) {
   );
 }
 
-// Buffs/protections actifs (fumigène, bouclier, sablier) — visibles dans la bande.
+// Buffs/protections actifs (bouclier, fumigène, +temps, rafale, défi) — pastilles
+// compactes dans la bande. Source : getTeamEffects (tone 'buff').
 function TeamBuffs({ team }) {
-  const buffs = [];
-  if (team.itemShield > 0) buffs.push({ icon: '\u{1F6E1}️', n: team.itemShield > 1 ? team.itemShield : null, title: `Bouclier : annule ${team.itemShield} recul${team.itemShield > 1 ? 's' : ''}`, color: '#3b6cb3' });
-  if (team.itemFumigene) buffs.push({ icon: '\u{1F4A8}', n: team.itemFumigeneTurns || null, title: `Fumigène : prochain pouvoir offensif annulé${team.itemFumigeneTurns ? ` (${team.itemFumigeneTurns} tour${team.itemFumigeneTurns > 1 ? 's' : ''})` : ''}`, color: '#7a8a99' });
-  if (team.sablierActif) buffs.push({ icon: '⏱️', n: null, title: 'Timer réduit', color: '#8745d4' });
+  const buffs = getTeamEffects(team).filter((e) => e.tone === 'buff');
   if (!buffs.length) return null;
   return (
     <div className="ts-buffs" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-      {buffs.map((b, i) => (
-        <span key={i} title={b.title} style={{
+      {buffs.map((b) => (
+        <span key={b.key} title={b.label} style={{
           display: 'inline-flex', alignItems: 'center', gap: 1,
           padding: '1px 6px', borderRadius: 999, fontSize: 13, lineHeight: 1.4,
           background: `${b.color}22`, border: `1px solid ${b.color}66`,
@@ -153,10 +151,10 @@ function TeamBuffs({ team }) {
   );
 }
 
-// Malus en attente (question imposée…) — bandeau rouge sur la fiche. Une ligne
-// par malus, mais l'animation/aura du pion ne se cumule pas (cf. getPendingMalus).
+// Malus en attente (question imposée, timer réduit…) — bandeau rouge sur la
+// fiche. Source : getTeamEffects (tone 'malus'). L'aura du pion ne se cumule pas.
 function TeamMalus({ team }) {
-  const malus = getPendingMalus(team);
+  const malus = getTeamEffects(team).filter((e) => e.tone === 'malus');
   if (!malus.length) return null;
   return (
     <div className="ts-malus" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
