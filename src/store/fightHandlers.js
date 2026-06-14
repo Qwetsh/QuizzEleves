@@ -2,6 +2,7 @@ import { moveBack } from '../logic/pathfinding.js';
 import { getEffectValue, reducedRecul, reducedSteal } from '../logic/itemEffects.js';
 import { ITEMS } from '../data/items.js';
 import { pickLootItem, placeItem, normalizeBag } from './itemHandlers.js';
+import { equipTriggerActions, runEffects } from './effectEngine.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 
@@ -206,7 +207,29 @@ function applyFightReward(set, get) {
 }
 
 export function closeFight(set, get) {
+  const f = get().showFight;
   set({ showFight: null });
-  get().nextTurn();
-  if (get().phase === 'game') saveGame(get());
+
+  // Déclencheurs d'équipement de duel : on:fightWin (gagnant) puis on:fightLose
+  // (perdant). Chaque camp a son propre sourceTeam (≠ équipe courante), d'où
+  // deux passes chaînées — la 2e (et la fin de tour) sont différées si un effet
+  // ouvre un sélecteur (deferredTurnEnd, comme answerQuestion).
+  let winnerIdx = -1, loserIdx = -1;
+  if (f && f.winnerSide) {
+    winnerIdx = f.winnerSide === 'attacker' ? f.attackerIndex : f.defenderIndex;
+    loserIdx = f.winnerSide === 'attacker' ? f.defenderIndex : f.attackerIndex;
+  }
+  const teams = get().teams;
+  const winActs = winnerIdx >= 0 ? equipTriggerActions(teams[winnerIdx], 'fightWin') : [];
+  const loseActs = loserIdx >= 0 ? equipTriggerActions(teams[loserIdx], 'fightLose') : [];
+
+  const endTurn = () => { if (!get().finished) { get().nextTurn(); if (get().phase === 'game') saveGame(get()); } };
+  const runLose = () => {
+    if (!loseActs.length) return endTurn();
+    runEffects(set, get, loseActs, { source: 'item', sourceTeam: loserIdx });
+    if (get().pendingActions) set({ deferredTurnEnd: endTurn }); else endTurn();
+  };
+  if (!winActs.length) return runLose();
+  runEffects(set, get, winActs, { source: 'item', sourceTeam: winnerIdx });
+  if (get().pendingActions) set({ deferredTurnEnd: runLose }); else runLose();
 }

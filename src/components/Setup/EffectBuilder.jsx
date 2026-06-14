@@ -112,7 +112,7 @@ export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAUL
       }}>
         <option value="fixed">valeur fixe</option>
         {faces.map((d) => <option key={d} value={d}>{diceFaceLabel(d)}</option>)}
-        {scale && SCALE_METRICS.map((s) => <option key={s.key} value={`scale:${s.key}`}>{`📈 × ${s.label}`}</option>)}
+        {scale && SCALE_METRICS.map((s) => <option key={s.key} value={`scale:${s.key}`}>{`📈 par ${s.label}`}</option>)}
       </select>
       {!isDice && !isScale && numInput(value, onChange, { min, max })}
       {isScale && (
@@ -277,6 +277,8 @@ const ON_FRAGMENTS_EQUIP = [
   { k: 'roll', label: 'le dé fait… (à mon tour)' },
   { k: 'correct', label: 'je réponds bien' },
   { k: 'wrong', label: 'je rate (ou temps écoulé)' },
+  { k: 'fightWin', label: 'je gagne un duel' },
+  { k: 'fightLose', label: 'je perds un duel' },
   { k: 'question', label: "j'appuie sur « Changer la question »" },
 ];
 const ON_FRAGMENTS_CONSUM = [
@@ -372,7 +374,7 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
         </>
       )}
 
-      {(fx.on === 'correct' || fx.on === 'wrong') && (
+      {(fx.on === 'correct' || fx.on === 'wrong' || fx.on === 'fightWin' || fx.on === 'fightLose') && (
         <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
       )}
 
