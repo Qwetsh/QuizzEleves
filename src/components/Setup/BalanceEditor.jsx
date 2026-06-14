@@ -13,7 +13,7 @@ import {
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { useGameStore } from '../../store/gameStore';
 import { TriggerCard, defaultTrigger, AmountInput, DEFAULT_DICE } from './EffectBuilder';
-import { describeItemEffects } from '../../logic/effectText';
+import { describeItemEffects, itemEffectLines } from '../../logic/effectText';
 import '../../styles/questions-editor.css';
 import '../../styles/balance-editor.css';
 
@@ -84,13 +84,14 @@ function Stepper({ value, onChange, min = 0, max = 999, step = 1 }) {
 }
 
 const rowToDraft = (r) => ({
-  key: r.key, name: r.name, desc: r.description ?? '', icon: r.icon ?? '', img: r.img ?? '',
+  key: r.key, name: r.name, desc: r.description ?? '', descExpert: r.desc_expert ?? '',
+  icon: r.icon ?? '', img: r.img ?? '',
   slot: r.slot, rarity: r.rarity, price: r.price, lootOnly: !!r.loot_only,
   effects: Array.isArray(r.effects) ? r.effects : [], enabled: r.enabled !== false,
   ord: r.ord, _isNew: false,
 });
 const newDraft = (ord) => ({
-  key: '', name: 'Nouvel objet', desc: '', icon: '✨', img: '',
+  key: '', name: 'Nouvel objet', desc: '', descExpert: '', icon: '✨', img: '',
   slot: 'head', rarity: 'commun', price: 10, lootOnly: false, effects: [],
   enabled: true, ord, _isNew: true,
 });
@@ -512,12 +513,39 @@ export default function BalanceEditor({ onClose }) {
                     <button className="btn btn--ghost btn--sm" onClick={addEffect}>{'+'} Effet simple</button>
                     <button className="btn btn--ghost btn--sm" onClick={addTrigger}>{'+'} Effet déclenché (avancé)</button>
                   </div>
-                  {/* Aperçu en clair : ce que liront les joueurs (au tap) en jeu */}
-                  {describeItemEffects(draft).length > 0 && (
-                    <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(91,140,58,0.08)', border: '1px solid rgba(91,140,58,0.25)' }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>👁️ Détail de l'effet (bouton « Détail » en jeu)</div>
+                </div>
+
+                {/* Détail de l'effet (bouton « Détail » en jeu). Éditable :
+                    vide = texte auto-généré depuis les effets ; rempli = override
+                    manuel (une ligne = une puce). */}
+                <div className="qed-field" style={{ marginTop: 8 }}>
+                  <label className="qed-label" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    Détail de l'effet (bouton « Détail » en jeu)
+                    <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }}
+                      onClick={() => set({ descExpert: describeItemEffects(draft).join('\n') })}
+                      disabled={describeItemEffects(draft).length === 0}>
+                      {'↻'} Générer depuis les effets
+                    </button>
+                    {draft.descExpert?.trim() && (
+                      <button type="button" className="btn btn--ghost btn--sm" onClick={() => set({ descExpert: '' })}>
+                        {'↺'} Auto
+                      </button>
+                    )}
+                  </label>
+                  <textarea className="qed-textarea" value={draft.descExpert}
+                    onChange={(ev) => set({ descExpert: ev.target.value })}
+                    placeholder={describeItemEffects(draft).join('\n') || "Texte détaillé… (une ligne = une puce). Laisse vide pour le texte auto-généré."} />
+                  <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 2 }}>
+                    {draft.descExpert?.trim()
+                      ? 'Override manuel actif (le texte ci-dessus prime sur l’auto-généré).'
+                      : 'Vide → texte auto-généré depuis les effets (aperçu ci-dessous).'}
+                  </div>
+                  {/* Aperçu EXACT de ce que liront les joueurs (au tap) en jeu */}
+                  {itemEffectLines(draft).length > 0 && (
+                    <div style={{ marginTop: 6, padding: '8px 10px', borderRadius: 8, background: 'rgba(91,140,58,0.08)', border: '1px solid rgba(91,140,58,0.25)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>{'👁️'} Aperçu en jeu</div>
                       <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.5 }}>
-                        {describeItemEffects(draft).map((l, i) => <li key={i}>{l}</li>)}
+                        {itemEffectLines(draft).map((l, i) => <li key={i}>{l}</li>)}
                       </ul>
                     </div>
                   )}

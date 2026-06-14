@@ -15,6 +15,7 @@ function rowToItem(r) {
   return {
     name: r.name,
     desc: r.description ?? '',
+    descExpert: r.desc_expert ?? '',
     icon: r.icon ?? undefined,
     img: r.img ?? undefined,
     slot: r.slot,
@@ -31,6 +32,7 @@ export function itemToPayload(it) {
     key: it.key,
     name: it.name,
     description: it.desc || null,
+    desc_expert: it.descExpert || null,
     icon: it.icon || null,
     img: it.img || null,
     slot: it.slot,

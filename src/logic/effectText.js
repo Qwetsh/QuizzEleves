@@ -115,7 +115,17 @@ export function describeEffect(fx) {
   return '';
 }
 
-// Liste des descriptions d'effets d'un objet (1 entrée par effet, vides filtrées).
+// Liste des descriptions d'effets d'un objet, AUTO-générée depuis ses effets
+// (1 entrée par effet, vides filtrées).
 export function describeItemEffects(item) {
   return (item?.effects || []).map(describeEffect).filter(Boolean);
+}
+
+// Lignes affichées sous « Détail de l'effet » : si l'objet porte une description
+// experte saisie à la main (descExpert), elle PRIME (découpée par lignes) ;
+// sinon on retombe sur la traduction auto-générée. Source unique pour le jeu.
+export function itemEffectLines(item) {
+  const expert = typeof item?.descExpert === 'string' ? item.descExpert.trim() : '';
+  if (expert) return expert.split('\n').map((l) => l.trim()).filter(Boolean);
+  return describeItemEffects(item);
 }

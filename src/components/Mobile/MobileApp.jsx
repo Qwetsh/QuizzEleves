@@ -7,7 +7,7 @@ import { fetchSession, subscribeSession } from '../../logic/sessionConfig';
 import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
-import { describeItemEffects } from '../../logic/effectText';
+import { itemEffectLines } from '../../logic/effectText';
 import '../../styles/mobile.css';
 
 function readInitialCode() {
@@ -85,7 +85,7 @@ function EquipSlot({ itemKey, slot, onTap }) {
       <div className="mob-eq-text">
         <div className="mob-eq-slot">{SLOTS[slot].name}</div>
         <div className="mob-eq-name">{item ? item.name : <em>vide</em>}</div>
-        {item && <div className="mob-eq-desc">{item.desc}{describeItemEffects(item).length > 0 ? ' · toucher pour les effets' : ''}</div>}
+        {item && <div className="mob-eq-desc">{item.desc}{itemEffectLines(item).length > 0 ? ' · toucher pour les effets' : ''}</div>}
       </div>
     </div>
   );
@@ -96,7 +96,7 @@ function ItemSheet({ itemKey, onClose }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const color = RARITIES[item.rarity]?.color || '#888';
-  const fx = describeItemEffects(item);
+  const fx = itemEffectLines(item);
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(20,12,4,0.5)', display: 'flex', alignItems: 'flex-end' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: '16px 18px 26px', boxShadow: '0 -10px 30px rgba(0,0,0,0.4)' }}>

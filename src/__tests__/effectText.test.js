@@ -1,6 +1,6 @@
 // Traduction lisible des effets (joueurs + éditeur).
 import { describe, it, expect } from 'vitest';
-import { describeItemEffects, describeEffect, amountLabel } from '../logic/effectText.js';
+import { describeItemEffects, describeEffect, amountLabel, itemEffectLines } from '../logic/effectText.js';
 
 describe('effectText', () => {
   it('amountLabel : nombre / dé / échelle', () => {
@@ -41,5 +41,15 @@ describe('effectText', () => {
   it('describeItemEffects liste tous les effets', () => {
     const item = { effects: [{ type: 'moneyPerCorrect', value: 3 }, { kind: 'trigger', on: 'wrong', do: [{ action: 'money', mode: 'lose', target: 'self', n: 5 }] }] };
     expect(describeItemEffects(item)).toHaveLength(2);
+  });
+
+  it('itemEffectLines : auto-généré si pas d’override', () => {
+    const item = { effects: [{ type: 'timerBonus', value: 5 }] };
+    expect(itemEffectLines(item)).toEqual(['+5s au temps de réponse']);
+  });
+
+  it('itemEffectLines : descExpert prime (une ligne = une puce)', () => {
+    const item = { descExpert: 'Ligne A\n  Ligne B  \n\n', effects: [{ type: 'timerBonus', value: 5 }] };
+    expect(itemEffectLines(item)).toEqual(['Ligne A', 'Ligne B']);
   });
 });

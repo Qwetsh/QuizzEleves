@@ -3,11 +3,11 @@
 // « simple » (item.desc) ; ce composant ajoute un bouton « Détail de l'effet »
 // qui déplie la traduction précise (effectText.describeItemEffects).
 import { useState } from 'react';
-import { describeItemEffects } from '../../logic/effectText';
+import { itemEffectLines } from '../../logic/effectText';
 
 export default function EffectDetails({ item, compact = false }) {
   const [open, setOpen] = useState(false);
-  const fx = describeItemEffects(item);
+  const fx = itemEffectLines(item);
   if (!fx.length) return null;
   return (
     <div style={{ marginTop: 5 }}>
