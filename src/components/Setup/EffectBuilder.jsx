@@ -33,6 +33,20 @@ export function defaultTrigger(slot) {
   return { kind: 'trigger', on: 'roll', values: [6], do: [{ action: 'money', mode: 'gain', target: 'self', n: 10, unit: 'flat' }] };
 }
 
+// Déplie une table d6 (clés « N » ou plages « a-b ») en 6 faces individuelles,
+// pour que l'éditeur affiche correctement une table seedée par plages. Le moteur
+// (rangeMatch) lit indifféremment les deux formats ; éditer une face écrit alors
+// des clés individuelles.
+export function expandD6Table(table) {
+  const out = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+  for (const key of Object.keys(table || {})) {
+    const acts = table[key] || [];
+    if (String(key).includes('-')) { const [a, b] = String(key).split('-').map(Number); for (let f = a; f <= b; f++) if (out[f] !== undefined) out[f] = acts; }
+    else if (out[key] !== undefined) out[key] = acts;
+  }
+  return out;
+}
+
 // Crée un déclencheur d'un type donné (utilisé par le menu « + Ajouter un effet »).
 export function makeTrigger(on) {
   if (on === 'roll') return { kind: 'trigger', on: 'roll', values: [6], do: [defaultAction()] };
@@ -324,18 +338,21 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
               <ActionList actions={fx.else || []} onChange={(d) => upd({ else: d })} />
             </div>
           )}
-          {useMode === 'd6' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {[1, 2, 3, 4, 5, 6].map((face) => (
-                <div key={face} className="bal-fx-face">
-                  <div className="bal-fx-face-label">{'\u{1F3B2}'} {face}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <ActionList actions={fx.table?.[face] || []} onChange={(d) => upd({ table: { ...fx.table, [face]: d } })} />
+          {useMode === 'd6' && (() => {
+            const d6 = expandD6Table(fx.table); // affiche correctement les tables par plages
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {[1, 2, 3, 4, 5, 6].map((face) => (
+                  <div key={face} className="bal-fx-face">
+                    <div className="bal-fx-face-label">{'\u{1F3B2}'} {face}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <ActionList actions={d6[face]} onChange={(d) => upd({ table: { ...d6, [face]: d } })} />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            );
+          })()}
         </>
       )}
 

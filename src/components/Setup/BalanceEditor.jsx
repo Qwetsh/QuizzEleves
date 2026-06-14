@@ -127,10 +127,12 @@ export default function BalanceEditor({ onClose }) {
   const [fxMenu, setFxMenu] = useState(false);
   const fileRef = useRef(null);
   const [ov, setOv] = useState(() => readCache());
+  const [ovBaseline, setOvBaseline] = useState(() => readCache()); // référence pour « non sauvé » (pouvoirs/loot)
   const [selPower, setSelPower] = useState('bouclier');
 
-  // Modifications non enregistrées de l'objet courant ?
+  // Modifications non enregistrées : objet courant (items) / overrides (pouvoirs+loot)
   const dirty = !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline);
+  const ovDirty = JSON.stringify(ov) !== JSON.stringify(ovBaseline);
 
   // Charge un brouillon comme référence « propre » (réinitialise le garde-fou).
   const loadDraft = (d, { keepSubtab = false } = {}) => {
@@ -142,7 +144,10 @@ export default function BalanceEditor({ onClose }) {
   const confirmIfDirty = (msg) => !dirty || window.confirm(msg);
   const chooseRow = (r) => { if (confirmIfDirty('Modifications non enregistrées — changer d’objet et les perdre ?')) loadDraft(rowToDraft(r)); };
   const chooseNew = () => { if (confirmIfDirty('Modifications non enregistrées — créer un objet et les perdre ?')) loadDraft(newDraft(rows?.length || 0)); };
-  const handleClose = () => { if (confirmIfDirty('Modifications non enregistrées — fermer et les perdre ?')) onClose(); };
+  const handleClose = () => {
+    const unsaved = (tab === 'items' && dirty) || (tab !== 'items' && ovDirty);
+    if (!unsaved || window.confirm('Modifications non enregistrées — fermer et les perdre ?')) onClose();
+  };
 
   // --- Pouvoirs ---
   const pVal = (key, field) => ov.powers?.[key]?.[field] ?? DEFAULTS.powers[key][field];
@@ -171,7 +176,7 @@ export default function BalanceEditor({ onClose }) {
   async function handleSaveBalance() {
     if (busy) return;
     setBusy(true); setStatus(null);
-    try { await saveBalance(ov); setStatus('Enregistré ✓'); }
+    try { await saveBalance(ov); setOvBaseline(clone(ov)); setStatus('Enregistré ✓'); }
     catch (e) { setStatus('Erreur : ' + (e.message || 'Supabase injoignable')); }
     setBusy(false);
   }
@@ -301,7 +306,8 @@ export default function BalanceEditor({ onClose }) {
                 </button>
               ))}
             </div>
-            <div className="qed-form">
+            <div className="bal-detail">
+              <div className="bal-detail-scroll">
               {(() => {
                 const k = selPower; const p = POWERS[k]; const d = DEFAULTS.powers[k];
                 return (
@@ -342,19 +348,22 @@ export default function BalanceEditor({ onClose }) {
                       );
                     })}
 
-                    <div className="qed-actions">
-                      <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
-                      <button className="btn btn--ghost" onClick={() => resetPower(k)} disabled={!ov.powers?.[k]}>{'↺'} Valeurs d'origine</button>
-                      {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
-                    </div>
                   </>
                 );
               })()}
+              </div>
+              <div className="bal-detail-foot">
+                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
+                <button className="btn btn--ghost" onClick={() => resetPower(selPower)} disabled={!ov.powers?.[selPower]}>{'↺'} Valeurs d'origine</button>
+                {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
+                {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
+              </div>
             </div>
           </div>
         ) : tab === 'loot' ? (
           <div className="qed-body">
-            <div className="qed-form">
+            <div className="bal-detail">
+              <div className="bal-detail-scroll">
               <div className="qed-label" style={{ marginBottom: 10 }}>Probabilités & poids de loot</div>
               {LOOT_FIELDS.map((f) => (
                 <div className="bal-row" key={f.k}>
@@ -373,9 +382,11 @@ export default function BalanceEditor({ onClose }) {
                   )}
                 </div>
               ))}
-              <div className="qed-actions">
-                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+              </div>
+              <div className="bal-detail-foot">
+                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
                 <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, loot: {} }))}>{'↺'} Valeurs d'origine</button>
+                {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
                 {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>
             </div>
