@@ -498,7 +498,8 @@ export const useGameStore = create((set, get) => ({
       soundTrap();
       addLog(`\u{1FAA4} ${team.emoji} ${team.name} declenche un piege${trap.label ? ` : ${trap.label}` : ''} !`);
       if (depth < 3) {
-        effectH.runEffects(set, get, trap.do, { source: 'trap' });
+        // ownerTeam = le POSEUR : l'or volé par le piège lui revient (cf. applyMoney).
+        effectH.runEffects(set, get, trap.do, { source: 'trap', ownerTeam: trap.ownerTeam });
         return;
       }
     }

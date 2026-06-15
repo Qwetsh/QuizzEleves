@@ -200,6 +200,10 @@ function applyMoney(set, get, action, ctx, indices) {
   if (!indices || !indices.length) return; // ex. randomOpponent sans adversaire : rien à faire
   const { teams, addLog } = get();
   const src = ctx.sourceTeam ?? 0;
+  // Bénéficiaire d'un vol : le POSEUR du piège si défini (ctx.ownerTeam), sinon
+  // la source de l'effet (lanceur du consommable/pouvoir). Évite le « vol de soi
+  // à soi » d'un piège dont la cible est « celui qui marche dessus » (= la source).
+  const stealRecipient = ctx.ownerTeam ?? src;
   const nt = [...teams];
   const amountFor = (team) => {
     if (action.unit === 'percent') return Math.floor((team.money ?? 0) * (action.n / 100));
@@ -207,13 +211,13 @@ function applyMoney(set, get, action, ctx, indices) {
   };
   if (action.mode === 'steal') {
     for (const i of indices) {
-      if (i === src) continue;
+      if (i === stealRecipient) continue;
       const victim = nt[i];
       const raw = Math.min(amountFor(victim), victim.money ?? 0);
       const stolen = reducedSteal(victim, raw);
       nt[i] = { ...victim, money: Math.max(0, (victim.money ?? 0) - stolen) };
-      nt[src] = { ...nt[src], money: (nt[src].money ?? 0) + stolen };
-      addLog(`💰 ${nt[src].emoji} vole ${stolen} pièce${stolen > 1 ? 's' : ''} à ${victim.emoji} ${victim.name} !`);
+      nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) + stolen };
+      addLog(`💰 ${nt[stealRecipient].emoji} vole ${stolen} pièce${stolen > 1 ? 's' : ''} à ${victim.emoji} ${victim.name} !`);
     }
   } else if (action.mode === 'lose') {
     for (const i of indices) {

@@ -480,6 +480,23 @@ describe('pièges', () => {
     expect(team(0).pos).toBe('arrivee');
     expect(S().finished).toBe(true);
   });
+
+  it('piège vol de pièces : l’or volé revient au POSEUR', () => {
+    // Cible « celui qui marche dessus » (self) ; le poseur (équipe 1) encaisse.
+    useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'Bourse', icon: '🪤', do: [{ action: 'money', mode: 'steal', target: 'self', n: 10, unit: 'flat' }], ownerTeam: 1 } } } });
+    useGameStore.setState({ teams: [{ ...team(0), pos: 'n3', money: 50 }, { ...team(1), money: 20 }], currentTeam: 0 });
+    S().handleLanding();
+    expect(team(0).money).toBe(40); // victime perd 10
+    expect(team(1).money).toBe(30); // poseur gagne 10
+    expect(S().board.n3.trap).toBeUndefined();
+  });
+
+  it('piège vol : le poseur sur SON piège ne se vole pas lui-même', () => {
+    useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'Bourse', icon: '🪤', do: [{ action: 'money', mode: 'steal', target: 'self', n: 10, unit: 'flat' }], ownerTeam: 0 } } } });
+    useGameStore.setState({ teams: [{ ...team(0), pos: 'n3', money: 50 }, team(1)], currentTeam: 0 });
+    S().handleLanding();
+    expect(team(0).money).toBe(50); // inchangé
+  });
 });
 
 // --- on:roll équipement ------------------------------------------------
