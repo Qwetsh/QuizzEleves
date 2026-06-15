@@ -671,7 +671,8 @@ export const useGameStore = create((set, get) => ({
       addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
       if (team.wager) addLog(`\u{1F3B2} D\u00e9fi r\u00e9ussi ! R\u00e9compense \u00e0 la cl\u00e9.`);
     } else {
-      const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse');
+      // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
+      const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse', get().preRollValue || 2);
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
       addLog(logMessage);
@@ -793,7 +794,8 @@ export const useGameStore = create((set, get) => ({
     const timedSubject = get().showQuestion?.subject; // thème (pour les déclencheurs conditionnés)
     const newTeams = [...teams];
 
-    const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9');
+    // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
+    const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2);
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
     addLog(logMessage);

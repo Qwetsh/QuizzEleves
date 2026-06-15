@@ -49,40 +49,55 @@ function freshGame(overrides = [{}, {}, {}]) {
 const S = () => useGameStore.getState();
 const team = (i = 0) => S().teams[i];
 
-describe('Bouclier par niveau', () => {
+describe('Bouclier par niveau (recul = valeur du dé, réduction croissante)', () => {
+  // Recul de base = 5 (le dé qui a fait avancer), équipe partie de n8.
+  const RECUL = 5;
   const withBouclier = (level, extra = {}) =>
-    mkTeam(0, { powers: { bouclier: { charges: 2, level } }, ...extra });
+    mkTeam(0, { pos: 'n8', powers: { bouclier: { charges: 2, level } }, ...extra });
+  const wrong = (t) => resolveWrongAnswer(t, BOARD, 'Mauvaise réponse', RECUL);
 
-  it('niv.1 : réduit le recul de 2 à 1 (charge consommée)', () => {
-    const r = resolveWrongAnswer(withBouclier(1), BOARD);
-    expect(r.updatedTeam.pos).toBe('n3');
+  it('niv.1 : retire 2 cases au recul (5 → 3) ; charge consommée', () => {
+    const r = wrong(withBouclier(1));
+    expect(r.updatedTeam.pos).toBe('n5'); // n8 reculé de 3
     expect(r.updatedTeam.powers.bouclier.charges).toBe(1);
   });
 
-  it('niv.1 + bottes usées : recul totalement absorbé', () => {
-    const t = withBouclier(1, { equipment: { head: null, body: null, feet: 'bottesUsees' } });
-    const r = resolveWrongAnswer(t, BOARD);
-    expect(r.updatedTeam.pos).toBe('n4');
-    expect(r.updatedTeam.powers.bouclier.charges).toBe(1);
-  });
-
-  it('niv.2 : annule le recul', () => {
-    const r = resolveWrongAnswer(withBouclier(2), BOARD);
-    expect(r.updatedTeam.pos).toBe('n4');
+  it('niv.2 : retire 4 cases au recul (5 → 1)', () => {
+    const r = wrong(withBouclier(2));
+    expect(r.updatedTeam.pos).toBe('n7'); // n8 reculé de 1
     expect(r.updatedTeam.money).toBe(50);
   });
 
-  it('niv.3 : annule le recul et rapporte 5 pièces', () => {
-    const r = resolveWrongAnswer(withBouclier(3), BOARD);
-    expect(r.updatedTeam.pos).toBe('n4');
+  it('niv.3 : retire 6 cases (recul absorbé) + 5 pièces', () => {
+    const r = wrong(withBouclier(3));
+    expect(r.updatedTeam.pos).toBe('n8'); // 5 - 6 <= 0
     expect(r.updatedTeam.money).toBe(55);
   });
 
-  it('sans charge : recul normal de 2', () => {
-    const t = mkTeam(0, { powers: { bouclier: { charges: 0, level: 3 } } });
-    const r = resolveWrongAnswer(t, BOARD);
-    expect(r.updatedTeam.pos).toBe('n2');
+  it('niv.1 + bottes usées : recul encore réduit par l’équipement', () => {
+    const t = withBouclier(1, { equipment: { head: null, body: null, feet: 'bottesUsees' } });
+    const r = wrong(t);
+    // 5 - 2 (bouclier) = 3, puis bottesUsees (reculReduction) réduit encore
+    expect(['n6', 'n7', 'n8']).toContain(r.updatedTeam.pos);
+    expect(r.updatedTeam.powers.bouclier.charges).toBe(1);
+  });
+
+  it('sans charge : recul = valeur du dé', () => {
+    const t = mkTeam(0, { pos: 'n8', powers: { bouclier: { charges: 0, level: 3 } } });
+    const r = wrong(t);
+    expect(r.updatedTeam.pos).toBe('n3'); // n8 reculé de 5
     expect(r.updatedTeam.money).toBe(50);
+  });
+});
+
+describe('Recul = valeur du dé (flux complet)', () => {
+  it('mauvaise réponse : recul = preRollValue', () => {
+    freshGame();
+    useGameStore.setState({ teams: [mkTeam(0, { pos: 'n8' }), mkTeam(1), mkTeam(2)], currentTeam: 0, preRollValue: 5 });
+    S().askQuestion('maths');
+    const wrong = (S().showQuestion.question.c + 1) % 4;
+    S().answerQuestion(wrong, 10);
+    expect(team(0).pos).toBe('n3'); // n8 reculé de 5 (le dé)
   });
 });
 

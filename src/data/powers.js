@@ -9,10 +9,12 @@ export const POWERS = {
     color: '#3b6cb3',
     activationCost: 0,
     upgradeCosts: [20, 30],
+    // Recul d'une mauvaise reponse = valeur du de qui a fait avancer. Le Bouclier
+    // en RETIRE un nombre de cases croissant avec le niveau (>= recul => absorbe).
     levels: [
-      { desc: 'Reduit le recul de moitie (1 case au lieu de 2)', effect: { type: 'reduceRecul', amount: 1 } },
-      { desc: 'Annule le recul', effect: { type: 'blockRecul' } },
-      { desc: 'Annule le recul + gagne 5 pieces', effect: { type: 'blockRecul', bonusMoney: 5 } },
+      { desc: 'Recul reduit de 2 cases', effect: { type: 'reduceRecul', amount: 2 } },
+      { desc: 'Recul reduit de 4 cases', effect: { type: 'reduceRecul', amount: 4 } },
+      { desc: 'Recul reduit de 6 cases + 5 pieces', effect: { type: 'reduceRecul', amount: 6, bonusMoney: 5 } },
     ],
   },
   indice: {
