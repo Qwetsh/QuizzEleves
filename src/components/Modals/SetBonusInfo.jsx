@@ -4,10 +4,14 @@
 // est mis en avant (actif) ou grisé (verrouillé) selon le nombre de pièces.
 // Les libellés des bonus réutilisent describeEffect (source unique effectText).
 import { SETS } from '../../data/sets';
+import { ITEMS } from '../../data/items';
 import { equippedSetCounts } from '../../logic/itemEffects';
 import { describeEffect } from '../../logic/effectText';
-import { setImg } from '../../logic/itemAssets';
+import { setPieceImgs } from '../../logic/itemAssets';
 import '../../styles/set-info.css';
+
+// Pièce de set → slot d'équipement correspondant (ordre coiffe/armure/amulette).
+const SLOT_OF_PIECE = { coiffe: 'head', armure: 'body', amulette: 'feet' };
 
 function Tier({ n, count, lines }) {
   if (!lines.length) return null;
@@ -37,16 +41,26 @@ export default function SetBonusInfo({ item, team }) {
   const lines2 = (set.bonus2 || []).map(describeEffect).filter(Boolean);
   const lines3 = (set.bonus3 || []).map(describeEffect).filter(Boolean);
   const c = set.color || '#8a6d3a';
-  const art = setImg(setKey);
+  // Les 3 pièces SÉPARÉES (détourées) ; chacune « obtenue » si l'équipe porte
+  // dans le slot correspondant un objet de ce set.
+  const pieces = setPieceImgs(setKey);
+  const hasPiece = (piece) => {
+    const eqKey = team?.equipment?.[SLOT_OF_PIECE[piece]];
+    return !!(eqKey && ITEMS[eqKey]?.set === setKey);
+  };
 
   return (
     <div
       className="setinfo"
       style={{ '--set-color': c, '--set-tint': c + '16', '--set-edge': c + '66', '--set-soft': c + '26' }}
     >
-      {art && (
+      {pieces.some((p) => p.url) && (
         <div className="setinfo-art">
-          <img src={art} alt={set.name} draggable={false} />
+          {pieces.map(({ piece, url }) => (
+            <div key={piece} className={'setinfo-piece' + (hasPiece(piece) ? ' got' : ' missing')}>
+              {url && <img src={url} alt={piece} draggable={false} />}
+            </div>
+          ))}
         </div>
       )}
       <div className="setinfo-head">

@@ -40,6 +40,13 @@ export function setImg(setKey) {
   return SET_ASSETS[setKey] || null;
 }
 
+// Pièces SÉPARÉES d'un set (détourées proprement), dans l'ordre coiffe/armure/
+// amulette (= head/body/feet), pour l'affichage « 3 pièces » de l'encart de set.
+const SET_PIECE_ORDER = ['coiffe', 'armure', 'amulette'];
+export function setPieceImgs(setKey) {
+  return SET_PIECE_ORDER.map((piece) => ({ piece, url: SET_PIECE_ASSETS['set-' + setKey + '-' + piece] || null }));
+}
+
 // URL d'une image embarquée à partir de sa clé.
 export function assetUrl(key) {
   return ITEM_ASSETS[key] || null;
