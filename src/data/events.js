@@ -42,4 +42,12 @@ export const EVENTS = {
   // --- Pari d'argent / question a enjeu ---
   loterie:          { name: 'Loterie',           icon: '\u{1F39F}️', desc: 'Tente ta chance : 50% de remporter 40 pieces, sinon tu perds 15 pieces.', category: 'money', optional: true, weight: 0.7 },
   sphinx:           { name: 'Le Sphinx',         icon: '\u{1F5FF}', desc: 'Le Sphinx te pose une question HARDCORE. Juste : +50 pieces. Faux : -20 pieces.', subject: 'hardcore', category: 'money', optional: true, weight: 0.45 },
+
+  // --- Objets : troc, forge, relique, tournoi ---
+  poseurPiege:      { name: 'Poseur de pieges',  icon: '🪤', desc: 'Place un piege sur une case de ton choix : qui marche dessus recule de 2 cases !', category: 'item', optional: false, weight: 0.6,
+    actions: [{ action: 'placeTrap', trap: { label: 'Piege', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] } }] },
+  troc:             { name: 'Troc du destin',    icon: '\u{1F504}', desc: 'Sacrifie un de tes objets... pour en recevoir un autre au hasard. Meilleur ou pire ?', needsChoice: true, category: 'item', optional: true, weight: 0.6 },
+  forge:            { name: 'La Forge',          icon: '🔨', desc: 'Fais fondre 2 consommables pour forger 1 EQUIPEMENT aleatoire !', category: 'item', optional: true, weight: 0.5 },
+  reliquaire:       { name: 'Le Reliquaire',     icon: '🏺', desc: 'Une relique t\'attire : recois une piece d\'un SET que tu as deja commence !', category: 'item', optional: false, weight: 0.45 },
+  tournoi:          { name: 'Tournoi eclair',    icon: '🏅', desc: 'Reponds vite ! Bonne reponse : tu remportes un consommable. Mauvaise : un adversaire le rafle !', needsQuestion: true, category: 'item', optional: true, weight: 0.5 },
 };

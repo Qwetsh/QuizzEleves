@@ -108,3 +108,60 @@ describe('événements de pari (loterie, sphinx)', () => {
     expect(S().teams[0].money).toBe(100);
   });
 });
+
+describe('événements : troc, forge, reliquaire, tournoi, pièges', () => {
+  it('forge : fond 2 consommables → forge un équipement', () => {
+    const consum = Object.keys(ITEMS).filter((k) => ITEMS[k].slot === 'consumable');
+    if (consum.length < 2) return; // catalogue sans assez de consommables
+    setup({ bag: [consum[0], consum[1]] });
+    useGameStore.setState({ showEvent: { key: 'forge', event: EVENTS.forge, phase: 'intro', data: {} } });
+    S().applyEventEffect();
+    expect(S().teams[0].bag.filter(Boolean).includes(consum[0])).toBe(false); // consommé
+    const forged = S().lootReveal?.itemKey;
+    if (forged) expect(ITEMS[forged].slot).not.toBe('consumable'); // un équipement
+  });
+
+  it('forge : refuse si moins de 2 consommables', () => {
+    setup({ bag: [] });
+    useGameStore.setState({ showEvent: { key: 'forge', event: EVENTS.forge, phase: 'intro', data: {} } });
+    S().applyEventEffect();
+    expect(S().showEvent.phase).toBe('result');
+    expect(S().showEvent.data.message).toMatch(/2 consommables/i);
+  });
+
+  it('troc : sacrifie un objet et en reçoit un (révélation ou résultat)', () => {
+    setup({ bag: [KEY] });
+    useGameStore.setState({ showEvent: { key: 'troc', event: EVENTS.troc, phase: 'choice', data: {} } });
+    S().eventTrade({ kind: 'bag', index: 0 });
+    expect(S().lootReveal?.itemKey != null || S().showEvent?.phase === 'result').toBe(true);
+  });
+
+  it('reliquaire : ne plante pas (relique ou vide)', () => {
+    setup();
+    useGameStore.setState({ showEvent: { key: 'reliquaire', event: EVENTS.reliquaire, phase: 'intro', data: {} } });
+    expect(() => S().applyEventEffect()).not.toThrow();
+  });
+
+  it('tournoi : bonne réponse → l\'équipe active remporte un consommable', () => {
+    setup();
+    useGameStore.setState({ showEvent: { key: 'tournoi', event: EVENTS.tournoi, phase: 'question', data: { questionResult: true } } });
+    S().applyEventEffect();
+    expect(S().showEvent.phase).toBe('result');
+    expect(S().showEvent.data.message).toMatch(/remporte|gagne/i);
+  });
+
+  it('poseur de pièges : ouvre le sélecteur de case puis pose le piège', () => {
+    const nextTurn = vi.fn();
+    setup();
+    useGameStore.setState({
+      nextTurn,
+      board: { depart: { x: 0, y: 0, type: 'depart', next: ['n1'] }, n1: { x: 1, y: 0, type: 'subject', next: [] } },
+      showEvent: { key: 'poseurPiege', event: EVENTS.poseurPiege, phase: 'intro', data: {} },
+    });
+    S().acceptEvent();
+    expect(S().showTilePicker).toBeTruthy();
+    S().selectTile('n1');
+    expect(S().board.n1.trap).toBeTruthy();
+    expect(nextTurn).toHaveBeenCalled();
+  });
+});

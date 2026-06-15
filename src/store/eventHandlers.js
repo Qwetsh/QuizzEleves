@@ -2,8 +2,9 @@ import { POWERS } from '../data/powers.js';
 import { moveForward, moveBack, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { randomSubject } from '../logic/turnHelpers.js';
-import { hasEffect, reducedSteal, reducedTax } from '../logic/itemEffects.js';
+import { hasEffect, reducedSteal, reducedTax, equippedSetCounts } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
+import { SETS } from '../data/sets.js';
 import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock } from './itemHandlers.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { runEffects } from './effectEngine.js';
@@ -121,8 +122,20 @@ export function acceptEvent(set, get) {
     return;
   }
 
-  if (key === 'pari' || key === 'bonus' || key === 'jackpot' || key === 'sphinx') {
+  if (key === 'pari' || key === 'bonus' || key === 'jackpot' || key === 'sphinx' || key === 'tournoi') {
     eventAskQuestion(set, get);
+    return;
+  }
+
+  if (key === 'troc') {
+    const t = get().teams[get().currentTeam];
+    const hasItems = Object.values(t?.equipment || {}).some((k) => k && ITEMS[k])
+      || (t?.bag || []).some((k) => k && ITEMS[k]);
+    if (!hasItems) {
+      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Tu n'as aucun objet à troquer !` } }, eventApplied: true });
+      return;
+    }
+    set({ showEvent: { ...showEvent, phase: 'choice' } });
     return;
   }
 
@@ -351,6 +364,45 @@ export function eventChooseGift(set, get, itemKey) {
   addLog(`\u{1F48E} ${team.emoji} ${team.name} ${r.outcome === 'equipped' ? 'équipe' : 'obtient'} ${item.icon} ${item.name} (coffre choisi) !`);
   set({ teams: newTeams, showEvent: null, eventApplied: false });
   get().showLoot(itemKey, { title: '\u{1F48E} Ton choix !', thenClose: true });
+}
+
+// Troc du destin : sacrifie UN objet (pick) → recoit un objet AU HASARD.
+export function eventTrade(set, get, pick) {
+  const { teams, currentTeam, addLog, showEvent } = get();
+  const team = teams[currentTeam];
+  const equipment = { ...team.equipment };
+  const bag = normalizeBag(team.bag);
+
+  let givenKey = null;
+  if (pick.kind === 'equipment') {
+    givenKey = equipment[pick.slot];
+    if (!givenKey || !ITEMS[givenKey]) return;
+    equipment[pick.slot] = null;
+  } else {
+    givenKey = bag[pick.index];
+    if (!givenKey || !ITEMS[givenKey]) return;
+    bag[pick.index] = null;
+  }
+  const given = ITEMS[givenKey];
+  const afterSacrifice = { ...team, equipment, bag };
+
+  const newKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS));
+  if (!newKey) {
+    const nt = [...teams]; nt[currentTeam] = afterSacrifice;
+    addLog(`\u{1F504} ${team.emoji} sacrifie ${given.icon} ${given.name}... mais ne reçoit rien !`);
+    set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Troc raté : rien en échange...` } } });
+    return;
+  }
+  const newItem = ITEMS[newKey];
+  const r = placeItem(afterSacrifice, newKey);
+  const nt = [...teams]; nt[currentTeam] = r.team;
+  addLog(`\u{1F504} ${team.emoji} ${team.name} troque ${given.icon} ${given.name} contre ${newItem.icon} ${newItem.name} !`);
+  if (r.outcome === 'refunded') {
+    set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Sac plein ! ${newItem.icon} ${newItem.name} revendu (+${r.refund} \u{1F4B0}).` } } });
+    return;
+  }
+  set({ teams: nt, showEvent: null, eventApplied: false });
+  get().showLoot(newKey, { title: '\u{1F504} Troc du destin !', thenClose: true });
 }
 
 // Pillage : vole UN objet a la cible — pick = { kind: 'equipment', slot } ou { kind: 'bag', index }.
@@ -679,6 +731,75 @@ export function applyEventEffect(set, get) {
       } else {
         newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 20) };
         message = `\u{1F5FF} Réponse fausse... ${team.emoji} ${team.name} perd 20 pièces.`;
+      }
+      break;
+    }
+    case 'forge': {
+      // Fond 2 consommables → forge 1 équipement aléatoire.
+      const bag = normalizeBag(team.bag);
+      const consum = [];
+      bag.forEach((k, i) => { if (k && ITEMS[k]?.slot === 'consumable') consum.push(i); });
+      if (consum.length < 2) { message = `🔨 Il te faut au moins 2 consommables à fondre...`; break; }
+      const burned = [ITEMS[bag[consum[0]]], ITEMS[bag[consum[1]]]];
+      bag[consum[0]] = null; bag[consum[1]] = null;
+      const eqKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS), { category: 'equipment' });
+      const afterBurn = { ...team, bag };
+      if (!eqKey) { newTeams[currentTeam] = afterBurn; message = `🔨 La forge s'éteint : aucun équipement à forger.`; break; }
+      const eq = ITEMS[eqKey];
+      const r = placeItem(afterBurn, eqKey);
+      newTeams[currentTeam] = r.team;
+      if (r.outcome === 'refunded') {
+        message = `🔨 ${eq.icon} ${eq.name} forgé... mais sac plein ! Revendu +${r.refund} \u{1F4B0}.`;
+      } else {
+        message = `🔨 ${team.emoji} fond ${burned[0].icon}+${burned[1].icon} et forge ${eq.icon} ${eq.name} !`;
+        lootKey = eqKey;
+      }
+      break;
+    }
+    case 'reliquaire': {
+      // Donne une pièce d'un SET déjà commencé (≥1 pièce équipée), slot non rempli
+      // par cette pièce ; fallback : n'importe quelle pièce de set.
+      const enabled = get().enabledItems || Object.keys(ITEMS);
+      const started = Object.keys(equippedSetCounts(team));
+      let candidates = started.length
+        ? enabled.filter((k) => {
+            const it = ITEMS[k];
+            return it && it.set && it.slot !== 'consumable' && started.includes(it.set) && team.equipment?.[it.slot] !== k;
+          })
+        : [];
+      if (candidates.length === 0) candidates = enabled.filter((k) => ITEMS[k]?.set && ITEMS[k].slot !== 'consumable');
+      if (candidates.length === 0) { message = `🏺 Le reliquaire est vide...`; break; }
+      const relicKey = candidates[Math.floor(Math.random() * candidates.length)];
+      const relic = ITEMS[relicKey];
+      const r = placeItem(team, relicKey);
+      newTeams[currentTeam] = r.team;
+      if (r.outcome === 'refunded') {
+        message = `🏺 ${relic.icon} ${relic.name}... mais sac plein ! Revendu +${r.refund} \u{1F4B0}.`;
+      } else {
+        message = `🏺 ${team.emoji} reçoit la relique ${relic.icon} ${relic.name} (${SETS[relic.set]?.name || 'set'}) !`;
+        lootKey = relicKey;
+      }
+      break;
+    }
+    case 'tournoi': {
+      // Question : gagnant = l'équipe active loote un conso ; perdant = un adversaire le rafle.
+      const prizeKey = pickLootItem(0, get().enabledItems || Object.keys(ITEMS), { category: 'consumable' });
+      if (!prizeKey) { message = `🏅 Aucun consommable en jeu...`; break; }
+      const prize = ITEMS[prizeKey];
+      if (data?.questionResult === true) {
+        const r = placeItem(team, prizeKey);
+        newTeams[currentTeam] = r.team;
+        message = r.outcome === 'refunded'
+          ? `🏅 ${team.emoji} gagne ${prize.icon} ${prize.name}... sac plein, revendu +${r.refund} \u{1F4B0} !`
+          : `🏅 ${team.emoji} remporte le tournoi et gagne ${prize.icon} ${prize.name} !`;
+      } else {
+        const opps = teams.map((_, i) => i).filter((i) => i !== currentTeam);
+        if (opps.length) {
+          const oi = opps[Math.floor(Math.random() * opps.length)];
+          const r = placeItem(teams[oi], prizeKey);
+          newTeams[oi] = r.team;
+          message = `🏅 Raté ! ${teams[oi].emoji} ${teams[oi].name} rafle ${prize.icon} ${prize.name} !`;
+        } else { message = `🏅 Personne d'autre pour rafler le lot.`; }
       }
       break;
     }

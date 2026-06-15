@@ -36,6 +36,7 @@ export default function EventModal() {
   const eventVolApply = useGameStore((s) => s.eventVolApply);
   const eventMerchantBuy = useGameStore((s) => s.eventMerchantBuy);
   const eventChooseGift = useGameStore((s) => s.eventChooseGift);
+  const eventTrade = useGameStore((s) => s.eventTrade);
   const eventPillageApply = useGameStore((s) => s.eventPillageApply);
   const revealEvent = useGameStore((s) => s.revealEvent);
 
@@ -106,6 +107,7 @@ export default function EventModal() {
                 onVolApply={eventVolApply}
                 onMerchantBuy={eventMerchantBuy}
                 onChooseGift={eventChooseGift}
+                onTrade={eventTrade}
                 onPillageApply={eventPillageApply}
                 onSkip={declineEvent}
               />
@@ -391,7 +393,7 @@ function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
   );
 }
 
-function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onChooseGift, onPillageApply, onSkip }) {
+function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onChooseGift, onTrade, onPillageApply, onSkip }) {
   // Vol en 2 etapes : pouvoir vole chez la cible, puis pouvoir recharge chez soi
   const [stealKey, setStealKey] = useState(null);
 
@@ -600,6 +602,34 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
             />
           ))}
         </div>
+      </>
+    );
+  }
+
+  if (eventKey === 'troc') {
+    const equipmentEntries = Object.entries(team.equipment || {}).filter(([, k]) => k && ITEMS[k]);
+    const bagEntries = (team.bag || []).map((k, i) => [i, k]).filter(([, k]) => k && ITEMS[k]);
+    return (
+      <>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+          Quel objet sacrifies-tu au troc ? (tu en reçois un au hasard)
+        </p>
+        <div className="space-y-2">
+          {equipmentEntries.map(([slot, key]) => (
+            <ItemChoiceButton key={`eq-${slot}`} itemKey={key}
+              onClick={() => { soundClick(); onTrade({ kind: 'equipment', slot }); }} />
+          ))}
+          {bagEntries.map(([index, key]) => (
+            <ItemChoiceButton key={`bag-${index}`} itemKey={key}
+              onClick={() => { soundClick(); onTrade({ kind: 'bag', index }); }} />
+          ))}
+        </div>
+        <button
+          onClick={onSkip}
+          style={{ marginTop: 14, width: '100%', fontSize: 14, color: 'var(--ink-500)', cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'var(--font-ui)', padding: 8 }}
+        >
+          Annuler le troc
+        </button>
       </>
     );
   }
