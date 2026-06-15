@@ -46,6 +46,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       doubleExtra: t.doubleExtra || 0,
       sablierActif: !!t.sablierActif,
       wager: t.wager ? true : null,
+      buffs: (t.buffs || []).map((b) => ({ type: b.type, turns: b.turns, n: b.n, subject: b.subject })),
       equipment: t.equipment || { head: null, body: null, feet: null },
       bag: (t.bag || []).filter(Boolean),
       powers: t.powers || {},

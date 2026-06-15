@@ -5,6 +5,16 @@
 //   tone: 'buff' (positif/neutre) | 'malus' (négatif). L'aura du pion ne
 //   s'affiche que pour les malus.
 import { SUBJECTS } from '../data/subjects.js';
+import { activeSets } from './itemEffects.js';
+
+// Effets de durée (buffs des consommables) → libellé + ton pour l'affichage.
+const BUFF_INFO = {
+  themeBonus: { tone: 'buff', icon: '💰', color: '#c8911f', label: (b) => `+${b.n ?? 5} or / bonne réponse${b.subject ? ` en ${SUBJECTS[b.subject]?.name || b.subject}` : ''}` },
+  noRecul: { tone: 'buff', icon: '\u{1F6DF}', color: '#3b6cb3', label: () => 'Pas de recul à l’erreur' },
+  advanceOnCorrect: { tone: 'buff', icon: '🏃', color: '#2f9d5a', label: () => 'Avance si bonne réponse' },
+  randomPath: { tone: 'buff', icon: '🎲', color: '#8745d4', label: () => 'Voie choisie au hasard' },
+  loseOnWrong: { tone: 'malus', icon: '💸', color: '#b5341f', label: (b) => `Perd ${b.n ?? 5} or à l’erreur` },
+};
 
 export function getTeamEffects(team) {
   if (!team) return [];
@@ -42,6 +52,21 @@ export function getTeamEffects(team) {
     const s = SUBJECTS[team.forcedSubject] || {};
     out.push({ key: 'forced', tone: 'malus', icon: s.icon || '\u{1F3AF}',
       label: `Question imposée : ${s.name || team.forcedSubject}`, color: s.color || '#8a1f2e' });
+  }
+
+  // --- Effets de durée (buffs des consommables), avec compteur de tours ---
+  (team.buffs || []).forEach((b, i) => {
+    const info = BUFF_INFO[b.type];
+    if (!info) return;
+    const turns = b.turns ?? 0;
+    out.push({ key: `buff-${i}`, tone: info.tone, icon: info.icon, n: turns > 0 ? turns : null,
+      label: `${info.label(b)} (${turns} tour${turns > 1 ? 's' : ''})`, color: info.color });
+  });
+
+  // --- Sets d'équipement actifs (2/3 ou 3/3) ---
+  for (const a of activeSets(team)) {
+    out.push({ key: `set-${a.key}`, tone: 'buff', icon: a.set.icon || '⚜️',
+      label: `Set ${a.set.name} ${a.count}/3`, color: a.set.color || '#a8771a' });
   }
 
   return out;

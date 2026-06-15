@@ -13,15 +13,17 @@
 // L'application MUTE les objets ITEMS/POWERS importés partout (par référence) :
 // tout le jeu lit donc les valeurs équilibrées sans changement ailleurs.
 import { POWERS } from '../data/powers.js';
+import { SETS } from '../data/sets.js';
 import { supabase, BALANCE_TABLE, BALANCE_ROW_ID } from './supabaseClient.js';
 
 // Snapshot des valeurs par défaut, capturé À L'IMPORT (donc avant toute
 // mutation). Sert de base de reset et de référence pour l'éditeur.
 // NB : les OBJETS ne passent plus par ici — ils sont pilotés par la table
-// quete_items (voir src/logic/itemsConfig.js). balanceConfig ne gère que les
-// pouvoirs et les paramètres de loot.
+// quete_items (voir src/logic/itemsConfig.js). balanceConfig gère pouvoirs,
+// loot et bonus de sets.
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const DEFAULT_POWERS = clone(POWERS);
+const DEFAULT_SETS = clone(SETS);
 
 // Paramètres de loot/économie auparavant codés en dur aux points d'appel,
 // désormais lus depuis cet objet mutable (voir itemHandlers, eventHandlers,
@@ -38,7 +40,7 @@ const DEFAULT_LOOT = {
 
 export const LOOT = { ...DEFAULT_LOOT };
 
-export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT };
+export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS };
 
 const LS_KEY = 'quete_balance_overrides_v1';
 
@@ -68,6 +70,13 @@ function resetToDefaults() {
     p.levels = d.levels.map((lv) => JSON.parse(JSON.stringify(lv)));
   }
   Object.assign(LOOT, DEFAULT_LOOT);
+  // Sets : restaure name/bonus2/bonus3 d'origine (clone profond).
+  for (const [k, d] of Object.entries(DEFAULT_SETS)) {
+    if (!SETS[k]) continue;
+    SETS[k].name = d.name;
+    SETS[k].bonus2 = clone(d.bonus2 || []);
+    SETS[k].bonus3 = clone(d.bonus3 || []);
+  }
 }
 
 // Applique un jeu d'overrides (peut être {}). Reset d'abord pour que retirer
@@ -88,6 +97,15 @@ export function applyBalance(overrides) {
   }
 
   if (ov.loot) Object.assign(LOOT, ov.loot);
+
+  // Bonus de sets modifiés (name / bonus2 / bonus3).
+  for (const [k, o] of Object.entries(ov.sets || {})) {
+    const s = SETS[k];
+    if (!s || !o) continue;
+    if (o.name != null) s.name = o.name;
+    if (Array.isArray(o.bonus2)) s.bonus2 = clone(o.bonus2);
+    if (Array.isArray(o.bonus3)) s.bonus3 = clone(o.bonus3);
+  }
 }
 
 // --- Cache localStorage (secours hors-ligne) ---

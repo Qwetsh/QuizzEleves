@@ -20,7 +20,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue } from '../logic/itemEffects.js';
+import { getEffectValue, findBuff, hasBuff } from '../logic/itemEffects.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -387,6 +387,16 @@ export const useGameStore = create((set, get) => ({
     // Un effet on:roll a pu d\u00E9placer l'\u00E9quipe HORS de la jonction o\u00F9 le d\u00E9 s'\u00E9tait
     // arr\u00EAt\u00E9 : on ne propose le choix de voie que si elle s'y trouve toujours.
     if (postRoll?.stoppedAtJunction && team.pos === postRoll.junctionPos) {
+      // Voie al\u00E9atoire (buff de dur\u00E9e ou effet d'\u00E9quipement) : on choisit pour le joueur.
+      if (hasBuff(team, 'randomPath') || getEffectValue(team, 'randomPath') > 0) {
+        const opts = get().board[team.pos]?.next || [];
+        if (opts.length) {
+          set({ pendingMove: { remaining: postRoll.remaining } });
+          addLog(`\u{1F3B2} Voie choisie au hasard !`);
+          setTimeout(() => get().chooseJunction(opts[Math.floor(Math.random() * opts.length)]), 450);
+          return;
+        }
+      }
       set({ awaitingChoice: true, pendingMove: { remaining: postRoll.remaining } });
       addLog(`\u2194\uFE0F Choisis une voie !`);
       return;
@@ -667,7 +677,9 @@ export const useGameStore = create((set, get) => ({
       // Si l'effet ouvre un s\u00e9lecteur (interactif), on DIFF\u00c8RE nextTurn jusqu'\u00e0 la
       // fin de la file (sinon TURN_RESET \u00e9craserait la file + le picker).
       const finishWrong = () => { if (!get().finished) get().nextTurn(); };
-      const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', showQuestion.subject), ...(team.wager?.else || [])];
+      const lwBuff = findBuff(team, 'loseOnWrong');
+      const buffWrong = lwBuff ? [{ action: 'money', mode: 'lose', target: 'self', n: lwBuff.n ?? 5, unit: 'flat' }] : [];
+      const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', showQuestion.subject), ...buffWrong, ...(team.wager?.else || [])];
       if (onWrong.length) {
         effectH.runEffects(set, get, onWrong, { source: 'item' });
         if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
@@ -746,9 +758,15 @@ export const useGameStore = create((set, get) => ({
       }
     };
 
+    // Effets de durée actifs à la bonne réponse : bonus d'or (sur thème) + avance.
+    const buffCorrect = [];
+    const tBonus = findBuff(team, 'themeBonus', showQuestion.subject);
+    if (tBonus) buffCorrect.push({ action: 'money', mode: 'gain', target: 'self', n: tBonus.n ?? 5, unit: 'flat' });
+    const advBuff = findBuff(team, 'advanceOnCorrect');
+    if (advBuff) buffCorrect.push({ action: 'move', target: 'self', dir: 'forward', n: advBuff.n ?? 'd4' });
     // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…),
-    // précédés de la récompense d'un éventuel pari « Défi » (team.wager.do).
-    const onCorrect = [...(team.wager?.do || []), ...effectH.equipTriggerActions(get().teams[currentTeam], 'correct', showQuestion.subject)];
+    // précédés de la récompense d'un éventuel pari « Défi » (team.wager.do) et des buffs.
+    const onCorrect = [...(team.wager?.do || []), ...buffCorrect, ...effectH.equipTriggerActions(get().teams[currentTeam], 'correct', showQuestion.subject)];
     if (onCorrect.length) {
       effectH.runEffects(set, get, onCorrect, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishCorrect }); return; }
@@ -779,7 +797,9 @@ export const useGameStore = create((set, get) => ({
     // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris).
     // nextTurn diff\u00e9r\u00e9 si l'effet ouvre un s\u00e9lecteur (cf. answerQuestion).
     const finishWrong = () => { if (!get().finished) get().nextTurn(); };
-    const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', timedSubject), ...(team.wager?.else || [])];
+    const lwBuffT = findBuff(team, 'loseOnWrong');
+    const buffWrongT = lwBuffT ? [{ action: 'money', mode: 'lose', target: 'self', n: lwBuffT.n ?? 5, unit: 'flat' }] : [];
+    const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', timedSubject), ...buffWrongT, ...(team.wager?.else || [])];
     if (onWrong.length) {
       effectH.runEffects(set, get, onWrong, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishWrong }); return; }
@@ -842,6 +862,15 @@ export const useGameStore = create((set, get) => ({
     newTeams[currentTeam] = { ...team, money: (team.money ?? 0) + amount };
     addLog(`\u{1F6E0}️ [dev] ${team.emoji} ${team.name} reçoit ${amount} pièces.`);
     set({ teams: newTeams });
+  },
+
+  // Loot moteur : pioche un objet (catégorie optionnelle) et le donne à une
+  // équipe — utilisé par l'action d'effet `loot` (ex. set Duelliste, fightWin).
+  engineLoot: (teamIdx, category) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const enabled = get().enabledItems || Object.keys(ITEMS);
+    const key = itemH.pickLootItem(0, enabled, category ? { category } : {});
+    if (key) itemH.grantItem(set, get, idx, key);
   },
 
   // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---
@@ -1018,6 +1047,16 @@ export const useGameStore = create((set, get) => ({
         ? { ...ct, itemFumigeneTurns: left }
         : { ...ct, itemFumigene: false, itemFumigeneTurns: undefined };
       if (left <= 0) addLog(`💨 Le fumigène de ${ct.emoji} ${ct.name} s'est dissipé.`);
+    }
+
+    // Buffs temporisés (effets de durée des consommables) : 1 tour de moins quand
+    // l'équipe REGAGNE la main ; expiration à 0.
+    const cb = nt[newCurrent];
+    if (cb?.buffs?.length) {
+      const buffs = cb.buffs.map((b) => ({ ...b, turns: (b.turns ?? 1) - 1 })).filter((b) => b.turns > 0);
+      if (nt === get().teams) nt = [...nt];
+      nt[newCurrent] = { ...cb, buffs };
+      if (buffs.length < cb.buffs.length) addLog(`⏳ Un effet de durée de ${cb.emoji} ${cb.name} s'est dissipé.`);
     }
 
     set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET });

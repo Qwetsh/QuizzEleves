@@ -7,7 +7,7 @@
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
 import { moveForward, moveBack } from '../logic/pathfinding.js';
-import { reducedSteal, reducedRecul, resolveAmount, diceLabel, passesChance } from '../logic/itemEffects.js';
+import { reducedSteal, reducedRecul, resolveAmount, diceLabel, passesChance, activeSetEffects } from '../logic/itemEffects.js';
 import { SUBJECTS } from '../data/subjects.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { ITEMS } from '../data/items.js';
@@ -41,6 +41,11 @@ export function announce(set, get, icon, text, color = '#e8b117') {
 export function triggersOf(item, on) {
   if (!item?.effects) return [];
   return item.effects.filter((fx) => fx && fx.kind === 'trigger' && fx.on === on);
+}
+
+// Déclencheurs apportés par les SETS actifs de l'équipe (mêmes que l'équipement).
+function setTriggersOf(team, on) {
+  return activeSetEffects(team).filter((fx) => fx && fx.kind === 'trigger' && fx.on === on);
 }
 
 // Adapte un effet de consommable LEGACY ({type,value}) en actions composables.
@@ -93,12 +98,12 @@ export function consumableActions(item) {
 // Actions des déclencheurs on:'roll' de l'équipement, pour une valeur de dé donnée.
 export function equipOnRollActions(team, value) {
   const out = [];
+  const consider = (t) => { if ((t.values || []).includes(value) && passesChance(t.chance)) out.push(...(t.do || [])); };
   for (const slot of SLOTS_EQUIP) {
     const it = ITEMS[team?.equipment?.[slot]];
-    for (const t of triggersOf(it, 'roll')) {
-      if ((t.values || []).includes(value) && passesChance(t.chance)) out.push(...(t.do || []));
-    }
+    for (const t of triggersOf(it, 'roll')) consider(t);
   }
+  for (const t of setTriggersOf(team, 'roll')) consider(t); // bonus de set
   return out;
 }
 
@@ -108,13 +113,15 @@ export function equipOnRollActions(team, value) {
 // (ex. « seulement si SVT ») n'est joué que s'il correspond.
 export function equipTriggerActions(team, on, subject) {
   const out = [];
+  const consider = (t) => {
+    if (t.subject && t.subject !== subject) return; // condition de thème non remplie
+    if (passesChance(t.chance)) out.push(...(t.do || [])); // chance optionnelle
+  };
   for (const slot of SLOTS_EQUIP) {
     const it = ITEMS[team?.equipment?.[slot]];
-    for (const t of triggersOf(it, on)) {
-      if (t.subject && t.subject !== subject) continue; // condition de thème non remplie
-      if (passesChance(t.chance)) out.push(...(t.do || [])); // chance optionnelle (ex. 20% à la bonne réponse)
-    }
+    for (const t of triggersOf(it, on)) consider(t);
   }
+  for (const t of setTriggersOf(team, on)) consider(t); // bonus de set
   return out;
 }
 
@@ -416,6 +423,27 @@ function stepHead(set, get, action, ctx) {
       const sname = SUBJECTS[subj]?.name || subj;
       get().addLog(`🎲 Défi lancé ! Ta prochaine question sera en ${sname}.`);
       announce(set, get, SUBJECTS[subj]?.icon || '🎲', `Défi → ${sname}`, SUBJECTS[subj]?.color || '#8a1f2e');
+      return 'done';
+    }
+    case 'buff': {
+      // Pose un effet de durée (X tours de l'équipe) sur la/les cible(s).
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const src = action.buff || {};
+      const turns = src.turns ?? 3;
+      const nt = [...get().teams];
+      for (const idx of t.indices) {
+        const cur = nt[idx];
+        nt[idx] = { ...cur, buffs: [...(cur.buffs || []), { type: src.type, turns, n: src.n, subject: src.subject }] };
+      }
+      set({ teams: nt });
+      get().addLog(`✨ Effet de durée posé pour ${turns} tour${turns > 1 ? 's' : ''}.`);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'loot': {
+      // Loot immédiat d'un objet (catégorie optionnelle) pour l'équipe source.
+      if (get().engineLoot) get().engineLoot(ctx.sourceTeam ?? get().currentTeam, action.category);
       return 'done';
     }
     case 'placeTrap': {

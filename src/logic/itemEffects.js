@@ -1,4 +1,50 @@
 import { ITEMS } from '../data/items.js';
+import { SETS } from '../data/sets.js';
+
+// --- Sets d'équipement -------------------------------------------------
+// Compte les pièces équipées de chaque set.
+export function equippedSetCounts(team) {
+  const counts = {};
+  const eq = team?.equipment || {};
+  for (const slot of ['head', 'body', 'feet']) {
+    const it = ITEMS[eq[slot]];
+    if (it?.set) counts[it.set] = (counts[it.set] || 0) + 1;
+  }
+  return counts;
+}
+
+// Sets actifs (≥ 2 pièces) avec le palier atteint — pour l'affichage.
+export function activeSets(team) {
+  const counts = equippedSetCounts(team);
+  const out = [];
+  for (const [key, n] of Object.entries(counts)) {
+    const s = SETS[key];
+    if (s && n >= 2) out.push({ key, set: s, count: n, tier: n >= 3 ? 3 : 2 });
+  }
+  return out;
+}
+
+// Effets actuellement octroyés par les sets équipés (bonus2 dès 2 pièces,
+// bonus3 dès 3). Injectés dans getEffectValue / equipTriggerActions : tout le
+// jeu en hérite sans changement aux points d'appel.
+export function activeSetEffects(team) {
+  const counts = equippedSetCounts(team);
+  const out = [];
+  for (const [key, n] of Object.entries(counts)) {
+    const s = SETS[key];
+    if (!s) continue;
+    if (n >= 2) out.push(...(s.bonus2 || []));
+    if (n >= 3) out.push(...(s.bonus3 || []));
+  }
+  return out;
+}
+
+// --- Buffs temporisés (consommables à durée) ---------------------------
+export function teamBuffs(team) { return team?.buffs || []; }
+export function findBuff(team, type, subject) {
+  return teamBuffs(team).find((b) => b.type === type && (subject == null || !b.subject || b.subject === subject));
+}
+export function hasBuff(team, type) { return teamBuffs(team).some((b) => b.type === type); }
 
 // --- Quantités aléatoires (dés) ---------------------------------------
 // Une quantité d'effet (`fx.value` / `action.n`) peut être un NOMBRE fixe ou
@@ -82,6 +128,10 @@ export function getEffectValue(team, type) {
       // que s'il passe son éventuelle probabilité de déclenchement.
       if (fx.type === type && passesChance(fx.chance)) total += resolveAmount(fx.value, team);
     }
+  }
+  // Bonus de set actifs (chokepoint : tous les appelants en héritent).
+  for (const fx of activeSetEffects(team)) {
+    if (fx.type === type && passesChance(fx.chance)) total += resolveAmount(fx.value, team);
   }
   return total;
 }

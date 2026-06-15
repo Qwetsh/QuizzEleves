@@ -1,7 +1,7 @@
 import { POWERS } from '../data/powers.js';
 import { SUBJECT_KEYS } from '../data/subjects.js';
 import { moveBack } from './pathfinding.js';
-import { reducedRecul } from './itemEffects.js';
+import { reducedRecul, hasBuff } from './itemEffects.js';
 
 /**
  * Pick a random subject key.
@@ -15,6 +15,14 @@ export function randomSubject() {
  * Returns { updatedTeam, logMessage }.
  */
 export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse') {
+  // 0. Buff \u00ab pas de recul \u00bb (effet de dur\u00e9e d'un consommable) \u2014 priorit\u00e9 absolue.
+  if (hasBuff(team, 'noRecul')) {
+    return {
+      updatedTeam: { ...team, wrong: team.wrong + 1 },
+      logMessage: `\u274c ${reason} ! \u{1F6DF} Prot\u00e9g\u00e9 (effet de dur\u00e9e) : pas de recul !`,
+    };
+  }
+
   // 1. Consommable Bouclier de bois (one-shot) avant le pouvoir Bouclier
   const itemShield = team.itemShield || 0;
   if (itemShield > 0) {
