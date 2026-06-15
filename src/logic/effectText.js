@@ -58,6 +58,20 @@ export function describeAction(a) {
       return `pose un piège${a.trap?.label ? ` « ${a.trap.label} »` : ''}${inner ? ` : ${inner}` : ''}`;
     }
     case 'gainCharge': return 'recharge un pouvoir';
+    case 'loot': return `loot un objet${a.category === 'consumable' ? ' (consommable)' : a.category === 'equipment' ? ' (équipement)' : ''}`;
+    case 'buff': {
+      const b = a.buff || {};
+      const turns = `pendant ${b.turns ?? 3} tour${(b.turns ?? 3) > 1 ? 's' : ''}`;
+      const tgt = self ? 'toi' : (TARGET_LABEL[a.target] || a.target);
+      const D = {
+        themeBonus: `+${amountLabel(b.n ?? 5)} or par bonne réponse${b.subject ? ` en ${SUBJECTS[b.subject]?.name || b.subject}` : ''}`,
+        advanceOnCorrect: `avance de ${amountLabel(b.n ?? 'd4')} à chaque bonne réponse`,
+        noRecul: 'aucun recul en cas d’erreur',
+        loseOnWrong: `perd ${amountLabel(b.n ?? 5)} or à chaque erreur`,
+        randomPath: 'voie choisie au hasard aux carrefours',
+      };
+      return `${turns}, ${tgt} : ${D[b.type] || b.type}`;
+    }
     case 'shieldNext': return `bouclier (annule ${amountLabel(a.n ?? 1)} recul${a.n === 1 ? '' : 's'})`;
     case 'fumigene': return `fumigène${a.turns ? ` pendant ${amountLabel(a.turns)} tour${a.turns === 1 ? '' : 's'}` : ''}`;
     case 'extraTime': return `+${amountLabel(a.n)}s à la prochaine question`;

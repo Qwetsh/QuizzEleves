@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { RARITIES, SLOTS } from '../../data/items';
 import { POWERS } from '../../data/powers';
+import { SETS } from '../../data/sets';
 import ItemIcon from '../Modals/ItemIcon';
 import { ITEM_ASSET_KEYS, assetUrl } from '../../logic/itemAssets';
 import {
@@ -20,6 +21,7 @@ import '../../styles/balance-editor.css';
 
 const TABS = [
   { key: 'items', label: '\u{1F392} Objets' },
+  { key: 'sets', label: '⚜️ Sets' },
   { key: 'powers', label: '⚡ Pouvoirs' },
   { key: 'loot', label: '\u{1F3B0} Loot' },
 ];
@@ -32,8 +34,9 @@ const EFFECT_LABELS = {
   gainMoney: 'Gagne des pièces', gainMoneyAll: 'Pièces à toutes les équipes', moveForward: 'Avance (cases)',
   extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule le prochain recul',
   gainCharge: 'Recharge un pouvoir', fumigene: 'Annule un pouvoir offensif',
+  randomPath: 'Voie aléatoire aux carrefours',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment'];
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'randomPath'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([
@@ -42,7 +45,7 @@ const DICEABLE_EFFECTS = new Set([
   'lootBonusConsumable', 'lootBonusEquipment',
 ]);
 // Effets binaires (immunités / déclencheurs simples) : pas de quantité.
-const BINARY_EFFECTS = new Set(['tempeteImmune', 'oubliProtect', 'gainCharge', 'fumigene']);
+const BINARY_EFFECTS = new Set(['tempeteImmune', 'oubliProtect', 'gainCharge', 'fumigene', 'randomPath']);
 const diceFor = (type) => (type === 'indiceBoost' ? ['d2', 'd3'] : DEFAULT_DICE);
 const isDynamicVal = (v) => typeof v === 'string' || (v != null && typeof v === 'object');
 
@@ -81,13 +84,13 @@ function Stepper({ value, onChange, min = 0, max = 999, step = 1 }) {
 
 const rowToDraft = (r) => ({
   key: r.key, name: r.name, desc: r.description ?? '', descExpert: r.desc_expert ?? '',
-  icon: r.icon ?? '', img: r.img ?? '',
+  icon: r.icon ?? '', img: r.img ?? '', set: r.set_key ?? '',
   slot: r.slot, rarity: r.rarity, price: r.price, lootOnly: !!r.loot_only,
   effects: Array.isArray(r.effects) ? r.effects : [], enabled: r.enabled !== false,
   ord: r.ord, _isNew: false,
 });
 const newDraft = (ord) => ({
-  key: '', name: 'Nouvel objet', desc: '', descExpert: '', icon: '✨', img: '',
+  key: '', name: 'Nouvel objet', desc: '', descExpert: '', icon: '✨', img: '', set: '',
   slot: 'head', rarity: 'commun', price: 10, lootOnly: false, effects: [],
   enabled: true, ord, _isNew: true,
 });
@@ -112,6 +115,53 @@ const ITEM_SUBTABS = [
   { key: 'textes', label: '\u{1F4DD} Textes' },
 ];
 
+// Éditeur des effets-bonus d'un set (pool équipement) : simples + déclencheurs.
+function SetBonusEditor({ effects, onChange }) {
+  const [menu, setMenu] = useState(false);
+  const list = effects || [];
+  const updateEffect = (i, patch) => onChange(list.map((fx, j) => (j !== i ? fx : (((patch && patch.kind === 'trigger') || (fx && fx.kind === 'trigger')) ? patch : { ...fx, ...patch }))));
+  const removeEffect = (i) => onChange(list.filter((_, j) => j !== i));
+  const addFx = (mk) => { onChange([...list, mk()]); setMenu(false); };
+  const presets = [
+    { label: '♾️ Bonus permanent', mk: () => ({ type: EQUIP_EFFECTS[0], value: 1 }) },
+    { label: '✅ Quand je réponds bien', mk: () => makeTrigger('correct') },
+    { label: '🤺 Quand je gagne un duel', mk: () => makeTrigger('fightWin') },
+    { label: '🎲 Selon le dé', mk: () => makeTrigger('roll') },
+  ];
+  return (
+    <div className="qed-field">
+      {list.length === 0 && <div className="bal-empty-fx">Aucun bonus.</div>}
+      {list.map((fx, i) => (
+        fx && fx.kind === 'trigger' ? (
+          <TriggerCard key={i} fx={fx} slot="body" onChange={(v) => updateEffect(i, v)} onRemove={() => removeEffect(i)} />
+        ) : (
+          <div key={i} className="bal-effect">
+            <select className="qed-select" value={fx.type} onChange={(ev) => {
+              const type = ev.target.value; const patch = { type };
+              if (isDynamicVal(fx.value) && (!DICEABLE_EFFECTS.has(type) || (typeof fx.value === 'string' && !diceFor(type).includes(fx.value)))) patch.value = 1;
+              updateEffect(i, patch);
+            }}>
+              {(EQUIP_EFFECTS.includes(fx.type) ? EQUIP_EFFECTS : [fx.type, ...EQUIP_EFFECTS]).map((t) => <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>)}
+            </select>
+            {!BINARY_EFFECTS.has(fx.type) && (DICEABLE_EFFECTS.has(fx.type)
+              ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} />
+              : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />)}
+            <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
+          </div>
+        )
+      ))}
+      <div style={{ marginTop: 6 }}>
+        <button className="btn btn--green btn--sm" onClick={() => setMenu((m) => !m)}>{menu ? '▾' : '+'} Ajouter un bonus</button>
+        {menu && (
+          <div className="fx-addmenu">
+            {presets.map((p) => <button key={p.label} onClick={() => addFx(p.mk)}>{p.label}</button>)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function BalanceEditor({ onClose }) {
   const syncEnabled = useGameStore((s) => s.syncEnabledItems);
   const [tab, setTab] = useState('items');
@@ -127,8 +177,9 @@ export default function BalanceEditor({ onClose }) {
   const [fxMenu, setFxMenu] = useState(false);
   const fileRef = useRef(null);
   const [ov, setOv] = useState(() => readCache());
-  const [ovBaseline, setOvBaseline] = useState(() => readCache()); // référence pour « non sauvé » (pouvoirs/loot)
+  const [ovBaseline, setOvBaseline] = useState(() => readCache()); // référence pour « non sauvé » (pouvoirs/loot/sets)
   const [selPower, setSelPower] = useState('bouclier');
+  const [selSet, setSelSet] = useState(Object.keys(SETS)[0]);
 
   // Modifications non enregistrées : objet courant (items) / overrides (pouvoirs+loot)
   const dirty = !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline);
@@ -168,6 +219,18 @@ export default function BalanceEditor({ onClose }) {
     });
   };
   const resetPower = (key) => { setStatus(null); setOv((prev) => { const powers = { ...(prev.powers || {}) }; delete powers[key]; return { ...prev, powers }; }); };
+
+  // --- Sets (bonus à 2/3 pièces) : valeur effective override ?? défaut ---
+  const setVal = (k, field) => ov.sets?.[k]?.[field] ?? DEFAULTS.sets[k]?.[field];
+  const setSetField = (k, field, value) => {
+    setStatus(null);
+    setOv((prev) => {
+      const sets = { ...(prev.sets || {}) };
+      sets[k] = { ...(sets[k] || {}), [field]: value };
+      return { ...prev, sets };
+    });
+  };
+  const resetSet = (k) => { setStatus(null); setOv((prev) => { const sets = { ...(prev.sets || {}) }; delete sets[k]; return { ...prev, sets }; }); };
 
   // --- Loot ---
   const lootVal = (k) => ov.loot?.[k] ?? DEFAULTS.loot[k];
@@ -292,6 +355,7 @@ export default function BalanceEditor({ onClose }) {
           <span className="qed-status">
             {tab === 'items' ? (rows == null ? 'Chargement…' : `${rows.length} objets`)
               : tab === 'powers' ? `${Object.keys(ov.powers || {}).length} pouvoir(s) modifié(s)`
+              : tab === 'sets' ? `${Object.keys(SETS).length} sets`
               : `${Object.keys(ov.loot || {}).length} réglage(s) modifié(s)`}
             {status && <span style={{ marginLeft: 6, color: status.startsWith('Erreur') || status.includes('échec') ? '#ffd9d0' : '#d6ffe0' }}>· {status}</span>}
           </span>
@@ -369,6 +433,49 @@ export default function BalanceEditor({ onClose }) {
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
                 <button className="btn btn--ghost" onClick={() => resetPower(selPower)} disabled={!ov.powers?.[selPower]}>{'↺'} Valeurs d'origine</button>
+                {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
+                {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
+              </div>
+            </div>
+          </div>
+        ) : tab === 'sets' ? (
+          <div className="qed-body">
+            <div className="qed-list">
+              {Object.entries(SETS).map(([k, s]) => (
+                <button key={k} className={`qed-item ${selSet === k ? 'is-active' : ''}`} onClick={() => { setSelSet(k); setStatus(null); }}>
+                  <span style={{ fontSize: 20, width: 26, textAlign: 'center' }}>{s.icon}</span>
+                  <span style={{ flex: 1 }}>{setVal(k, 'name') || s.name}</span>
+                  {ov.sets?.[k] && <span className="qed-item-tag" title="Modifié">{'✎'}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="bal-detail">
+              <div className="bal-detail-scroll">
+                {(() => {
+                  const k = selSet; const s = SETS[k]; if (!s) return null;
+                  const members = (rows || []).filter((r) => r.set_key === k);
+                  return (
+                    <>
+                      <div className="bal-card bal-card--mini">
+                        <span style={{ fontSize: 36 }}>{s.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <input className="qed-input" value={setVal(k, 'name') || ''} onChange={(e) => setSetField(k, 'name', e.target.value)} />
+                          <div className="bal-default" style={{ marginTop: 4 }}>
+                            {members.length} pièce{members.length > 1 ? 's' : ''} assignée{members.length > 1 ? 's' : ''}{members.length ? ` : ${members.map((r) => r.name).join(', ')}` : ' (assigne des objets via leur onglet Infos → Set)'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="qed-label" style={{ marginTop: 12 }}>{'\u{1F948}'} Bonus à 2 pièces équipées</div>
+                      <SetBonusEditor effects={setVal(k, 'bonus2') || []} onChange={(e) => setSetField(k, 'bonus2', e)} />
+                      <div className="qed-label" style={{ marginTop: 14 }}>{'\u{1F947}'} Bonus à 3 pièces équipées</div>
+                      <SetBonusEditor effects={setVal(k, 'bonus3') || []} onChange={(e) => setSetField(k, 'bonus3', e)} />
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="bal-detail-foot">
+                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
+                <button className="btn btn--ghost" onClick={() => resetSet(selSet)} disabled={!ov.sets?.[selSet]}>{'↺'} Valeurs d'origine</button>
                 {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
                 {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>
@@ -521,6 +628,17 @@ export default function BalanceEditor({ onClose }) {
                         <Stepper value={draft.price} onChange={(v) => set({ price: v })} max={999} />
                         <span className="bal-default">pièces en boutique</span>
                       </div>
+
+                      {draft.slot !== 'consumable' && (
+                        <div className="bal-row">
+                          <span className="bal-label">Set</span>
+                          <select className="qed-select" style={{ width: 200 }} value={draft.set || ''} onChange={(ev) => set({ set: ev.target.value })}>
+                            <option value="">— aucun —</option>
+                            {Object.entries(SETS).map(([k, s]) => <option key={k} value={k}>{s.icon} {s.name}</option>)}
+                          </select>
+                          <span className="bal-default">bonus à 2/3 pièces équipées</span>
+                        </div>
+                      )}
 
                       <label className="bal-toggle" style={{ marginTop: 4 }}>
                         <input type="checkbox" checked={!!draft.lootOnly} onChange={(ev) => set({ lootOnly: ev.target.checked })} />

@@ -16,6 +16,17 @@ const ACTIONS = [
   { key: 'shieldNext', label: '🛡️ Bouclier' },
   { key: 'fumigene', label: '💨 Fumigène' },
   { key: 'extraTime', label: '⏳ Temps en +' },
+  { key: 'buff', label: '🕒 Effet de durée (X tours)' },
+  { key: 'loot', label: '🎁 Loot un objet' },
+];
+
+// Types d'effet de durée (buff) — voir gameStore (application) et teamStatus (affichage).
+const BUFF_TYPES = [
+  { k: 'themeBonus', label: 'gagne de l’or à chaque bonne réponse' },
+  { k: 'advanceOnCorrect', label: 'avance à chaque bonne réponse' },
+  { k: 'noRecul', label: 'ne recule pas en cas d’erreur' },
+  { k: 'loseOnWrong', label: 'perd de l’or en cas d’erreur (malus)' },
+  { k: 'randomPath', label: 'voie choisie au hasard' },
 ];
 const TARGETS = [
   { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
@@ -70,6 +81,8 @@ export function describeAction(a) {
     case 'challenge': return `défi (${SUBJECTS[a.subject]?.name || a.subject}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
     case 'placeTrap': return `poser un piège (${a.trap?.do?.length || 0} effet·s)`;
     case 'gainCharge': return 'recharger un pouvoir';
+    case 'loot': return `loot un objet${a.category ? ` (${a.category})` : ''}`;
+    case 'buff': { const b = a.buff || {}; return `effet ${b.turns ?? 3} tours : ${BUFF_TYPES.find((t) => t.k === b.type)?.label || b.type}`; }
     case 'shieldNext': return 'bouclier (annule 1 recul)';
     case 'fumigene': return `fumigène${a.turns ? ` (${amountLabel(a.turns)} tours)` : ''}`;
     case 'extraTime': return `+${amountLabel(a.n)}s à la prochaine question`;
@@ -164,6 +177,8 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
+        if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
+        if (k === 'loot') base.category = '';
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -226,6 +241,47 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <W>tours (0 = jusqu'à utilisation)</W>
         </>
       )}
+
+      {a.action === 'loot' && (
+        <>
+          <W>un objet</W>
+          <select className="qed-select fx-blank" value={a.category || ''} onChange={(e) => upd({ category: e.target.value || undefined })}>
+            <option value="">au hasard</option>
+            <option value="consumable">consommable</option>
+            <option value="equipment">équipement</option>
+          </select>
+        </>
+      )}
+
+      {a.action === 'buff' && (() => {
+        const b = a.buff || {};
+        const setB = (patch) => upd({ buff: { ...b, ...patch } });
+        return (
+          <div className="fx-nest" style={{ borderColor: '#8745d4' }}>
+            <div className="fx-sentence">
+              <W>pendant</W>
+              <input type="number" className="qed-input fx-blank" style={{ width: 56 }} min={1} max={20}
+                value={b.turns ?? 3} onChange={(e) => setB({ turns: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />
+              <W>tours, sur</W>
+              <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+            </div>
+            <div className="fx-sentence">
+              <W>l'équipe</W>
+              <select className="qed-select fx-blank" value={b.type || 'themeBonus'} onChange={(e) => setB({ type: e.target.value })}>
+                {BUFF_TYPES.map((t) => <option key={t.k} value={t.k}>{t.label}</option>)}
+              </select>
+              {b.type === 'themeBonus' && (<><W>de</W><AmountInput value={b.n ?? 5} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or, en</W>
+                <select className="qed-select fx-blank" value={b.subject || ''} onChange={(e) => setB({ subject: e.target.value || undefined })}>
+                  <option value="">toute matière</option>
+                  {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+                  <optgroup label="Thèmes spéciaux">{FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}</optgroup>
+                </select></>)}
+              {b.type === 'loseOnWrong' && (<><W>de</W><AmountInput value={b.n ?? 5} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or</W></>)}
+              {b.type === 'advanceOnCorrect' && (<><W>de</W><AmountInput value={b.n ?? 'd4'} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>case(s)</W></>)}
+            </div>
+          </div>
+        );
+      })()}
 
       {a.action === 'challenge' && (
         <div className="fx-nest" style={{ borderColor: '#8a1f2e' }}>
