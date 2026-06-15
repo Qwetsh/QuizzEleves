@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, setItemsData } from '../data/items.js';
+import { getEffectValue, activeSets, hasBuff } from '../logic/itemEffects.js';
 import {
   runEffects, resumeQueue, legacyToActions, consumableActions,
   equipOnRollActions, equipTriggerActions, questionRerollOptions, d6Branch, expandUseTriggers,
@@ -313,6 +314,55 @@ describe('equipTriggerActions : condition de thème', () => {
     });
     const team = { equipment: { head: null, body: null, feet: 'anneauTout' } };
     expect(equipTriggerActions(team, 'correct', 'histoire')).toHaveLength(1);
+  });
+});
+
+// --- Sets d'équipement (bonus à 2/3 pièces) ---
+
+describe('sets d’équipement', () => {
+  beforeEach(() => {
+    setItemsData({
+      n1: { name: 'N1', slot: 'head', rarity: 'rare', price: 1, set: 'nature', effects: [] },
+      n2: { name: 'N2', slot: 'body', rarity: 'rare', price: 1, set: 'nature', effects: [] },
+      n3: { name: 'N3', slot: 'feet', rarity: 'rare', price: 1, set: 'nature', effects: [] },
+    });
+  });
+  it('2 pièces → bonus2 injecté dans getEffectValue', () => {
+    const team = { equipment: { head: 'n1', body: 'n2', feet: null } };
+    expect(getEffectValue(team, 'timerBonus')).toBe(3); // SETS.nature.bonus2 = timerBonus 3
+    expect(activeSets(team)[0]).toMatchObject({ key: 'nature', count: 2, tier: 2 });
+  });
+  it('3 pièces → bonus3 (déclencheur on:correct SVT) injecté', () => {
+    const team = { equipment: { head: 'n1', body: 'n2', feet: 'n3' } };
+    expect(equipTriggerActions(team, 'correct', 'svt')).toHaveLength(1); // gain(5) en SVT
+    expect(equipTriggerActions(team, 'correct', 'maths')).toHaveLength(0); // pas en maths
+    expect(activeSets(team)[0].tier).toBe(3);
+  });
+  it('1 pièce → aucun bonus', () => {
+    const team = { equipment: { head: 'n1', body: null, feet: null } };
+    expect(getEffectValue(team, 'timerBonus')).toBe(0);
+    expect(activeSets(team)).toHaveLength(0);
+  });
+});
+
+// --- Buffs temporisés ---
+
+describe('buffs temporisés', () => {
+  it('l’action buff pose un effet de durée sur la cible', () => {
+    exec([{ action: 'buff', target: 'self', buff: { type: 'noRecul', turns: 2 } }], { source: 'item' });
+    expect(team(0).buffs).toHaveLength(1);
+    expect(team(0).buffs[0]).toMatchObject({ type: 'noRecul', turns: 2 });
+    expect(hasBuff(team(0), 'noRecul')).toBe(true);
+  });
+  it('le buff se décrémente quand l’équipe regagne la main et expire à 0', () => {
+    // 2 équipes : pose un buff turns:1 sur l'équipe 0, joue le tour de 1 → retour à 0
+    const nt = [...S().teams];
+    nt[0] = { ...nt[0], buffs: [{ type: 'noRecul', turns: 1 }] };
+    useGameStore.setState({ teams: nt, currentTeam: 0 });
+    S().nextTurn(); // → équipe 1
+    expect(team(0).buffs).toHaveLength(1); // pas encore décrémenté (équipe 0 n'a pas rejoué)
+    S().nextTurn(); // → équipe 0 regagne la main : décrément 1→0, expire
+    expect(team(0).buffs).toHaveLength(0);
   });
 });
 
