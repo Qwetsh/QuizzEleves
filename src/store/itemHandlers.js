@@ -253,11 +253,13 @@ export function placeItem(team, itemKey) {
 }
 
 // Ajoute un objet looté en journalisant l'issue de la cascade.
+// Retourne l'issue { outcome, refund } pour que l'appelant puisse, par ex.,
+// déclencher (ou non) le visuel de gain d'objet selon l'outcome.
 export function grantItem(set, get, teamIndex, itemKey) {
   const { teams, addLog } = get();
   const team = teams[teamIndex];
   const item = ITEMS[itemKey];
-  if (!team || !item) return;
+  if (!team || !item) return null;
 
   const r = placeItem(team, itemKey);
   const newTeams = [...teams];
@@ -272,6 +274,7 @@ export function grantItem(set, get, teamIndex, itemKey) {
   }
 
   set({ teams: newTeams });
+  return { outcome: r.outcome, refund: r.refund };
 }
 
 // --- Consommables ---

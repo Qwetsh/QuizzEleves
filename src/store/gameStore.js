@@ -866,11 +866,25 @@ export const useGameStore = create((set, get) => ({
 
   // Loot moteur : pioche un objet (catégorie optionnelle) et le donne à une
   // équipe — utilisé par l'action d'effet `loot` (ex. set Duelliste, fightWin).
+  // Place l'objet PUIS déclenche le visuel de gain d'objet (LootReveal), comme
+  // le coffre. Pas de `thenClose` : on est en plein milieu d'un tour (effet de
+  // consommable), il ne faut donc ni fermer d'événement ni enchaîner nextTurn.
   engineLoot: (teamIdx, category) => {
     const idx = teamIdx ?? get().currentTeam;
     const enabled = get().enabledItems || Object.keys(ITEMS);
     const key = itemH.pickLootItem(0, enabled, category ? { category } : {});
-    if (key) itemH.grantItem(set, get, idx, key);
+    if (!key) return;
+    const res = itemH.grantItem(set, get, idx, key);
+    // Sac plein → objet revendu : pas de cérémonie de gain (cohérent coffre).
+    if (!res || res.outcome === 'refunded') return;
+    // File-aware : si une révélation est déjà à l'écran (plusieurs loots dans
+    // la même séquence d'effets), on empile au lieu d'écraser.
+    const lr = get().lootReveal;
+    if (lr) {
+      set({ lootReveal: { ...lr, rest: [...(lr.rest || []), { itemKey: key, title: '🎁 Butin obtenu !' }] } });
+    } else {
+      get().showLoot(key, { title: '🎁 Butin obtenu !' });
+    }
   },
 
   // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---
