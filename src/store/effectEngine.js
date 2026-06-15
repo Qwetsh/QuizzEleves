@@ -600,8 +600,8 @@ function finishQueue(set, get) {
     // Le piège a pu déplacer la victime : ré-évalue la case (borné)
     if ((ctx.trapDepth || 0) < 3) get().handleLanding();
   } else if (ctx.source === 'event') {
-    // Événement « scripté » (actions du moteur) : la file vidée = fin du tour.
-    get().nextTurn();
+    // Événement « scripté » (actions du moteur) : file vidée → question + fin de tour.
+    get().finishEventTurn();
   }
   if (get().phase === 'game') saveGame(get());
 }

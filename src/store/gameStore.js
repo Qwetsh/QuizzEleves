@@ -80,6 +80,9 @@ const TURN_RESET = {
   showSubjectPicker: false,
   rerollUsed: false,
   trapDepth: 0,
+  // Case événement = événement + question : flag posé à l'atterrissage, consommé
+  // par finishEventTurn ; effacé par les événements qui ont déjà leur question.
+  pendingEventQuestion: null,
   forcedSubject: null,
   deferredTurnEnd: null,
 };
@@ -271,8 +274,7 @@ export const useGameStore = create((set, get) => ({
     // sa fermeture enchaîne sur le tour suivant (comme closeEvent).
     if (lr?.thenClose) {
       set({ showEvent: null, eventApplied: false });
-      get().nextTurn();
-      if (get().phase === 'game') saveGame(get());
+      get().finishEventTurn();
     }
   },
 
@@ -516,6 +518,9 @@ export const useGameStore = create((set, get) => ({
       const picked = pickRandomEvent(enabledEvents);
       if (picked) {
         addLog(`\u{1F381} ${team.emoji} ${team.name} tombe sur : ${picked.event.icon} ${picked.event.name}`);
+        // La case événement donnera AUSSI une question à la fin (sauf événements
+        // qui posent déjà leur propre question, qui effaceront ce flag).
+        set({ pendingEventQuestion: { subject: node.subject || randomSubject() } });
         eventH.triggerEvent(set, get, picked);
         return;
       }
@@ -834,6 +839,19 @@ export const useGameStore = create((set, get) => ({
   applyEventEffect: () => eventH.applyEventEffect(set, get),
   closeEvent: () => {
     set({ showEvent: null, eventApplied: false });
+    get().finishEventTurn();
+  },
+  // Sortie UNIQUE des événements : pose une question (case événement = événement
+  // + question) sauf si l'événement avait déjà sa propre question (flag effacé)
+  // ou si la partie est finie ; sinon on enchaîne directement sur le tour suivant.
+  finishEventTurn: () => {
+    if (get().finished) return;
+    const peq = get().pendingEventQuestion;
+    if (peq) {
+      set({ pendingEventQuestion: null });
+      get().askQuestion(peq.subject || randomSubject());
+      return;
+    }
     get().nextTurn();
     if (get().phase === 'game') saveGame(get());
   },
@@ -967,7 +985,7 @@ export const useGameStore = create((set, get) => ({
     // Marché Noir : la boutique a été ouverte par un événement → fermer = fin du tour.
     const mn = typeof get().showShop === 'object' && get().showShop?.marcheNoir;
     set({ showShop: false });
-    if (mn) get().nextTurn(); // nextTurn sauvegarde déjà
+    if (mn) get().finishEventTurn(); // Marché Noir = événement → question puis fin de tour
   },
   buyNewPower: (pk) => powerH.buyNewPower(set, get, pk),
   buyPowerCharge: (pk) => powerH.buyPowerCharge(set, get, pk),

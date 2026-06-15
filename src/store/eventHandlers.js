@@ -161,7 +161,7 @@ export function declineEvent(set, get) {
   const team = teams[currentTeam];
   addLog(`${team.emoji} ${team.name} décline l'événement.`);
   set({ showEvent: null });
-  get().nextTurn();
+  get().finishEventTurn();
 }
 
 export function eventSelectTarget(set, get, targetIndex) {
@@ -238,6 +238,9 @@ export function eventRollDice(set, get) {
 export function eventAskQuestion(set, get) {
   const { showEvent, questions, askedQuestions, addLog } = get();
   if (!showEvent) return;
+  // Cet événement pose DÉJÀ sa propre question → pas de question supplémentaire
+  // en fin de tour (on efface le flag posé à l'atterrissage).
+  if (get().pendingEventQuestion) set({ pendingEventQuestion: null });
 
   // Thème forcé par l'événement (ex. Sphinx → 'hardcore'), sinon aléatoire.
   const subject = showEvent.event?.subject || randomSubject();
@@ -248,7 +251,7 @@ export function eventAskQuestion(set, get) {
   if (!result) {
     addLog(`⚠️ Pas de question disponible.`);
     set({ showEvent: null });
-    get().nextTurn();
+    get().finishEventTurn();
     return;
   }
 
@@ -277,7 +280,7 @@ export function eventRechargeChoice(set, get, powerKey) {
   const pName = POWERS[powerKey]?.name || powerKey;
   addLog(`\u{1F50B} ${team.emoji} ${team.name} recharge ${pName} ! (+1 charge)`);
   set({ teams: newTeams, showEvent: null });
-  get().nextTurn();
+  get().finishEventTurn();
 }
 
 // Vol : transfere 1 charge d'un pouvoir de la cible (stealKey) vers un
@@ -298,7 +301,7 @@ export function eventVolApply(set, get, stealKey, giveKey) {
   newTeams[currentTeam] = { ...team, powers: { ...team.powers, [giveKey]: { ...myEntry, charges: myEntry.charges + 1 } } };
   addLog(`\u{1FA99} ${team.emoji} ${team.name} vole 1 charge de ${POWERS[stealKey].name} à ${target.emoji} ${target.name} et recharge ${POWERS[giveKey].name} !`);
   set({ teams: newTeams, showEvent: null });
-  get().nextTurn();
+  get().finishEventTurn();
 }
 
 // Marche Noir : achat d'une charge d'un pouvoir possede a -50%.
@@ -319,7 +322,7 @@ export function eventMarcheNoirBuy(set, get, powerKey) {
   };
   addLog(`\u{1F3AA} ${team.emoji} ${team.name} achète 1 charge de ${power.name} au marché noir ! (-${price} \u{1F4B0})`);
   set({ teams: newTeams, showEvent: null });
-  get().nextTurn();
+  get().finishEventTurn();
 }
 
 // Marchand ambulant : achat d'un objet de l'etal a -30%.
@@ -340,7 +343,7 @@ export function eventMerchantBuy(set, get, itemKey) {
   addLog(`\u{1F9D9} ${team.emoji} ${team.name} achète ${item.icon} ${item.name} au marchand ambulant ! (-${price} \u{1F4B0})`);
   grantItem(set, get, currentTeam, itemKey);
   set({ showEvent: null });
-  get().nextTurn();
+  get().finishEventTurn();
 }
 
 // Les trois coffres : le joueur choisit UN des 3 objets proposes (data.gifts).
@@ -435,7 +438,7 @@ export function eventPillageApply(set, get, pick) {
   addLog(`\u{1F3F4}‍☠️ ${team.emoji} ${team.name} pille ${item.icon} ${item.name} à ${target.emoji} ${target.name} !`);
   grantItem(set, get, currentTeam, itemKey);
   set({ showEvent: null });
-  get().nextTurn();
+  get().finishEventTurn();
 }
 
 // --- The big switch ---

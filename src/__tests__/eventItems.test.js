@@ -150,6 +150,34 @@ describe('événements : troc, forge, reliquaire, tournoi, pièges', () => {
     expect(S().showEvent.data.message).toMatch(/remporte|gagne/i);
   });
 
+  it('après un événement non-question : une question est posée (flag consommé)', () => {
+    setup({ money: 50 });
+    useGameStore.setState({
+      pendingEventQuestion: { subject: 'maths' },
+      questions: { maths: [{ q: 'Q ?', a: ['a', 'b', 'c', 'd'], c: 0 }] }, askedQuestions: {},
+      showEvent: { key: 'tresor', event: EVENTS.tresor, phase: 'result', data: { message: 'x' } },
+    });
+    S().closeEvent();
+    expect(S().showQuestion).toBeTruthy();
+    expect(S().pendingEventQuestion).toBeNull();
+  });
+
+  it('un événement-question (sphinx) n\'ajoute PAS de 2e question', () => {
+    const nextTurn = vi.fn();
+    setup();
+    useGameStore.setState({
+      nextTurn, pendingEventQuestion: { subject: 'maths' },
+      questions: { hardcore: [{ q: 'H ?', a: ['a', 'b', 'c', 'd'], c: 0 }] }, askedQuestions: {},
+      showEvent: { key: 'sphinx', event: EVENTS.sphinx, phase: 'intro', data: {} },
+    });
+    S().acceptEvent(); // → eventAskQuestion efface le flag
+    expect(S().pendingEventQuestion).toBeNull();
+    useGameStore.setState({ showQuestion: null });
+    S().closeEvent(); // pas de nouvelle question → nextTurn direct
+    expect(S().showQuestion).toBeNull();
+    expect(nextTurn).toHaveBeenCalled();
+  });
+
   it('poseur de pièges : ouvre le sélecteur de case puis pose le piège', () => {
     const nextTurn = vi.fn();
     setup();
