@@ -549,6 +549,15 @@ describe('effets passifs : questions', () => {
     expect(r.updatedTeam.pos).toBe('n3'); // recul de 1 au lieu de 2
   });
 
+  it('reculReductionPct réduit le recul en % (cumulable avec le forfait)', () => {
+    ITEMS.__tpct = { name: 'TestPct', slot: 'feet', rarity: 'commun', price: 0, effects: [{ type: 'reculReductionPct', value: 50 }] };
+    const t = mkTeam(0, { equipment: { head: null, body: null, feet: '__tpct' } });
+    expect(reducedRecul(t, 6)).toBe(3); // −50 % de 6
+    ITEMS.__tpct.effects.push({ type: 'reculReduction', value: 1 });
+    expect(reducedRecul(t, 6)).toBe(2); // 6 → 3 (−50 %) → 2 (−1 case)
+    delete ITEMS.__tpct;
+  });
+
   it('itemShield (bouclier de bois) absorbe le recul AVANT le pouvoir Bouclier', () => {
     const t = mkTeam(0, { itemShield: 1, powers: { bouclier: { charges: 2, level: 1 } } });
     const r = resolveWrongAnswer(t, BOARD);

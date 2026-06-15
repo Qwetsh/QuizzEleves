@@ -144,8 +144,13 @@ export function hasEffect(team, type) {
  * Recul subi après réduction par l'équipement (mauvaise réponse, Foudre,
  * défaite de duel). Jamais négatif.
  */
+// Réduction du recul subi : d'abord en POURCENTAGE (reculReductionPct, cumulé,
+// plafonné à 100 %), puis en CASES forfaitaires (reculReduction). Les deux types
+// se choisissent par objet dans l'éditeur ; un objet peut n'avoir que l'un.
 export function reducedRecul(team, amount) {
-  return Math.max(0, amount - getEffectValue(team, 'reculReduction'));
+  const pct = getEffectValue(team, 'reculReductionPct');
+  const afterPct = pct > 0 ? amount * (1 - Math.min(pct, 100) / 100) : amount;
+  return Math.max(0, Math.round(afterPct) - getEffectValue(team, 'reculReduction'));
 }
 
 /**

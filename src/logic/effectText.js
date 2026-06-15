@@ -96,6 +96,7 @@ function describeLegacy(fx) {
     case 'taxReduction': txt = `−${v}% sur les impôts et taxes`; break;
     case 'stealProtection': txt = `−${v}% sur l'or qu'on te vole`; break;
     case 'reculReduction': txt = `recul subi réduit de ${v} case${fx.value === 1 ? '' : 's'}`; break;
+    case 'reculReductionPct': txt = `recul subi réduit de ${v}%`; break;
     case 'tempeteImmune': txt = `immunité à la Tempête`; break;
     case 'oubliProtect': txt = `protège du Trou de l'oubli`; break;
     case 'fightStealBonus': txt = `+${v} pièce${fx.value === 1 ? '' : 's'} volée${fx.value === 1 ? '' : 's'} en duel`; break;
