@@ -582,12 +582,26 @@ describe('effets passifs : pouvoirs offensifs', () => {
   });
 
   it('reculReduction atténue la Foudre', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // 1D4 → 3
     const teams = [...S().teams];
     teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 1 } } };
     teams[1] = { ...teams[1], equipment: { head: null, body: null, feet: 'bottesMontagne' } };
     useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
     S().applyOffensivePower(1);
-    expect(team(1).pos).toBe('n3'); // 3 - 2 = 1 case de recul
+    expect(team(1).pos).toBe('n3'); // 1D4=3, -2 (bottes) = 1 case de recul
+    vi.restoreAllMocks();
+  });
+
+  it('Foudre niv.3 recule de 1D10', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.95); // 1D10 → 10
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 3 } } };
+    teams[1] = { ...teams[1], pos: 'n8' };
+    useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
+    S().applyOffensivePower(1);
+    // 1D10=10 depuis n8 → retour au départ (un 1D4 max=4 donnerait n4)
+    expect(team(1).pos).toBe('depart');
+    vi.restoreAllMocks();
   });
 });
 

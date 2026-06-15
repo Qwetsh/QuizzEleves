@@ -58,9 +58,9 @@ export const POWERS = {
     activationCost: 10,
     upgradeCosts: [20, 30],
     levels: [
-      { desc: 'Recule la cible de 3 cases', effect: { type: 'reculTarget', amount: 3 } },
-      { desc: 'Recule la cible de 5 cases', effect: { type: 'reculTarget', amount: 5 } },
-      { desc: 'Recule la cible de 7 cases', effect: { type: 'reculTarget', amount: 7 } },
+      { desc: 'Recule la cible de 1D4 cases', effect: { type: 'reculTarget', amount: 'd4' } },
+      { desc: 'Recule la cible de 1D6 cases', effect: { type: 'reculTarget', amount: 'd6' } },
+      { desc: 'Recule la cible de 1D10 cases', effect: { type: 'reculTarget', amount: 'd10' } },
     ],
   },
   sablier: {

@@ -1,7 +1,7 @@
 import { POWERS } from '../data/powers.js';
 import { moveBack } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
-import { reducedRecul } from '../logic/itemEffects.js';
+import { reducedRecul, resolveAmount, diceLabel } from '../logic/itemEffects.js';
 import { saveGame } from './persistence.js';
 import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
 import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
@@ -166,8 +166,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   let lightning = false;
 
   if (powerKey === 'foudre') {
-    // Equipement de la cible (reculReduction) : recul attenue
-    const reculAmount = reducedRecul(target, effect.amount ?? 3);
+    // Recul = lancer de dé (1D4 / 1D6 / 1D10 selon le niveau), atténué par
+    // l'équipement de la cible (reculReduction).
+    const rolled = resolveAmount(effect.amount ?? 'd4', target);
+    const dieLabel = diceLabel(effect.amount ?? 'd4');
+    const reculAmount = reducedRecul(target, rolled);
     const r = moveBack(board, target.pos, reculAmount);
     newTeams[targetTeamIndex] = { ...target, pos: r.finalPos };
     if (r.path.length > 1) {
@@ -175,8 +178,8 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     }
     lightning = true;
     soundThunder();
-    addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} cases.`);
-    announce(set, get, '⚡', `Foudre sur ${target.emoji} ${target.name} — −${reculAmount} case${reculAmount > 1 ? 's' : ''}`, POWERS[powerKey].color);
+    addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}, ${dieLabel} \u2192 ${rolled}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} case${reculAmount > 1 ? 's' : ''}.`);
+    announce(set, get, '⚡', `Foudre sur ${target.emoji} ${target.name} — ${dieLabel} → −${reculAmount} case${reculAmount > 1 ? 's' : ''}`, POWERS[powerKey].color);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
     newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
