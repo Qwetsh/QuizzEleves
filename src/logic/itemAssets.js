@@ -1,28 +1,41 @@
-// Résolution des visuels d'équipement (src/assets/items/{key}.png) et des
-// illustrations de sets (src/assets/sets/{setKey}.png), chargés par Vite via
-// import.meta.glob. Les consommables n'ont pas d'image (emoji).
+// Résolution des visuels chargés par Vite via import.meta.glob :
+//  - objets    : src/assets/items/{key}.png
+//  - sets      : src/assets/sets/{setKey}.png      → COMPOSITE (3 pièces),
+//                pour l'illustration de l'encart de set uniquement.
+//  - pièces    : src/assets/sets/pieces/{setKey}-{coiffe|armure|amulette}.png
+//                → pièces SÉPARÉES, assignables à un objet individuel.
+// Les consommables n'ont pas d'image (emoji).
 const base = (p) => p.split('/').pop().replace(/\.png$/, '');
 const ITEM_ASSET_URLS = import.meta.glob('../assets/items/*.png', { eager: true, query: '?url', import: 'default' });
 const SET_ASSET_URLS = import.meta.glob('../assets/sets/*.png', { eager: true, query: '?url', import: 'default' });
+const SET_PIECE_URLS = import.meta.glob('../assets/sets/pieces/*.png', { eager: true, query: '?url', import: 'default' });
 
-// Illustrations de sets indexées par clé de set (coiffe + armure + amulette) :
-// pour setImg() + l'encart de détail d'objet.
+// Composites indexés par clé de set — pour setImg() / l'encart de détail.
 const SET_ASSETS = Object.fromEntries(
   Object.entries(SET_ASSET_URLS).map(([p, url]) => [base(p), url])
 );
+// Pièces de set séparées, exposées sous clé `set-{setKey}-{pièce}`.
+const SET_PIECE_ASSETS = Object.fromEntries(
+  Object.entries(SET_PIECE_URLS).map(([p, url]) => ['set-' + base(p), url])
+);
 
-// Map des images assignables à un objet. Les visuels de sets y sont AUSSI
-// exposés sous une clé préfixée `set-…` : sélectionnables dans l'éditeur et
-// résolus par itemImg/assetUrl, sans collision avec les clés d'objets.
+// Map des images assignables à un objet (résolution par itemImg/assetUrl).
+// On inclut les pièces de set ET — pour compat — les composites (clé `set-X`),
+// même si ces derniers ne sont PLUS proposés dans le sélecteur.
 const ITEM_ASSETS = {
   ...Object.fromEntries(Object.entries(SET_ASSETS).map(([k, url]) => ['set-' + k, url])),
+  ...SET_PIECE_ASSETS,
   ...Object.fromEntries(Object.entries(ITEM_ASSET_URLS).map(([p, url]) => [base(p), url])),
 };
 
-// Clés des images embarquées (sets en tête pour visibilité dans le sélecteur).
-export const ITEM_ASSET_KEYS = Object.keys(ITEM_ASSETS);
+// Sélecteur de l'éditeur : pièces de set (en tête) puis objets — PAS les
+// composites (un objet = une seule pièce).
+export const ITEM_ASSET_KEYS = [
+  ...Object.keys(SET_PIECE_ASSETS),
+  ...Object.keys(ITEM_ASSET_URLS).map(base),
+];
 
-// URL de l'illustration d'un set à partir de sa clé (null si absente).
+// URL du composite d'un set à partir de sa clé (null si absente).
 export function setImg(setKey) {
   return SET_ASSETS[setKey] || null;
 }
