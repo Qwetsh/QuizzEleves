@@ -599,6 +599,9 @@ function finishQueue(set, get) {
   } else if (ctx.source === 'trap') {
     // Le piège a pu déplacer la victime : ré-évalue la case (borné)
     if ((ctx.trapDepth || 0) < 3) get().handleLanding();
+  } else if (ctx.source === 'event') {
+    // Événement « scripté » (actions du moteur) : la file vidée = fin du tour.
+    get().nextTurn();
   }
   if (get().phase === 'game') saveGame(get());
 }

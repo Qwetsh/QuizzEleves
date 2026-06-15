@@ -26,4 +26,20 @@ export const EVENTS = {
   coffre:           { name: 'Coffre au tresor',  icon: '\u{1F9F0}', desc: 'Tu decouvres un coffre mysterieux... Il contient un objet !',                      effect: 'coffre',      category: 'item', optional: false, weight: 1 },
   marchandAmbulant: { name: 'Marchand ambulant', icon: '\u{1F9D9}', desc: 'Un marchand ambulant te propose ses objets a -30% ! Il a parfois des objets legendaires...', effect: 'marchandAmbulant', needsChoice: true, category: 'item', optional: true, weight: 1 },
   pillage:          { name: 'Pillage',           icon: '\u{1F3F4}‍☠️', desc: 'Choisis une equipe et vole-lui UN objet (equipement ou consommable) !',     effect: 'pillage',     needsTarget: true, category: 'item', optional: true, weight: 0.5 },
+  troisCoffres:     { name: 'Les trois coffres', icon: '\u{1F48E}', desc: 'Trois coffres s\'offrent a toi. Choisis-en UN seul... ton choix est definitif !', effect: 'troisCoffres', needsChoice: true, category: 'item', optional: false, weight: 0.7 },
+  pickpocket:       { name: 'Pickpocket !',      icon: '\u{1F99D}', desc: 'Un voleur a fouille tes affaires... tu perds un objet au hasard !',           effect: 'pickpocket',  category: 'item', optional: false, weight: 0.6 },
+
+  // --- Événements « scriptés » : portent une liste d'ACTIONS du moteur d'effets ---
+  benediction:      { name: 'Benediction',       icon: '✨',    desc: 'Une aura te porte : pendant 2 tours, chaque bonne reponse te fait AVANCER d\'une case !', category: 'item', optional: false, weight: 0.7,
+    actions: [{ action: 'buff', target: 'self', buff: { type: 'advanceOnCorrect', turns: 2, n: 1 } }] },
+  malediction:      { name: 'Malediction',       icon: '\u{1F480}', desc: 'Un mauvais sort te frappe : pendant 3 tours, chaque erreur te coute 5 pieces !', category: 'money', optional: false, weight: 0.5,
+    actions: [{ action: 'buff', target: 'self', buff: { type: 'loseOnWrong', turns: 3, n: 5 } }] },
+  boussoleCassee:   { name: 'Boussole cassee',   icon: '\u{1F9ED}', desc: 'Ta boussole s\'affole : ta PROCHAINE voie a un carrefour sera choisie au hasard !', category: 'item', optional: false, weight: 0.6,
+    actions: [{ action: 'randomPathNext', target: 'self' }] },
+  tempeteMagnetique:{ name: 'Tempete magnetique', icon: '\u{1F9F2}', desc: 'Un champ magnetique brouille tout : la prochaine voie de CHAQUE equipe sera aleatoire !', category: 'item', optional: false, weight: 0.45,
+    actions: [{ action: 'randomPathNext', target: 'all' }] },
+
+  // --- Pari d'argent / question a enjeu ---
+  loterie:          { name: 'Loterie',           icon: '\u{1F39F}️', desc: 'Tente ta chance : 50% de remporter 40 pieces, sinon tu perds 15 pieces.', category: 'money', optional: true, weight: 0.7 },
+  sphinx:           { name: 'Le Sphinx',         icon: '\u{1F5FF}', desc: 'Le Sphinx te pose une question HARDCORE. Juste : +50 pieces. Faux : -20 pieces.', subject: 'hardcore', category: 'money', optional: true, weight: 0.45 },
 };

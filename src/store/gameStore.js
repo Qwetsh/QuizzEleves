@@ -828,6 +828,7 @@ export const useGameStore = create((set, get) => ({
   eventMarcheNoirBuy: (pk) => eventH.eventMarcheNoirBuy(set, get, pk),
   eventVolApply: (stealKey, giveKey) => eventH.eventVolApply(set, get, stealKey, giveKey),
   eventMerchantBuy: (itemKey) => eventH.eventMerchantBuy(set, get, itemKey),
+  eventChooseGift: (itemKey) => eventH.eventChooseGift(set, get, itemKey),
   eventPillageApply: (pick) => eventH.eventPillageApply(set, get, pick),
   applyEventEffect: () => eventH.applyEventEffect(set, get),
   closeEvent: () => {

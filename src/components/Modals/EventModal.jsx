@@ -35,6 +35,7 @@ export default function EventModal() {
   const eventMarcheNoirBuy = useGameStore((s) => s.eventMarcheNoirBuy);
   const eventVolApply = useGameStore((s) => s.eventVolApply);
   const eventMerchantBuy = useGameStore((s) => s.eventMerchantBuy);
+  const eventChooseGift = useGameStore((s) => s.eventChooseGift);
   const eventPillageApply = useGameStore((s) => s.eventPillageApply);
   const revealEvent = useGameStore((s) => s.revealEvent);
 
@@ -104,6 +105,7 @@ export default function EventModal() {
                 onMarcheNoirBuy={eventMarcheNoirBuy}
                 onVolApply={eventVolApply}
                 onMerchantBuy={eventMerchantBuy}
+                onChooseGift={eventChooseGift}
                 onPillageApply={eventPillageApply}
                 onSkip={declineEvent}
               />
@@ -389,7 +391,7 @@ function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
   );
 }
 
-function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onPillageApply, onSkip }) {
+function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onChooseGift, onPillageApply, onSkip }) {
   // Vol en 2 etapes : pouvoir vole chez la cible, puis pouvoir recharge chez soi
   const [stealKey, setStealKey] = useState(null);
 
@@ -578,6 +580,26 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
         >
           Non merci, je passe mon chemin
         </button>
+      </>
+    );
+  }
+
+  if (eventKey === 'troisCoffres') {
+    const gifts = data?.gifts || [];
+    return (
+      <>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+          Choisis UN coffre — ton choix est définitif !
+        </p>
+        <div className="space-y-2">
+          {gifts.map((key) => (
+            <ItemChoiceButton
+              key={key}
+              itemKey={key}
+              onClick={() => { soundClick(); onChooseGift(key); }}
+            />
+          ))}
+        </div>
       </>
     );
   }

@@ -6,6 +6,7 @@ import { hasEffect, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock } from './itemHandlers.js';
 import { LOOT } from '../logic/balanceConfig.js';
+import { runEffects } from './effectEngine.js';
 
 // Etal du marchand ambulant : 3 objets distincts parmi les objets actives,
 // ponderes par rarete (les legendaires sont rares mais possibles — contrairement
@@ -79,6 +80,15 @@ export function acceptEvent(set, get) {
   if (!showEvent) return;
   const { key } = showEvent;
 
+  // Événement « scripté » : il porte une liste d'ACTIONS du moteur d'effets
+  // (buff, randomPathNext, loot, money, placeTrap…). On ferme la modale et on
+  // délègue au moteur ; la fin de file (source 'event') enchaîne nextTurn.
+  if (Array.isArray(showEvent.event?.actions) && showEvent.event.actions.length) {
+    set({ showEvent: null, eventApplied: true });
+    runEffects(set, get, showEvent.event.actions, { source: 'event' });
+    return;
+  }
+
   const needsTarget = ['decharge', 'sacrifice', 'duel', 'don', 'vol', 'echange', 'volArgent', 'pillage'];
   if (needsTarget.includes(key)) {
     set({ showEvent: { ...showEvent, phase: 'target' } });
@@ -96,12 +106,22 @@ export function acceptEvent(set, get) {
     return;
   }
 
+  if (key === 'troisCoffres') {
+    const gifts = generateMerchantStock(3, get().enabledItems || Object.keys(ITEMS));
+    if (gifts.length === 0) {
+      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Les coffres sont vides aujourd'hui...` } }, eventApplied: true });
+      return;
+    }
+    set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, gifts } } });
+    return;
+  }
+
   if (key === 'rejouer' || key === 'quitteDouble' || key === 'tempete') {
     eventRollDice(set, get);
     return;
   }
 
-  if (key === 'pari' || key === 'bonus' || key === 'jackpot') {
+  if (key === 'pari' || key === 'bonus' || key === 'jackpot' || key === 'sphinx') {
     eventAskQuestion(set, get);
     return;
   }
@@ -206,7 +226,8 @@ export function eventAskQuestion(set, get) {
   const { showEvent, questions, askedQuestions, addLog } = get();
   if (!showEvent) return;
 
-  const subject = randomSubject();
+  // Thème forcé par l'événement (ex. Sphinx → 'hardcore'), sinon aléatoire.
+  const subject = showEvent.event?.subject || randomSubject();
   const pool = questions[subject] || [];
   const asked = askedQuestions[subject] || new Set();
   const result = pickQuestion(pool, asked);
@@ -307,6 +328,29 @@ export function eventMerchantBuy(set, get, itemKey) {
   grantItem(set, get, currentTeam, itemKey);
   set({ showEvent: null });
   get().nextTurn();
+}
+
+// Les trois coffres : le joueur choisit UN des 3 objets proposes (data.gifts).
+export function eventChooseGift(set, get, itemKey) {
+  const { teams, currentTeam, addLog, showEvent } = get();
+  const team = teams[currentTeam];
+  const item = ITEMS[itemKey];
+  // Securite : l'objet doit faire partie des 3 coffres proposes
+  if (!item || !showEvent?.data?.gifts?.includes(itemKey)) return;
+
+  const r = placeItem(team, itemKey);
+  const newTeams = [...teams];
+  newTeams[currentTeam] = r.team;
+
+  if (r.outcome === 'refunded') {
+    // Sac plein : l'objet est revendu, pas de cerémonie de gain
+    addLog(`\u{1F9F0} Sac plein ! ${item.icon} ${item.name} est revendu (+${r.refund} \u{1F4B0}).`);
+    set({ teams: newTeams, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Sac plein ! ${item.icon} ${item.name} revendu (+${r.refund} \u{1F4B0}).` } } });
+    return;
+  }
+  addLog(`\u{1F48E} ${team.emoji} ${team.name} ${r.outcome === 'equipped' ? 'équipe' : 'obtient'} ${item.icon} ${item.name} (coffre choisi) !`);
+  set({ teams: newTeams, showEvent: null, eventApplied: false });
+  get().showLoot(itemKey, { title: '\u{1F48E} Ton choix !', thenClose: true });
 }
 
 // Pillage : vole UN objet a la cible — pick = { kind: 'equipment', slot } ou { kind: 'bag', index }.
@@ -616,6 +660,28 @@ export function applyEventEffect(set, get) {
       }
       break;
     }
+    case 'loterie': {
+      // Pile ou face : 50% gros gain, sinon perte d'une mise.
+      if (Math.random() < 0.5) {
+        newTeams[currentTeam] = { ...team, money: team.money + 40 };
+        message = `\u{1F39F}️ Gagné ! ${team.emoji} ${team.name} remporte 40 pièces !`;
+      } else {
+        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 15) };
+        message = `\u{1F39F}️ Perdu... ${team.emoji} ${team.name} perd 15 pièces.`;
+      }
+      break;
+    }
+    case 'sphinx': {
+      // Question HARDCORE forcée (cf. eventAskQuestion) : gros enjeu.
+      if (data?.questionResult === true) {
+        newTeams[currentTeam] = { ...team, money: team.money + 50 };
+        message = `\u{1F5FF} Le Sphinx s'incline ! ${team.emoji} ${team.name} gagne 50 pièces !`;
+      } else {
+        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 20) };
+        message = `\u{1F5FF} Réponse fausse... ${team.emoji} ${team.name} perd 20 pièces.`;
+      }
+      break;
+    }
     case 'banquier': {
       const bonusAmount = team.correct * 3;
       newTeams[currentTeam] = { ...team, money: team.money + bonusAmount };
@@ -646,6 +712,30 @@ export function applyEventEffect(set, get) {
       if (ti != null && ti >= 0 && ti < teams.length) {
         message = `\u{1F3F4}‍☠️ ${newTeams[ti].emoji} ${newTeams[ti].name} n'a aucun objet à piller !`;
       }
+      break;
+    }
+    case 'pickpocket': {
+      // Perd UN objet au hasard (equipement OU sac). Filtre les cles perimees.
+      const picks = [];
+      for (const slot of ['head', 'body', 'feet']) {
+        const k = team.equipment?.[slot];
+        if (k && ITEMS[k]) picks.push({ kind: 'equipment', slot, key: k });
+      }
+      const bag = normalizeBag(team.bag);
+      bag.forEach((k, i) => { if (k && ITEMS[k]) picks.push({ kind: 'bag', index: i, key: k }); });
+      if (picks.length === 0) {
+        message = `\u{1F99D} Le voleur fouille... mais ${team.emoji} ${team.name} n'a aucun objet à perdre !`;
+        break;
+      }
+      const lost = picks[Math.floor(Math.random() * picks.length)];
+      const item = ITEMS[lost.key];
+      if (lost.kind === 'equipment') {
+        newTeams[currentTeam] = { ...team, equipment: { ...team.equipment, [lost.slot]: null } };
+      } else {
+        bag[lost.index] = null;
+        newTeams[currentTeam] = { ...team, bag };
+      }
+      message = `\u{1F99D} Pickpocket ! ${team.emoji} ${team.name} perd ${item.icon} ${item.name} !`;
       break;
     }
     default:
