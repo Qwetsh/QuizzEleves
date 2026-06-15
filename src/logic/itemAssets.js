@@ -1,13 +1,31 @@
-// Résolution des visuels d'équipement (src/assets/items/{key}.png), chargés
-// par Vite via import.meta.glob. Les consommables n'ont pas d'image (emoji).
+// Résolution des visuels d'équipement (src/assets/items/{key}.png) et des
+// illustrations de sets (src/assets/sets/{setKey}.png), chargés par Vite via
+// import.meta.glob. Les consommables n'ont pas d'image (emoji).
+const base = (p) => p.split('/').pop().replace(/\.png$/, '');
 const ITEM_ASSET_URLS = import.meta.glob('../assets/items/*.png', { eager: true, query: '?url', import: 'default' });
+const SET_ASSET_URLS = import.meta.glob('../assets/sets/*.png', { eager: true, query: '?url', import: 'default' });
 
-const ITEM_ASSETS = Object.fromEntries(
-  Object.entries(ITEM_ASSET_URLS).map(([p, url]) => [p.split('/').pop().replace(/\.png$/, ''), url])
+// Illustrations de sets indexées par clé de set (coiffe + armure + amulette) :
+// pour setImg() + l'encart de détail d'objet.
+const SET_ASSETS = Object.fromEntries(
+  Object.entries(SET_ASSET_URLS).map(([p, url]) => [base(p), url])
 );
 
-// Clés des images embarquées (pour le sélecteur d'image de l'éditeur).
+// Map des images assignables à un objet. Les visuels de sets y sont AUSSI
+// exposés sous une clé préfixée `set-…` : sélectionnables dans l'éditeur et
+// résolus par itemImg/assetUrl, sans collision avec les clés d'objets.
+const ITEM_ASSETS = {
+  ...Object.fromEntries(Object.entries(SET_ASSETS).map(([k, url]) => ['set-' + k, url])),
+  ...Object.fromEntries(Object.entries(ITEM_ASSET_URLS).map(([p, url]) => [base(p), url])),
+};
+
+// Clés des images embarquées (sets en tête pour visibilité dans le sélecteur).
 export const ITEM_ASSET_KEYS = Object.keys(ITEM_ASSETS);
+
+// URL de l'illustration d'un set à partir de sa clé (null si absente).
+export function setImg(setKey) {
+  return SET_ASSETS[setKey] || null;
+}
 
 // URL d'une image embarquée à partir de sa clé.
 export function assetUrl(key) {

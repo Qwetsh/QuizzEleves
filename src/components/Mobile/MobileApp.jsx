@@ -9,6 +9,7 @@ import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
+import SetBonusInfo from '../Modals/SetBonusInfo';
 import '../../styles/mobile.css';
 
 function readInitialCode() {
@@ -93,7 +94,7 @@ function EquipSlot({ itemKey, slot, onTap }) {
 }
 
 // Panneau de détail (bottom sheet) au tap d'un objet : desc + EFFETS lisibles.
-function ItemSheet({ itemKey, onClose }) {
+function ItemSheet({ itemKey, team, onClose }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const color = RARITIES[item.rarity]?.color || '#888';
@@ -116,6 +117,7 @@ function ItemSheet({ itemKey, onClose }) {
             {fx.map((l, i) => <li key={i}>{l}</li>)}
           </ul>
         )}
+        <SetBonusInfo item={item} team={team} />
         <button className="mob-btn mob-btn--gold" style={{ marginTop: 16 }} onClick={onClose}>Fermer</button>
       </div>
     </div>
@@ -241,7 +243,7 @@ function TeamView({ session, teamIdx, onSwitch }) {
 
       <div className="mob-foot">Lecture seule · l'écran se met à jour en direct</div>
 
-      {sheet && <ItemSheet itemKey={sheet} onClose={() => setSheet(null)} />}
+      {sheet && <ItemSheet itemKey={sheet} team={t} onClose={() => setSheet(null)} />}
     </div>
   );
 }

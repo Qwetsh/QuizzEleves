@@ -1,0 +1,112 @@
+/* Encart « Set d'équipement » (SetBonusInfo.jsx) — détail d'un objet de set.
+   Teinté par --set-color (couleur du set, injectée inline avec ses variantes
+   alpha --set-tint/--set-edge/--set-soft). Lisible sur fond pierre (popover
+   TBI) comme sur parchemin clair (sheet mobile). */
+.setinfo {
+  margin-top: 9px;
+  padding: 8px 10px 9px;
+  border-radius: 12px;
+  background: var(--set-tint, rgba(255, 252, 235, 0.5));
+  box-shadow: inset 0 0 0 1.5px var(--set-edge, rgba(138, 109, 58, 0.4));
+  font-family: var(--font-ui, inherit);
+}
+
+/* Illustration composite du set (coiffe + armure + amulette) */
+.setinfo-art {
+  margin: -1px 0 7px;
+  padding: 4px 0;
+  border-radius: 9px;
+  background: radial-gradient(ellipse at 50% 42%, var(--set-soft), transparent 70%);
+  text-align: center;
+}
+.setinfo-art img {
+  display: block;
+  width: 100%;
+  max-height: 90px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 5px rgba(20, 12, 4, 0.32));
+}
+
+.setinfo-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.setinfo-icon { font-size: 17px; line-height: 1; flex-shrink: 0; }
+.setinfo-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--set-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.setinfo-count {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--set-color);
+  flex-shrink: 0;
+}
+.setinfo-count-max { font-size: 11px; opacity: 0.55; }
+
+/* Pips : 3 segments, remplis = pièces équipées */
+.setinfo-pips { display: flex; gap: 5px; margin: 6px 0 7px; }
+.setinfo-pip {
+  width: 22px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--set-soft);
+  box-shadow: inset 0 0 0 1px var(--set-edge);
+}
+.setinfo-pip.on {
+  background: var(--set-color);
+  box-shadow: 0 1px 3px var(--set-edge);
+}
+
+/* Paliers de bonus : actif = pleine opacité + badge plein ; sinon grisé */
+.setinfo-tier { padding-top: 5px; opacity: 0.55; }
+.setinfo-tier.is-active { opacity: 1; }
+.setinfo-tier + .setinfo-tier {
+  margin-top: 5px;
+  border-top: 1px dashed var(--set-edge);
+}
+.setinfo-tier-head { display: flex; align-items: center; gap: 6px; }
+.setinfo-tier-badge {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--set-soft);
+  color: var(--set-color);
+  box-shadow: inset 0 0 0 1px var(--set-edge);
+}
+.setinfo-tier.is-active .setinfo-tier-badge {
+  background: var(--set-color);
+  color: #fff;
+  box-shadow: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+.setinfo-tier-state {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--set-color);
+}
+.setinfo-tier:not(.is-active) .setinfo-tier-state {
+  color: #7a6a44;
+  font-weight: 600;
+}
+.setinfo-tier-lines {
+  margin: 3px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #43391c;
+}
+.setinfo-tier-lines li { margin: 1px 0; }

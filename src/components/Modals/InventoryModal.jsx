@@ -1,17 +1,23 @@
-// Inventaire « Temple moussu » — porté du design Claude Design
-// (Inventaire — Explorations, variante B). Drag & drop pointer-based entre
-// le SAC (grille 12 cases) et l'ÉQUIPEMENT (3 slots gravés) ; clic sans
-// glisser = popover d'actions (Utiliser / Revendre).
-import { useState, useRef, useEffect } from 'react';
+// Inventaire — habillage image (panneau « INVENTAIRE » illustré). Le décor
+// (titre, colonne ÉQUIPEMENT, onglet SAC, fleurs, plaques) est peint dans
+// panel.png ; on ne superpose QUE les zones interactives, positionnées en % du
+// panneau : 3 cases d'équipement (eqframe.png) dans la colonne bois, la grille
+// du sac (slot.png) sur le parchemin, et le bouton fermer (close.png).
+// La mécanique de drag & drop est inchangée (rects des cases figés au grab).
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { sellPrice, isValidMove, normalizeBag } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
-import { itemImg, rarityRing } from '../../logic/itemAssets';
+import { itemImg } from '../../logic/itemAssets';
 import EffectDetails from './EffectDetails';
-import { TemplePanel, Sprig as InvSprig, Rune as InvRune } from './TempleDecor';
+import SetBonusInfo from './SetBonusInfo';
+import panelImg from '../../assets/inventory/panel.png';
+import slotImg from '../../assets/inventory/slot.png';
+import eqframeImg from '../../assets/inventory/eqframe.png';
+import closeImg from '../../assets/inventory/close.png';
 import '../../styles/inventory.css';
 
 // Silhouettes gravées des slots d'équipement vides (viewBox 0 0 64 64)
@@ -21,54 +27,59 @@ const SLOT_GLYPHS = {
   feet: '<path fill-rule="evenodd" d="M32 6 C16 6 8 20 8 34 C8 44 12 52 18 58 L26 51 C21 46 17 40 17 34 C17 24 23 14 32 14 C41 14 47 24 47 34 C47 40 43 46 38 51 L46 58 C52 52 56 44 56 34 C56 20 48 6 32 6 Z"/>',
 };
 
+// Positions (en % du panneau) des 3 cases d'équipement dans la colonne bois.
 const EQUIP_SLOTS = [
-  { key: 'head', label: SLOTS.head.name },
-  { key: 'body', label: SLOTS.body.name },
-  { key: 'feet', label: SLOTS.feet.name },
+  { key: 'head', cy: '32%' },
+  { key: 'body', cy: '53%' },
+  { key: 'feet', cy: '74%' },
 ];
 
-/* ---------- Case (équipement ou sac) ---------- */
-function InvSlot({ k, glyph, itemKey, refCb, onGrab, state, popStamp, away }) {
+/* ---------- Case (équipement ou sac), habillage image ---------- */
+function ImgSlot({ k, variant, glyph, itemKey, style, refCb, onGrab, state, popStamp, away }) {
   const item = ITEMS[itemKey];
   const rarityColor = item ? RARITIES[item.rarity]?.color : null;
+  const legendary = item?.rarity === 'legendaire';
   const img = item ? itemImg(item) : null;
-  // Liseré de rareté sur le slot interne (laisse les états de drag, portés par
-  // le slotframe, intacts). Base = ombres internes du slot conservées dessous.
-  const slotBase = 'inset 0 3px 9px rgba(80,55,20,0.38), inset 0 -2px 0 rgba(255,250,230,0.5)';
+  const bg = variant === 'equip' ? eqframeImg : slotImg;
   return (
-    <div className={'inv-slotframe' + (state ? ' is-' + state : '')}>
-      <div
-        className="inv-slot"
-        ref={refCb}
-        data-slot={k}
-        style={item ? { boxShadow: rarityRing(item.rarity, rarityColor, { base: slotBase }) } : undefined}
-      >
-        {!item && glyph && (
-          <svg
-            className="inv-glyph glyph-carve"
-            viewBox="0 0 64 64"
-            dangerouslySetInnerHTML={{ __html: glyph }}
-          />
-        )}
-        {item && (
-          <div
-            className={'inv-item' + (away ? ' is-away' : '')}
-            key={popStamp || 0}
-            onPointerDown={(e) => onGrab(e, k)}
-            title={`${item.name} — ${item.desc}`}
-          >
-            {img
-              ? <img className="inv-item-img" src={img} alt={item.name} draggable={false} />
-              : <span className="inv-emoji">{item.icon}</span>}
-          </div>
-        )}
-      </div>
+    <div
+      className={'invimg-slot invimg-slot--' + variant + (state ? ' is-' + state : '')}
+      style={{ ...style, backgroundImage: `url(${bg})` }}
+      ref={refCb}
+      data-slot={k}
+    >
+      {item && rarityColor && (
+        <span
+          className="invimg-glow"
+          style={{ background: `radial-gradient(circle, ${rarityColor}${legendary ? '66' : '40'}, transparent 68%)` }}
+        />
+      )}
+      {!item && glyph && (
+        <svg
+          className="inv-glyph glyph-carve"
+          viewBox="0 0 64 64"
+          dangerouslySetInnerHTML={{ __html: glyph }}
+        />
+      )}
+      {item && (
+        <div
+          className={'inv-item' + (away ? ' is-away' : '')}
+          key={popStamp || 0}
+          onPointerDown={(e) => onGrab(e, k)}
+          title={`${item.name} — ${item.desc}`}
+        >
+          {img
+            ? <img className="inv-item-img" src={img} alt={item.name} draggable={false} />
+            : <span className="inv-emoji">{item.icon}</span>}
+        </div>
+      )}
     </div>
   );
 }
 
-/* ---------- Popover d'actions ---------- */
+/* ---------- Popover d'actions (clic sur un objet) ---------- */
 function ActionPopover({ pop, onUse, onSell, onClose }) {
+  const team = useGameStore((s) => s.teams[s.currentTeam]);
   const item = ITEMS[pop.itemKey];
   if (!item) return null;
   const rar = RARITIES[item.rarity];
@@ -86,6 +97,7 @@ function ActionPopover({ pop, onUse, onSell, onClose }) {
       </span>
       <div className="inv-popover-desc">{item.desc}</div>
       <EffectDetails item={item} />
+      <SetBonusInfo item={item} team={team} />
       <div className="inv-popover-actions">
         {canUse && (
           <button className="inv-btn-use" onClick={() => { soundClick(); onUse(pop); }}>
@@ -103,6 +115,9 @@ function ActionPopover({ pop, onUse, onSell, onClose }) {
     document.body
   );
 }
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /* ---------- Modale ---------- */
 export default function InventoryModal() {
@@ -126,10 +141,37 @@ export default function InventoryModal() {
   // un glisser, inutile de forcer un layout (getBoundingClientRect x15) à
   // chaque pointermove
   const slotRects = useRef({});
+  const dialogRef = useRef(null);
 
   useEffect(() => {
     if (!showInventory) { setDrag(null); setHoverKey(null); setPopover(null); }
   }, [showInventory]);
+
+  // Focus initial dans le panneau + restauration à la fermeture (parité a11y
+  // avec TemplePanel, qui sert la Boutique).
+  useEffect(() => {
+    if (!showInventory) return;
+    const prev = document.activeElement;
+    const raf = requestAnimationFrame(() => {
+      dialogRef.current?.querySelector(FOCUSABLE)?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (typeof prev?.focus === 'function') prev.focus();
+    };
+  }, [showInventory]);
+
+  // Échap ferme ; Tab reste piégé dans le panneau.
+  const onKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') { closeInventory(); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(dialogRef.current?.querySelectorAll(FOCUSABLE) || []);
+    if (!focusable.length) { e.preventDefault(); return; }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }, [closeInventory]);
 
   const team = showInventory ? teams[currentTeam] : null;
   const equipment = team?.equipment || { head: null, body: null, feet: null };
@@ -223,70 +265,84 @@ export default function InventoryModal() {
   return (
     <AnimatePresence>
       {showInventory && team && (
-        <TemplePanel
-          title="INVENTAIRE"
-          team={team}
-          onClose={closeInventory}
-          medallion={<InvRune />}
-          onBackdropPointerDown={(e) => {
+        <motion.div
+          className="inv-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Inventaire"
+          onKeyDown={onKeyDown}
+          onPointerDown={(e) => {
             if (e.target === e.currentTarget) closeInventory();
             else setPopover(null);
           }}
         >
-          <div className="inv-wood">
+          <motion.div
+            initial={{ scale: 0.84, y: 24 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 220 }}
+          >
+            <div ref={dialogRef} className="invimg-panel" style={{ backgroundImage: `url(${panelImg})` }}>
+              {/* Cases d'équipement (colonne bois) */}
+              {EQUIP_SLOTS.map((s) => {
+                const k = 'equip:' + s.key;
+                return (
+                  <ImgSlot
+                    key={s.key}
+                    k={k}
+                    variant="equip"
+                    glyph={SLOT_GLYPHS[s.key]}
+                    itemKey={equipment[s.key]}
+                    style={{ left: '21.3%', top: s.cy }}
+                    refCb={(el) => { slotEls.current[k] = el; }}
+                    onGrab={onGrab}
+                    state={slotState(k)}
+                    popStamp={pops[k]}
+                    away={drag && !drag.flyback && drag.key === k}
+                  />
+                );
+              })}
 
-                  <div className="inv-equip">
-                    <div className="inv-equip-banner">ÉQUIPEMENT</div>
-                    {EQUIP_SLOTS.map((s) => {
-                      const k = 'equip:' + s.key;
-                      return (
-                        <div className="inv-equip-cell" key={s.key}>
-                          <InvSlot
-                            k={k}
-                            glyph={SLOT_GLYPHS[s.key]}
-                            itemKey={equipment[s.key]}
-                            refCb={(el) => { slotEls.current[k] = el; }}
-                            onGrab={onGrab}
-                            state={slotState(k)}
-                            popStamp={pops[k]}
-                            away={drag && !drag.flyback && drag.key === k}
-                          />
-                          <div className="inv-equip-label">{s.label}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
+              {/* Grille du sac (parchemin) */}
+              <div className="invimg-bag">
+                {bag.map((itemKey, i) => {
+                  const k = 'bag:' + i;
+                  return (
+                    <ImgSlot
+                      key={i}
+                      k={k}
+                      variant="bag"
+                      itemKey={itemKey}
+                      refCb={(el) => { slotEls.current[k] = el; }}
+                      onGrab={onGrab}
+                      state={slotState(k)}
+                      popStamp={pops[k]}
+                      away={drag && !drag.flyback && drag.key === k}
+                    />
+                  );
+                })}
+              </div>
 
-                  <div className="inv-sac">
-                    <div className="inv-sac-head">
-                      <InvSprig className="inv-pack-sprig" x="14px" y="34px" rot={-30} size={70} leaves={5} />
-                      <div className="inv-pack">🎒</div>
-                      <div className="inv-sac-plaque">
-                        <span className="dia">◆</span>
-                        <span>SAC</span>
-                        <span className="dia">◆</span>
-                      </div>
-                    </div>
-                    <div className="inv-grid">
-                      {bag.map((itemKey, i) => {
-                        const k = 'bag:' + i;
-                        return (
-                          <InvSlot
-                            key={i}
-                            k={k}
-                            glyph={null}
-                            itemKey={itemKey}
-                            refCb={(el) => { slotEls.current[k] = el; }}
-                            onGrab={onGrab}
-                            state={slotState(k)}
-                            popStamp={pops[k]}
-                            away={drag && !drag.flyback && drag.key === k}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+              {/* Bouton fermer */}
+              <button
+                className="invimg-close"
+                style={{ backgroundImage: `url(${closeImg})` }}
+                onClick={() => { soundClick(); closeInventory(); }}
+                aria-label="Fermer"
+              />
+
+              {/* Étiquette équipe + pièces */}
+              <div className="invimg-team" style={{ '--team': team.color }}>
+                <span className="invimg-team-emoji">{team.emoji}</span>
+                <span className="invimg-team-name">{team.name}</span>
+              </div>
+              {/* La pièce est déjà peinte dans la plaque : on n'affiche que le nombre */}
+              <div className="invimg-money">{team.money ?? 0}</div>
+            </div>
+          </motion.div>
 
           {/* Fantôme de drag */}
           {drag && createPortal(
@@ -310,7 +366,7 @@ export default function InventoryModal() {
           {popover && (
             <ActionPopover pop={popover} onUse={onUse} onSell={onSell} onClose={() => setPopover(null)} />
           )}
-        </TemplePanel>
+        </motion.div>
       )}
     </AnimatePresence>
   );

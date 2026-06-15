@@ -23,6 +23,8 @@ import LightningStrike from './LightningStrike';
 import ActionDiceOverlay from './ActionDiceOverlay';
 import SubjectPickerModal from '../Modals/SubjectPickerModal';
 import EffectToast from './EffectToast';
+import btnBoutique from '../../assets/inventory/btn-boutique.png';
+import btnInventaire from '../../assets/inventory/btn-inventaire.png';
 
 function useFullscreen() {
   const [isFs, setIsFs] = useState(false);
@@ -89,69 +91,17 @@ export default function GameLayout() {
               display: 'flex', alignItems: 'center', gap: 10,
             }}
           >
-            <button
-              onClick={openShop}
-              aria-label="Ouvrir la boutique"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '12px 26px',
-                borderRadius: 999,
-                border: '2px solid rgba(110, 78, 16, 0.55)',
-                background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))',
-                fontFamily: 'var(--font-display)',
-                fontSize: 17,
-                color: '#fff',
-                cursor: 'pointer',
-                textShadow: '0 1px 0 rgba(0,0,0,0.25)',
-                boxShadow:
-                  'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 0 rgba(110,78,16,0.55), 0 10px 20px rgba(46,31,16,0.3)',
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{"\u{1F6D2}"}</span>
-              Boutique
-              <span
-                style={{
-                  padding: '2px 10px', borderRadius: 999,
-                  background: 'rgba(0,0,0,0.18)',
-                  fontSize: 14,
-                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
-                }}
-              >
+            <button onClick={openShop} aria-label="Ouvrir la boutique" className="hud-imgbtn">
+              <img src={btnBoutique} alt="Boutique" draggable={false} />
+              <span className="hud-imgbtn-badge">
                 {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
               </span>
             </button>
 
-            <button
-              onClick={openInventory}
-              aria-label="Ouvrir l'inventaire"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 10,
-                padding: '12px 26px',
-                borderRadius: 999,
-                border: '2px solid rgba(74, 50, 26, 0.6)',
-                background: 'linear-gradient(180deg, #a9805a, #7a563a)',
-                fontFamily: 'var(--font-display)',
-                fontSize: 17,
-                color: '#fff',
-                cursor: 'pointer',
-                textShadow: '0 1px 0 rgba(0,0,0,0.25)',
-                boxShadow:
-                  'inset 0 2px 0 rgba(255,255,255,0.35), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 0 rgba(60,40,20,0.55), 0 10px 20px rgba(46,31,16,0.3)',
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{"\u{1F392}"}</span>
-              Inventaire
+            <button onClick={openInventory} aria-label="Ouvrir l'inventaire" className="hud-imgbtn">
+              <img src={btnInventaire} alt="Inventaire" draggable={false} />
               {(team.bag?.filter(Boolean).length ?? 0) > 0 && (
-                <span
-                  style={{
-                    padding: '2px 10px', borderRadius: 999,
-                    background: 'rgba(0,0,0,0.18)',
-                    fontSize: 14,
-                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {team.bag.filter(Boolean).length}
-                </span>
+                <span className="hud-imgbtn-badge">{team.bag.filter(Boolean).length}</span>
               )}
             </button>
 
