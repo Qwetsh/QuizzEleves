@@ -266,9 +266,49 @@ describe('actions : reroll de question', () => {
     expect(S().showQuestion.subject).toBe('francais');
   });
 
+  it('rerollQuestion probabiliste : chance → thème principal, sinon → repli', () => {
+    // Tirage gagnant (random < chance) → thème principal (francais)
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    useGameStore.setState({ showQuestion: { question: QUESTIONS.maths[0], subject: 'maths', index: 0 }, askedQuestions: {} });
+    exec([{ action: 'rerollQuestion', subject: 'francais', chance: 0.5, elseSubject: 'maths' }], { source: 'question' });
+    expect(S().showQuestion.subject).toBe('francais');
+    Math.random.mockRestore();
+
+    // Tirage perdant (random ≥ chance) → thème de repli (maths)
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    useGameStore.setState({ showQuestion: { question: QUESTIONS.francais[0], subject: 'francais', index: 0 }, askedQuestions: {} });
+    exec([{ action: 'rerollQuestion', subject: 'francais', chance: 0.5, elseSubject: 'maths' }], { source: 'question' });
+    expect(S().showQuestion.subject).toBe('maths');
+    Math.random.mockRestore();
+  });
+
   it('questionRerollOptions liste équipement (plafonné) + sac', () => {
     // pas d'objets de reroll dans le catalogue par défaut -> 0
     expect(questionRerollOptions(mkTeam(0), false)).toHaveLength(0);
+  });
+});
+
+describe('action : voie aléatoire (randomPathNext)', () => {
+  it('pose le flag one-shot sur soi', () => {
+    exec([{ action: 'randomPathNext', target: 'self' }], { source: 'item' });
+    expect(team(0).randomPathNext).toBe(true);
+    expect(S().pendingActions).toBeNull();
+  });
+
+  it('cible un adversaire', () => {
+    exec([{ action: 'randomPathNext', target: 'randomOpponent' }], { source: 'item' });
+    expect(team(1).randomPathNext).toBe(true);
+    expect(team(0).randomPathNext).toBeFalsy();
+  });
+
+  it('le carrefour auto-choisit la voie et consomme le flag', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    freshGame([{}, {}], JUNCTION);
+    useGameStore.setState({ teams: S().teams.map((t, i) => (i === 0 ? { ...t, pos: 'n2', randomPathNext: true } : t)) });
+    S().resolvePostRoll(4, { stoppedAtJunction: true, junctionPos: 'n2', remaining: 1 });
+    expect(S().awaitingChoice).toBe(false);     // pas de demande de voie au joueur
+    expect(team(0).randomPathNext).toBe(false); // flag consommé
+    vi.restoreAllMocks();
   });
 });
 

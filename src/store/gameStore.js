@@ -387,11 +387,19 @@ export const useGameStore = create((set, get) => ({
     // Un effet on:roll a pu d\u00E9placer l'\u00E9quipe HORS de la jonction o\u00F9 le d\u00E9 s'\u00E9tait
     // arr\u00EAt\u00E9 : on ne propose le choix de voie que si elle s'y trouve toujours.
     if (postRoll?.stoppedAtJunction && team.pos === postRoll.junctionPos) {
-      // Voie al\u00E9atoire (buff de dur\u00E9e ou effet d'\u00E9quipement) : on choisit pour le joueur.
-      if (hasBuff(team, 'randomPath') || getEffectValue(team, 'randomPath') > 0) {
+      // Voie al\u00E9atoire : buff de dur\u00E9e, effet d'\u00E9quipement, OU flag one-shot
+      // (randomPathNext, pos\u00E9 par un consommable/effet cibl\u00E9) : on choisit pour
+      // le joueur. Le flag one-shot est consomm\u00E9 ici.
+      if (hasBuff(team, 'randomPath') || getEffectValue(team, 'randomPath') > 0 || team.randomPathNext) {
         const opts = get().board[team.pos]?.next || [];
         if (opts.length) {
-          set({ pendingMove: { remaining: postRoll.remaining } });
+          if (team.randomPathNext) {
+            const nt = [...teams];
+            nt[currentTeam] = { ...team, randomPathNext: false };
+            set({ teams: nt, pendingMove: { remaining: postRoll.remaining } });
+          } else {
+            set({ pendingMove: { remaining: postRoll.remaining } });
+          }
           addLog(`\u{1F3B2} Voie choisie au hasard !`);
           setTimeout(() => get().chooseJunction(opts[Math.floor(Math.random() * opts.length)]), 450);
           return;

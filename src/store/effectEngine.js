@@ -392,9 +392,25 @@ function stepHead(set, get, action, ctx) {
       return 'suspend';
     }
     case 'rerollQuestion': {
-      const r = applyReroll(set, get, action, ctx);
+      // Couche de probabilité optionnelle : chance% → thème principal, sinon →
+      // elseSubject (ex. 50% thème choisi / 50% Hardcore). Le tirage est mémorisé
+      // dans ctx (_rerollPick) pour survivre à une suspension SubjectPicker —
+      // sinon le thème pourrait changer entre le clic et la reprise.
+      let act = action;
+      if (typeof action.chance === 'number') {
+        let pick = ctx._rerollPick;
+        if (pick == null) {
+          pick = Math.random() < action.chance ? (action.subject || 'same') : (action.elseSubject || 'hardcore');
+          ctx._rerollPick = pick;
+          const pa = get().pendingActions;
+          if (pa) set({ pendingActions: { ...pa, ctx: { ...pa.ctx, _rerollPick: pick } } });
+        }
+        act = { ...action, subject: pick };
+      }
+      const r = applyReroll(set, get, act, ctx);
       if (r.suspend === 'subjectPicker') { set({ showSubjectPicker: true }); return 'suspend'; }
       clearCtxResolution(set, get, 'subject');
+      clearCtxResolution(set, get, '_rerollPick');
       return 'done';
     }
     case 'forceSubject': {
@@ -410,6 +426,23 @@ function stepHead(set, get, action, ctx) {
       const whoLabel = action.target === 'self' ? 'ta prochaine question' : 'la prochaine question de la cible';
       get().addLog(`🎯 ${SUBJECTS[subj]?.icon || ''} ${whoLabel} forcée en ${sname} !`);
       announce(set, get, SUBJECTS[subj]?.icon || '🎯', `Question forcée → ${sname}`, SUBJECTS[subj]?.color || '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'randomPathNext': {
+      // Rend ALÉATOIRE le prochain choix de voie (carrefour) d'une ou plusieurs
+      // équipes. Flag one-shot par équipe (team.randomPathNext), consommé au
+      // premier carrefour atteint (gameStore.resolvePostRoll).
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const nt = [...get().teams];
+      for (const idx of t.indices) nt[idx] = { ...nt[idx], randomPathNext: true };
+      set({ teams: nt });
+      const whoLabel = action.target === 'self' ? 'Ta prochaine voie'
+        : action.target === 'all' ? 'La prochaine voie de chaque équipe'
+        : 'La prochaine voie de la cible';
+      get().addLog(`🎲 ${whoLabel} sera choisie au hasard !`);
+      announce(set, get, '🎲', `${whoLabel} → au hasard`, '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }

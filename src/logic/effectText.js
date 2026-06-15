@@ -46,8 +46,11 @@ export function describeAction(a) {
       if (a.mode === 'lose') return self ? `perds ${amt}${unit}` : `retire ${amt}${unit} à ${who}`;
       return self ? `gagne ${amt}${unit}` : `donne ${amt}${unit} à ${who}`;
     }
-    case 'rerollQuestion': return `change la question (${subjectLabel(a.subject)})`;
+    case 'rerollQuestion': return typeof a.chance === 'number'
+      ? `change la question (${Math.round(a.chance * 100)}% ${subjectLabel(a.subject)}, sinon ${subjectLabel(a.elseSubject || 'hardcore')})`
+      : `change la question (${subjectLabel(a.subject)})`;
     case 'forceSubject': return `force ${who} à une question ${SUBJECTS[a.subject]?.name || a.subject}`;
+    case 'randomPathNext': return self ? 'rend ta prochaine voie aléatoire' : `rend la prochaine voie de ${who} aléatoire`;
     case 'challenge': {
       const win = (a.do || []).map(describeAction).filter(Boolean).join(', ') || 'rien';
       const lose = (a.else || []).map(describeAction).filter(Boolean).join(', ');

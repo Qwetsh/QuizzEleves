@@ -38,6 +38,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       pos: t.pos,
       // Effets transitoires (rappel visuel côté élève) — cf. getTeamEffects.
       forcedSubject: t.forcedSubject || null,
+      randomPathNext: !!t.randomPathNext,
       itemShield: t.itemShield || 0,
       itemFumigene: !!t.itemFumigene,
       itemFumigeneTurns: t.itemFumigeneTurns || 0,

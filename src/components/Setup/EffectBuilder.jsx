@@ -10,6 +10,7 @@ const ACTIONS = [
   { key: 'move', label: '🏃 Déplacer' },
   { key: 'rerollQuestion', label: '🔄 Changer la question' },
   { key: 'forceSubject', label: '🎯 Imposer un thème' },
+  { key: 'randomPathNext', label: '🎲 Voie aléatoire (carrefour)' },
   { key: 'challenge', label: '🎲 Défi (mon thème + pari)' },
   { key: 'placeTrap', label: '🪤 Poser un piège' },
   { key: 'gainCharge', label: '⚡ Recharger un pouvoir' },
@@ -77,8 +78,14 @@ export function describeAction(a) {
   switch (a.action) {
     case 'move': return `${a.dir === 'back' ? 'reculer' : 'avancer'} ${who} de ${amountLabel(a.n)}`;
     case 'money': return `${a.mode === 'steal' ? 'voler' : a.mode === 'lose' ? 'retirer' : 'donner'} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or à ${who}`;
-    case 'rerollQuestion': return `changer la question (${a.subject === 'choose' ? 'thème au choix' : a.subject === 'same' || !a.subject ? 'même thème' : SUBJECTS[a.subject]?.name || a.subject})`;
+    case 'rerollQuestion': {
+      const sl = (s) => s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s;
+      return typeof a.chance === 'number'
+        ? `changer la question (${Math.round(a.chance * 100)}% ${sl(a.subject)}, sinon ${sl(a.elseSubject || 'hardcore')})`
+        : `changer la question (${sl(a.subject)})`;
+    }
     case 'challenge': return `défi (${SUBJECTS[a.subject]?.name || a.subject}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
+    case 'randomPathNext': return `voie aléatoire au prochain carrefour pour ${who}`;
     case 'placeTrap': return `poser un piège (${a.trap?.do?.length || 0} effet·s)`;
     case 'gainCharge': return 'recharger un pouvoir';
     case 'loot': return `loot un objet${a.category ? ` (${a.category})` : ''}`;
@@ -152,6 +159,31 @@ function SubjectSelect({ value, onChange, extra }) {
   );
 }
 
+// Couche de probabilité optionnelle d'un reroll : chance% → thème principal,
+// sinon → thème de repli (ex. 50% thème choisi / 50% Hardcore). `a` = l'action
+// rerollQuestion, `onChange` reçoit l'action complète remplacée.
+function RerollChance({ a, onChange }) {
+  if (typeof a.chance === 'number') {
+    return (
+      <>
+        <W>avec</W>
+        {numInput(Math.round(a.chance * 100), (v) => onChange({ ...a, chance: v / 100 }), { max: 100 })}
+        <W>% de chance, sinon</W>
+        <SubjectSelect value={a.elseSubject || 'hardcore'} onChange={(v) => onChange({ ...a, elseSubject: v })}
+          extra={<option value="same">le même thème</option>} />
+        <button type="button" className="bal-fx-x" title="Retirer la probabilité"
+          onClick={() => onChange({ action: 'rerollQuestion', subject: a.subject || 'same' })}>{'\u{1F5D1}'}</button>
+      </>
+    );
+  }
+  return (
+    <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 4 }}
+      onClick={() => onChange({ ...a, chance: 0.5, elseSubject: 'hardcore' })}>
+      + % de chance
+    </button>
+  );
+}
+
 function TargetSelect({ value, onChange, opts }) {
   return (
     <select className="qed-select fx-blank" value={value} onChange={(e) => onChange(e.target.value)}>
@@ -176,6 +208,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'extraTime') base.n = 5;
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
+        if (k === 'randomPathNext') base.target = 'self';
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
         if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
         if (k === 'loot') base.category = '';
@@ -218,6 +251,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <W>pour</W>
           <SubjectSelect value={a.subject || 'same'} onChange={(v) => upd({ subject: v })}
             extra={<><option value="same">le même thème</option><option value="choose">un thème au choix</option></>} />
+          <RerollChance a={a} onChange={onChange} />
         </>
       )}
 
@@ -227,6 +261,14 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <TargetSelect value={a.target} onChange={(v) => upd({ target: v })} opts={targetOpts} />
           <W>une question</W>
           <SubjectSelect value={a.subject || 'hardcore'} onChange={(v) => upd({ subject: v })} />
+        </>
+      )}
+
+      {a.action === 'randomPathNext' && (
+        <>
+          <W>pour</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>(prochain carrefour)</W>
         </>
       )}
 
@@ -434,15 +476,20 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
         <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
       )}
 
-      {fx.on === 'question' && (
-        <>
-          <div className="fx-nest-label">Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur :</div>
-          <div className="fx-sentence">
-            <SubjectSelect value={fx.do?.[0]?.subject || 'same'} onChange={(v) => upd({ do: [{ action: 'rerollQuestion', subject: v }] })}
-              extra={<><option value="same">le même thème (autre question)</option><option value="choose">un thème au choix</option></>} />
-          </div>
-        </>
-      )}
+      {fx.on === 'question' && (() => {
+        const a = fx.do?.[0]?.action === 'rerollQuestion' ? fx.do[0] : { action: 'rerollQuestion', subject: 'same' };
+        const setA = (na) => upd({ do: [na] });
+        return (
+          <>
+            <div className="fx-nest-label">Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur :</div>
+            <div className="fx-sentence">
+              <SubjectSelect value={a.subject || 'same'} onChange={(v) => setA({ ...a, subject: v })}
+                extra={<><option value="same">le même thème (autre question)</option><option value="choose">un thème au choix</option></>} />
+              <RerollChance a={a} onChange={setA} />
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
