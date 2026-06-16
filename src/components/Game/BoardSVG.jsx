@@ -270,7 +270,7 @@ const DecorImage = ({ d, i }) => {
   );
 };
 
-const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon }) {
+const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon, inspectTrapAt }) {
   return [
     ...(boardDecor || []).flatMap((d, i) => {
       if (!bimg(d.img)) return [];
@@ -355,9 +355,10 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
           )}
 
           {node.trap && (
-            <g style={{ pointerEvents: 'none' }}>
+            <g style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); inspectTrapAt?.(id); }}>
+              <title>Voir l'effet du piège</title>
               <circle cx={node.x} cy={node.y - r * 0.9} r={r * 0.42} fill="#2b1c10" stroke="#c9472f" strokeWidth={2} opacity={0.92} />
-              <text x={node.x} y={node.y - r * 0.9 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.5}>
+              <text x={node.x} y={node.y - r * 0.9 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.5} style={{ pointerEvents: 'none' }}>
                 {node.trap.icon || '\u{1FAA4}'}
               </text>
             </g>
@@ -383,6 +384,7 @@ export default function BoardSVG() {
   const selectTile = useGameStore((s) => s.selectTile);
   const movePath = useGameStore((s) => s.movePath);
   const clearTeamMove = useGameStore((s) => s.clearTeamMove);
+  const inspectTrapAt = useGameStore((s) => s.inspectTrapAt);
 
   const containerRef = useRef(null);
   const svgRef = useRef(null);
@@ -490,7 +492,7 @@ export default function BoardSVG() {
       >
         <Terrain board={board} islandCircles={islandCircles} viewBox={viewBox} />
 
-        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} />
+        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} inspectTrapAt={inspectTrapAt} />
 
         {/* Animated Pawns */}
         {teams.map((team, idx) => {

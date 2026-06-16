@@ -127,18 +127,23 @@ export function equipTriggerActions(team, on, subject) {
 
 // Options de « changer la question » disponibles pour une équipe (équipement + sac).
 // L'équipement est plafonné à un reroll par question (rerollUsed).
-export function questionRerollOptions(team, rerollUsed) {
+// `subject` = thème de la question courante : un déclencheur portant une condition
+// de matières (`subjects: [...]`) n'est proposé que si elle correspond.
+export function questionRerollOptions(team, rerollUsed, subject) {
   const opts = [];
+  // Filtre de matières : pas de condition ⇒ toujours ; sinon le thème courant doit
+  // être dans la liste.
+  const subjectMatches = (t) => !t.subjects?.length || (subject != null && t.subjects.includes(subject));
   for (const slot of SLOTS_EQUIP) {
     const it = ITEMS[team?.equipment?.[slot]];
-    const trig = triggersOf(it, 'question');
+    const trig = triggersOf(it, 'question').filter(subjectMatches);
     if (trig.length && !rerollUsed) {
       opts.push({ itemName: it.name, icon: it.icon, fromBag: false, actions: trig.flatMap((t) => t.do || []) });
     }
   }
   (team?.bag || []).forEach((k, i) => {
     const it = ITEMS[k];
-    const trig = triggersOf(it, 'question');
+    const trig = triggersOf(it, 'question').filter(subjectMatches);
     if (trig.length) opts.push({ itemName: it.name, icon: it.icon, fromBag: true, bagIndex: i, actions: trig.flatMap((t) => t.do || []) });
   });
   return opts;
@@ -184,7 +189,14 @@ function applyMoveOne(set, get, idx, dir, n, allowJunction) {
     res = moveForward(board, team.pos, n, { throughJunctions: !allowJunction });
   }
   const nt = [...teams];
-  nt[idx] = { ...team, pos: res.finalPos };
+  const patch = { pos: res.finalPos };
+  // High-water-mark : mémorise la case la plus avancée (par x) jamais atteinte —
+  // sert à l'action `teleportFurthest`. Les reculs ne l'abaissent jamais.
+  if (dir !== 'back' && board[res.finalPos]) {
+    const curMaxX = team.maxPos && board[team.maxPos] ? board[team.maxPos].x : -Infinity;
+    if (board[res.finalPos].x > curMaxX) patch.maxPos = res.finalPos;
+  }
+  nt[idx] = { ...team, ...patch };
   const movePath = res.path.length > 1
     ? [{ teamIndex: idx, waypoints: res.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: dir === 'back' ? 'back' : 'forward' }]
     : null;
@@ -447,6 +459,31 @@ function stepHead(set, get, action, ctx) {
         : 'La prochaine voie de la cible';
       get().addLog(`🎲 ${whoLabel} sera choisie au hasard !`);
       announce(set, get, '🎲', `${whoLabel} → au hasard`, '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'teleportFurthest': {
+      // Téléporte la/les cible(s) sur la case la PLUS AVANCÉE (par x) qu'elles
+      // aient déjà atteinte (team.maxPos). Sans effet si déjà au plus loin.
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const { board, teams } = get();
+      const nt = [...teams];
+      let movePath = null; let moved = false;
+      for (const idx of t.indices) {
+        const tm = nt[idx];
+        const best = tm.maxPos && board[tm.maxPos] ? tm.maxPos : tm.pos;
+        if (best !== tm.pos && board[best] && board[best].x > (board[tm.pos]?.x ?? -Infinity)) {
+          movePath = [{ teamIndex: idx, waypoints: [{ x: board[tm.pos].x, y: board[tm.pos].y }, { x: board[best].x, y: board[best].y }], type: 'forward' }];
+          nt[idx] = { ...tm, pos: best };
+          moved = true;
+          get().addLog(`✨ ${tm.emoji} ${tm.name} se téléporte sur sa case la plus avancée !`);
+          if (board[best].type === 'arrivee') { get().addLog(`🏆 ${tm.emoji} ${tm.name} atteint l'arrivée !`); }
+        }
+      }
+      set({ teams: nt, ...(movePath ? { movePath } : {}) });
+      if (moved && nt.some((tm) => board[tm.pos]?.type === 'arrivee')) set({ finished: true });
+      announce(set, get, '✨', moved ? 'Téléportation : case la plus avancée !' : 'Déjà au plus loin atteint', '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }

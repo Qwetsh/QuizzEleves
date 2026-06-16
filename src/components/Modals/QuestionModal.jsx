@@ -114,7 +114,7 @@ export default function QuestionModal() {
 
   const canUseIndice = !indiceUsed && !revealed && team?.powers?.indice?.charges > 0;
   // Objets « changer la question » (équipement plafonné + consommables du sac)
-  const rerollOptions = !revealed ? questionRerollOptions(team, rerollUsedState) : [];
+  const rerollOptions = !revealed ? questionRerollOptions(team, rerollUsedState, showQuestion?.subject) : [];
 
   // Reset uniquement quand la QUESTION change (pas quand showQuestion est
   // re-cree par l'ajout de bonusTime apres usage de l'Indice).

@@ -11,6 +11,7 @@ const ACTIONS = [
   { key: 'rerollQuestion', label: '🔄 Changer la question' },
   { key: 'forceSubject', label: '🎯 Imposer un thème' },
   { key: 'randomPathNext', label: '🎲 Voie aléatoire (carrefour)' },
+  { key: 'teleportFurthest', label: '✨ Téléport. case la + avancée' },
   { key: 'challenge', label: '🎲 Défi (mon thème + pari)' },
   { key: 'placeTrap', label: '🪤 Poser un piège' },
   { key: 'gainCharge', label: '⚡ Recharger un pouvoir' },
@@ -25,9 +26,11 @@ const ACTIONS = [
 const BUFF_TYPES = [
   { k: 'themeBonus', label: 'gagne de l’or à chaque bonne réponse' },
   { k: 'advanceOnCorrect', label: 'avance à chaque bonne réponse' },
+  { k: 'diceBonus', label: 'le dé fait +N à chaque lancer' },
   { k: 'noRecul', label: 'ne recule pas en cas d’erreur' },
   { k: 'loseOnWrong', label: 'perd de l’or en cas d’erreur (malus)' },
   { k: 'randomPath', label: 'voie choisie au hasard' },
+  { k: 'duelImmune', label: 'immunisé contre les duels' },
 ];
 const TARGETS = [
   { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
@@ -86,6 +89,7 @@ export function describeAction(a) {
     }
     case 'challenge': return `défi (${SUBJECTS[a.subject]?.name || a.subject}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
     case 'randomPathNext': return `voie aléatoire au prochain carrefour pour ${who}`;
+    case 'teleportFurthest': return `téléporter ${who} sur la case la plus avancée atteinte`;
     case 'placeTrap': return `poser un piège (${a.trap?.do?.length || 0} effet·s)`;
     case 'gainCharge': return 'recharger un pouvoir';
     case 'loot': return `loot un objet${a.category ? ` (${a.category})` : ''}`;
@@ -209,6 +213,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
         if (k === 'randomPathNext') base.target = 'self';
+        if (k === 'teleportFurthest') base.target = 'self';
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
         if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
         if (k === 'loot') base.category = '';
@@ -272,6 +277,14 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         </>
       )}
 
+      {a.action === 'teleportFurthest' && (
+        <>
+          <W>pour</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>(case la plus avancée déjà atteinte)</W>
+        </>
+      )}
+
       {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>recul(s)</W></>)}
       {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>s à la prochaine question</W></>)}
       {a.action === 'gainCharge' && <W>au choix du joueur</W>}
@@ -320,6 +333,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
                 </select></>)}
               {b.type === 'loseOnWrong' && (<><W>de</W><AmountInput value={b.n ?? 5} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or</W></>)}
               {b.type === 'advanceOnCorrect' && (<><W>de</W><AmountInput value={b.n ?? 'd4'} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>case(s)</W></>)}
+              {b.type === 'diceBonus' && (<><W>de +</W><AmountInput value={b.n ?? 1} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au lancer de dé</W></>)}
             </div>
           </div>
         );
@@ -479,8 +493,22 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
       {fx.on === 'question' && (() => {
         const a = fx.do?.[0]?.action === 'rerollQuestion' ? fx.do[0] : { action: 'rerollQuestion', subject: 'same' };
         const setA = (na) => upd({ do: [na] });
+        const subjects = fx.subjects || [];
+        const toggleSubj = (k) => upd({ subjects: subjects.includes(k) ? subjects.filter((s) => s !== k) : [...subjects, k] });
         return (
           <>
+            <div className="fx-nest-label">Disponible seulement quand la question est en (aucune coche = toutes les matières) :</div>
+            <div className="fx-sentence" style={{ flexWrap: 'wrap', marginBottom: 6 }}>
+              {SUBJECT_KEYS.map((k) => {
+                const on = subjects.includes(k);
+                return (
+                  <button key={k} type="button" onClick={() => toggleSubj(k)}
+                    className={'fx-die' + (on ? ' is-on' : '')} style={{ width: 'auto', padding: '2px 8px', fontSize: 12 }}>
+                    {SUBJECTS[k]?.icon} {SUBJECTS[k]?.name || k}
+                  </button>
+                );
+              })}
+            </div>
             <div className="fx-nest-label">Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur :</div>
             <div className="fx-sentence">
               <SubjectSelect value={a.subject || 'same'} onChange={(v) => setA({ ...a, subject: v })}

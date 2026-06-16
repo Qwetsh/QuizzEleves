@@ -45,6 +45,10 @@ export function findBuff(team, type, subject) {
   return teamBuffs(team).find((b) => b.type === type && (subject == null || !b.subject || b.subject === subject));
 }
 export function hasBuff(team, type) { return teamBuffs(team).some((b) => b.type === type); }
+// Somme des valeurs `n` des buffs d'un type (cumul si plusieurs actifs).
+export function buffValue(team, type) {
+  return teamBuffs(team).filter((b) => b.type === type).reduce((s, b) => s + (Number(b.n) || 0), 0);
+}
 
 // --- Quantités aléatoires (dés) ---------------------------------------
 // Une quantité d'effet (`fx.value` / `action.n`) peut être un NOMBRE fixe ou
@@ -138,6 +142,14 @@ export function getEffectValue(team, type) {
 
 export function hasEffect(team, type) {
   return getEffectValue(team, type) > 0;
+}
+
+/**
+ * Immunité aux duels : soit via un passif d'équipement/set (effet `duelImmune`),
+ * soit via un buff temporisé (consommable, `duelImmune` pendant X tours).
+ */
+export function isDuelImmune(team) {
+  return hasEffect(team, 'duelImmune') || hasBuff(team, 'duelImmune');
 }
 
 /**

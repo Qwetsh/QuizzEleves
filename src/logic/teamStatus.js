@@ -12,7 +12,9 @@ const BUFF_INFO = {
   themeBonus: { tone: 'buff', icon: '💰', color: '#c8911f', label: (b) => `+${b.n ?? 5} or / bonne réponse${b.subject ? ` en ${SUBJECTS[b.subject]?.name || b.subject}` : ''}` },
   noRecul: { tone: 'buff', icon: '\u{1F6DF}', color: '#3b6cb3', label: () => 'Pas de recul à l’erreur' },
   advanceOnCorrect: { tone: 'buff', icon: '🏃', color: '#2f9d5a', label: () => 'Avance si bonne réponse' },
+  diceBonus: { tone: 'buff', icon: '🚀', color: '#2f9d5a', label: (b) => `Dé +${b.n ?? 1} au lancer` },
   randomPath: { tone: 'buff', icon: '🎲', color: '#8745d4', label: () => 'Voie choisie au hasard' },
+  duelImmune: { tone: 'buff', icon: '\u{1F6E1}\u{FE0F}', color: '#3b6cb3', label: () => 'Immunisé contre les duels' },
   loseOnWrong: { tone: 'malus', icon: '💸', color: '#b5341f', label: (b) => `Perd ${b.n ?? 5} or à l’erreur` },
 };
 

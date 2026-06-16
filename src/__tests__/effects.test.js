@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, setItemsData } from '../data/items.js';
-import { getEffectValue, activeSets, hasBuff } from '../logic/itemEffects.js';
+import { getEffectValue, activeSets, hasBuff, isDuelImmune } from '../logic/itemEffects.js';
 import {
   runEffects, resumeQueue, legacyToActions, consumableActions,
   equipOnRollActions, equipTriggerActions, questionRerollOptions, d6Branch, expandUseTriggers,
@@ -286,6 +286,51 @@ describe('actions : reroll de question', () => {
     // pas d'objets de reroll dans le catalogue par défaut -> 0
     expect(questionRerollOptions(mkTeam(0), false)).toHaveLength(0);
   });
+
+  it('questionRerollOptions filtre par matières (subjects)', () => {
+    setItemsData({
+      loupeSvt: { name: 'Loupe SVT', slot: 'head', rarity: 'rare', price: 10, icon: '🔬',
+        effects: [{ kind: 'trigger', on: 'question', subjects: ['svt'], do: [{ action: 'rerollQuestion', subject: 'same' }] }] },
+    });
+    const t = mkTeam(0, { equipment: { head: 'loupeSvt', body: null, feet: null } });
+    expect(questionRerollOptions(t, false, 'svt')).toHaveLength(1);    // matière ciblée → proposé
+    expect(questionRerollOptions(t, false, 'maths')).toHaveLength(0);  // autre matière → masqué
+    expect(questionRerollOptions(t, false)).toHaveLength(0);           // sans thème → masqué
+  });
+});
+
+describe('action : téléportation case la plus avancée (teleportFurthest)', () => {
+  it('renvoie sur maxPos quand il est devant', () => {
+    freshGame([{ pos: 'n2', maxPos: 'n6' }, {}]);
+    exec([{ action: 'teleportFurthest', target: 'self' }], { source: 'item' });
+    expect(team(0).pos).toBe('n6');
+  });
+  it('sans effet si déjà au plus loin atteint', () => {
+    freshGame([{ pos: 'n6', maxPos: 'n6' }, {}]);
+    exec([{ action: 'teleportFurthest', target: 'self' }], { source: 'item' });
+    expect(team(0).pos).toBe('n6');
+  });
+  it('avancer met à jour le high-water-mark maxPos', () => {
+    freshGame([{ pos: 'n2' }, {}]);
+    exec([{ action: 'move', target: 'self', dir: 'forward', n: 3 }], { source: 'item' });
+    expect(team(0).pos).toBe('n5');
+    expect(team(0).maxPos).toBe('n5');
+  });
+});
+
+describe('immunité aux duels (isDuelImmune)', () => {
+  it('vrai via passif d’équipement (duelImmune)', () => {
+    setItemsData({
+      amuletteDuel: { name: 'Amulette anti-duel', slot: 'feet', rarity: 'légendaire', price: 30,
+        effects: [{ type: 'duelImmune', value: 1 }] },
+    });
+    const t = mkTeam(0, { equipment: { head: null, body: null, feet: 'amuletteDuel' } });
+    expect(isDuelImmune(t)).toBe(true);
+  });
+  it('vrai via buff temporisé, faux sans rien', () => {
+    expect(isDuelImmune(mkTeam(0, { buffs: [{ type: 'duelImmune', turns: 2 }] }))).toBe(true);
+    expect(isDuelImmune(mkTeam(0))).toBe(false);
+  });
 });
 
 describe('action : voie aléatoire (randomPathNext)', () => {
@@ -449,6 +494,23 @@ describe('d6 table', () => {
     resumeQueue(set, get, { rollResult: 5 });
     expect(team(0).money).toBe(55);
     expect(S().pendingActions).toBeNull();
+  });
+});
+
+// --- Buff bonus de dé --------------------------------------------------
+
+describe('buff diceBonus', () => {
+  it('le déplacement = valeur du dé + N pendant la durée', () => {
+    freshGame([{ pos: 'depart', buffs: [{ type: 'diceBonus', turns: 4, n: 2 }] }, {}]);
+    S().handleDiceResult(3);
+    expect(team(0).pos).toBe('n5');        // depart + (3+2)
+    expect(S().preRollValue).toBe(5);      // recul potentiel = avance effective
+  });
+
+  it('sans buff : déplacement = valeur du dé', () => {
+    freshGame([{ pos: 'depart' }, {}]);
+    S().handleDiceResult(3);
+    expect(team(0).pos).toBe('n3');
   });
 });
 

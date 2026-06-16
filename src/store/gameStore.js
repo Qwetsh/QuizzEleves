@@ -20,7 +20,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, findBuff, hasBuff } from '../logic/itemEffects.js';
+import { getEffectValue, findBuff, hasBuff, buffValue, isDuelImmune } from '../logic/itemEffects.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -78,6 +78,7 @@ const TURN_RESET = {
   showTilePicker: null,
   showActionDice: null,
   showSubjectPicker: false,
+  inspectTrap: null,
   rerollUsed: false,
   trapDepth: 0,
   // Case événement = événement + question : flag posé à l'atterrissage, consommé
@@ -357,10 +358,16 @@ export const useGameStore = create((set, get) => ({
   handleDiceResult: (value, opts = {}) => {
     const { teams, currentTeam, board, addLog } = get();
     const team = teams[currentTeam];
-    set({ preRollPos: team.pos, preRollValue: value, freeActivation: false });
-    addLog(`${team.emoji} ${team.name} lance le d\u00E9 : ${value}`);
+    // Buff \u00AB bonus de d\u00E9 \u00BB (effet de dur\u00E9e) : pendant sa dur\u00E9e, le d\u00E9placement
+    // effectif = valeur du d\u00E9 + N. L'atterrissage sur la case finale est normal.
+    const bonus = buffValue(team, 'diceBonus');
+    const eff = value + bonus;
+    set({ preRollPos: team.pos, preRollValue: eff, freeActivation: false });
+    addLog(bonus > 0
+      ? `${team.emoji} ${team.name} lance le d\u00E9 : ${value} (+${bonus} bonus) \u2192 avance de ${eff} !`
+      : `${team.emoji} ${team.name} lance le d\u00E9 : ${value}`);
 
-    const result = moveForward(board, team.pos, value);
+    const result = moveForward(board, team.pos, eff);
     const newTeams = [...teams];
     newTeams[currentTeam] = { ...team, pos: result.finalPos };
     // Build animation waypoints from path
@@ -480,6 +487,17 @@ export const useGameStore = create((set, get) => ({
 
     if (!node) { get().nextTurn(); return; }
 
+    // High-water-mark : mémorise la case la plus avancée (par x) jamais atteinte
+    // par cette équipe — utilisé par l'action `teleportFurthest`.
+    {
+      const curMaxX = team.maxPos && board[team.maxPos] ? board[team.maxPos].x : -Infinity;
+      if (node.x > curMaxX) {
+        const nt = [...teams];
+        nt[currentTeam] = { ...team, maxPos: team.pos };
+        set({ teams: nt });
+      }
+    }
+
     if (node.type === 'arrivee') {
       addLog(`\u{1F3C6} ${team.emoji} ${team.name} atteint l'arriv\u00e9e !`);
       set({ finished: true });
@@ -509,9 +527,16 @@ export const useGameStore = create((set, get) => ({
     if (node.type !== 'depart') {
       const defenderIndex = teams.findIndex((t, i) => i !== currentTeam && t.pos === team.pos);
       if (defenderIndex !== -1) {
-        const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : randomSubject();
-        fightH.startFight(set, get, defenderIndex, subj);
-        return;
+        // Immunité aux duels (passif ou buff) : si l'attaquant OU le défenseur est
+        // immunisé, pas de duel — on poursuit vers l'action normale de la case.
+        if (isDuelImmune(team) || isDuelImmune(teams[defenderIndex])) {
+          const who = isDuelImmune(team) ? team : teams[defenderIndex];
+          addLog(`\u{1F6E1}\u{FE0F} Duel évité : ${who.emoji} ${who.name} est immunisé(e) aux duels.`);
+        } else {
+          const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : randomSubject();
+          fightH.startFight(set, get, defenderIndex, subj);
+          return;
+        }
       }
     }
 
@@ -1050,6 +1075,14 @@ export const useGameStore = create((set, get) => ({
     set({ showSubjectPicker: false });
     effectH.resumeQueue(set, get, { subject: key });
   },
+  // Inspection d'un piège : ouvre une fiche listant ses effets (un piège peut en
+  // cumuler plusieurs). Purement informatif, ne déclenche pas le piège.
+  inspectTrapAt: (nodeId) => {
+    const node = get().board?.[nodeId];
+    if (!node?.trap) return;
+    set({ inspectTrap: { nodeId, ...node.trap } });
+  },
+  closeInspectTrap: () => set({ inspectTrap: null }),
   // Bouton « changer la question » : exécute le reroll fourni par un objet
   useQuestionReroll: (opt) => {
     const { showQuestion, pendingActions, rerollUsed, teams, currentTeam } = get();

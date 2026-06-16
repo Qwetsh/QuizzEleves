@@ -22,6 +22,7 @@ import FlyingCoins from './FlyingCoins';
 import LightningStrike from './LightningStrike';
 import ActionDiceOverlay from './ActionDiceOverlay';
 import SubjectPickerModal from '../Modals/SubjectPickerModal';
+import TrapInspectModal from '../Modals/TrapInspectModal';
 import EffectToast from './EffectToast';
 import btnBoutique from '../../assets/inventory/btn-boutique.png';
 import btnInventaire from '../../assets/inventory/btn-inventaire.png';
@@ -232,6 +233,7 @@ export default function GameLayout() {
       <FightModal />
       <LootReveal />
       <StarterChest />
+      <TrapInspectModal />
     </div>
   );
 }

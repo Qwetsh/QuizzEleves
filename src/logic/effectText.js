@@ -51,6 +51,7 @@ export function describeAction(a) {
       : `change la question (${subjectLabel(a.subject)})`;
     case 'forceSubject': return `force ${who} à une question ${SUBJECTS[a.subject]?.name || a.subject}`;
     case 'randomPathNext': return self ? 'rend ta prochaine voie aléatoire' : `rend la prochaine voie de ${who} aléatoire`;
+    case 'teleportFurthest': return self ? 'te téléporte sur la case la plus avancée atteinte' : `téléporte ${who} sur sa case la plus avancée atteinte`;
     case 'challenge': {
       const win = (a.do || []).map(describeAction).filter(Boolean).join(', ') || 'rien';
       const lose = (a.else || []).map(describeAction).filter(Boolean).join(', ');
@@ -69,9 +70,11 @@ export function describeAction(a) {
       const D = {
         themeBonus: `+${amountLabel(b.n ?? 5)} or par bonne réponse${b.subject ? ` en ${SUBJECTS[b.subject]?.name || b.subject}` : ''}`,
         advanceOnCorrect: `avance de ${amountLabel(b.n ?? 'd4')} à chaque bonne réponse`,
+        diceBonus: `chaque lancer de dé fait +${amountLabel(b.n ?? 1)}`,
         noRecul: 'aucun recul en cas d’erreur',
         loseOnWrong: `perd ${amountLabel(b.n ?? 5)} or à chaque erreur`,
         randomPath: 'voie choisie au hasard aux carrefours',
+        duelImmune: 'immunisé contre les duels',
       };
       return `${turns}, ${tgt} : ${D[b.type] || b.type}`;
     }
@@ -98,6 +101,7 @@ function describeLegacy(fx) {
     case 'reculReduction': txt = `recul subi réduit de ${v} case${fx.value === 1 ? '' : 's'}`; break;
     case 'reculReductionPct': txt = `recul subi réduit de ${v}%`; break;
     case 'tempeteImmune': txt = `immunité à la Tempête`; break;
+    case 'duelImmune': txt = `immunité aux duels`; break;
     case 'oubliProtect': txt = `protège du Trou de l'oubli`; break;
     case 'fightStealBonus': txt = `+${v} pièce${fx.value === 1 ? '' : 's'} volée${fx.value === 1 ? '' : 's'} en duel`; break;
     case 'lootBonusConsumable': txt = `+${v}% de chance de looter un consommable`; break;
@@ -138,7 +142,12 @@ function describeTrigger(fx) {
   if (fx.on === 'wrong') return `${chancePrefix}à chaque erreur${onSubj} (ou temps écoulé) : ${joinDo(fx.do)}`;
   if (fx.on === 'fightWin') return `${chancePrefix}quand tu gagnes un duel : ${joinDo(fx.do)}`;
   if (fx.on === 'fightLose') return `${chancePrefix}quand tu perds un duel : ${joinDo(fx.do)}`;
-  if (fx.on === 'question') return `bouton « Changer la question » → ${subjectLabel(fx.do?.[0]?.subject)}`;
+  if (fx.on === 'question') {
+    const onSubjects = fx.subjects?.length
+      ? ` (seulement en ${fx.subjects.map((s) => SUBJECTS[s]?.name || s).join('/')})`
+      : '';
+    return `bouton « Changer la question »${onSubjects} → ${subjectLabel(fx.do?.[0]?.subject)}`;
+  }
   return joinDo(fx.do);
 }
 
