@@ -48,6 +48,7 @@ function freshGame(overrides = [{}, {}, {}]) {
     indiceUsed: false, indiceHidden: [], freeActivation: false,
     shopStock: [], shopStockTurns: 10, movePath: null,
     preRollPos: null, preRollValue: null,
+    enabledItems: Object.keys(ITEMS),
   });
 }
 
@@ -90,21 +91,26 @@ describe('catalogue items.js', () => {
     }
   });
 
-  it('le stock boutique exclut les légendaires, le loot peut en donner', () => {
+  it('la vitrine = consommables + équipements, sans légendaires ni doublon', () => {
     for (let n = 0; n < 20; n++) {
       const stock = generateShopStock();
-      expect(stock).toHaveLength(4);
-      expect(new Set(stock).size).toBe(4);
+      expect(new Set(stock).size).toBe(stock.length); // pas de doublon
       for (const k of stock) expect(ITEMS[k].lootOnly).toBeFalsy();
+      const consos = stock.filter((k) => ITEMS[k].slot === 'consumable');
+      const equips = stock.filter((k) => ITEMS[k].slot !== 'consumable');
+      expect(consos.length).toBeGreaterThan(0);
+      expect(equips.length).toBeGreaterThan(0);
+      expect(consos.length).toBeLessThanOrEqual(8);
+      expect(equips.length).toBeLessThanOrEqual(8);
     }
     expect(ITEMS[pickLootItem(1)].rarity).toBe('legendaire');
     expect(ITEMS[pickLootItem(0)].rarity).not.toBe('legendaire');
   });
 
   it('enabledItems filtre la boutique et le loot', () => {
-    const enabled = ['chapeauPaille', 'potionHate'];
+    const enabled = ['chapeauPaille', 'potionHate']; // 1 équip + 1 conso
     for (let n = 0; n < 10; n++) {
-      const stock = generateShopStock(4, enabled);
+      const stock = generateShopStock(enabled);
       expect(stock.length).toBeLessThanOrEqual(2);
       for (const k of stock) expect(enabled).toContain(k);
       expect(enabled).toContain(pickLootItem(0.5, enabled));
@@ -112,7 +118,7 @@ describe('catalogue items.js', () => {
     // Rabattement : que des non-legendaires actives mais tirage "legendaire"
     expect(enabled).toContain(pickLootItem(1, enabled));
     // Aucun objet active
-    expect(generateShopStock(4, [])).toEqual([]);
+    expect(generateShopStock([])).toEqual([]);
     expect(pickLootItem(0.5, [])).toBeNull();
   });
 });
@@ -192,12 +198,21 @@ describe('itemEffects', () => {
 describe('boutique : buyItem / revente', () => {
   beforeEach(() => freshGame());
 
-  it('achat déquipement : débit + slot rempli + retiré du stock', () => {
-    useGameStore.setState({ shopStock: ['chapeauPaille', 'potionHate'] });
+  it('achat déquipement : débit + slot rempli + remplacé dans le stock', () => {
+    // Catalogue réduit pour rendre le remplacement déterministe : après l'achat
+    // de chapeauPaille, le seul autre équipement activé est bandeauSage.
+    useGameStore.setState({
+      enabledItems: ['chapeauPaille', 'potionHate', 'bandeauSage'],
+      shopStock: ['chapeauPaille', 'potionHate'],
+    });
     S().buyItem('chapeauPaille');
     expect(team().money).toBe(40);
     expect(team().equipment.head).toBe('chapeauPaille');
-    expect(S().shopStock).toEqual(['potionHate']);
+    // chapeauPaille retiré, remplacé par un équipement (bandeauSage) ; potionHate reste
+    expect(S().shopStock).not.toContain('chapeauPaille');
+    expect(S().shopStock).toContain('potionHate');
+    expect(S().shopStock).toContain('bandeauSage');
+    expect(S().shopStock).toHaveLength(2);
   });
 
   it('slot occupé : le nouvel équipement va dans le sac (pas de revente forcée)', () => {
@@ -231,6 +246,25 @@ describe('boutique : buyItem / revente', () => {
     S().buyItem('bandeauSage');
     expect(team().money).toBe(50);
     expect(team().equipment.head).toBeNull();
+  });
+
+  it('renouvellement à lachat : remplaçant de même catégorie, pas le même objet', () => {
+    // Achat d'un consommable -> un autre CONSOMMABLE arrive, jamais celui acheté.
+    useGameStore.setState({ shopStock: ['potionHate', 'chapeauPaille'] });
+    S().buyItem('potionHate');
+    const added = S().shopStock.filter((k) => k !== 'chapeauPaille');
+    expect(added).toHaveLength(1);
+    expect(added[0]).not.toBe('potionHate');           // pas de réapparition immédiate
+    expect(ITEMS[added[0]].slot).toBe('consumable');   // même catégorie
+    expect(S().shopStock).toContain('chapeauPaille');  // l'équipement reste
+  });
+
+  it('achat refusé (argent) : pas de remplacement', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], money: 0 };
+    useGameStore.setState({ teams, shopStock: ['bandeauSage', 'potionHate'] });
+    S().buyItem('bandeauSage');
+    expect(S().shopStock).toEqual(['bandeauSage', 'potionHate']); // inchangé
   });
 
   it('sellEquipment / sellBagItem rendent la moitié du prix', () => {

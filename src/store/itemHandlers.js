@@ -5,7 +5,11 @@ import { saveGame } from './persistence.js';
 import { runEffects, consumableActions, announce } from './effectEngine.js';
 
 export const BAG_SIZE = 12;
-export const SHOP_STOCK_SIZE = 4;
+// Vitrine de la boutique : N consommables + N équipements affichés en même temps.
+// Le stock ne tourne plus tout seul : chaque achat est remplacé aussitôt par un
+// nouvel objet de la MÊME catégorie (cf. buyItem + pickReplacement).
+export const SHOP_CONSUMABLE_SLOTS = 8;
+export const SHOP_EQUIPMENT_SLOTS = 8;
 // Plafond d'une pile de consommables identiques (au-delà → nouvelle case).
 export const STACK_MAX = 9;
 
@@ -114,12 +118,41 @@ export function pickWeightedItems(count, enabledKeys, weightOf) {
   return stock;
 }
 
-// Boutique : les objets lootOnly (légendaires) sont exclus pour que le loot
-// reste désirable.
-export function generateShopStock(count = SHOP_STOCK_SIZE, enabledKeys = Object.keys(ITEMS)) {
-  return pickWeightedItems(count, enabledKeys, (item) =>
-    item.lootOnly ? 0 : item.rarity === 'commun' ? LOOT.shopWeightCommon : LOOT.shopWeightOther
-  );
+// Poids d'un objet dans la boutique normale (lootOnly/légendaire exclus pour
+// que le loot reste désirable).
+const shopWeightOf = (item) =>
+  item.lootOnly ? 0 : item.rarity === 'commun' ? LOOT.shopWeightCommon : LOOT.shopWeightOther;
+
+const isConsumableKey = (k) => ITEMS[k]?.slot === 'consumable';
+
+// Tire `count` objets d'une catégorie ('consumable' | 'equipment') parmi les
+// objets activés, en excluant les clés déjà présentes (`exclude`).
+export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS), exclude = []) {
+  const ex = new Set(exclude);
+  const pool = enabledKeys.filter((k) => {
+    const it = ITEMS[k];
+    if (!it || ex.has(k)) return false;
+    return category === 'consumable' ? it.slot === 'consumable' : it.slot !== 'consumable';
+  });
+  return pickWeightedItems(count, pool, shopWeightOf);
+}
+
+// Vitrine de la boutique : SHOP_CONSUMABLE_SLOTS consommables + SHOP_EQUIPMENT_SLOTS
+// équipements, dans un seul tableau plat (consommables d'abord).
+export function generateShopStock(enabledKeys = Object.keys(ITEMS)) {
+  return [
+    ...pickShopItems('consumable', SHOP_CONSUMABLE_SLOTS, enabledKeys),
+    ...pickShopItems('equipment', SHOP_EQUIPMENT_SLOTS, enabledKeys),
+  ];
+}
+
+// Objet de remplacement après un achat : même catégorie que `boughtKey`, absent
+// du stock courant ET différent de l'objet acheté (pour qu'il ne réapparaisse
+// pas aussitôt). null si le pool est épuisé.
+export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys(ITEMS)) {
+  const category = isConsumableKey(boughtKey) ? 'consumable' : 'equipment';
+  const picked = pickShopItems(category, 1, enabledKeys, [...stock, boughtKey]);
+  return picked[0] || null;
 }
 
 // Tirage d'un objet de loot (coffres, récompense de duel...) parmi les objets
@@ -176,9 +209,14 @@ export function buyItem(set, get, itemKey) {
   }
 
   const restStock = stock.filter((k) => k !== itemKey);
-  set(mn
-    ? { teams: newTeams, showShop: { ...showShop, stock: restStock } }
-    : { teams: newTeams, shopStock: restStock });
+  if (mn) {
+    // Marché Noir : stock clandestin qui s'épuise (pas de réassort).
+    set({ teams: newTeams, showShop: { ...showShop, stock: restStock } });
+  } else {
+    // Boutique : un nouvel objet de la même catégorie arrive aussitôt.
+    const replacement = pickReplacement(itemKey, restStock, get().enabledItems);
+    set({ teams: newTeams, shopStock: replacement ? [...restStock, replacement] : restStock });
+  }
   saveGame(get());
 }
 

@@ -331,8 +331,8 @@ export const useGameStore = create((set, get) => ({
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
-      shopStock: get().itemsEnabled() ? itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems) : [],
-      shopStockTurns: setupTeams.length * 2,
+      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems) : [],
+      shopStockTurns: 0,
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       powerSetupIndex: 0, powerSetupCategory: 'def',
@@ -1163,17 +1163,11 @@ export const useGameStore = create((set, get) => ({
 
   // --- Turn management ---
   nextTurn: () => {
-    const { teams, currentTeam, finished, shopStockTurns, addLog } = get();
+    const { teams, currentTeam, finished, addLog } = get();
     if (finished) return;
 
-    // Stock rotatif de la boutique : renouvele apres N tours (ext. objets requise)
-    const turnsLeft = (shopStockTurns ?? 0) - 1;
-    if (get().itemsEnabled() && turnsLeft <= 0) {
-      set({ shopStock: itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems), shopStockTurns: teams.length * 2 });
-      addLog(`🛒 La boutique renouvelle son stock d'objets !`);
-    } else {
-      set({ shopStockTurns: turnsLeft });
-    }
+    // La boutique ne tourne plus toute seule : son stock se renouvelle à l'achat
+    // (un objet acheté est remplacé aussitôt — cf. buyItem/pickReplacement).
 
     const newCurrent = (currentTeam + 1) % teams.length;
     // Buffs à durée (tours) : on décrémente quand l'équipe REGAGNE la main ;
@@ -1274,8 +1268,11 @@ export const useGameStore = create((set, get) => ({
     if (saved.extensions == null) set({ extensions: defaultExtensions() });
     // `level` est désormais un tableau : normalise les sauvegardes au format chaîne.
     if (!Array.isArray(saved.level)) set({ level: [saved.level || 'cycle4'] });
-    if (get().itemsEnabled() && !Array.isArray(saved.shopStock)) {
-      set({ shopStock: itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems), shopStockTurns: get().teams.length * 2 });
+    // Migration : ancien stock (rotatif, 4 objets) → nouvelle vitrine 8+8. On
+    // régénère si le stock est absent ou trop petit pour le nouveau format.
+    if (get().itemsEnabled()
+        && (!Array.isArray(saved.shopStock) || saved.shopStock.length < itemH.SHOP_CONSUMABLE_SLOTS)) {
+      set({ shopStock: itemH.generateShopStock(get().enabledItems), shopStockTurns: 0 });
     }
   },
 

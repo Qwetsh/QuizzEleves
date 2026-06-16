@@ -2,6 +2,7 @@
 // le chrome (cadre, plaque, feuillage, a11y) vient de TemplePanel ; ici,
 // les étals de parchemin (arrivage d'objets, recharge, amélioration,
 // déblocage de pouvoirs) à bannières de bois.
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
@@ -58,18 +59,15 @@ function Price({ value }) {
   );
 }
 
-/* ---------- Étal : objets (stock rotatif ou marché noir) ---------- */
-function ItemStall({ team, shopStock, shopStockTurns, onBuyItem, discount = 1, banner, note }) {
-  if (!shopStock || shopStock.length === 0) return null;
+/* ---------- Étal : objets (liste de clés fournie) ---------- */
+function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
+  if (!items || items.length === 0) return null;
   const bag = team.bag || [];
   const equipment = team.equipment || {};
 
   return (
-    <Stall
-      banner={banner || '\u{1F4E6} Arrivage du moment'}
-      note={note != null ? note : `Nouvel arrivage dans ${shopStockTurns} tour${shopStockTurns > 1 ? 's' : ''}`}
-    >
-      {shopStock.map((key, idx) => {
+    <Stall banner={banner || '\u{1F4E6} Objets'} note={note}>
+      {items.map((key, idx) => {
         const item = ITEMS[key];
         if (!item) return null;
         const rarityColor = RARITIES[item.rarity]?.color || '#888';
@@ -248,9 +246,10 @@ export default function ShopModal() {
   const buyNewPower = useGameStore((s) => s.buyNewPower);
   const buyItem = useGameStore((s) => s.buyItem);
   const shopStock = useGameStore((s) => s.shopStock);
-  const shopStockTurns = useGameStore((s) => s.shopStockTurns);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
+
+  const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs'
 
   const team = showShop ? teams[currentTeam] : null;
 
@@ -264,6 +263,10 @@ export default function ShopModal() {
 
   const marcheNoir = typeof showShop === 'object' && showShop?.marcheNoir;
 
+  // Vitrine normale : on sépare consommables et équipements.
+  const consoStock = (shopStock || []).filter((k) => ITEMS[k]?.slot === 'consumable');
+  const equipStock = (shopStock || []).filter((k) => ITEMS[k] && ITEMS[k].slot !== 'consumable');
+
   return (
     <AnimatePresence>
       {showShop && team && (
@@ -273,7 +276,7 @@ export default function ShopModal() {
               <div className="shop-scroll">
                 <ItemStall
                   team={team}
-                  shopStock={showShop.stock}
+                  items={showShop.stock}
                   onBuyItem={buyItem}
                   discount={showShop.discount ?? 1}
                   banner={'🕯️ Étals clandestins'}
@@ -286,27 +289,54 @@ export default function ShopModal() {
           <TemplePanel title="BOUTIQUE" team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
             <div className="inv-wood">
               <div className="shop-scroll">
-                <ItemStall
-                  team={team}
-                  shopStock={shopStock}
-                  shopStockTurns={shopStockTurns}
-                  onBuyItem={buyItem}
-                />
-                <RechargeStall
-                  ownedPowers={ownedPowers}
-                  money={team.money}
-                  onBuyCharge={buyPowerCharge}
-                />
-                <UpgradeStall
-                  ownedPowers={ownedPowers}
-                  money={team.money}
-                  onUpgrade={upgradePowerLevel}
-                />
-                <UnlockStall
-                  unownedPowers={unownedPowers}
-                  money={team.money}
-                  onBuyNew={buyNewPower}
-                />
+                <div className="shop-tabs" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === 'objets'}
+                    className={'shop-tab' + (tab === 'objets' ? ' is-active' : '')}
+                    onClick={() => { soundClick(); setTab('objets'); }}
+                  >
+                    {'\u{1F9F3}'} Objets
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === 'pouvoirs'}
+                    className={'shop-tab' + (tab === 'pouvoirs' ? ' is-active' : '')}
+                    onClick={() => { soundClick(); setTab('pouvoirs'); }}
+                  >
+                    {'⚡'} Pouvoirs
+                  </button>
+                </div>
+
+                {tab === 'objets' ? (
+                  <>
+                    <ItemStall team={team} items={consoStock} onBuyItem={buyItem} banner={'🧪 Consommables'} />
+                    <ItemStall team={team} items={equipStock} onBuyItem={buyItem} banner={'🛡️ Équipements'} />
+                    {consoStock.length === 0 && equipStock.length === 0 && (
+                      <div className="shop-empty">La boutique n'a plus rien à vendre pour le moment.</div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <RechargeStall
+                      ownedPowers={ownedPowers}
+                      money={team.money}
+                      onBuyCharge={buyPowerCharge}
+                    />
+                    <UpgradeStall
+                      ownedPowers={ownedPowers}
+                      money={team.money}
+                      onUpgrade={upgradePowerLevel}
+                    />
+                    <UnlockStall
+                      unownedPowers={unownedPowers}
+                      money={team.money}
+                      onBuyNew={buyNewPower}
+                    />
+                  </>
+                )}
               </div>
             </div>
           </TemplePanel>
