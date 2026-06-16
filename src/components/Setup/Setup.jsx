@@ -15,6 +15,7 @@ import EventsChecklist from './EventsChecklist';
 import ItemsChecklist from './ItemsChecklist';
 import StarterChestConfig from './StarterChestConfig';
 import ExtensionsChecklist from './ExtensionsChecklist';
+import RulesConfig from './RulesConfig';
 import { extOn } from '../../extensions/registry';
 
 // Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
@@ -214,6 +215,9 @@ export default function Setup() {
           </div>
           <div className="panel">
             <ExtensionsChecklist />
+          </div>
+          <div className="panel">
+            <RulesConfig />
           </div>
           <div className="panel">
             <EventsChecklist />

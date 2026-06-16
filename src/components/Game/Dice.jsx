@@ -21,7 +21,8 @@ export default function Dice() {
   const pendingActions = useGameStore((s) => s.pendingActions);
   const showChargePicker = useGameStore((s) => s.showChargePicker);
   const showTargetPicker = useGameStore((s) => s.showTargetPicker);
-  const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker;
+  const showDuelChoice = useGameStore((s) => s.showDuelChoice);
+  const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice;
   const team = teams[currentTeam];
   const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding, pendingActions };
   const canRelance = team?.powers?.relance?.charges > 0 && canUsePowerInContext('relance', ctx);

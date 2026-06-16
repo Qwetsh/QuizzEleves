@@ -98,6 +98,7 @@ const TURN_RESET = {
   showShop: false,
   showShopPrompt: false,
   showInventory: false,
+  showDuelChoice: null,
   indiceUsed: false,
   indiceHidden: [],
   freeActivation: false,
@@ -142,6 +143,11 @@ export const useGameStore = create((set, get) => ({
   // Pool de questions « spécial Brevet » (DNB) ajouté par-dessus le niveau choisi
   useBrevet: false,
   setUseBrevet: (v) => set({ useBrevet: v }),
+
+  // Duels : true = duel forcé automatique (historique) ; false = l'équipe qui
+  // arrive sur une case occupée CHOISIT de défier (et qui) ou non.
+  forcedDuels: false,
+  setForcedDuels: (v) => set({ forcedDuels: v }),
 
   nbTeams: 3,
   setNbTeams: (n) => set({ nbTeams: n, setupTeams: createDefaultTeams(n) }),
@@ -230,6 +236,8 @@ export const useGameStore = create((set, get) => ({
   showQuestion: null,
   showEvent: null,
   showFight: null,
+  // Choix de duel (mode non forcé) : { defenders:[idx], subject } | null
+  showDuelChoice: null,
   eventApplied: false,
   showTargetPicker: null,
   indiceUsed: false,
@@ -438,8 +446,8 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest, teams, currentTeam } = get();
-    if (finished || rolling || showDiceModal || showFight || showStarterChest) return;
+    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest, showDuelChoice, teams, currentTeam } = get();
+    if (finished || rolling || showDiceModal || showFight || showStarterChest || showDuelChoice) return;
     // Bloque le dé pendant une séquence d'effet (choix de case/cible/d6...) ou
     // tant que le tour n'est pas résolu (atterrissage, jonction, question).
     if (pendingActions || pendingLanding || awaitingChoice || showQuestion || showEvent) return;
@@ -622,30 +630,53 @@ export const useGameStore = create((set, get) => ({
       }
     }
 
-    // Combat : la case (hors depart) est occupee par une autre equipe.
-    // Le duel remplace l'action normale de la case.
+    // Duel : la case (hors départ) est occupée par une/des autre(s) équipe(s).
     if (node.type !== 'depart') {
-      const defenderIndex = teams.findIndex((t, i) => i !== currentTeam && t.pos === team.pos);
-      if (defenderIndex !== -1) {
-        // Immunité aux duels (passif ou buff) : si l'attaquant OU le défenseur est
-        // immunisé, pas de duel — on poursuit vers l'action normale de la case.
-        if (isDuelImmune(team) || isDuelImmune(teams[defenderIndex])) {
-          const who = isDuelImmune(team) ? team : teams[defenderIndex];
-          addLog(`\u{1F6E1}\u{FE0F} Duel évité : ${who.emoji} ${who.name} est immunisé(e) aux duels.`);
+      const present = teams.filter((t, i) => i !== currentTeam && t.pos === team.pos);
+      if (present.length) {
+        const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : randomSubject();
+        // Immunité (passif/buff) : l'arrivant immunisé ne duelle pas ; un défenseur
+        // immunisé est exclu de la liste des cibles possibles.
+        if (isDuelImmune(team)) {
+          addLog(`\u{1F6E1}\u{FE0F} Duel évité : ${team.emoji} ${team.name} est immunisé(e) aux duels.`);
         } else {
-          const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : randomSubject();
-          fightH.startFight(set, get, defenderIndex, subj);
-          return;
+          const presentIdx = teams.map((_, i) => i).filter((i) => i !== currentTeam && teams[i].pos === team.pos);
+          // Cibles possibles vs cibles bloquées (immunisées) : ces dernières sont
+          // affichées grisées dans la modale (non sélectionnables), pas masquées.
+          const defenders = presentIdx.filter((i) => !isDuelImmune(teams[i]));
+          const blocked = presentIdx.filter((i) => isDuelImmune(teams[i]));
+          if (defenders.length === 0) {
+            addLog(`\u{1F6E1}\u{FE0F} Duel évité : adversaire(s) immunisé(s).`);
+          } else if (get().forcedDuels) {
+            // Duel forcé (historique) : duel automatique avec le 1er adversaire.
+            fightH.startFight(set, get, defenders[0], subj);
+            return;
+          } else {
+            // Mode choix : l'arrivant décide (défier qui, ou refuser → case normale).
+            set({ showDuelChoice: { defenders, blocked, subject: subj } });
+            return;
+          }
         }
       }
     }
+
+    // Pas de duel → action normale de la case.
+    get().resolveLandingCase();
+  },
+
+  // Action « normale » d'une case (hors duel) : événement, question de matière,
+  // jonction… Extrait de handleLanding pour être réutilisé quand un duel est
+  // refusé (declineDuel) ou évité (immunité).
+  resolveLandingCase: () => {
+    const { teams, currentTeam, board, addLog, enabledEvents } = get();
+    const team = teams[currentTeam];
+    const node = board[team.pos];
+    if (!node) { get().nextTurn(); return; }
 
     if (node.type === 'event') {
       const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled() });
       if (picked) {
         addLog(`\u{1F381} ${team.emoji} ${team.name} tombe sur : ${picked.event.icon} ${picked.event.name}`);
-        // La case événement donnera AUSSI une question à la fin (sauf événements
-        // qui posent déjà leur propre question, qui effaceront ce flag).
         set({ pendingEventQuestion: { subject: node.subject || randomSubject() } });
         eventH.triggerEvent(set, get, picked);
         return;
@@ -668,6 +699,22 @@ export const useGameStore = create((set, get) => ({
     }
 
     get().nextTurn();
+  },
+
+  // L'arrivant accepte le duel contre l'équipe choisie (mode non forcé).
+  chooseDuel: (defenderIndex) => {
+    const dc = get().showDuelChoice;
+    if (!dc || !dc.defenders.includes(defenderIndex)) return;
+    set({ showDuelChoice: null });
+    fightH.startFight(set, get, defenderIndex, dc.subject);
+  },
+  // L'arrivant refuse le duel → il joue la case normalement.
+  declineDuel: () => {
+    if (!get().showDuelChoice) return;
+    const t = get().teams[get().currentTeam];
+    get().addLog(`\u{1F91D} ${t.emoji} ${t.name} préfère ne pas défier et joue la case.`);
+    set({ showDuelChoice: null });
+    get().resolveLandingCase();
   },
 
   // --- Questions ---

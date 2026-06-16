@@ -15,6 +15,7 @@ import TargetPickerModal from '../Modals/TargetPickerModal';
 import VictoryModal from '../Modals/VictoryModal';
 import ShopModal from '../Modals/ShopModal';
 import ShopPromptModal from '../Modals/ShopPromptModal';
+import DuelChoiceModal from '../Modals/DuelChoiceModal';
 import InventoryModal from '../Modals/InventoryModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
@@ -241,6 +242,7 @@ export default function GameLayout() {
       <ShopPromptModal />
       <InventoryModal />
       <FightModal />
+      <DuelChoiceModal />
       <LootReveal />
       <StarterChest />
       <TrapInspectModal />
