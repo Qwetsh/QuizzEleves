@@ -145,6 +145,30 @@ export function hasEffect(team, type) {
 }
 
 /**
+ * Comme getEffectValue, mais DÉTAILLE chaque contribution (pour le journal).
+ * Retourne { total, parts: [{ label, formula, amount }] } où `label` est le nom
+ * de l'objet (ou « Set »), `formula` l'étiquette de la quantité (ex. « 1×série »)
+ * et `amount` la valeur tirée. ⚠️ Les dés/quantités à l'échelle sont résolus ICI
+ * (un seul tirage) : utiliser `total` comme valeur appliquée, ne pas rappeler
+ * getEffectValue par-dessus (sinon double tirage).
+ */
+export function explainEffectValue(team, type) {
+  const parts = [];
+  let total = 0;
+  const consider = (fx, label) => {
+    if (fx.type !== type || !passesChance(fx.chance)) return;
+    const amt = resolveAmount(fx.value, team);
+    total += amt;
+    if (amt !== 0) parts.push({ label, formula: diceLabel(fx.value), amount: amt });
+  };
+  for (const item of equippedItems(team)) {
+    for (const fx of item.effects) consider(fx, item.name);
+  }
+  for (const fx of activeSetEffects(team)) consider(fx, 'Set d’objets');
+  return { total, parts };
+}
+
+/**
  * Immunité aux duels : soit via un passif d'équipement/set (effet `duelImmune`),
  * soit via un buff temporisé (consommable, `duelImmune` pendant X tours).
  */

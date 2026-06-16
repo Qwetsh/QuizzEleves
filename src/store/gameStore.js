@@ -21,7 +21,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, findBuff, hasBuff, buffValue, isDuelImmune } from '../logic/itemEffects.js';
+import { getEffectValue, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune } from '../logic/itemEffects.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -44,6 +44,30 @@ function createDefaultTeams(n) {
     // (prompt « Visiter la boutique ? »). Remis à 0 à chaque ouverture.
     turnsSinceShop: 0,
   }));
+}
+
+// Configuration par défaut du coffre de départ (modifiable au Setup). Reproduit
+// le comportement historique : activé, 20 or fixe, 3 consommables proposés, 1 gardé.
+export function defaultStarterChestConfig() {
+  return {
+    enabled: true,
+    goldMode: 'fixed',   // 'fixed' | 'random'
+    gold: 20,            // montant fixe
+    goldMin: 10,         // borne basse si 'random'
+    goldMax: 30,         // borne haute si 'random'
+    propose: 3,          // objets proposés (0–6)
+    keep: 1,             // objets à garder (1–propose)
+    category: 'consumable', // 'consumable' | 'equipment' | 'all'
+  };
+}
+
+// Tire l'or du coffre selon la config (résolu UNE fois au début : même montant
+// pour toutes les équipes quand 'random', cf. décision produit).
+function resolveStarterGold(cfg) {
+  if (cfg.goldMode !== 'random') return cfg.gold ?? 0;
+  const lo = Math.min(cfg.goldMin ?? 0, cfg.goldMax ?? 0);
+  const hi = Math.max(cfg.goldMin ?? 0, cfg.goldMax ?? 0);
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 
 // Compteur monotone d'id de VFX (foudre/bouclier) — un seul, partagé par tous
@@ -219,6 +243,10 @@ export const useGameStore = create((set, get) => ({
   // Stock rotatif de la boutique d'objets : renouvelé tous les N tours
   shopStock: [],
   shopStockTurns: 0,
+  // Coffre de départ : configuration (Setup) + or résolu une fois au début
+  // (null tant que la partie n'a pas démarré → résolu depuis la config si besoin).
+  starterChestConfig: defaultStarterChestConfig(),
+  starterGold: null,
   preRollPos: null,
   preRollValue: null,
   // Animations: [{ teamIndex, waypoints: [{x,y},...], type: 'forward'|'back' }, ...]
@@ -235,7 +263,14 @@ export const useGameStore = create((set, get) => ({
   bumpQuestionsVersion: () => set((s) => ({ questionsVersion: s.questionsVersion + 1 })),
 
   // --- Log ---
+  // msg : chaîne OU objet { text, detail:[{label, amount?, note?}] } (cf. logFormat).
   addLog: (msg) => set({ log: [...get().log, msg] }),
+
+  // --- Coffre de départ : config (Setup uniquement, verrouillé en partie) ---
+  setStarterChestConfig: (patch) => {
+    if (get().phase !== 'setup') return;
+    set((s) => ({ starterChestConfig: { ...s.starterChestConfig, ...patch } }));
+  },
 
   // --- Révélation d'objet (visuel C) ---
   // Coffre de départ : ouvert une fois par équipe à son premier tour (20 PO +
@@ -246,30 +281,54 @@ export const useGameStore = create((set, get) => ({
   triggerStarterChest: () => {
     const { teams, currentTeam } = get();
     const t = teams[currentTeam];
-    // Extension objets désactivée : pas de coffre de départ (rien à donner).
-    if (!get().itemsEnabled()) { set({ showStarterChest: false, lastStarterReward: null }); return; }
+    const cfg = get().starterChestConfig || defaultStarterChestConfig();
+    // Coffre désactivé (config) ou extension objets coupée : pas de coffre.
+    if (!get().itemsEnabled() || !cfg.enabled) { set({ showStarterChest: false, lastStarterReward: null }); return; }
     if (!t || t.starterChestOpened) { set({ showStarterChest: false, lastStarterReward: null }); return; }
-    // Triple choix : 3 consommables distincts (hors légendaires lootOnly) à choisir.
+    // Pool d'objets proposés selon la catégorie choisie (hors légendaires lootOnly).
     const enabled = get().enabledItems || Object.keys(ITEMS);
-    const consumKeys = enabled.filter((k) => ITEMS[k]?.slot === 'consumable' && !ITEMS[k].lootOnly);
-    const choices = itemH.pickWeightedItems(3, consumKeys, (item) => (item.rarity === 'commun' ? 3 : 2));
-    set({ showStarterChest: true, lastStarterReward: { gold: 20, choices } });
+    const pool = enabled.filter((k) => {
+      const it = ITEMS[k];
+      if (!it || it.lootOnly) return false;
+      if (cfg.category === 'consumable') return it.slot === 'consumable';
+      if (cfg.category === 'equipment') return it.slot !== 'consumable';
+      return true; // 'all'
+    });
+    const propose = Math.max(0, Math.min(6, cfg.propose ?? 3));
+    const choices = propose > 0
+      ? itemH.pickWeightedItems(propose, pool, (item) => (item.rarity === 'commun' ? 3 : 2))
+      : [];
+    const keep = Math.max(1, Math.min(cfg.keep ?? 1, choices.length || 1));
+    // Or pré-résolu au début de partie (même montant pour tous) ; sinon résolu ici.
+    const gold = get().starterGold ?? resolveStarterGold(cfg);
+    set({ showStarterChest: true, lastStarterReward: { gold, choices, keep } });
   },
-  // Ferme le coffre de départ : verse les 20 pièces + le consommable CHOISI
-  // (chosenKey ; null si aucun choix proposé). Choix validé contre la liste.
-  closeStarterChest: (chosenKey = null) => {
+  // Ferme le coffre de départ : verse l'or + les objets CHOISIS (jusqu'à `keep`).
+  // `chosen` : une clé (compat) OU un tableau de clés ; validées contre la liste.
+  closeStarterChest: (chosen = null) => {
     const { teams, currentTeam, lastStarterReward, addLog } = get();
     const t = teams[currentTeam];
     if (!t) { set({ showStarterChest: false, lastStarterReward: null }); return; }
     const gold = lastStarterReward?.gold || 0;
     const choices = lastStarterReward?.choices || [];
-    const itemKey = chosenKey && choices.includes(chosenKey) ? chosenKey : null;
+    const keep = lastStarterReward?.keep || 1;
+    const arr = Array.isArray(chosen) ? chosen : (chosen ? [chosen] : []);
+    // Garde au plus `keep` clés valides et distinctes.
+    const seen = new Set();
+    const chosenKeys = [];
+    for (const k of arr) {
+      if (choices.includes(k) && !seen.has(k) && chosenKeys.length < keep) { seen.add(k); chosenKeys.push(k); }
+    }
     let placed = { ...t, money: (t.money ?? 0) + gold, starterChestOpened: true };
-    if (itemKey) placed = itemH.placeItem(placed, itemKey).team; // sac vide au départ → placé
+    const names = [];
+    for (const k of chosenKeys) {
+      placed = itemH.placeItem(placed, k).team; // équipe (slot libre) ou met au sac
+      names.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
+    }
     const nt = [...teams];
     nt[currentTeam] = placed;
     set({ teams: nt, showStarterChest: false, lastStarterReward: null });
-    addLog(`\u{1F9F0} ${t.emoji} ${t.name} ouvre son coffre de départ : +${gold} 🪙${itemKey ? ` et ${ITEMS[itemKey].icon} ${ITEMS[itemKey].name} !` : ' !'}`);
+    addLog(`\u{1F9F0} ${t.emoji} ${t.name} ouvre son coffre de départ : +${gold} 🪙${names.length ? ` et ${names.join(', ')} !` : ' !'}`);
     get().checkMoneyMilestone(currentTeam); // les pièces volent (FlyingCoins) au changement d'or
     if (get().phase === 'game') saveGame(get());
   },
@@ -367,7 +426,9 @@ export const useGameStore = create((set, get) => ({
           return { ...t, powers };
         });
         addLog(`\u{1F3B2} D\u00e9but de la partie ! ${finalTeams.length} \u00e9quipes en lice.`);
-        set({ teams: finalTeams, phase: 'game' });
+        // Or du coffre r\u00e9solu UNE fois (m\u00eame montant pour toutes les \u00e9quipes si 'random').
+        const starterGold = resolveStarterGold(get().starterChestConfig || defaultStarterChestConfig());
+        set({ teams: finalTeams, phase: 'game', starterGold });
         get().triggerStarterChest(); // 1re \u00e9quipe : coffre de d\u00e9part
       }
     } else {
@@ -731,21 +792,33 @@ export const useGameStore = create((set, get) => ({
     if (correct) {
       // Double/triple: money only on last question (or never if doubleNoBonus)
       const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleExtra || 0) > 0);
-      // L'equipement (moneyPerCorrect) s'applique a chaque bonne reponse, meme sans bonus
-      const equipBonus = getEffectValue(tTeam, 'moneyPerCorrect');
-      const gain = (noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime)) + equipBonus;
+      // L'equipement (moneyPerCorrect) s'applique a chaque bonne reponse, meme sans bonus.
+      // explainEffectValue D\u00c9TAILLE chaque source (objet, set, \u00d7s\u00e9rie\u2026) en un seul tirage.
+      const base = noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime);
+      const bonusBreak = explainEffectValue(tTeam, 'moneyPerCorrect');
+      const gain = base + bonusBreak.total;
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
       newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + gain, wager: undefined };
-      addLog(`\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`);
+      // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
+      let gainDetail;
+      if (bonusBreak.parts.length > 0) {
+        gainDetail = [];
+        if (base > 0) gainDetail.push({ label: 'Rapidit\u00e9 de r\u00e9ponse', amount: base });
+        for (const p of bonusBreak.parts) gainDetail.push({ label: p.label, note: `(${p.formula})`, amount: p.amount });
+      }
+      addLog({
+        text: `\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`,
+        detail: gainDetail,
+      });
       if (team.wager) addLog(`\u{1F3B2} D\u00e9fi r\u00e9ussi ! R\u00e9compense \u00e0 la cl\u00e9.`);
     } else {
       // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-      const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse', get().preRollValue || 2);
+      const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse', get().preRollValue || 2);
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
-      addLog(logMessage);
+      addLog({ text: logMessage, detail });
       if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
       if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
@@ -867,10 +940,10 @@ export const useGameStore = create((set, get) => ({
     const newTeams = [...teams];
 
     // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-    const { updatedTeam, logMessage, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2);
+    const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2);
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
-    addLog(logMessage);
+    addLog({ text: logMessage, detail });
     if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
     if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
@@ -1227,6 +1300,10 @@ export const useGameStore = create((set, get) => ({
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       showStarterChest: false, lastStarterReward: null,
     });
+    // Coffre de départ : config absente (vieilles saves) → défaut ; or non résolu
+    // (saves antérieures à la config) → on le résout depuis la config.
+    if (saved.starterChestConfig == null) set({ starterChestConfig: defaultStarterChestConfig() });
+    if (saved.starterGold == null) set({ starterGold: resolveStarterGold(get().starterChestConfig) });
     // Coffre de départ : si l'équipe courante ne l'a pas encore ouvert, le reproposer.
     if (get().phase === 'game') get().triggerStarterChest();
     // Sauvegardes anterieures au systeme d'objets : le CHAMP est absent.
@@ -1285,6 +1362,7 @@ export const useGameStore = create((set, get) => ({
       phase: 'setup', teams: [], currentTeam: 0, board: null, boardDecor: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
       shopStock: [], shopStockTurns: 0,
+      starterChestConfig: defaultStarterChestConfig(), starterGold: null,
       rolling: false, ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       nbTeams: 3, setupTeams: createDefaultTeams(3),

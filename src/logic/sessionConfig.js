@@ -3,6 +3,7 @@
 // s'y abonnent en lecture (Realtime). Tout est optionnel — le TBI fonctionne
 // sans aucun téléphone connecté.
 import { supabase } from './supabaseClient.js';
+import { logText } from './logFormat.js';
 
 const TABLE = 'quete_game_sessions';
 // Sans I/O/0/1 pour éviter les confusions de lecture du code d'appairage.
@@ -29,8 +30,9 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
     extensions: extensions || null, // extensions actives (gate l'UI objets côté mobile)
     shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
     // Historique : on n'envoie que les dernières entrées (l'onglet mobile les
-    // affiche du plus récent au plus ancien).
-    log: (log || []).slice(-60),
+    // affiche du plus récent au plus ancien). Les entrées structurées
+    // { text, detail } sont aplaties en texte (le mobile lit des chaînes).
+    log: (log || []).slice(-60).map(logText),
     teams: (teams || []).map((t, idx) => ({
       idx,
       name: t.name, emoji: t.emoji, color: t.color,

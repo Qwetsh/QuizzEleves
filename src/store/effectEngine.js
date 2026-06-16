@@ -26,6 +26,14 @@ function dieTag(n) {
   return '';
 }
 
+// Formule lisible d'une quantité non fixe (dé/à l'échelle), pour le détail du
+// journal — null si la quantité est un simple nombre.
+function fxFormula(n) {
+  return (typeof n === 'string' || (n && typeof n === 'object')) ? diceLabel(n) : null;
+}
+
+const cases = (n) => `${n} case${Math.abs(n) > 1 ? 's' : ''}`;
+
 // --- Feedback visuel : « toasts » d'effet animés ----------------------
 let fxId = 0;
 export function announce(set, get, icon, text, color = '#e8b117') {
@@ -186,9 +194,11 @@ function applyMoveOne(set, get, idx, dir, n, allowJunction) {
   const { board, teams } = get();
   const team = teams[idx];
   let res;
+  let applied = n;
   if (dir === 'back') {
     const amt = reducedRecul(team, n); // l'équipement (reculReduction) atténue
-    if (amt <= 0) return { moved: false };
+    if (amt <= 0) return { moved: false, applied: 0 };
+    applied = amt;
     res = moveBack(board, team.pos, amt);
   } else {
     res = moveForward(board, team.pos, n, { throughJunctions: !allowJunction });
@@ -210,7 +220,7 @@ function applyMoveOne(set, get, idx, dir, n, allowJunction) {
     set({ awaitingChoice: true, pendingMove: { remaining: res.remaining, noLanding: true, resumeEngine: true, teamIndex: idx } });
     return { suspended: true };
   }
-  return { moved: true, finalPos: res.finalPos };
+  return { moved: true, finalPos: res.finalPos, applied };
 }
 
 function applyMoney(set, get, action, ctx, indices) {
@@ -222,6 +232,10 @@ function applyMoney(set, get, action, ctx, indices) {
   // à soi » d'un piège dont la cible est « celui qui marche dessus » (= la source).
   const stealRecipient = ctx.ownerTeam ?? src;
   const nt = [...teams];
+  // Étiquette de la base d'un montant (formule de dé/échelle, ou « X% de son or »).
+  const baseLabel = action.unit === 'percent'
+    ? `${action.formula ? action.formula + ' = ' : ''}${action.n}% de l'or`
+    : (action.formula || null);
   const amountFor = (team) => {
     if (action.unit === 'percent') return Math.floor((team.money ?? 0) * (action.n / 100));
     return action.n;
@@ -234,7 +248,15 @@ function applyMoney(set, get, action, ctx, indices) {
       const stolen = reducedSteal(victim, raw);
       nt[i] = { ...victim, money: Math.max(0, (victim.money ?? 0) - stolen) };
       nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) + stolen };
-      addLog(`💰 ${nt[stealRecipient].emoji} vole ${stolen} pièce${stolen > 1 ? 's' : ''} à ${victim.emoji} ${victim.name} !`);
+      // Détail : montant visé, protection éventuelle de la victime, butin réel.
+      const detail = [];
+      if (baseLabel) detail.push({ label: 'Vol prévu', note: baseLabel });
+      if (stolen < raw) detail.push({ label: `Protection de ${victim.name}`, note: `−${raw - stolen} 🪙` });
+      if (detail.length) detail.push({ label: 'Pièces volées', amount: stolen });
+      addLog({
+        text: `💰 ${nt[stealRecipient].emoji} vole ${stolen} pièce${stolen > 1 ? 's' : ''} à ${victim.emoji} ${victim.name} !`,
+        detail: detail.length ? detail : undefined,
+      });
     }
   } else if (action.mode === 'lose') {
     for (const i of indices) {
@@ -242,14 +264,27 @@ function applyMoney(set, get, action, ctx, indices) {
       const raw = amountFor(t);
       const loss = i === src ? raw : reducedSteal(t, raw);
       nt[i] = { ...t, money: Math.max(0, (t.money ?? 0) - loss) };
-      if (loss > 0) addLog(`💸 ${t.emoji} ${t.name} perd ${loss} pièce${loss > 1 ? 's' : ''}.`);
+      if (loss > 0) {
+        const detail = [];
+        if (baseLabel) detail.push({ label: 'Perte prévue', note: baseLabel });
+        if (loss < raw) detail.push({ label: 'Protection', note: `−${raw - loss} 🪙` });
+        if (detail.length) detail.push({ label: 'Pièces perdues', amount: -loss });
+        addLog({
+          text: `💸 ${t.emoji} ${t.name} perd ${loss} pièce${loss > 1 ? 's' : ''}.`,
+          detail: detail.length ? detail : undefined,
+        });
+      }
     }
   } else { // gain
     for (const i of indices) {
       const t = nt[i];
-      nt[i] = { ...t, money: (t.money ?? 0) + amountFor(t) };
+      const amt = amountFor(t);
+      nt[i] = { ...t, money: (t.money ?? 0) + amt };
+      addLog({
+        text: `💰 ${t.emoji} ${t.name} gagne ${amt} pièce${amt > 1 ? 's' : ''} !`,
+        detail: baseLabel ? [{ label: baseLabel, amount: amt }] : undefined,
+      });
     }
-    addLog(`💰 ${action.target === 'all' ? 'Toutes les équipes gagnent' : nt[indices[0]]?.emoji + ' gagne'} des pièces !`);
   }
   set({ teams: nt });
 }
@@ -348,13 +383,29 @@ function stepHead(set, get, action, ctx) {
       // jonction seulement pour un move 'self' vers l'avant
       const allowJunction = action.target === 'self' && action.dir === 'forward';
       const n = resolveAmount(action.n, srcTeam); // un seul tir partagé par toutes les cibles
+      const formula = fxFormula(action.n);
       for (const idx of t.indices) {
         const res = applyMoveOne(set, get, idx, action.dir, n, allowJunction);
         if (res.suspended) return 'suspend';
         // Journalise le déplacement (sinon seul un toast transitoire le montrait).
         if (res.moved) {
           const tm = get().teams[idx];
-          get().addLog(`${action.dir === 'back' ? '⬅️' : '➡️'} ${tm.emoji} ${tm.name} ${action.dir === 'back' ? 'recule' : 'avance'} de ${n} case${n > 1 ? 's' : ''}.`);
+          const applied = res.applied ?? n;
+          // Détail : recul atténué par l'équipement, ou formule (dé / à l'échelle).
+          let detail;
+          if (action.dir === 'back' && applied < n) {
+            detail = [
+              { label: 'Recul prévu', note: cases(n) },
+              { label: 'Équipement', note: `−${cases(n - applied)}` },
+              { label: 'Recul subi', note: cases(applied) },
+            ];
+          } else if (formula) {
+            detail = [{ label: formula, note: cases(applied) }];
+          }
+          get().addLog({
+            text: `${action.dir === 'back' ? '⬅️' : '➡️'} ${tm.emoji} ${tm.name} ${action.dir === 'back' ? 'recule' : 'avance'} de ${cases(applied)}.`,
+            detail,
+          });
         }
         if (res.finalPos && get().board[res.finalPos]?.type === 'arrivee') {
           get().addLog(`🏆 ${get().teams[idx].emoji} ${get().teams[idx].name} atteint l'arrivée !`);
@@ -372,7 +423,7 @@ function stepHead(set, get, action, ctx) {
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       if (OFFENSIVE(action) && consumeFumigene(set, get, t.indices[0], action)) { clearCtxResolution(set, get, 'targetTeam'); return 'done'; }
       const mn = resolveAmount(action.n, srcTeam);
-      applyMoney(set, get, { ...action, n: mn }, ctx, t.indices);
+      applyMoney(set, get, { ...action, n: mn, formula: fxFormula(action.n) }, ctx, t.indices);
       if (typeof action.n === 'string' || (action.n && typeof action.n === 'object')) {
         announce(set, get, '🎲', `${diceLabel(action.n)} → ${mn}${action.unit === 'percent' ? '%' : ' or'}`, '#e8b117');
       }

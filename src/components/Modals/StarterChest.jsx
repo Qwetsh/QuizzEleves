@@ -21,7 +21,7 @@ const GOLD_RAYS = `conic-gradient(${Array.from({ length: 12 }, (_, i) => {
 
 // Mini-carte de choix (3 tiennent côte à côte dans la modale grâce à flex:1).
 // Affiche l'EFFET de l'objet : les élèves ne connaissent pas les consommables.
-function ChoiceCard({ itemKey, index, onPick }) {
+function ChoiceCard({ itemKey, index, onPick, selected }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const r = RARITIES[item.rarity] || { color: '#888', name: '' };
@@ -35,14 +35,22 @@ function ChoiceCard({ itemKey, index, onPick }) {
       initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + index * 0.1 }}
       whileHover={{ scale: 1.04, y: -3 }} whileTap={{ scale: 0.96 }}
       style={{
+        position: 'relative',
         flex: '1 1 0', minWidth: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
         padding: '12px 8px 10px', borderRadius: 14, cursor: 'pointer',
-        border: `2px solid ${r.color}`,
-        background: `linear-gradient(180deg, ${r.color}1f, #fffefb)`,
-        boxShadow: '0 4px 10px rgba(46,31,16,0.18)',
+        border: `${selected ? 3 : 2}px solid ${r.color}`,
+        background: selected ? `linear-gradient(180deg, ${r.color}40, #fffefb)` : `linear-gradient(180deg, ${r.color}1f, #fffefb)`,
+        boxShadow: selected ? `0 0 0 3px ${r.color}55, 0 6px 14px rgba(46,31,16,0.25)` : '0 4px 10px rgba(46,31,16,0.18)',
       }}
     >
+      {selected && (
+        <span style={{
+          position: 'absolute', top: -9, right: -9, width: 24, height: 24, borderRadius: '50%',
+          background: r.color, color: '#fff', display: 'grid', placeItems: 'center',
+          fontSize: 14, fontWeight: 800, boxShadow: '0 2px 5px rgba(0,0,0,0.3)', border: '2px solid #fffefb',
+        }}>✓</span>
+      )}
       {img
         ? <img src={img} alt="" draggable={false} style={{ width: '64%', maxWidth: 56, aspectRatio: '1 / 1', objectFit: 'contain', filter: `drop-shadow(0 0 10px ${r.color}88)` }} />
         : <span style={{ fontSize: 36, lineHeight: 1 }}>{item.icon}</span>}
@@ -59,13 +67,33 @@ function ChestInner({ team }) {
   const reward = useGameStore((s) => s.lastStarterReward);
   const close = useGameStore((s) => s.closeStarterChest);
   const [opened, setOpened] = useState(false);
+  const [picked, setPicked] = useState([]);
 
   const choices = (reward?.choices || []).filter((k) => ITEMS[k]);
   const gold = reward?.gold ?? 20;
+  // Nombre d'objets à garder, plafonné par ce qui est réellement proposé.
+  const keep = Math.max(1, Math.min(reward?.keep ?? 1, choices.length || 1));
+  const target = Math.min(keep, choices.length); // objets à sélectionner
+  const single = target <= 1;
+
+  // La modale s'élargit avec le nombre d'objets (au-delà de 2) : 4 colonnes max,
+  // les cartes s'enroulent ensuite. Au plus 92% de l'écran.
+  const cols = Math.min(choices.length || 1, 4);
+  const modalWidth = choices.length > 2 ? Math.min(640, 96 + cols * 132) : 360;
 
   const open = () => { soundMoney(); setOpened(true); };
-  const choose = (key) => { soundClick(); close(key); };
   const done = () => { soundClick(); close(null); };
+  // 1 seul à garder : tap = choix immédiat. Plusieurs : on bascule la sélection.
+  const onPick = (key) => {
+    soundClick();
+    if (single) { close(key); return; }
+    setPicked((cur) => {
+      if (cur.includes(key)) return cur.filter((k) => k !== key);
+      if (cur.length >= target) return cur; // plafond atteint
+      return [...cur, key];
+    });
+  };
+  const validate = () => { soundClick(); close(picked); };
 
   return (
     <motion.div className="loot-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -73,7 +101,7 @@ function ChestInner({ team }) {
         initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', damping: 18, stiffness: 240 }}
       >
-        <div className="loot-modal">
+        <div className="loot-modal" style={{ width: modalWidth, maxWidth: '92vw' }}>
           <div className="loot-banner">{opened ? `${team?.emoji || ''} Trésor de départ !` : '🧰 Un coffre de départ !'}</div>
 
           {/* Scène du coffre */}
@@ -111,12 +139,21 @@ function ChestInner({ team }) {
               </motion.div>
               {choices.length > 0 ? (
                 <>
-                  <p className="loot-desc" style={{ textAlign: 'center', margin: 0 }}>Choisis UN consommable pour démarrer :</p>
-                  <div style={{ display: 'flex', gap: 8, width: '100%', alignItems: 'stretch' }}>
+                  <p className="loot-desc" style={{ textAlign: 'center', margin: 0 }}>
+                    {single
+                      ? 'Choisis UN objet pour démarrer :'
+                      : `Choisis ${target} objets (${picked.length}/${target}) :`}
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10, width: '100%', padding: '0 16px', alignItems: 'stretch' }}>
                     {choices.map((key, i) => (
-                      <ChoiceCard key={key} itemKey={key} index={i} onPick={choose} />
+                      <ChoiceCard key={key} itemKey={key} index={i} onPick={onPick} selected={picked.includes(key)} />
                     ))}
                   </div>
+                  {!single && (
+                    <button className="loot-btn" onClick={validate} disabled={picked.length !== target} style={picked.length !== target ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}>
+                      Valider mon choix
+                    </button>
+                  )}
                   <p style={{ fontSize: 11, color: 'var(--ink-500)' }}>Ton choix est définitif.</p>
                 </>
               ) : (

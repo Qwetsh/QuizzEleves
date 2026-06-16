@@ -5,6 +5,7 @@ const SAVE_FIELDS = [
   'askedQuestions', 'questions', 'log', 'phase',
   'extensions', 'enabledEvents', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'boardParams',
   'shopStock', 'shopStockTurns',
+  'starterChestConfig', 'starterGold',
 ];
 
 /**

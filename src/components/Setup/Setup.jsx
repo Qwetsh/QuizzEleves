@@ -13,6 +13,7 @@ import TeamCustomization from './TeamCustomization';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
 import ItemsChecklist from './ItemsChecklist';
+import StarterChestConfig from './StarterChestConfig';
 import ExtensionsChecklist from './ExtensionsChecklist';
 import { extOn } from '../../extensions/registry';
 
@@ -220,6 +221,11 @@ export default function Setup() {
           {itemsOn && (
             <div className="panel">
               <ItemsChecklist />
+            </div>
+          )}
+          {itemsOn && (
+            <div className="panel">
+              <StarterChestConfig />
             </div>
           )}
           {showTools && <EditorTools />}
