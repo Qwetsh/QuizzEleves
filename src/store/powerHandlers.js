@@ -1,7 +1,7 @@
 import { POWERS } from '../data/powers.js';
 import { moveBack } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
-import { reducedRecul, resolveAmount, diceLabel } from '../logic/itemEffects.js';
+import { reducedRecul, resolveAmount, diceLabel, moveDieSides } from '../logic/itemEffects.js';
 import { saveGame } from './persistence.js';
 import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
 import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
@@ -114,10 +114,12 @@ export function useRelance(set, get) {
   // Nettoie aussi un éventuel choix de jonction en cours (on relance depuis le départ du lancer).
   set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false, awaitingChoice: false, pendingMove: null });
 
-  const finalValue = Math.floor(Math.random() * 6) + 1;
+  // Mêmes faces que le dé de mouvement de l'équipe (D4/D6/D10).
+  const sides = moveDieSides(team);
+  const finalValue = Math.floor(Math.random() * sides) + 1;
   let count = 0;
   const interval = setInterval(() => {
-    set({ diceValue: Math.floor(Math.random() * 6) + 1 });
+    set({ diceValue: Math.floor(Math.random() * sides) + 1 });
     count++;
     if (count >= 10) {
       clearInterval(interval);

@@ -29,7 +29,7 @@ function PipPattern({ n }) {
   );
 }
 
-function DiceFace({ pips, side, size }) {
+function DiceFace({ pips, side, size, number }) {
   const half = size / 2;
   const transforms = {
     front:  `rotateY(0deg) translateZ(${half}px)`,
@@ -44,13 +44,22 @@ function DiceFace({ pips, side, size }) {
       className="dice3d-face"
       style={{ width: size, height: size, transform: transforms[side] }}
     >
-      <PipPattern n={pips} />
+      {number != null
+        ? <span style={{
+            display: 'grid', placeItems: 'center', width: '100%', height: '100%',
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            fontSize: size * 0.5, lineHeight: 1, color: 'inherit',
+          }}>{number}</span>
+        : <PipPattern n={pips} />}
     </div>
   );
 }
 
 export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false }) {
-  const target = DICE_FACE_ROT[value] || DICE_FACE_ROT[1];
+  // Au-delà d'un D6 (ex. D10 → 7..10), le cube à pips ne peut pas représenter la
+  // face : on présente la face avant (rotation 0) avec le NOMBRE écrit.
+  const numeric = value > 6;
+  const target = numeric ? { x: 0, y: 0 } : (DICE_FACE_ROT[value] || DICE_FACE_ROT[1]);
   const spins = rolling ? 4 : 0;
   const rotX = target.x + spins * 360 + (rolling ? 720 : 0);
   const rotY = target.y + spins * 360 + (rolling ? -720 : 0);
@@ -75,7 +84,7 @@ export default function Dice3D({ value = 1, rolling = false, size = 96, onClick,
             : 'transform 480ms cubic-bezier(.34,1.56,.64,1)',
         }}
       >
-        <DiceFace pips={1} side="front"  size={size} />
+        <DiceFace pips={1} side="front"  size={size} number={numeric ? value : null} />
         <DiceFace pips={6} side="back"   size={size} />
         <DiceFace pips={3} side="top"    size={size} />
         <DiceFace pips={4} side="bottom" size={size} />

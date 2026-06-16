@@ -144,6 +144,21 @@ export function hasEffect(team, type) {
   return getEffectValue(team, type) > 0;
 }
 
+// Nombre de faces du dé de MOUVEMENT pour cette équipe. Par défaut 6. Un effet
+// `moveDieSides` (équipement, set ou buff temporisé) transforme le dé en D4, D6
+// ou D10 ; si plusieurs sources, le plus grand dé l'emporte.
+const MOVE_DIE_SIDES = [4, 6, 10];
+export function moveDieSides(team) {
+  const vals = [];
+  const push = (v) => { const n = Number(v) || 0; if (MOVE_DIE_SIDES.includes(n)) vals.push(n); };
+  for (const item of equippedItems(team)) {
+    for (const fx of item.effects) if (fx.type === 'moveDieSides' && passesChance(fx.chance)) push(fx.value);
+  }
+  for (const fx of activeSetEffects(team)) if (fx.type === 'moveDieSides' && passesChance(fx.chance)) push(fx.value);
+  for (const b of teamBuffs(team)) if (b?.type === 'moveDieSides') push(b.n);
+  return vals.length ? Math.max(...vals) : 6;
+}
+
 /**
  * Comme getEffectValue, mais DÉTAILLE chaque contribution (pour le journal).
  * Retourne { total, parts: [{ label, formula, amount }] } où `label` est le nom

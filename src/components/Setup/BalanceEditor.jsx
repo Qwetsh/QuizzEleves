@@ -30,14 +30,14 @@ const EFFECT_LABELS = {
   timerBonus: 'Timer (+s)', indiceBoost: 'Indice (+rép. éliminées)', moneyPerCorrect: 'Pièces / bonne réponse',
   taxReduction: 'Impôts/taxes (−%)', stealProtection: 'Anti-vol (−%)', reculReduction: 'Recul subi (−cases)', reculReductionPct: 'Recul subi (−%)',
   tempeteImmune: 'Immunité Tempête', oubliProtect: "Anti Trou de l'oubli", fightStealBonus: 'Vol de duel (+pièces)',
-  duelImmune: 'Immunité aux duels',
+  duelImmune: 'Immunité aux duels', moveDieSides: 'Dé de mouvement (4 / 6 / 10)',
   lootBonusConsumable: 'Chance loot consommable (+%)', lootBonusEquipment: 'Chance loot équipement (+%)',
   gainMoney: 'Gagne des pièces', gainMoneyAll: 'Pièces à toutes les équipes', moveForward: 'Avance (cases)',
   extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule le prochain recul',
   gainCharge: 'Recharge un pouvoir', fumigene: 'Annule un pouvoir offensif',
   randomPath: 'Voie aléatoire aux carrefours',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'randomPath'];
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'moveDieSides', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'randomPath'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([

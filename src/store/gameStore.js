@@ -21,7 +21,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune } from '../logic/itemEffects.js';
+import { getEffectValue, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides } from '../logic/itemEffects.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -438,12 +438,14 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest } = get();
+    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest, teams, currentTeam } = get();
     if (finished || rolling || showDiceModal || showFight || showStarterChest) return;
     // Bloque le dé pendant une séquence d'effet (choix de case/cible/d6...) ou
     // tant que le tour n'est pas résolu (atterrissage, jonction, question).
     if (pendingActions || pendingLanding || awaitingChoice || showQuestion || showEvent) return;
-    const finalValue = Math.floor(Math.random() * 6) + 1;
+    // Faces du dé de mouvement (D4/D6/D10 selon l'équipement ; 6 par défaut).
+    const sides = moveDieSides(teams[currentTeam]);
+    const finalValue = Math.floor(Math.random() * sides) + 1;
     set({ rolling: true, diceValue: finalValue, showDiceModal: true });
   },
 
