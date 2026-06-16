@@ -1,7 +1,11 @@
-// Tests : effet « dé de mouvement » (moveDieSides) — transforme le dé en D4/D6/D10.
+// Tests : effet « dé de mouvement » (moveDieSides) — transforme le dé en D4/D6/D10
+// + effet « Question Hardcore (X%) » (hardcoreChance).
 import { describe, it, expect, afterEach } from 'vitest';
 import { moveDieSides } from '../logic/itemEffects.js';
 import { ITEMS, setItemsData } from '../data/items.js';
+import { useGameStore } from '../store/gameStore.js';
+
+const S = () => useGameStore.getState();
 
 const mkTeam = (over = {}) => ({
   equipment: { head: null, body: null, feet: null }, bag: [], powers: {}, buffs: [], ...over,
@@ -44,5 +48,45 @@ describe('moveDieSides', () => {
     });
     const team = mkTeam({ equipment: { head: 'deTruque', body: null, feet: null }, buffs: [{ type: 'moveDieSides', n: 4, turns: 3 }] });
     expect(moveDieSides(team)).toBe(4);
+  });
+});
+
+describe('hardcoreChance (Question Hardcore X%)', () => {
+  const snap = { ...ITEMS };
+  afterEach(() => setItemsData(snap));
+
+  function setup(hc, withHardcorePool = true) {
+    setItemsData({
+      ...snap,
+      casqueHC: { name: 'Casque maudit', icon: '💀', slot: 'head', rarity: 'rare', price: 0, effects: [{ type: 'hardcoreChance', value: hc }] },
+    });
+    useGameStore.setState({
+      phase: 'game', devSandbox: true,
+      teams: [{ name: 'T', emoji: '🦁', color: '#111', money: 0, correct: 0, wrong: 0, streak: 0, powers: {}, equipment: { head: 'casqueHC', body: null, feet: null }, bag: [] }],
+      currentTeam: 0, forcedSubject: null,
+      questions: {
+        maths: [{ q: 'M ?', a: ['a', 'b', 'c', 'd'], c: 0 }],
+        ...(withHardcorePool ? { hardcore: [{ q: 'HC ?', a: ['a', 'b', 'c', 'd'], c: 0 }] } : {}),
+      },
+      askedQuestions: {}, log: [], showQuestion: null,
+    });
+  }
+
+  it('100% → question forcée en Hardcore', () => {
+    setup(100);
+    S().askQuestion('maths');
+    expect(S().showQuestion.subject).toBe('hardcore');
+  });
+
+  it('0% → question normale (maths)', () => {
+    setup(0);
+    S().askQuestion('maths');
+    expect(S().showQuestion.subject).toBe('maths');
+  });
+
+  it('aucun pool Hardcore → reste normal même à 100%', () => {
+    setup(100, false);
+    S().askQuestion('maths');
+    expect(S().showQuestion.subject).toBe('maths');
   });
 });

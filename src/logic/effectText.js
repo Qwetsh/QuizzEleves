@@ -102,6 +102,7 @@ function describeLegacy(fx) {
     case 'reculReduction': txt = `recul subi réduit de ${v} case${fx.value === 1 ? '' : 's'}`; break;
     case 'reculReductionPct': txt = `recul subi réduit de ${v}%`; break;
     case 'moveDieSides': txt = `dé de mouvement transformé en D${fx.value}`; break;
+    case 'hardcoreChance': txt = `${v}% de chance que ta question soit en Hardcore`; break;
     case 'tempeteImmune': txt = `immunité à la Tempête`; break;
     case 'duelImmune': txt = `immunité aux duels`; break;
     case 'oubliProtect': txt = `protège du Trou de l'oubli`; break;

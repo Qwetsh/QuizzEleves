@@ -688,6 +688,16 @@ export const useGameStore = create((set, get) => ({
         set({ forcedSubject: null });
       }
     }
+    // Effet passif « Question Hardcore (X%) » : si le thème n'est pas déjà forcé,
+    // X% de chance que la question bascule en Hardcore (uniquement si le pool existe).
+    if (!forced) {
+      const t0 = get().teams[cur];
+      const hc = getEffectValue(t0, 'hardcoreChance');
+      if (hc > 0 && (get().questions.hardcore || []).length && Math.random() * 100 < hc) {
+        subject = 'hardcore';
+        get().addLog(`💀 ${t0.emoji} ${t0.name} : question Hardcore ! (${hc}%)`);
+      }
+    }
     const { questions, askedQuestions, teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const pool = questions[subject] || [];
