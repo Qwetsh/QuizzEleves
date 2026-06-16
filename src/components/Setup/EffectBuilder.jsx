@@ -28,6 +28,7 @@ const BUFF_TYPES = [
   { k: 'themeBonus', label: 'gagne de l’or à chaque bonne réponse' },
   { k: 'advanceOnCorrect', label: 'avance à chaque bonne réponse' },
   { k: 'diceBonus', label: 'le dé fait +N à chaque lancer' },
+  { k: 'moveDieSides', label: 'transforme le dé de mouvement (D4/D6/D10)' },
   { k: 'noRecul', label: 'ne recule pas en cas d’erreur' },
   { k: 'loseOnWrong', label: 'perd de l’or en cas d’erreur (malus)' },
   { k: 'randomPath', label: 'voie choisie au hasard' },
@@ -327,7 +328,11 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
             </div>
             <div className="fx-sentence">
               <W>l'équipe</W>
-              <select className="qed-select fx-blank" value={b.type || 'themeBonus'} onChange={(e) => setB({ type: e.target.value })}>
+              <select className="qed-select fx-blank" value={b.type || 'themeBonus'} onChange={(e) => {
+                const t = e.target.value;
+                // Le dé forcé n'accepte que 4/6/10 : seed une valeur valide au changement.
+                setB(t === 'moveDieSides' && ![4, 6, 10].includes(Number(b.n)) ? { type: t, n: 4 } : { type: t });
+              }}>
                 {BUFF_TYPES.map((t) => <option key={t.k} value={t.k}>{t.label}</option>)}
               </select>
               {b.type === 'themeBonus' && (<><W>de</W><AmountInput value={b.n ?? 5} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or, en</W>
@@ -339,6 +344,10 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
               {b.type === 'loseOnWrong' && (<><W>de</W><AmountInput value={b.n ?? 5} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or</W></>)}
               {b.type === 'advanceOnCorrect' && (<><W>de</W><AmountInput value={b.n ?? 'd4'} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>case(s)</W></>)}
               {b.type === 'diceBonus' && (<><W>de +</W><AmountInput value={b.n ?? 1} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au lancer de dé</W></>)}
+              {b.type === 'moveDieSides' && (<><W>en</W>
+                <select className="qed-select fx-blank" value={b.n ?? 4} onChange={(e) => setB({ n: Number(e.target.value) })}>
+                  <option value={4}>D4</option><option value={6}>D6</option><option value={10}>D10</option>
+                </select></>)}
             </div>
           </div>
         );
