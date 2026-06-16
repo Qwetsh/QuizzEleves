@@ -395,6 +395,26 @@ function stepHead(set, get, action, ctx) {
       }
       return 'done';
     }
+    case 'hideWrong': {
+      // Élimine N mauvaise(s) réponse(s) de la question COURANTE (façon Indice).
+      // Sans effet s'il n'y a pas de question ouverte (ex. joué hors contexte).
+      const sq = get().showQuestion;
+      if (!sq?.question) return 'done';
+      const q = sq.question;
+      const already = get().indiceHidden || [];
+      const wrong = q.a.map((_, i) => i).filter((i) => i !== q.c && !already.includes(i));
+      if (!wrong.length) return 'done';
+      for (let i = wrong.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
+      }
+      const want = Math.max(1, resolveAmount(action.n, srcTeam) || 1);
+      const picked = wrong.slice(0, Math.min(want, wrong.length));
+      set({ indiceHidden: [...already, ...picked] });
+      get().addLog(`💡 ${picked.length} mauvaise réponse${picked.length > 1 ? 's' : ''} éliminée${picked.length > 1 ? 's' : ''} !`);
+      announce(set, get, '💡', `−${picked.length} mauvaise réponse${picked.length > 1 ? 's' : ''}${dieTag(action.n)}`, '#c8911f');
+      return 'done';
+    }
     case 'shieldNext': {
       const sn = typeof action.n === 'number' ? (action.n || 1) : (resolveAmount(action.n, srcTeam) || 1);
       patchSource(set, get, (t) => ({ itemShield: (t.itemShield || 0) + sn }));

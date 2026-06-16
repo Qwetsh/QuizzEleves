@@ -78,6 +78,7 @@ export function describeAction(a) {
       };
       return `${turns}, ${tgt} : ${D[b.type] || b.type}`;
     }
+    case 'hideWrong': return `élimine ${amountLabel(a.n ?? 1)} mauvaise réponse${a.n === 1 ? '' : 's'}`;
     case 'shieldNext': return `bouclier (annule ${amountLabel(a.n ?? 1)} recul${a.n === 1 ? '' : 's'})`;
     case 'fumigene': return `fumigène${a.turns ? ` pendant ${amountLabel(a.turns)} tour${a.turns === 1 ? '' : 's'}` : ''}`;
     case 'extraTime': return `+${amountLabel(a.n)}s à la prochaine question`;

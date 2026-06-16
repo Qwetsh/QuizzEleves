@@ -433,6 +433,17 @@ describe('déclencheur on:questionSubject (à l’apparition de la question)', (
     expect(team(0).money).toBe(50);
   });
 
+  it('hideWrong élimine une mauvaise réponse de la question courante', () => {
+    setItemsData({
+      loupe: { name: 'Loupe', slot: 'head', rarity: 'rare', price: 10,
+        effects: [{ kind: 'trigger', on: 'questionSubject', subjects: ['maths'], do: [{ action: 'hideWrong', n: 1 }] }] },
+    });
+    freshGame([{ equipment: { head: 'loupe', body: null, feet: null } }, {}]);
+    S().askQuestion('maths');
+    expect(S().indiceHidden).toHaveLength(1);
+    expect(S().indiceHidden).not.toContain(S().showQuestion.question.c); // jamais la bonne
+  });
+
   it('extraTime sur question ouverte prolonge la question courante', () => {
     setItemsData({
       sablier: { name: 'Sablier', slot: 'body', rarity: 'rare', price: 10,

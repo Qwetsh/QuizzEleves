@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
-import { ITEMS } from '../../data/items';
+import { ITEMS, RARITIES } from '../../data/items';
+import { itemImg } from '../../logic/itemAssets';
 import { EVENT_IMG } from '../../data/eventAssets';
-import { LootCard } from './LootReveal';
 import { soundClick, soundMoney } from '../../logic/sounds';
 import '../../styles/loot-reveal.css';
 
@@ -17,6 +17,37 @@ const GOLD_RAYS = `conic-gradient(${Array.from({ length: 12 }, (_, i) => {
   const a = i * 30;
   return `#f5d36a40 ${a}deg ${a + 10}deg, transparent ${a + 10}deg ${a + 30}deg`;
 }).join(', ')})`;
+
+// Mini-carte de choix (3 tiennent côte à côte dans la modale grâce à flex:1).
+function ChoiceCard({ itemKey, index, onPick }) {
+  const item = ITEMS[itemKey];
+  if (!item) return null;
+  const r = RARITIES[item.rarity] || { color: '#888', name: '' };
+  const img = itemImg(item);
+  return (
+    <motion.button
+      type="button"
+      onClick={() => onPick(itemKey)}
+      title={`${item.name} — ${item.desc}`}
+      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + index * 0.1 }}
+      whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.96 }}
+      style={{
+        flex: '1 1 0', minWidth: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+        padding: '12px 6px 10px', borderRadius: 14, cursor: 'pointer',
+        border: `2px solid ${r.color}`,
+        background: `linear-gradient(180deg, ${r.color}1f, #fffefb)`,
+        boxShadow: '0 4px 10px rgba(46,31,16,0.18)',
+      }}
+    >
+      {img
+        ? <img src={img} alt="" draggable={false} style={{ width: '74%', maxWidth: 60, aspectRatio: '1 / 1', objectFit: 'contain', filter: `drop-shadow(0 0 10px ${r.color}88)` }} />
+        : <span style={{ fontSize: 38, lineHeight: 1 }}>{item.icon}</span>}
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, lineHeight: 1.1, textAlign: 'center', color: 'var(--ink-800)' }}>{item.name}</span>
+      <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: r.color, borderRadius: 6, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
+    </motion.button>
+  );
+}
 
 function ChestInner({ team }) {
   const reward = useGameStore((s) => s.lastStarterReward);
@@ -75,19 +106,9 @@ function ChestInner({ team }) {
               {choices.length > 0 ? (
                 <>
                   <p className="loot-desc" style={{ textAlign: 'center', margin: 0 }}>Choisis UN consommable pour démarrer :</p>
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, width: '100%', alignItems: 'stretch' }}>
                     {choices.map((key, i) => (
-                      <motion.button
-                        key={key}
-                        type="button"
-                        onClick={() => choose(key)}
-                        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + i * 0.1 }}
-                        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                        title={`Choisir ${ITEMS[key].name}`}
-                      >
-                        <LootCard item={ITEMS[key]} compact />
-                      </motion.button>
+                      <ChoiceCard key={key} itemKey={key} index={i} onPick={choose} />
                     ))}
                   </div>
                   <p style={{ fontSize: 11, color: 'var(--ink-500)' }}>Ton choix est définitif.</p>

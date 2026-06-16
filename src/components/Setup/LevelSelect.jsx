@@ -11,9 +11,12 @@ const LEVELS = [
 
 export default function LevelSelect() {
   const level = useGameStore((s) => s.level);
-  const setLevel = useGameStore((s) => s.setLevel);
+  const toggleLevel = useGameStore((s) => s.toggleLevel);
   const useBrevet = useGameStore((s) => s.useBrevet);
   const setUseBrevet = useGameStore((s) => s.setUseBrevet);
+  // `level` est un tableau (sélection multiple) ; tolère une vieille valeur chaîne.
+  const selected = Array.isArray(level) ? level : [level];
+  const isOn = (key) => selected.includes(key);
   // Re-render quand les questions sont (re)charg\u00e9es depuis Supabase : les
   // compteurs ci-dessous sont alors recalcul\u00e9s sur la source \u00e0 jour.
   useGameStore((s) => s.questionsVersion);
@@ -23,15 +26,15 @@ export default function LevelSelect() {
 
   return (
     <div>
-      <div className="field-label">Niveau</div>
+      <div className="field-label">Niveau <span style={{ fontWeight: 400, color: 'var(--ink-400)', fontSize: 12 }}>(plusieurs possibles)</span></div>
       <div className="flex gap-2.5 flex-wrap items-stretch">
         {LEVELS.map((l) => {
           const count = countQuestions(l.key);
           return (
             <button
               key={l.key}
-              onClick={() => setLevel(l.key)}
-              className={`chip ${level === l.key ? 'is-active' : ''}`}
+              onClick={() => toggleLevel(l.key)}
+              className={`chip ${isOn(l.key) ? 'is-active' : ''}`}
             >
               <span className="flex flex-col items-center">
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{l.label}</strong>

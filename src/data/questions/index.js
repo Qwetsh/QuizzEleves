@@ -20,14 +20,19 @@ export function setQuestionData({ cycle4, brevet } = {}) {
 }
 
 /**
- * Filtre les questions par niveau en se basant sur le prefixe du champ `t`.
- * Niveaux possibles : '6e', '5e', '4e', '3e', 'cycle4' (= 5e+4e+3e), 'all'.
+ * Filtre les questions par niveau. `level` peut être une CHAÎNE ('6e','5e',…)
+ * ou un TABLEAU de niveaux (sélection multiple, ex. ['5e','4e']). 'cycle4' et
+ * 'all' = aucun filtre (tout le pool). Une question est gardée si son niveau
+ * figure dans la sélection.
  */
 function filterByLevel(questions, level) {
-  if (level === 'all' || level === 'cycle4') return questions;
+  const raw = Array.isArray(level) ? level : [level];
+  if (raw.includes('all') || raw.includes('cycle4')) return questions;
+  const wanted = new Set(raw);
   // Questions Supabase : champ `level` fiable. Fichiers JS (fallback) : pas de
   // `level`, on retombe sur le préfixe du thème (« 5e — … »).
-  return questions.filter((q) => (q.level ? q.level === level : (q.t || '').startsWith(level)));
+  return questions.filter((q) =>
+    q.level ? wanted.has(q.level) : [...wanted].some((l) => (q.t || '').startsWith(l)));
 }
 
 /**

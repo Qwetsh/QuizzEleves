@@ -15,6 +15,7 @@ const ACTIONS = [
   { key: 'challenge', label: '🎲 Défi (mon thème + pari)' },
   { key: 'placeTrap', label: '🪤 Poser un piège' },
   { key: 'gainCharge', label: '⚡ Recharger un pouvoir' },
+  { key: 'hideWrong', label: '💡 Éliminer une mauvaise réponse' },
   { key: 'shieldNext', label: '🛡️ Bouclier' },
   { key: 'fumigene', label: '💨 Fumigène' },
   { key: 'extraTime', label: '⏳ Temps en +' },
@@ -95,6 +96,7 @@ export function describeAction(a) {
     case 'gainCharge': return 'recharger un pouvoir';
     case 'loot': return `loot un objet${a.category ? ` (${a.category})` : ''}`;
     case 'buff': { const b = a.buff || {}; return `effet ${b.turns ?? 3} tours : ${BUFF_TYPES.find((t) => t.k === b.type)?.label || b.type}`; }
+    case 'hideWrong': return `éliminer ${amountLabel(a.n)} mauvaise réponse(s)`;
     case 'shieldNext': return 'bouclier (annule 1 recul)';
     case 'fumigene': return `fumigène${a.turns ? ` (${amountLabel(a.turns)} tours)` : ''}`;
     case 'extraTime': return `+${amountLabel(a.n)}s à la prochaine question`;
@@ -210,6 +212,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'move') Object.assign(base, { target: 'self', dir: 'forward', n: 2 });
         if (k === 'money') Object.assign(base, { mode: 'gain', target: 'self', n: 5, unit: 'flat' });
         if (k === 'shieldNext') base.n = 1;
+        if (k === 'hideWrong') base.n = 1;
         if (k === 'extraTime') base.n = 5;
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
@@ -286,6 +289,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         </>
       )}
 
+      {(a.action === 'hideWrong') && (<><W>élimine</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>mauvaise(s) réponse(s)</W></>)}
       {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>recul(s)</W></>)}
       {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>s à la prochaine question</W></>)}
       {a.action === 'gainCharge' && <W>au choix du joueur</W>}
@@ -508,6 +512,19 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
                   </button>
                 );
               })}
+            </div>
+            <div className="fx-sentence" style={{ marginBottom: 6 }}>
+              <W>Probabilité :</W>
+              {typeof fx.chance === 'number' ? (
+                <>
+                  {numInput(Math.round(fx.chance * 100), (v) => upd({ chance: v / 100 }), { max: 100 })}
+                  <W>% de chance</W>
+                  <button type="button" className="bal-fx-x" title="Toujours (retirer la probabilité)"
+                    onClick={() => { const { chance, ...rest } = fx; onChange(rest); }}>{'\u{1F5D1}'}</button>
+                </>
+              ) : (
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => upd({ chance: 0.5 })}>+ % de chance</button>
+              )}
             </div>
             <div className="fx-nest-label">Dès que la question apparaît (avant de répondre), faire :</div>
             <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />

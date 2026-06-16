@@ -287,6 +287,7 @@ export default function BalanceEditor({ onClose }) {
   ] : [
     { label: '♾️ Bonus permanent', sub: 'Tant que l’objet est équipé', mk: () => ({ type: EQUIP_EFFECTS[0], value: 1 }) },
     { label: '✅ Quand je réponds bien', sub: 'Récompense (option : par matière)', mk: () => makeTrigger('correct') },
+    { label: '🎯 Quand je tombe sur un thème', sub: 'Effet auto à l’apparition d’une question de matière(s) choisie(s)', mk: () => makeTrigger('questionSubject') },
     { label: '❌ Quand je rate', sub: 'Malus / effet à l’erreur', mk: () => makeTrigger('wrong') },
     { label: '🤺 Quand je gagne un duel', sub: 'Loot, or, avancer…', mk: () => makeTrigger('fightWin') },
     { label: '🛡️ Quand je perds un duel', sub: 'Lot de consolation, malus…', mk: () => makeTrigger('fightLose') },

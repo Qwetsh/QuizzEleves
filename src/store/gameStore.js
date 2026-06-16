@@ -98,8 +98,18 @@ export const useGameStore = create((set, get) => ({
   devSandbox: false,
 
   // --- Setup state ---
-  level: 'cycle4',
-  setLevel: (level) => set({ level }),
+  // `level` est un TABLEAU de niveaux (sélection multiple). 'cycle4' = méta
+  // (= tout le cycle 4), mutuellement exclusif avec les niveaux précis.
+  level: ['cycle4'],
+  setLevel: (level) => set({ level: Array.isArray(level) ? level : [level] }),
+  toggleLevel: (key) => set((s) => {
+    const cur = Array.isArray(s.level) ? s.level : [s.level];
+    const META = 'cycle4';
+    if (key === META) return { level: [META] };           // méta : remplace tout
+    const grades = cur.filter((l) => l !== META);          // on quitte la méta
+    const next = grades.includes(key) ? grades.filter((l) => l !== key) : [...grades, key];
+    return { level: next.length ? next : [key] };          // garder ≥ 1 niveau
+  }),
 
   // Pool de questions « spécial Brevet » (DNB) ajouté par-dessus le niveau choisi
   useBrevet: false,
@@ -1226,6 +1236,8 @@ export const useGameStore = create((set, get) => ({
     // Extensions : une save porte son propre jeu d'extensions. Sauvegardes
     // antérieures (champ absent) → tout activé (comportement historique).
     if (saved.extensions == null) set({ extensions: defaultExtensions() });
+    // `level` est désormais un tableau : normalise les sauvegardes au format chaîne.
+    if (!Array.isArray(saved.level)) set({ level: [saved.level || 'cycle4'] });
     if (get().itemsEnabled() && !Array.isArray(saved.shopStock)) {
       set({ shopStock: itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems), shopStockTurns: get().teams.length * 2 });
     }
