@@ -268,9 +268,47 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spac
 }
 
 /* Boutons image Boutique / Inventaire (HUD bas) */
+/* Section « Objets à utiliser » du HUD de droite (sous les pouvoirs) */
+.hud-conso { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.hud-conso-label {
+  font-family: var(--font-display); font-size: 12px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-500); text-align: center;
+}
+.hud-conso-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.hud-conso-btn {
+  --rar: #888;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  width: 78px; padding: 9px 6px 8px;
+  border-radius: 14px;
+  border: 2px solid var(--rar);
+  background: radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--rar) 18%, #fffaf0), #fffaf0);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 3px 7px rgba(46,31,16,0.18);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.hud-conso-btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 6px 13px rgba(46,31,16,0.26); }
+.hud-conso-btn:active { transform: translateY(1px) scale(0.97); }
+.hud-conso-ico { position: relative; width: 46px; height: 46px; display: inline-flex; align-items: center; justify-content: center; }
+.hud-conso-ico img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.hud-conso-emoji { font-size: 32px; line-height: 1; }
+.hud-conso-badge {
+  position: absolute; right: -6px; bottom: -6px;
+  min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 999px; font-family: var(--font-display); font-size: 12px; line-height: 20px;
+  color: #fff; background: var(--ink-800); border: 1.5px solid #fffaf0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.hud-conso-name {
+  font-family: var(--font-ui); font-size: 11px; line-height: 1.12; text-align: center;
+  color: var(--ink-700); max-width: 100%; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+
 .hud-imgbtn {
   position: relative;
-  width: 186px;
+  /* Cibles tactiles agrandies pour le TBI/écran tactile (élèves debout). */
+  width: 238px;
   border: none;
   background: none;
   padding: 0;
@@ -302,7 +340,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spac
   border: 1.5px solid var(--gold-500);
   color: var(--gold-shine);
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }

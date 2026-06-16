@@ -40,6 +40,9 @@ function createDefaultTeams(n) {
     powerOff: null,
     sablierActif: false,
     doubleActive: false,
+    // Tours écoulés depuis la dernière visite de la boutique par cette équipe
+    // (prompt « Visiter la boutique ? »). Remis à 0 à chaque ouverture.
+    turnsSinceShop: 0,
   }));
 }
 
@@ -69,6 +72,7 @@ const TURN_RESET = {
   preRollValue: null,
   showTargetPicker: null,
   showShop: false,
+  showShopPrompt: false,
   showInventory: false,
   indiceUsed: false,
   indiceHidden: [],
@@ -208,6 +212,9 @@ export const useGameStore = create((set, get) => ({
   indiceHidden: [],
   showDiceModal: false,
   showShop: false,
+  // Prompt « Visiter la boutique ? » proposé en début de tour (transitoire,
+  // non persisté) : true | false
+  showShopPrompt: false,
   showInventory: false,
   // Stock rotatif de la boutique d'objets : renouvelé tous les N tours
   shopStock: [],
@@ -1045,9 +1052,22 @@ export const useGameStore = create((set, get) => ({
 
   // --- Shop (delegated) ---
   openShop: () => {
-    const { finished, rolling, showQuestion, showEvent, showFight, awaitingChoice } = get();
+    const { finished, rolling, showQuestion, showEvent, showFight, awaitingChoice, teams, currentTeam } = get();
     if (finished || rolling || showQuestion || showEvent || showFight || awaitingChoice) return;
-    set({ showShop: true });
+    // Visiter la boutique remet à zéro le compteur du prompt de l'équipe active.
+    const nt = teams.slice();
+    if (nt[currentTeam]) nt[currentTeam] = { ...nt[currentTeam], turnsSinceShop: 0 };
+    set({ showShop: true, showShopPrompt: false, teams: nt });
+  },
+  // Prompt « Visiter la boutique ? » : accepter ouvre la boutique (reset compteur
+  // via openShop) ; « Plus tard » referme et remet le compteur à 0 (snooze : ne
+  // re-proposé que dans shopPromptDelay tours).
+  acceptShopPrompt: () => { set({ showShopPrompt: false }); get().openShop(); },
+  dismissShopPrompt: () => {
+    const { teams, currentTeam } = get();
+    const nt = teams.slice();
+    if (nt[currentTeam]) nt[currentTeam] = { ...nt[currentTeam], turnsSinceShop: 0 };
+    set({ showShopPrompt: false, teams: nt });
   },
   closeShop: () => {
     // Marché Noir : la boutique a été ouverte par un événement → fermer = fin du tour.
@@ -1179,7 +1199,23 @@ export const useGameStore = create((set, get) => ({
       if (buffs.length < cb.buffs.length) addLog(`⏳ Un effet de durée de ${cb.emoji} ${cb.name} s'est dissipé.`);
     }
 
-    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET });
+    // Compteur du prompt boutique : +1 quand l'équipe REGAGNE la main.
+    const reTeam = nt[newCurrent];
+    const sinceShop = (reTeam?.turnsSinceShop ?? 0) + 1;
+    if (nt === get().teams) nt = [...nt];
+    nt[newCurrent] = { ...reTeam, turnsSinceShop: sinceShop };
+
+    // Proposer « Visiter la boutique ? » si l'équipe ne l'a pas vue depuis assez
+    // de tours ET peut s'offrir au moins un objet de l'arrivage.
+    let showShopPrompt = false;
+    if (get().itemsEnabled()) {
+      const cheapest = itemH.cheapestStockPrice(get().shopStock);
+      if (sinceShop >= (LOOT.shopPromptDelay ?? 3) && (reTeam?.money ?? 0) >= cheapest) {
+        showShopPrompt = true;
+      }
+    }
+
+    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET, showShopPrompt });
     get().triggerStarterChest(); // coffre de départ au 1er tour de cette équipe
     if (get().phase === 'game') saveGame(get());
   },

@@ -13,6 +13,16 @@ export function sellPrice(item) {
   return Math.ceil(item.price / 2);
 }
 
+// Prix du moins cher des objets actuellement en arrivage (stock = tableau de
+// clés). Sert au prompt « Visiter la boutique ? » : on ne le propose que si
+// l'équipe peut s'offrir au moins un objet. Infinity si le stock est vide.
+export function cheapestStockPrice(stock) {
+  const prices = (Array.isArray(stock) ? stock : [])
+    .map((k) => ITEMS[k]?.price)
+    .filter((p) => typeof p === 'number');
+  return prices.length ? Math.min(...prices) : Infinity;
+}
+
 // --- Sac positionnel & PILES ---
 // Une case du sac est : null | "clé" (1 exemplaire) | { key, n } (pile de n≥2).
 // On garde la forme « chaîne » pour 1 exemplaire (rétro-compatible avec les

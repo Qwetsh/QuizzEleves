@@ -36,6 +36,7 @@ const DEFAULT_LOOT = {
   answerConsumableRate: 0.12,  // proba max du loot de CONSOMMABLE de bonne réponse (× temps restant, indépendant)
   shopWeightCommon: 3,         // poids d'un objet commun dans le stock boutique
   shopWeightOther: 2,          // poids d'un objet rare/légendaire (hors lootOnly)
+  shopPromptDelay: 3,          // tours sans voir la boutique avant de proposer « Visiter la boutique ? »
 };
 
 export const LOOT = { ...DEFAULT_LOOT };

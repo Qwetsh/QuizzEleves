@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import BoardSVG from './BoardSVG';
 import Dice from './Dice';
 import PowerButtons from './Sidebar/PowerButtons';
+import ConsumableBar from './Sidebar/ConsumableBar';
 import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
 import MobileSessionPanel from './MobileSessionPanel';
@@ -13,6 +14,7 @@ import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
 import VictoryModal from '../Modals/VictoryModal';
 import ShopModal from '../Modals/ShopModal';
+import ShopPromptModal from '../Modals/ShopPromptModal';
 import InventoryModal from '../Modals/InventoryModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
@@ -91,7 +93,7 @@ export default function GameLayout() {
               left: '50%',
               transform: 'translateX(-50%)',
               zIndex: 56,
-              display: 'flex', alignItems: 'center', gap: 10,
+              display: 'flex', alignItems: 'center', gap: 16,
             }}
           >
             {itemsOn && (
@@ -186,6 +188,7 @@ export default function GameLayout() {
         <div style={{ padding: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <Dice />
           <PowerButtons />
+          <ConsumableBar />
         </div>
 
         {/* Journal section */}
@@ -235,6 +238,7 @@ export default function GameLayout() {
       <TargetPickerModal />
       <VictoryModal />
       <ShopModal />
+      <ShopPromptModal />
       <InventoryModal />
       <FightModal />
       <LootReveal />

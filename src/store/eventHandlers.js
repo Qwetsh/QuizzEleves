@@ -149,7 +149,10 @@ export function acceptEvent(set, get) {
     // légendaires normalement introuvables) + remise. Fermer la boutique
     // termine le tour (cf. closeShop). On clôt l'event tout de suite.
     const stock = generateBlackMarketStock(5, get().enabledItems || Object.keys(ITEMS));
-    set({ showEvent: null, eventApplied: true, showShop: { marcheNoir: true, stock, discount: 0.7 } });
+    // Voir le Marché Noir compte comme une visite de boutique → reset du prompt.
+    const nt = get().teams.slice();
+    if (nt[get().currentTeam]) nt[get().currentTeam] = { ...nt[get().currentTeam], turnsSinceShop: 0 };
+    set({ showEvent: null, eventApplied: true, showShopPrompt: false, teams: nt, showShop: { marcheNoir: true, stock, discount: 0.7 } });
     return;
   }
 
