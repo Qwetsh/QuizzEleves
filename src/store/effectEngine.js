@@ -114,7 +114,10 @@ export function equipOnRollActions(team, value) {
 export function equipTriggerActions(team, on, subject) {
   const out = [];
   const consider = (t) => {
-    if (t.subject && t.subject !== subject) return; // condition de thème non remplie
+    if (t.subject && t.subject !== subject) return; // condition de thème (mono) non remplie
+    // Condition de thème MULTI (déclencheur on:questionSubject) : le thème courant
+    // doit figurer dans la liste. Liste vide ⇒ toute matière.
+    if (t.subjects?.length && !t.subjects.includes(subject)) return;
     if (passesChance(t.chance)) out.push(...(t.do || [])); // chance optionnelle
   };
   for (const slot of SLOTS_EQUIP) {
@@ -141,8 +144,10 @@ export function questionRerollOptions(team, rerollUsed, subject) {
       opts.push({ itemName: it.name, icon: it.icon, fromBag: false, actions: trig.flatMap((t) => t.do || []) });
     }
   }
-  (team?.bag || []).forEach((k, i) => {
-    const it = ITEMS[k];
+  // Une case de sac peut être une clé ("k") ou une pile ({ key, n }).
+  const keyOf = (c) => (typeof c === 'string' ? c : c?.key);
+  (team?.bag || []).forEach((c, i) => {
+    const it = ITEMS[keyOf(c)];
     const trig = triggersOf(it, 'question').filter(subjectMatches);
     if (trig.length) opts.push({ itemName: it.name, icon: it.icon, fromBag: true, bagIndex: i, actions: trig.flatMap((t) => t.do || []) });
   });
@@ -376,9 +381,18 @@ function stepHead(set, get, action, ctx) {
     }
     case 'extraTime': {
       const et = resolveAmount(action.n, srcTeam);
-      patchSource(set, get, (t) => ({ itemTimerBonus: (t.itemTimerBonus || 0) + et }));
-      get().addLog(`⌛ +${et}s à la prochaine question.`);
-      announce(set, get, '⌛', `+${et}s à la prochaine question${dieTag(action.n)}`, '#3b6cb3');
+      const sq = get().showQuestion;
+      if (sq?.question) {
+        // Question DÉJÀ ouverte (ex. déclencheur on:questionSubject) : prolonge la
+        // question COURANTE — la modale relit itemBonusTime et réajuste le timer.
+        set({ showQuestion: { ...sq, itemBonusTime: (sq.itemBonusTime || 0) + et } });
+        get().addLog(`⌛ +${et}s sur cette question.`);
+        announce(set, get, '⌛', `+${et}s sur cette question${dieTag(action.n)}`, '#3b6cb3');
+      } else {
+        patchSource(set, get, (t) => ({ itemTimerBonus: (t.itemTimerBonus || 0) + et }));
+        get().addLog(`⌛ +${et}s à la prochaine question.`);
+        announce(set, get, '⌛', `+${et}s à la prochaine question${dieTag(action.n)}`, '#3b6cb3');
+      }
       return 'done';
     }
     case 'shieldNext': {

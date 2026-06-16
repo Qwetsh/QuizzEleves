@@ -126,6 +126,7 @@ function SetBonusEditor({ effects, onChange }) {
   const presets = [
     { label: '♾️ Bonus permanent', mk: () => ({ type: EQUIP_EFFECTS[0], value: 1 }) },
     { label: '✅ Quand je réponds bien', mk: () => makeTrigger('correct') },
+    { label: '🎯 Quand je tombe sur un thème', mk: () => makeTrigger('questionSubject') },
     { label: '🤺 Quand je gagne un duel', mk: () => makeTrigger('fightWin') },
     { label: '🎲 Selon le dé', mk: () => makeTrigger('roll') },
   ];

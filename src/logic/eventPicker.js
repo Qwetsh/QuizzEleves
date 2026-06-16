@@ -3,11 +3,15 @@ import { EVENTS } from '../data/events.js';
 /**
  * Tirage pondere d'un evenement parmi les evenements actifs.
  * @param {string[]} enabledKeys - cles des evenements actives (ex: ['rejouer','recul',...])
+ * @param {object} [opts]
+ * @param {boolean} [opts.itemsEnabled=true] - si false, exclut les evenements qui
+ *   dependent du systeme d'objets (marques `needsItems`) — extension equipement coupee.
  * @returns {{ key: string, event: object }} l'evenement tire
  */
-export function pickRandomEvent(enabledKeys) {
+export function pickRandomEvent(enabledKeys, opts = {}) {
+  const { itemsEnabled = true } = opts;
   const pool = enabledKeys
-    .filter((k) => EVENTS[k])
+    .filter((k) => EVENTS[k] && (itemsEnabled || !EVENTS[k].needsItems))
     .map((k) => ({ key: k, event: EVENTS[k], weight: EVENTS[k].weight ?? 1 }));
 
   if (pool.length === 0) return null;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { cellKey, cellN } from '../../store/itemHandlers';
 import { itemImg } from '../../logic/itemAssets';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
@@ -99,8 +100,8 @@ function EquipmentStrip({ team, className }) {
         );
       })}
       {bag.length > 0 && (
-        <span className="ts-eq-bag" title={`Sac : ${bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}`}>
-          {'\u{1F9F3}'} {bag.length}
+        <span className="ts-eq-bag" title={`Sac : ${bag.map((c) => { const it = ITEMS[cellKey(c)]; return it ? it.name + (cellN(c) > 1 ? ` ×${cellN(c)}` : '') : null; }).filter(Boolean).join(', ')}`}>
+          {'\u{1F9F3}'} {bag.reduce((s, c) => s + cellN(c), 0)}
         </span>
       )}
     </div>

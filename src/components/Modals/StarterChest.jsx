@@ -23,11 +23,12 @@ function ChestInner({ team }) {
   const close = useGameStore((s) => s.closeStarterChest);
   const [opened, setOpened] = useState(false);
 
-  const item = reward?.item ? ITEMS[reward.item] : null;
+  const choices = (reward?.choices || []).filter((k) => ITEMS[k]);
   const gold = reward?.gold ?? 20;
 
   const open = () => { soundMoney(); setOpened(true); };
-  const done = () => { soundClick(); close(); };
+  const choose = (key) => { soundClick(); close(key); };
+  const done = () => { soundClick(); close(null); };
 
   return (
     <motion.div className="loot-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -62,7 +63,7 @@ function ChestInner({ team }) {
           ) : (
             <motion.div
               initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}
             >
               <motion.div
                 initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
@@ -71,8 +72,29 @@ function ChestInner({ team }) {
               >
                 +{gold} <span className="coin" />
               </motion.div>
-              {item && <LootCard item={item} subtitle="Un consommable pour démarrer" compact />}
-              <button className="loot-btn" onClick={done}>Super&nbsp;!</button>
+              {choices.length > 0 ? (
+                <>
+                  <p className="loot-desc" style={{ textAlign: 'center', margin: 0 }}>Choisis UN consommable pour démarrer :</p>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {choices.map((key, i) => (
+                      <motion.button
+                        key={key}
+                        type="button"
+                        onClick={() => choose(key)}
+                        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + i * 0.1 }}
+                        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                        title={`Choisir ${ITEMS[key].name}`}
+                      >
+                        <LootCard item={ITEMS[key]} compact />
+                      </motion.button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--ink-500)' }}>Ton choix est définitif.</p>
+                </>
+              ) : (
+                <button className="loot-btn" onClick={done}>Super&nbsp;!</button>
+              )}
             </motion.div>
           )}
         </div>

@@ -13,6 +13,8 @@ import TeamCustomization from './TeamCustomization';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
 import ItemsChecklist from './ItemsChecklist';
+import ExtensionsChecklist from './ExtensionsChecklist';
+import { extOn } from '../../extensions/registry';
 
 // Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
 // Lance un duel direct entre les deux premières équipes du setup, sans toucher
@@ -107,6 +109,8 @@ const TOOLS_CODE = '54150';
 export default function Setup() {
   const startGame = useGameStore((s) => s.startGame);
   const resumeGame = useGameStore((s) => s.resumeGame);
+  const extensions = useGameStore((s) => s.extensions);
+  const itemsOn = extOn(extensions, 'equipment');
   const [hasSave, setHasSave] = useState(false);
   // Accès aux outils d'édition hors dev : triple-clic sur le dé + code.
   const [toolsUnlocked, setToolsUnlocked] = useState(() => {
@@ -208,11 +212,16 @@ export default function Setup() {
             <TeamCustomization />
           </div>
           <div className="panel">
-            <EventsChecklist />
+            <ExtensionsChecklist />
           </div>
           <div className="panel">
-            <ItemsChecklist />
+            <EventsChecklist />
           </div>
+          {itemsOn && (
+            <div className="panel">
+              <ItemsChecklist />
+            </div>
+          )}
           {showTools && <EditorTools />}
           {import.meta.env.DEV && <DevFightPanel />}
         </div>

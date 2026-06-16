@@ -5,7 +5,7 @@ import { SUBJECTS } from '../../data/subjects';
 import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { merchantPrice } from '../../store/eventHandlers';
-import { canReceiveItem } from '../../store/itemHandlers';
+import { canReceiveItem, cellKey } from '../../store/itemHandlers';
 import { EVENTS } from '../../data/events';
 import { EVENT_IMG, EVENT_IMG_LIST } from '../../data/eventAssets';
 import ItemIcon from './ItemIcon';
@@ -608,7 +608,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
 
   if (eventKey === 'troc') {
     const equipmentEntries = Object.entries(team.equipment || {}).filter(([, k]) => k && ITEMS[k]);
-    const bagEntries = (team.bag || []).map((k, i) => [i, k]).filter(([, k]) => k && ITEMS[k]);
+    const bagEntries = (team.bag || []).map((c, i) => [i, cellKey(c)]).filter(([, k]) => k && ITEMS[k]);
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
@@ -638,7 +638,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     const target = teams?.[data?.targetIndex];
     if (!target) return null;
     const equipmentEntries = Object.entries(target.equipment || {}).filter(([, k]) => k);
-    const bagEntries = (target.bag || []).map((k, i) => [i, k]);
+    const bagEntries = (target.bag || []).map((c, i) => [i, cellKey(c)]).filter(([, k]) => k && ITEMS[k]);
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>

@@ -9,8 +9,13 @@ import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
+import { extOn } from '../../extensions/registry';
 import SetBonusInfo from '../Modals/SetBonusInfo';
 import '../../styles/mobile.css';
+
+// Une case de sac : "clé" (1) ou { key, n } (pile). Helpers locaux (mobile léger).
+const cellKey = (c) => (c == null ? null : typeof c === 'string' ? c : c.key);
+const cellN = (c) => (c == null ? 0 : typeof c === 'string' ? 1 : (c.n || 1));
 
 function readInitialCode() {
   const p = new URLSearchParams(window.location.search);
@@ -144,8 +149,10 @@ function TeamView({ session, teamIdx, onSwitch }) {
   const t = session.teams[teamIdx];
   const effects = getTeamEffects(t);
   const myTurn = session.currentTeam === teamIdx && session.status !== 'finished';
-  const bagKeys = (t.bag || []).filter((k) => ITEMS[k]);
-  const shopKeys = (session.shop || []).filter((k) => ITEMS[k]);
+  const itemsOn = extOn(session.extensions, 'equipment');
+  const bagCells = (t.bag || []).map((c) => ({ key: cellKey(c), n: cellN(c) })).filter((c) => ITEMS[c.key]);
+  const bagUnits = bagCells.reduce((s, c) => s + c.n, 0);
+  const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
   const pKeys = powerKeysOf(t);
   const totalQ = (t.correct ?? 0) + (t.wrong ?? 0);
   const rate = totalQ ? Math.round((t.correct / totalQ) * 100) : null;
@@ -192,29 +199,33 @@ function TeamView({ session, teamIdx, onSwitch }) {
         </div>
       )}
 
+      {itemsOn && (
       <section className="mob-section">
         <h2 className="mob-section-title">Équipement</h2>
         {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} onTap={setSheet} />)}
       </section>
+      )}
 
+      {itemsOn && (
       <section className="mob-section">
-        <h2 className="mob-section-title">Sac {bagKeys.length > 0 && <span className="mob-count">{bagKeys.length}</span>}</h2>
-        {bagKeys.length === 0 ? (
+        <h2 className="mob-section-title">Sac {bagUnits > 0 && <span className="mob-count">{bagUnits}</span>}</h2>
+        {bagCells.length === 0 ? (
           <div className="mob-empty">Sac vide</div>
         ) : (
           <div className="mob-bag">
-            {bagKeys.map((k, i) => {
-              const item = ITEMS[k];
+            {bagCells.map((c, i) => {
+              const item = ITEMS[c.key];
               return (
-                <button key={i} className="mob-bag-item" onClick={() => setSheet(k)} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
+                <button key={i} className="mob-bag-item" onClick={() => setSheet(c.key)} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
                   {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
-                  <span className="mob-bag-name">{item.name}</span>
+                  <span className="mob-bag-name">{item.name}{c.n > 1 ? ` ×${c.n}` : ''}</span>
                 </button>
               );
             })}
           </div>
         )}
       </section>
+      )}
 
       {shopKeys.length > 0 && (
         <section className="mob-section">

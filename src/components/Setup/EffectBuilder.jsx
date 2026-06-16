@@ -66,8 +66,9 @@ export function expandD6Table(table) {
 export function makeTrigger(on) {
   if (on === 'roll') return { kind: 'trigger', on: 'roll', values: [6], do: [defaultAction()] };
   if (on === 'question') return { kind: 'trigger', on: 'question', n: 1, do: [{ action: 'rerollQuestion', subject: 'same' }] };
+  if (on === 'questionSubject') return { kind: 'trigger', on: 'questionSubject', subjects: [], do: [defaultAction()] };
   if (on === 'use') return { kind: 'trigger', on: 'use', do: [defaultAction()] };
-  return { kind: 'trigger', on, do: [defaultAction()] }; // correct | wrong
+  return { kind: 'trigger', on, do: [defaultAction()] }; // correct | wrong | fightWin | fightLose
 }
 
 const amountLabel = (n) => {
@@ -389,6 +390,7 @@ const ON_FRAGMENTS_EQUIP = [
   { k: 'roll', label: 'le dé fait… (à mon tour)' },
   { k: 'correct', label: 'je réponds bien' },
   { k: 'wrong', label: 'je rate (ou temps écoulé)' },
+  { k: 'questionSubject', label: 'je tombe sur une question de…' },
   { k: 'fightWin', label: 'je gagne un duel' },
   { k: 'fightLose', label: 'je perds un duel' },
   { k: 'question', label: "j'appuie sur « Changer la question »" },
@@ -489,6 +491,29 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
       {(fx.on === 'correct' || fx.on === 'wrong' || fx.on === 'fightWin' || fx.on === 'fightLose') && (
         <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
       )}
+
+      {fx.on === 'questionSubject' && (() => {
+        const subjects = fx.subjects || [];
+        const toggleSubj = (k) => upd({ subjects: subjects.includes(k) ? subjects.filter((s) => s !== k) : [...subjects, k] });
+        return (
+          <>
+            <div className="fx-nest-label">Thème(s) déclencheur(s) (aucune coche = toute matière) :</div>
+            <div className="fx-sentence" style={{ flexWrap: 'wrap', marginBottom: 6 }}>
+              {SUBJECT_KEYS.map((k) => {
+                const on = subjects.includes(k);
+                return (
+                  <button key={k} type="button" onClick={() => toggleSubj(k)}
+                    className={'fx-die' + (on ? ' is-on' : '')} style={{ width: 'auto', padding: '2px 8px', fontSize: 12 }}>
+                    {SUBJECTS[k]?.icon} {SUBJECTS[k]?.name || k}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="fx-nest-label">Dès que la question apparaît (avant de répondre), faire :</div>
+            <ActionList actions={fx.do || []} onChange={(d) => upd({ do: d })} />
+          </>
+        );
+      })()}
 
       {fx.on === 'question' && (() => {
         const a = fx.do?.[0]?.action === 'rerollQuestion' ? fx.do[0] : { action: 'rerollQuestion', subject: 'same' };

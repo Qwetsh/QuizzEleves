@@ -238,6 +238,8 @@ function MinigameStage({ fight, attacker, defender }) {
 function RewardScreen({ fight, attacker, defender }) {
   const fightChooseReward = useGameStore((s) => s.fightChooseReward);
   const closeFight = useGameStore((s) => s.closeFight);
+  // Extension objets coupée : pas de butin d'objet en duel.
+  const itemsOn = useGameStore((s) => s.itemsEnabled());
 
   const winner = fight.winnerSide === 'attacker' ? attacker : defender;
   const loser = fight.winnerSide === 'attacker' ? defender : attacker;
@@ -288,14 +290,16 @@ function RewardScreen({ fight, attacker, defender }) {
                 <button className="btn btn--purple btn--lg" onClick={() => fightChooseReward('knockback')}>
                   {"⬅️ Repousser — 1 dé de cases"}
                 </button>
-                <button className="btn btn--lg" onClick={() => fightChooseReward('loot')}>
-                  {"\u{1F392} Butin — vole un objet"}
-                </button>
+                {itemsOn && (
+                  <button className="btn btn--lg" onClick={() => fightChooseReward('loot')}>
+                    {"\u{1F392} Butin — vole un objet"}
+                  </button>
+                )}
               </div>
               <p style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 12, fontFamily: 'var(--font-ui)' }}>
                 Piller : vole à {loser.emoji} {loser.name} autant de pièces que la somme des 2 dés.<br />
-                Repousser : {loser.emoji} {loser.name} recule du résultat du dé.<br />
-                Butin : vole un objet au hasard à {loser.emoji} {loser.name} (équipement ou consommable).
+                Repousser : {loser.emoji} {loser.name} recule du résultat du dé.
+                {itemsOn && <><br />Butin : vole un objet au hasard à {loser.emoji} {loser.name} (équipement ou consommable).</>}
               </p>
             </>
           )}

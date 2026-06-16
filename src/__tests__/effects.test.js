@@ -400,6 +400,49 @@ describe('equipTriggerActions : condition de thème', () => {
     const team = { equipment: { head: null, body: null, feet: 'anneauTout' } };
     expect(equipTriggerActions(team, 'correct', 'histoire')).toHaveLength(1);
   });
+
+  it('on:questionSubject filtre par liste de matières (subjects)', () => {
+    setItemsData({
+      toqueMaths: { name: 'Toque', slot: 'head', rarity: 'rare', price: 10,
+        effects: [{ kind: 'trigger', on: 'questionSubject', subjects: ['maths', 'svt'], do: [gain(5)] }] },
+      anneauTout: { name: 'Anneau', slot: 'feet', rarity: 'commun', price: 5,
+        effects: [{ kind: 'trigger', on: 'questionSubject', subjects: [], do: [gain(2)] }] },
+    });
+    const t1 = { equipment: { head: 'toqueMaths', body: null, feet: null } };
+    expect(equipTriggerActions(t1, 'questionSubject', 'maths')).toHaveLength(1);   // ciblé
+    expect(equipTriggerActions(t1, 'questionSubject', 'francais')).toHaveLength(0); // hors liste
+    const t2 = { equipment: { head: null, body: null, feet: 'anneauTout' } };
+    expect(equipTriggerActions(t2, 'questionSubject', 'histoire')).toHaveLength(1); // liste vide = tout
+  });
+});
+
+describe('déclencheur on:questionSubject (à l’apparition de la question)', () => {
+  it('askQuestion joue l’effet sur le thème ciblé, et rien sinon', () => {
+    setItemsData({
+      toque: { name: 'Toque', slot: 'head', rarity: 'rare', price: 10,
+        effects: [{ kind: 'trigger', on: 'questionSubject', subjects: ['maths'], do: [{ action: 'money', mode: 'gain', target: 'self', n: 7, unit: 'flat' }] }] },
+    });
+    // Thème ciblé → +7 or
+    freshGame([{ equipment: { head: 'toque', body: null, feet: null }, money: 50 }, {}]);
+    S().askQuestion('maths');
+    expect(team(0).money).toBe(57);
+    expect(S().showQuestion?.subject).toBe('maths');
+    // Thème non ciblé → inchangé
+    freshGame([{ equipment: { head: 'toque', body: null, feet: null }, money: 50 }, {}]);
+    S().askQuestion('francais');
+    expect(team(0).money).toBe(50);
+  });
+
+  it('extraTime sur question ouverte prolonge la question courante', () => {
+    setItemsData({
+      sablier: { name: 'Sablier', slot: 'body', rarity: 'rare', price: 10,
+        effects: [{ kind: 'trigger', on: 'questionSubject', subjects: ['maths'], do: [{ action: 'extraTime', n: 8 }] }] },
+    });
+    freshGame([{ equipment: { head: null, body: 'sablier', feet: null } }, {}]);
+    S().askQuestion('maths');
+    expect(S().showQuestion?.itemBonusTime).toBe(8); // prolonge LA question, pas la suivante
+    expect(team(0).itemTimerBonus ?? 0).toBe(0);
+  });
 });
 
 // --- Sets d'équipement (bonus à 2/3 pièces) ---

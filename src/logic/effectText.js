@@ -138,6 +138,12 @@ function describeTrigger(fx) {
   // Condition de thème (déclencheurs de réponse) : « … en Histoire ».
   const onSubj = fx.subject ? ` en ${SUBJECTS[fx.subject]?.name || fx.subject}` : '';
   if (fx.on === 'roll') return `${chancePrefix}si le dé fait ${(fx.values || []).join('/')} : ${joinDo(fx.do)}`;
+  if (fx.on === 'questionSubject') {
+    const subs = fx.subjects?.length
+      ? fx.subjects.map((s) => SUBJECTS[s]?.name || s).join('/')
+      : 'toute matière';
+    return `${chancePrefix}quand je tombe sur une question en ${subs} : ${joinDo(fx.do)}`;
+  }
   if (fx.on === 'correct') return `${chancePrefix}à chaque bonne réponse${onSubj} : ${joinDo(fx.do)}`;
   if (fx.on === 'wrong') return `${chancePrefix}à chaque erreur${onSubj} (ou temps écoulé) : ${joinDo(fx.do)}`;
   if (fx.on === 'fightWin') return `${chancePrefix}quand tu gagnes un duel : ${joinDo(fx.do)}`;

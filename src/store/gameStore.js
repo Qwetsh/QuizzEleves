@@ -8,6 +8,7 @@ import { generateDecor } from '../logic/decorGenerator.js';
 import { moveForward, moveBack } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
+import { defaultExtensions, extOn } from '../extensions/registry.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -122,6 +123,17 @@ export const useGameStore = create((set, get) => ({
     set({ boardParams: { ...get().boardParams, [key]: value } });
   },
 
+  // --- Extensions (modules activables, choisis au Setup, verrouillés en jeu) ---
+  extensions: defaultExtensions(),
+  toggleExtension: (id) => {
+    // Verrou : on ne bascule une extension qu'au Setup (élimine les états
+    // incohérents en pleine partie : objets équipés orphelins, stock, events…).
+    if (get().phase !== 'setup') return;
+    set((s) => ({ extensions: { ...s.extensions, [id]: !extOn(s.extensions, id) } }));
+  },
+  // Helper interne : l'extension « objets/équipement » est-elle active ?
+  itemsEnabled: () => extOn(get().extensions, 'equipment'),
+
   enabledEvents: Object.keys(EVENTS),
   toggleEvent: (key) => {
     const { enabledEvents } = get();
@@ -217,16 +229,24 @@ export const useGameStore = create((set, get) => ({
   triggerStarterChest: () => {
     const { teams, currentTeam } = get();
     const t = teams[currentTeam];
+    // Extension objets désactivée : pas de coffre de départ (rien à donner).
+    if (!get().itemsEnabled()) { set({ showStarterChest: false, lastStarterReward: null }); return; }
     if (!t || t.starterChestOpened) { set({ showStarterChest: false, lastStarterReward: null }); return; }
-    const item = itemH.pickLootItem(0, get().enabledItems || Object.keys(ITEMS), { category: 'consumable' });
-    set({ showStarterChest: true, lastStarterReward: { gold: 20, item } });
+    // Triple choix : 3 consommables distincts (hors légendaires lootOnly) à choisir.
+    const enabled = get().enabledItems || Object.keys(ITEMS);
+    const consumKeys = enabled.filter((k) => ITEMS[k]?.slot === 'consumable' && !ITEMS[k].lootOnly);
+    const choices = itemH.pickWeightedItems(3, consumKeys, (item) => (item.rarity === 'commun' ? 3 : 2));
+    set({ showStarterChest: true, lastStarterReward: { gold: 20, choices } });
   },
-  closeStarterChest: () => {
+  // Ferme le coffre de départ : verse les 20 pièces + le consommable CHOISI
+  // (chosenKey ; null si aucun choix proposé). Choix validé contre la liste.
+  closeStarterChest: (chosenKey = null) => {
     const { teams, currentTeam, lastStarterReward, addLog } = get();
     const t = teams[currentTeam];
     if (!t) { set({ showStarterChest: false, lastStarterReward: null }); return; }
     const gold = lastStarterReward?.gold || 0;
-    const itemKey = lastStarterReward?.item || null;
+    const choices = lastStarterReward?.choices || [];
+    const itemKey = chosenKey && choices.includes(chosenKey) ? chosenKey : null;
     let placed = { ...t, money: (t.money ?? 0) + gold, starterChestOpened: true };
     if (itemKey) placed = itemH.placeItem(placed, itemKey).team; // sac vide au départ → placé
     const nt = [...teams];
@@ -294,7 +314,7 @@ export const useGameStore = create((set, get) => ({
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
-      shopStock: itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems),
+      shopStock: get().itemsEnabled() ? itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems) : [],
       shopStockTurns: setupTeams.length * 2,
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
@@ -541,7 +561,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     if (node.type === 'event') {
-      const picked = pickRandomEvent(enabledEvents);
+      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled() });
       if (picked) {
         addLog(`\u{1F381} ${team.emoji} ${team.name} tombe sur : ${picked.event.icon} ${picked.event.name}`);
         // La case événement donnera AUSSI une question à la fin (sauf événements
@@ -664,6 +684,13 @@ export const useGameStore = create((set, get) => ({
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false, indiceHidden, rerollUsed: false,
     });
+
+    // Déclencheur d'équipement « quand je tombe sur une question de [thèmes] » :
+    // joué À l'apparition de la question (avant de répondre). La question est déjà
+    // ouverte → les actions agissent dessus (prolonger le temps, changer la
+    // question, bouclier préventif, gain d'or, avancer…).
+    const subjActions = effectH.equipTriggerActions(get().teams[currentTeam], 'questionSubject', subject);
+    if (subjActions.length) effectH.runEffects(set, get, subjActions, { source: 'item' });
   },
 
   answerQuestion: (chosenIndex, timeLeft = 0) => {
@@ -757,6 +784,8 @@ export const useGameStore = create((set, get) => ({
       // Loot de bonne réponse : au plus une fois par tour (la rafale Double y
       // revient une seule fois). Taux par canal = BASE × temps restant + BONUS
       // d'objet FLAT (un « +100% » garantit le loot). Canaux INDÉPENDANTS.
+      // Extension objets désactivée : aucun butin (couture d'octroi coupée).
+      if (!get().itemsEnabled()) { get().nextTurn(); return; }
       const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
       const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
       const lootTeam = get().teams[currentTeam];
@@ -926,6 +955,7 @@ export const useGameStore = create((set, get) => ({
   // le coffre. Pas de `thenClose` : on est en plein milieu d'un tour (effet de
   // consommable), il ne faut donc ni fermer d'événement ni enchaîner nextTurn.
   engineLoot: (teamIdx, category) => {
+    if (!get().itemsEnabled()) return; // extension objets coupée → action `loot` neutre
     const idx = teamIdx ?? get().currentTeam;
     const enabled = get().enabledItems || Object.keys(ITEMS);
     const key = itemH.pickLootItem(0, enabled, category ? { category } : {});
@@ -1089,7 +1119,9 @@ export const useGameStore = create((set, get) => ({
     if (!showQuestion || pendingActions || !opt) return;
     if (opt.fromBag) {
       const bag = itemH.normalizeBag(teams[currentTeam].bag);
-      bag[opt.bagIndex] = null;
+      const cell = bag[opt.bagIndex];
+      // Consomme UNE unité de la pile (la case se libère à 0).
+      bag[opt.bagIndex] = itemH.cellN(cell) > 1 ? itemH.mkCell(itemH.cellKey(cell), itemH.cellN(cell) - 1) : null;
       const nt = [...teams];
       nt[currentTeam] = { ...nt[currentTeam], bag };
       set({ teams: nt });
@@ -1104,9 +1136,9 @@ export const useGameStore = create((set, get) => ({
     const { teams, currentTeam, finished, shopStockTurns, addLog } = get();
     if (finished) return;
 
-    // Stock rotatif de la boutique : renouvele apres N tours
+    // Stock rotatif de la boutique : renouvele apres N tours (ext. objets requise)
     const turnsLeft = (shopStockTurns ?? 0) - 1;
-    if (turnsLeft <= 0) {
+    if (get().itemsEnabled() && turnsLeft <= 0) {
       set({ shopStock: itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems), shopStockTurns: teams.length * 2 });
       addLog(`🛒 La boutique renouvelle son stock d'objets !`);
     } else {
@@ -1191,7 +1223,10 @@ export const useGameStore = create((set, get) => ({
     if (get().board && oldFormat) {
       set({ boardDecor: generateDecor(get().board) });
     }
-    if (!Array.isArray(saved.shopStock)) {
+    // Extensions : une save porte son propre jeu d'extensions. Sauvegardes
+    // antérieures (champ absent) → tout activé (comportement historique).
+    if (saved.extensions == null) set({ extensions: defaultExtensions() });
+    if (get().itemsEnabled() && !Array.isArray(saved.shopStock)) {
       set({ shopStock: itemH.generateShopStock(itemH.SHOP_STOCK_SIZE, get().enabledItems), shopStockTurns: get().teams.length * 2 });
     }
   },
@@ -1208,6 +1243,7 @@ export const useGameStore = create((set, get) => ({
       rolling: false, ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       nbTeams: 3, setupTeams: createDefaultTeams(3),
+      extensions: defaultExtensions(),
       enabledEvents: Object.keys(EVENTS),
       enabledItems: Object.keys(ITEMS),
       boardParams: {

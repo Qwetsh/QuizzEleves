@@ -6,47 +6,77 @@ import { runEffects, consumableActions, announce } from './effectEngine.js';
 
 export const BAG_SIZE = 12;
 export const SHOP_STOCK_SIZE = 4;
+// Plafond d'une pile de consommables identiques (au-delà → nouvelle case).
+export const STACK_MAX = 9;
 
 export function sellPrice(item) {
   return Math.ceil(item.price / 2);
 }
 
-// --- Sac positionnel ---
-// Le sac est un tableau de BAG_SIZE cases (itemKey | null) : les objets gardent
-// leur case pour le drag & drop de l'inventaire. Tolère les anciennes
-// sauvegardes (tableaux compacts plus courts).
+// --- Sac positionnel & PILES ---
+// Une case du sac est : null | "clé" (1 exemplaire) | { key, n } (pile de n≥2).
+// On garde la forme « chaîne » pour 1 exemplaire (rétro-compatible avec les
+// sauvegardes et la plupart du code). Seuls les CONSOMMABLES se stackent ;
+// l'équipement reste toujours à 1 par case.
+export const cellKey = (c) => (c == null ? null : typeof c === 'string' ? c : c.key);
+export const cellN = (c) => (c == null ? 0 : typeof c === 'string' ? 1 : (Number(c.n) || 1));
+// Forme canonique : chaîne si 1 exemplaire, objet { key, n } si pile.
+export const mkCell = (key, n) => (n <= 1 ? key : { key, n });
+
+// Le sac est un tableau de BAG_SIZE cases : les objets gardent leur case pour le
+// drag & drop. Tolère les anciennes sauvegardes (tableaux compacts plus courts,
+// et entrées sous forme de simples clés).
 export function normalizeBag(bag) {
-  const arr = (Array.isArray(bag) ? bag.slice(0, BAG_SIZE) : []).map((k) => (k && ITEMS[k] ? k : null));
+  const arr = (Array.isArray(bag) ? bag.slice(0, BAG_SIZE) : []).map((c) => {
+    const k = cellKey(c);
+    if (!k || !ITEMS[k]) return null;
+    return mkCell(k, Math.min(Math.max(1, cellN(c)), STACK_MAX));
+  });
   while (arr.length < BAG_SIZE) arr.push(null);
   return arr;
 }
 
+// Nombre de CASES occupées (pour « sac plein »).
 export function bagCount(bag) {
   return (bag || []).filter(Boolean).length;
+}
+
+// Nombre total d'UNITÉS (somme des piles) — pour les badges « combien d'objets ».
+export function bagUnitCount(bag) {
+  return (bag || []).reduce((s, c) => s + cellN(c), 0);
 }
 
 function firstFreeCell(bag) {
   return bag.indexOf(null);
 }
 
-// Ajoute un objet dans la premiere case libre. Retourne null si sac plein.
+// Ajoute un objet : empile sur une pile compatible (même consommable, sous le
+// plafond) sinon première case libre. Retourne null si rien de possible (plein).
 function bagWith(bag, itemKey) {
+  const item = ITEMS[itemKey];
+  if (!item) return null;
   const arr = normalizeBag(bag);
-  const i = firstFreeCell(arr);
-  if (i === -1) return null;
-  arr[i] = itemKey;
+  if (item.slot === 'consumable') {
+    const i = arr.findIndex((c) => cellKey(c) === itemKey && cellN(c) < STACK_MAX);
+    if (i !== -1) { arr[i] = mkCell(itemKey, cellN(arr[i]) + 1); return arr; }
+  }
+  const free = firstFreeCell(arr);
+  if (free === -1) return null;
+  arr[free] = mkCell(itemKey, 1);
   return arr;
 }
 
 // L'equipe peut-elle recevoir cet objet sans le perdre ? (slot d'equipement
-// libre, ou une case de sac disponible). A verifier AVANT tout achat — sinon
-// grantItem convertit l'objet en pieces de revente et l'acheteur perd la
-// difference.
+// libre, case de sac libre, ou pile compatible non pleine). A verifier AVANT
+// tout achat — sinon grantItem convertit l'objet en pieces de revente.
 export function canReceiveItem(team, itemKey) {
   const item = ITEMS[itemKey];
   if (!item) return false;
   if (item.slot !== 'consumable' && !(team.equipment || {})[item.slot]) return true;
-  return normalizeBag(team.bag).includes(null);
+  const bag = normalizeBag(team.bag);
+  if (bag.includes(null)) return true;
+  if (item.slot === 'consumable') return bag.some((c) => cellKey(c) === itemKey && cellN(c) < STACK_MAX);
+  return false;
 }
 
 // --- Stock rotatif de la boutique ---
@@ -161,15 +191,18 @@ export function sellEquipment(set, get, slot) {
   saveGame(get());
 }
 
+// Revend UNE unité de la case (la pile diminue ; la case se libère à 0).
 export function sellBagItem(set, get, bagIndex) {
   const { teams, currentTeam, addLog } = get();
   const team = teams[currentTeam];
   const bag = normalizeBag(team.bag);
-  const item = ITEMS[bag[bagIndex]];
+  const cell = bag[bagIndex];
+  const key = cellKey(cell);
+  const item = ITEMS[key];
   if (!item) return;
 
   const refund = sellPrice(item);
-  bag[bagIndex] = null;
+  bag[bagIndex] = cellN(cell) > 1 ? mkCell(key, cellN(cell) - 1) : null;
   const newTeams = [...teams];
   newTeams[currentTeam] = { ...team, money: team.money + refund, bag };
   addLog(`♻️ ${team.emoji} ${team.name} revend ${item.icon} ${item.name} (+${refund} 💰).`);
@@ -180,7 +213,8 @@ export function sellBagItem(set, get, bagIndex) {
 // --- Drag & drop de l'inventaire ---
 // Cles de case : 'equip:head' | 'equip:body' | 'equip:feet' | 'bag:0'..'bag:11'
 
-function readCell(equipment, bag, key) {
+// Cellule BRUTE d'une case (chaîne pour l'équipement, cell pour le sac).
+function rawCell(equipment, bag, key) {
   return key.startsWith('equip:') ? equipment[key.slice(6)] : bag[+key.slice(4)];
 }
 
@@ -188,7 +222,7 @@ export function isValidMove(team, fromKey, toKey) {
   if (!toKey || toKey === fromKey) return false;
   const equipment = team.equipment || { head: null, body: null, feet: null };
   const bag = normalizeBag(team.bag);
-  const itemKey = readCell(equipment, bag, fromKey);
+  const itemKey = cellKey(rawCell(equipment, bag, fromKey));
   const item = ITEMS[itemKey];
   if (!item) return false;
 
@@ -196,7 +230,7 @@ export function isValidMove(team, fromKey, toKey) {
     return item.slot === toKey.slice(6);
   }
   // cible = sac
-  const targetKey = readCell(equipment, bag, toKey);
+  const targetKey = cellKey(rawCell(equipment, bag, toKey));
   if (!targetKey) return true;
   if (fromKey.startsWith('bag:')) return true; // echange libre dans le sac
   // depuis l'equipement : l'objet deloge doit pouvoir prendre la place
@@ -210,22 +244,25 @@ export function moveInventoryItem(set, get, fromKey, toKey) {
 
   const equipment = { ...(team.equipment || { head: null, body: null, feet: null }) };
   const bag = normalizeBag(team.bag);
+  // Écrit une valeur : l'équipement ne stocke que la CLÉ (jamais de pile) ; le
+  // sac conserve la cellule telle quelle (préserve une pile lors d'un échange).
   const write = (key, value) => {
-    if (key.startsWith('equip:')) equipment[key.slice(6)] = value;
+    if (key.startsWith('equip:')) equipment[key.slice(6)] = cellKey(value);
     else bag[+key.slice(4)] = value;
   };
-  const a = readCell(equipment, bag, fromKey);
-  const b = readCell(equipment, bag, toKey);
+  const a = rawCell(equipment, bag, fromKey);
+  const b = rawCell(equipment, bag, toKey);
   write(toKey, a);
   write(fromKey, b);
 
   const newTeams = [...teams];
   newTeams[currentTeam] = { ...team, equipment, bag };
   set({ teams: newTeams });
+  const movedItem = ITEMS[cellKey(a)];
   if (toKey.startsWith('equip:')) {
-    addLog(`\u{1F392} ${team.emoji} ${team.name} équipe ${ITEMS[a].icon} ${ITEMS[a].name} !`);
+    addLog(`\u{1F392} ${team.emoji} ${team.name} équipe ${movedItem.icon} ${movedItem.name} !`);
   } else if (fromKey.startsWith('equip:')) {
-    addLog(`\u{1F392} ${team.emoji} ${team.name} range ${ITEMS[a].icon} ${ITEMS[a].name} dans le sac.`);
+    addLog(`\u{1F392} ${team.emoji} ${team.name} range ${movedItem.icon} ${movedItem.name} dans le sac.`);
   }
   saveGame(get());
 }
@@ -285,11 +322,13 @@ export function useConsumable(set, get, bagIndex) {
   if (pendingActions) return; // une séquence d'effets est déjà en cours
   const team = teams[currentTeam];
   const bag = normalizeBag(team.bag);
-  const itemKey = bag[bagIndex];
+  const cell = bag[bagIndex];
+  const itemKey = cellKey(cell);
   const item = ITEMS[itemKey];
   if (!item || item.slot !== 'consumable') return;
 
-  bag[bagIndex] = null;
+  // Consomme UNE unité (la pile diminue ; la case se libère à 0).
+  bag[bagIndex] = cellN(cell) > 1 ? mkCell(itemKey, cellN(cell) - 1) : null;
   const newTeams = [...teams];
   newTeams[currentTeam] = { ...team, bag };
   set({ teams: newTeams, showInventory: false });

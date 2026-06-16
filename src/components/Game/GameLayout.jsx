@@ -7,6 +7,7 @@ import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
 import MobileSessionPanel from './MobileSessionPanel';
 import DevItemGiver from './DevItemGiver';
+import { bagUnitCount } from '../../store/itemHandlers';
 import QuestionModal from '../Modals/QuestionModal';
 import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
@@ -46,6 +47,7 @@ export default function GameLayout() {
   const openShop = useGameStore((s) => s.openShop);
   const openInventory = useGameStore((s) => s.openInventory);
   const devAddMoney = useGameStore((s) => s.devAddMoney);
+  const itemsOn = useGameStore((s) => s.itemsEnabled());
   const [isFs, toggleFs] = useFullscreen();
 
   const team = teams[currentTeam];
@@ -92,19 +94,23 @@ export default function GameLayout() {
               display: 'flex', alignItems: 'center', gap: 10,
             }}
           >
-            <button onClick={openShop} aria-label="Ouvrir la boutique" className="hud-imgbtn">
-              <img src={btnBoutique} alt="Boutique" draggable={false} />
-              <span className="hud-imgbtn-badge">
-                {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
-              </span>
-            </button>
+            {itemsOn && (
+              <button onClick={openShop} aria-label="Ouvrir la boutique" className="hud-imgbtn">
+                <img src={btnBoutique} alt="Boutique" draggable={false} />
+                <span className="hud-imgbtn-badge">
+                  {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
+                </span>
+              </button>
+            )}
 
-            <button onClick={openInventory} aria-label="Ouvrir l'inventaire" className="hud-imgbtn">
-              <img src={btnInventaire} alt="Inventaire" draggable={false} />
-              {(team.bag?.filter(Boolean).length ?? 0) > 0 && (
-                <span className="hud-imgbtn-badge">{team.bag.filter(Boolean).length}</span>
-              )}
-            </button>
+            {itemsOn && (
+              <button onClick={openInventory} aria-label="Ouvrir l'inventaire" className="hud-imgbtn">
+                <img src={btnInventaire} alt="Inventaire" draggable={false} />
+                {bagUnitCount(team.bag) > 0 && (
+                  <span className="hud-imgbtn-badge">{bagUnitCount(team.bag)}</span>
+                )}
+              </button>
+            )}
 
             {/* Bouton dev : pieces gratuites pour tester les achats (localhost uniquement) */}
             {import.meta.env.DEV && (
@@ -127,7 +133,7 @@ export default function GameLayout() {
                 {"\u{1F6E0}️"} +10 <span className="coin" />
               </button>
             )}
-            {import.meta.env.DEV && <DevItemGiver />}
+            {import.meta.env.DEV && itemsOn && <DevItemGiver />}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { moveBack } from '../logic/pathfinding.js';
 import { getEffectValue, reducedRecul, reducedSteal } from '../logic/itemEffects.js';
 import { ITEMS } from '../data/items.js';
-import { pickLootItem, placeItem, normalizeBag } from './itemHandlers.js';
+import { pickLootItem, placeItem, normalizeBag, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { equipTriggerActions, runEffects } from './effectEngine.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
@@ -146,7 +146,7 @@ function applyFightReward(set, get) {
     // Filtre sur ITEMS : ignore les clés périmées d'anciennes sauvegardes
     const pool = [
       ...Object.entries(loser.equipment || {}).filter(([, k]) => k && ITEMS[k]).map(([slot, k]) => ({ kind: 'equipment', slot, key: k })),
-      ...(loser.bag || []).map((k, i) => ({ kind: 'bag', index: i, key: k })).filter((e) => e.key && ITEMS[e.key]),
+      ...(loser.bag || []).map((c, i) => ({ kind: 'bag', index: i, key: cellKey(c) })).filter((e) => e.key && ITEMS[e.key]),
     ];
 
     if (pool.length === 0) {
@@ -168,8 +168,10 @@ function applyFightReward(set, get) {
       if (picked.kind === 'equipment') {
         newTeams[loserIdx] = { ...loser, equipment: { ...loser.equipment, [picked.slot]: null } };
       } else {
+        // Vole UNE unité de la pile (la case se libère à 0).
         const loserBag = normalizeBag(loser.bag);
-        loserBag[picked.index] = null;
+        const cell = loserBag[picked.index];
+        loserBag[picked.index] = cellN(cell) > 1 ? mkCell(cellKey(cell), cellN(cell) - 1) : null;
         newTeams[loserIdx] = { ...loser, bag: loserBag };
       }
       const r = receiveItem(winner, picked.key);

@@ -5,7 +5,7 @@ import { randomSubject } from '../logic/turnHelpers.js';
 import { hasEffect, reducedSteal, reducedTax, equippedSetCounts } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { SETS } from '../data/sets.js';
-import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock } from './itemHandlers.js';
+import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { runEffects } from './effectEngine.js';
 
@@ -130,7 +130,7 @@ export function acceptEvent(set, get) {
   if (key === 'troc') {
     const t = get().teams[get().currentTeam];
     const hasItems = Object.values(t?.equipment || {}).some((k) => k && ITEMS[k])
-      || (t?.bag || []).some((k) => k && ITEMS[k]);
+      || (t?.bag || []).some((c) => ITEMS[cellKey(c)]);
     if (!hasItems) {
       set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Tu n'as aucun objet à troquer !` } }, eventApplied: true });
       return;
@@ -200,7 +200,7 @@ export function eventSelectTarget(set, get, targetIndex) {
     // Ne compter que les objets EXISTANTS au catalogue (une clé périmée/supprimée
     // ne se rend pas dans la liste → éviterait un soft-lock de la modale).
     const hasItems = Object.values(target?.equipment || {}).some((k) => k && ITEMS[k])
-      || (target?.bag || []).some((k) => k && ITEMS[k]);
+      || (target?.bag || []).some((c) => ITEMS[cellKey(c)]);
     if (hasItems) {
       set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, targetIndex } } });
       return;
@@ -382,9 +382,10 @@ export function eventTrade(set, get, pick) {
     if (!givenKey || !ITEMS[givenKey]) return;
     equipment[pick.slot] = null;
   } else {
-    givenKey = bag[pick.index];
+    const cell = bag[pick.index];
+    givenKey = cellKey(cell);
     if (!givenKey || !ITEMS[givenKey]) return;
-    bag[pick.index] = null;
+    bag[pick.index] = cellN(cell) > 1 ? mkCell(givenKey, cellN(cell) - 1) : null; // sacrifie 1 unité
   }
   const given = ITEMS[givenKey];
   const afterSacrifice = { ...team, equipment, bag };
@@ -427,9 +428,10 @@ export function eventPillageApply(set, get, pick) {
     newTeams[targetIndex] = { ...target, equipment: { ...target.equipment, [pick.slot]: null } };
   } else {
     const bag = normalizeBag(target.bag);
-    itemKey = bag[pick.index];
+    const cell = bag[pick.index];
+    itemKey = cellKey(cell);
     if (!itemKey) return;
-    bag[pick.index] = null;
+    bag[pick.index] = cellN(cell) > 1 ? mkCell(itemKey, cellN(cell) - 1) : null; // vole 1 unité
     newTeams[targetIndex] = { ...target, bag };
   }
 
@@ -738,13 +740,22 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'forge': {
-      // Fond 2 consommables → forge 1 équipement aléatoire.
+      // Fond 2 consommables (UNITÉS, piles comprises) → forge 1 équipement aléatoire.
       const bag = normalizeBag(team.bag);
-      const consum = [];
-      bag.forEach((k, i) => { if (k && ITEMS[k]?.slot === 'consumable') consum.push(i); });
-      if (consum.length < 2) { message = `🔨 Il te faut au moins 2 consommables à fondre...`; break; }
-      const burned = [ITEMS[bag[consum[0]]], ITEMS[bag[consum[1]]]];
-      bag[consum[0]] = null; bag[consum[1]] = null;
+      const consumSlots = [];
+      bag.forEach((c, i) => { if (cellKey(c) && ITEMS[cellKey(c)]?.slot === 'consumable') consumSlots.push(i); });
+      const totalUnits = consumSlots.reduce((s, i) => s + cellN(bag[i]), 0);
+      if (totalUnits < 2) { message = `🔨 Il te faut au moins 2 consommables à fondre...`; break; }
+      const burnedIcons = [];
+      let toBurn = 2;
+      for (const i of consumSlots) {
+        while (toBurn > 0 && cellN(bag[i]) > 0) {
+          burnedIcons.push(ITEMS[cellKey(bag[i])].icon);
+          bag[i] = cellN(bag[i]) > 1 ? mkCell(cellKey(bag[i]), cellN(bag[i]) - 1) : null;
+          toBurn--;
+        }
+        if (toBurn === 0) break;
+      }
       const eqKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS), { category: 'equipment' });
       const afterBurn = { ...team, bag };
       if (!eqKey) { newTeams[currentTeam] = afterBurn; message = `🔨 La forge s'éteint : aucun équipement à forger.`; break; }
@@ -754,7 +765,7 @@ export function applyEventEffect(set, get) {
       if (r.outcome === 'refunded') {
         message = `🔨 ${eq.icon} ${eq.name} forgé... mais sac plein ! Revendu +${r.refund} \u{1F4B0}.`;
       } else {
-        message = `🔨 ${team.emoji} fond ${burned[0].icon}+${burned[1].icon} et forge ${eq.icon} ${eq.name} !`;
+        message = `🔨 ${team.emoji} fond ${burnedIcons[0]}+${burnedIcons[1]} et forge ${eq.icon} ${eq.name} !`;
         lootKey = eqKey;
       }
       break;
@@ -846,7 +857,7 @@ export function applyEventEffect(set, get) {
         if (k && ITEMS[k]) picks.push({ kind: 'equipment', slot, key: k });
       }
       const bag = normalizeBag(team.bag);
-      bag.forEach((k, i) => { if (k && ITEMS[k]) picks.push({ kind: 'bag', index: i, key: k }); });
+      bag.forEach((c, i) => { const k = cellKey(c); if (k && ITEMS[k]) picks.push({ kind: 'bag', index: i, key: k }); });
       if (picks.length === 0) {
         message = `\u{1F99D} Le voleur fouille... mais ${team.emoji} ${team.name} n'a aucun objet à perdre !`;
         break;
@@ -856,7 +867,8 @@ export function applyEventEffect(set, get) {
       if (lost.kind === 'equipment') {
         newTeams[currentTeam] = { ...team, equipment: { ...team.equipment, [lost.slot]: null } };
       } else {
-        bag[lost.index] = null;
+        const cell = bag[lost.index];
+        bag[lost.index] = cellN(cell) > 1 ? mkCell(lost.key, cellN(cell) - 1) : null; // perd 1 unité
         newTeams[currentTeam] = { ...team, bag };
       }
       message = `\u{1F99D} Pickpocket ! ${team.emoji} ${team.name} perd ${item.icon} ${item.name} !`;

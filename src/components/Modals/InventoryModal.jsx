@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
-import { sellPrice, isValidMove, normalizeBag } from '../../store/itemHandlers';
+import { sellPrice, isValidMove, normalizeBag, cellKey, cellN } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
@@ -35,7 +35,7 @@ const EQUIP_SLOTS = [
 ];
 
 /* ---------- Case (équipement ou sac), habillage image ---------- */
-function ImgSlot({ k, variant, glyph, itemKey, style, refCb, onGrab, state, popStamp, away }) {
+function ImgSlot({ k, variant, glyph, itemKey, count = 1, style, refCb, onGrab, state, popStamp, away }) {
   const item = ITEMS[itemKey];
   const rarityColor = item ? RARITIES[item.rarity]?.color : null;
   const legendary = item?.rarity === 'legendaire';
@@ -71,6 +71,7 @@ function ImgSlot({ k, variant, glyph, itemKey, style, refCb, onGrab, state, popS
           {img
             ? <img className="inv-item-img" src={img} alt={item.name} draggable={false} />
             : <span className="inv-emoji">{item.icon}</span>}
+          {count > 1 && <span className="inv-stack-badge">×{count}</span>}
         </div>
       )}
     </div>
@@ -192,7 +193,7 @@ export default function InventoryModal() {
   const bag = normalizeBag(team?.bag);
 
   const cellItem = (key) =>
-    key.startsWith('equip:') ? equipment[key.slice(6)] : bag[+key.slice(4)];
+    key.startsWith('equip:') ? equipment[key.slice(6)] : cellKey(bag[+key.slice(4)]);
 
   const hitTest = (x, y) => {
     for (const [k, b] of Object.entries(slotRects.current)) {
@@ -322,14 +323,15 @@ export default function InventoryModal() {
 
               {/* Grille du sac (parchemin) */}
               <div className="invimg-bag">
-                {bag.map((itemKey, i) => {
+                {bag.map((cell, i) => {
                   const k = 'bag:' + i;
                   return (
                     <ImgSlot
                       key={i}
                       k={k}
                       variant="bag"
-                      itemKey={itemKey}
+                      itemKey={cellKey(cell)}
+                      count={cellN(cell)}
                       refCb={(el) => { slotEls.current[k] = el; }}
                       onGrab={onGrab}
                       state={slotState(k)}
