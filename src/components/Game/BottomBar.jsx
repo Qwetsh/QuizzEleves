@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
@@ -152,22 +152,62 @@ function TeamBuffs({ team }) {
   );
 }
 
-// Malus en attente (question imposée, timer réduit…) — bandeau rouge sur la
-// fiche. Source : getTeamEffects (tone 'malus'). L'aura du pion ne se cumule pas.
+// Malus en attente (question imposée, timer réduit, malédictions…) — affichés
+// en ICÔNES seules (pastilles rouges) pour ne pas décaler la fiche quand il y
+// en a beaucoup. Le détail (libellés) s'affiche dans un popover AU CLIC.
+// Source : getTeamEffects (tone 'malus').
 function TeamMalus({ team }) {
   const malus = getTeamEffects(team).filter((e) => e.tone === 'malus');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, [open]);
   if (!malus.length) return null;
   return (
-    <div className="ts-malus" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+    <div ref={ref} className="ts-malus" style={{ position: 'relative', display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
       {malus.map((m) => (
-        <span key={m.key} title={m.label} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          padding: '1px 8px', borderRadius: 999, fontSize: 12, lineHeight: 1.5, fontWeight: 600,
-          color: '#7a1320', background: '#f7d7d2', border: '1px solid #c9472f',
-        }}>
-          <span>{m.icon}</span>{m.label}
-        </span>
+        <button
+          key={m.key}
+          type="button"
+          title={m.label}
+          onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+            minWidth: 24, height: 24, padding: m.n ? '0 6px' : 0,
+            borderRadius: 999, fontSize: 14, lineHeight: 1, cursor: 'pointer',
+            color: '#7a1320', background: '#f7d7d2', border: '1.5px solid #c9472f',
+            boxShadow: '0 1px 2px rgba(201,71,47,0.3)',
+          }}
+        >
+          <span>{m.icon}</span>{m.n ? <small style={{ fontWeight: 700, fontSize: 11 }}>{m.n}</small> : ''}
+        </button>
       ))}
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, zIndex: 130,
+            minWidth: 170, maxWidth: 250, padding: '8px 10px', borderRadius: 10,
+            background: '#fffaf7', border: '1.5px solid #c9472f',
+            boxShadow: '0 8px 22px rgba(46,31,16,0.30)',
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}
+        >
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: '#7a1320', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Malus actifs ({malus.length})
+          </div>
+          {malus.map((m) => (
+            <div key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.3 }}>
+              <span style={{ fontSize: 15, flexShrink: 0 }}>{m.icon}</span>
+              <span>{m.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
