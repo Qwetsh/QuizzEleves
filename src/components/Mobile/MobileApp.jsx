@@ -3,7 +3,7 @@
 // et ses pouvoirs/charges — y compris pendant le tour adverse. Le TBI publie
 // l'état ; ici on ne fait que lire (l'édition viendra en Phase 3).
 import { useState, useEffect } from 'react';
-import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken } from '../../logic/sessionConfig';
+import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent } from '../../logic/sessionConfig';
 import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
@@ -192,10 +192,14 @@ function EquipSlot({ itemKey, slot, onTap }) {
   );
 }
 
-// Panneau de détail (bottom sheet) au tap d'un objet : desc + EFFETS lisibles.
-function ItemSheet({ itemKey, team, onClose }) {
+// Panneau de détail (bottom sheet) au tap d'un objet : desc + EFFETS lisibles,
+// + actions d'édition (mode téléphone, sur SA propre équipe, hors verrou).
+//   loc : { kind:'equip', slot } | { kind:'bag', key } | { kind:'shop' }
+function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
+  const canEdit = owned && !locked && loc && loc.kind !== 'shop';
+  const isConsumable = item.slot === 'consumable';
   const color = RARITIES[item.rarity]?.color || '#888';
   const fx = itemEffectLines(item);
   return (
@@ -217,7 +221,29 @@ function ItemSheet({ itemKey, team, onClose }) {
           </ul>
         )}
         <SetBonusInfo item={item} team={team} />
-        <button className="mob-btn mob-btn--gold" style={{ marginTop: 16 }} onClick={onClose}>Fermer</button>
+
+        {/* Actions d'édition (sa propre équipe, hors résolution) */}
+        {canEdit && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+            {loc.kind === 'bag' && !isConsumable && (
+              <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('equip', { key: itemKey })}>🛡️ Équiper</button>
+            )}
+            {loc.kind === 'equip' && (
+              <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('unequip', { slot: loc.slot })}>🎒 Mettre au sac</button>
+            )}
+            <button className="mob-btn mob-btn--ghost" style={{ minWidth: 0, flex: 1 }}
+              onClick={() => (loc.kind === 'equip' ? onAction('sellEquip', { slot: loc.slot }) : onAction('sellBag', { key: itemKey }))}>
+              ♻️ Vendre
+            </button>
+          </div>
+        )}
+        {owned && locked && loc && loc.kind !== 'shop' && (
+          <div style={{ marginTop: 12, fontSize: 12.5, color: '#7a1320', textAlign: 'center' }}>
+            🔒 Édition impossible pendant ton tour de jeu.
+          </div>
+        )}
+
+        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>Fermer</button>
       </div>
     </div>
   );
@@ -238,11 +264,18 @@ function PowerRow({ powerKey, charges, level }) {
   );
 }
 
-function TeamView({ session, teamIdx, onSwitch }) {
+function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
   const effects = getTeamEffects(t);
   const myTurn = session.currentTeam === teamIdx && session.status !== 'finished';
+  // Édition (mode téléphone, sa propre équipe) : bloquée si la partie est finie
+  // ou si c'est mon tour ET qu'une résolution est en cours (verrou publié).
+  const editLocked = (myTurn && !!session.locked) || session.status === 'finished';
+  const sendAction = (type, payload) => {
+    if (code && token) sendIntent(code, token, type, payload).catch(() => {});
+    setSheet(null);
+  };
   const itemsOn = extOn(session.extensions, 'equipment');
   const bagCells = (t.bag || []).map((c) => ({ key: cellKey(c), n: cellN(c) })).filter((c) => ITEMS[c.key]);
   const bagUnits = bagCells.reduce((s, c) => s + c.n, 0);
@@ -296,7 +329,7 @@ function TeamView({ session, teamIdx, onSwitch }) {
       {itemsOn && (
       <section className="mob-section">
         <h2 className="mob-section-title">Équipement</h2>
-        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} onTap={setSheet} />)}
+        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} />)}
       </section>
       )}
 
@@ -310,7 +343,7 @@ function TeamView({ session, teamIdx, onSwitch }) {
             {bagCells.map((c, i) => {
               const item = ITEMS[c.key];
               return (
-                <button key={i} className="mob-bag-item" onClick={() => setSheet(c.key)} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
+                <button key={i} className="mob-bag-item" onClick={() => setSheet({ itemKey: c.key, loc: { kind: 'bag', key: c.key } })} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
                   {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
                   <span className="mob-bag-name">{item.name}{c.n > 1 ? ` ×${c.n}` : ''}</span>
                 </button>
@@ -328,7 +361,7 @@ function TeamView({ session, teamIdx, onSwitch }) {
             {shopKeys.map((k, i) => {
               const item = ITEMS[k];
               return (
-                <button key={i} className="mob-bag-item" onClick={() => setSheet(k)} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
+                <button key={i} className="mob-bag-item" onClick={() => setSheet({ itemKey: k, loc: { kind: 'shop' } })} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
                   {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
                   <span className="mob-bag-name">{item.name}</span>
                   <span className="mob-shop-price">{'\u{1FA99}'} {item.price}</span>
@@ -346,9 +379,9 @@ function TeamView({ session, teamIdx, onSwitch }) {
           : pKeys.map((k) => <PowerRow key={k} powerKey={k} charges={t.powers[k]?.charges ?? 0} level={t.powers[k]?.level ?? 1} />)}
       </section>
 
-      <div className="mob-foot">Lecture seule · l'écran se met à jour en direct</div>
+      <div className="mob-foot">{owned ? "Touche un objet pour l'équiper, le ranger ou le vendre" : "Lecture seule · l'écran se met à jour en direct"}</div>
 
-      {sheet && <ItemSheet itemKey={sheet} team={t} onClose={() => setSheet(null)} />}
+      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={editLocked} onAction={sendAction} onClose={() => setSheet(null)} />}
     </div>
   );
 }
@@ -412,6 +445,7 @@ export default function MobileApp() {
   const [teamIdx, setTeamIdx] = useState(null);
   const [tab, setTab] = useState('team');
   const [token, setToken] = useState(''); // jeton « propriétaire » de l'équipe (mode téléphone)
+  const [owned, setOwned] = useState(false); // l'équipe affichée est-elle CELLE du téléphone (édition autorisée)
 
   // Jeton local par code : permet de retrouver SON équipe (reconnexion / lobby).
   useEffect(() => {
@@ -447,6 +481,7 @@ export default function MobileApp() {
 
   const chooseTeam = (idx) => {
     setTeamIdx(idx);
+    setOwned(false); // choix manuel (mode tableau) = lecture seule
     try { localStorage.setItem(`quete_mobile_team_${code}`, String(idx)); } catch { /* mode privé */ }
   };
 
@@ -460,6 +495,7 @@ export default function MobileApp() {
       const mine = rows.find((r) => r.token === token && r.idx != null);
       if (mine && session.teams?.[mine.idx]) {
         setTeamIdx(mine.idx);
+        setOwned(true); // équipe créée par CE téléphone → édition autorisée
         try { localStorage.setItem(`quete_mobile_team_${code}`, String(mine.idx)); } catch { /* mode privé */ }
       }
     }).catch(() => {});
@@ -478,7 +514,7 @@ export default function MobileApp() {
   return (
     <>
       {tab === 'team'
-        ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} />
+        ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />
         : <HistoryView session={session} />}
       <TabBar tab={tab} setTab={setTab} />
     </>

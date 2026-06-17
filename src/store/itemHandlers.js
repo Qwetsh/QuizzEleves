@@ -220,16 +220,19 @@ export function buyItem(set, get, itemKey) {
   saveGame(get());
 }
 
-export function sellEquipment(set, get, slot) {
+// teamIndex (optionnel) : par défaut l'équipe active ; précisé pour les actions
+// pilotées par un téléphone (édition à distance d'une équipe donnée).
+export function sellEquipment(set, get, slot, teamIndex) {
   const { teams, currentTeam, addLog } = get();
-  const team = teams[currentTeam];
-  const itemKey = team.equipment?.[slot];
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
+  const itemKey = team?.equipment?.[slot];
   const item = ITEMS[itemKey];
   if (!item) return;
 
   const refund = sellPrice(item);
   const newTeams = [...teams];
-  newTeams[currentTeam] = {
+  newTeams[idx] = {
     ...team,
     money: team.money + refund,
     equipment: { ...team.equipment, [slot]: null },
@@ -240,9 +243,10 @@ export function sellEquipment(set, get, slot) {
 }
 
 // Revend UNE unité de la case (la pile diminue ; la case se libère à 0).
-export function sellBagItem(set, get, bagIndex) {
+export function sellBagItem(set, get, bagIndex, teamIndex) {
   const { teams, currentTeam, addLog } = get();
-  const team = teams[currentTeam];
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
   const bag = normalizeBag(team.bag);
   const cell = bag[bagIndex];
   const key = cellKey(cell);
@@ -252,7 +256,7 @@ export function sellBagItem(set, get, bagIndex) {
   const refund = sellPrice(item);
   bag[bagIndex] = cellN(cell) > 1 ? mkCell(key, cellN(cell) - 1) : null;
   const newTeams = [...teams];
-  newTeams[currentTeam] = { ...team, money: team.money + refund, bag };
+  newTeams[idx] = { ...team, money: team.money + refund, bag };
   addLog(`♻️ ${team.emoji} ${team.name} revend ${item.icon} ${item.name} (+${refund} 💰).`);
   set({ teams: newTeams });
   saveGame(get());
@@ -285,10 +289,11 @@ export function isValidMove(team, fromKey, toKey) {
   return ITEMS[targetKey]?.slot === fromKey.slice(6);
 }
 
-export function moveInventoryItem(set, get, fromKey, toKey) {
+export function moveInventoryItem(set, get, fromKey, toKey, teamIndex) {
   const { teams, currentTeam, addLog } = get();
-  const team = teams[currentTeam];
-  if (!isValidMove(team, fromKey, toKey)) return;
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
+  if (!team || !isValidMove(team, fromKey, toKey)) return;
 
   const equipment = { ...(team.equipment || { head: null, body: null, feet: null }) };
   const bag = normalizeBag(team.bag);
@@ -304,7 +309,7 @@ export function moveInventoryItem(set, get, fromKey, toKey) {
   write(fromKey, b);
 
   const newTeams = [...teams];
-  newTeams[currentTeam] = { ...team, equipment, bag };
+  newTeams[idx] = { ...team, equipment, bag };
   set({ teams: newTeams });
   const movedItem = ITEMS[cellKey(a)];
   if (toKey.startsWith('equip:')) {

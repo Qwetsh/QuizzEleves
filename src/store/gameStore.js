@@ -1277,6 +1277,38 @@ export const useGameStore = create((set, get) => ({
   useConsumable: (i) => itemH.useConsumable(set, get, i),
   moveInventoryItem: (fromKey, toKey) => itemH.moveInventoryItem(set, get, fromKey, toKey),
 
+  // --- Intentions mobiles (édition d'équipement à distance) ---
+  // Le téléphone envoie une intention référant son équipe par son `token` ; le
+  // TBI (maître) la valide (jeton connu + équipe pas en pleine résolution) puis
+  // l'applique sur la BONNE équipe. Types : equip {key} / unequip {slot} /
+  // sellEquip {slot} / sellBag {key} — par CLÉ d'objet (les index de sac du
+  // mobile ne correspondent pas au sac positionnel du TBI).
+  applyTeamIntent: (token, type, payload = {}) => {
+    const st = get();
+    const idx = st.teams.findIndex((t) => t.token && t.token === token);
+    if (idx < 0) return; // jeton inconnu (équipe retirée ?)
+    const resolving = !!(st.showQuestion || st.showEvent || st.showFight || st.showDuelChoice
+      || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
+    // Bloqué si partie finie, ou si c'est l'équipe ACTIVE en pleine résolution.
+    if (st.finished || (idx === st.currentTeam && resolving)) return;
+
+    const team = st.teams[idx];
+    if (!team) return;
+    if (type === 'equip') {
+      const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
+      const item = ITEMS[payload.key];
+      if (i >= 0 && item && item.slot !== 'consumable') itemH.moveInventoryItem(set, get, `bag:${i}`, `equip:${item.slot}`, idx);
+    } else if (type === 'unequip') {
+      const free = itemH.normalizeBag(team.bag).indexOf(null);
+      if (free >= 0 && team.equipment?.[payload.slot]) itemH.moveInventoryItem(set, get, `equip:${payload.slot}`, `bag:${free}`, idx);
+    } else if (type === 'sellEquip') {
+      itemH.sellEquipment(set, get, payload.slot, idx);
+    } else if (type === 'sellBag') {
+      const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
+      if (i >= 0) itemH.sellBagItem(set, get, i, idx);
+    }
+  },
+
   // --- Moteur d'effets composable (objets) : routeurs des interruptions ---
   // Sélecteur de cible générique : route vers le pouvoir (legacy) ou le moteur.
   selectTarget: (i) => {
