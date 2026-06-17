@@ -127,6 +127,8 @@ export const BURST_RESET = {
   doubleNoBonus: false,
   doubleTimerDivisor: undefined,
   doubleGoldFactor: undefined,
+  doubleAllOrNothing: false,
+  doubleBank: undefined,
   sablierActif: false,
   sablierDivisor: undefined,
 };

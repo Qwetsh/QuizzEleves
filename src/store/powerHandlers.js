@@ -300,12 +300,18 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     // Ces voies font GAGNER de l'or à la cible (avec le facteur) → on lève le « sans bonus ».
     const goldFactor = (effect.goldMult || 1) / (effect.goldDiv || 1);
     const goldFx = goldFactor !== 1 ? { doubleGoldFactor: goldFactor } : {};
-    const noBonus = goldFactor !== 1 ? false : (!!effect.noBonus || !!target.doubleNoBonus); // collant
+    // Tout-ou-rien : gains banqués puis doublés si rafale parfaite (sinon 0) → bonus actif.
+    const allOrNothing = !!effect.allOrNothing;
+    const aon = allOrNothing ? { doubleAllOrNothing: true, doubleBank: 0 } : {};
+    const noBonus = (goldFactor !== 1 || allOrNothing) ? false : (!!effect.noBonus || !!target.doubleNoBonus); // collant
     // Niv.3 : timer reduit persistant sur la rafale — champ separe du Sablier
     // (un Sablier adverse one-shot ne doit pas heriter de cette persistance)
     const newDiv = Math.max(target.doubleTimerDivisor || 1, effect.timerDivisor || 1);
     const pressure = newDiv > 1 ? { doubleTimerDivisor: newDiv } : {};
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx };
+    // Examen surprise : la 1re question de la rafale sera Hardcore (si le pool existe).
+    const hcPool = (get().questions?.hardcore || []).length > 0;
+    const hcFx = (effect.hardcoreOne && hcPool) ? { forcedSubject: 'hardcore' } : {};
+    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx };
     soundPower();
     addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
     announce(set, get, '❓', `Double sur ${target.emoji} ${target.name} — ${1 + newExtra} questions`, POWERS[powerKey].color);

@@ -205,3 +205,27 @@ describe('branches Bouclier câblées (or)', () => {
     expect(r.patch.money).toBe(8);
   });
 });
+
+describe('branches Double câblées', () => {
+  const S = () => useGameStore.getState();
+  const cast = (over, extra) => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true }, showTargetPicker: { powerKey: 'double' },
+      teams: [teamWith('double', over), { ...teamWith('foudre'), pos: 'n8' }],
+      ...extra,
+    });
+    S().applyOffensivePower(1);
+  };
+
+  it('Tout-ou-rien (L10) : banque active + « sans bonus » levé', () => {
+    cast({ level: 10, spec10: 'allin' });
+    expect(S().teams[1].doubleAllOrNothing).toBe(true);
+    expect(S().teams[1].doubleNoBonus).toBe(false);
+  });
+
+  it('Examen surprise (L5) : force une question Hardcore sur la cible', () => {
+    cast({ level: 5, spec5: 'exam' }, { questions: { hardcore: [{ q: '?', a: ['A', 'B', 'C', 'D'], c: 0 }] } });
+    expect(S().teams[1].forcedSubject).toBe('hardcore');
+  });
+});

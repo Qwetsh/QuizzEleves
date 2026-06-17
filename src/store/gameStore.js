@@ -939,7 +939,16 @@ export const useGameStore = create((set, get) => ({
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
-      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + gain, wager: undefined };
+      // Tout-ou-rien (Double L10) : on banque les gains et on les DOUBLE à la dernière
+      // question (rafale parfaite) ; une erreur en route (BURST_RESET) fait tout perdre.
+      let payNow = gain;
+      let aonPatch = {};
+      if (team.doubleActive && team.doubleAllOrNothing) {
+        const bank = (team.doubleBank || 0) + gain;
+        if (turnComplete) { payNow = bank * 2; addLog(`🎰 Tout-ou-rien réussi ! Gains doublés : +${payNow} 💰`); }
+        else { payNow = 0; aonPatch = { doubleBank: bank }; }
+      }
+      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + payNow, wager: undefined, ...aonPatch };
       // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
       let gainDetail;
       if (bonusBreak.parts.length > 0) {
