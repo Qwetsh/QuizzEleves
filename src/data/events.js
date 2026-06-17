@@ -40,6 +40,7 @@ export const EVENTS = {
     actions: [{ action: 'randomPathNext', target: 'all' }] },
 
   // --- Pari d'argent / question a enjeu ---
+  vaTout:           { name: 'Le Va-tout',         icon: '\u{1F3B0}', desc: 'Empile les pieces : chaque bonne reponse rapporte de plus en plus (+5, +10, +15...). Encaisse quand tu veux ! Mais une seule erreur et tu perds toute ta mise + recul d\'1D10.', category: 'money', optional: true, weight: 0.7 },
   loterie:          { name: 'Loterie',           icon: '\u{1F39F}️', desc: 'Tente ta chance : 50% de remporter 40 pieces, sinon tu perds 15 pieces.', category: 'money', optional: true, weight: 0.7 },
   sphinx:           { name: 'Le Sphinx',         icon: '\u{1F5FF}', desc: 'Le Sphinx te pose une question HARDCORE. Juste : +50 pieces. Faux : -20 pieces.', subject: 'hardcore', category: 'money', optional: true, weight: 0.45 },
 

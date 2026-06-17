@@ -31,6 +31,8 @@ export default function EventModal() {
   const closeEvent = useGameStore((s) => s.closeEvent);
   const eventSelectTarget = useGameStore((s) => s.eventSelectTarget);
   const eventAnswerQuestion = useGameStore((s) => s.eventAnswerQuestion);
+  const eventVaToutContinue = useGameStore((s) => s.eventVaToutContinue);
+  const eventVaToutCashOut = useGameStore((s) => s.eventVaToutCashOut);
   const eventRechargeChoice = useGameStore((s) => s.eventRechargeChoice);
   const eventMarcheNoirBuy = useGameStore((s) => s.eventMarcheNoirBuy);
   const eventVolApply = useGameStore((s) => s.eventVolApply);
@@ -111,6 +113,9 @@ export default function EventModal() {
                 onPillageApply={eventPillageApply}
                 onSkip={declineEvent}
               />
+            )}
+            {phase === 'vaToutChoice' && (
+              <VaToutChoicePhase data={data} onContinue={eventVaToutContinue} onCashOut={eventVaToutCashOut} />
             )}
             {phase === 'result' && <ResultPhase data={data} onClose={closeEvent} />}
           </div>
@@ -665,6 +670,33 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
   }
 
   return null;
+}
+
+// Va-tout : après une bonne réponse, choisir de continuer (mise croissante) ou
+// d'encaisser la mise accumulée.
+function VaToutChoicePhase({ data, onContinue, onCashOut }) {
+  const pot = data?.vaToutPot || 0;
+  const streak = data?.vaToutStreak || 0;
+  const lastGain = data?.lastGain || 0;
+  const nextGain = (streak + 1) * 5; // prochaine bonne réponse
+  return (
+    <>
+      <p style={{ fontSize: 16, marginBottom: 6 }}>
+        {'✅'} Bonne réponse ! <strong>+{lastGain}</strong> {'\u{1FA99}'}
+      </p>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: '#b8862c', margin: '4px 0 10px' }}>
+        Mise : {pot} {'\u{1FA99}'}
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--ink-500)', marginBottom: 18 }}>
+        Continuer rapporterait <strong>+{nextGain}</strong> {'\u{1FA99}'} de plus… mais une mauvaise réponse fait
+        TOUT perdre et reculer d'1D10 !
+      </p>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button className="btn btn--green btn--lg" onClick={onContinue}>{'\u{1F3B2}'} Continuer (+{nextGain})</button>
+        <button className="btn btn--purple btn--lg" onClick={onCashOut}>{'\u{1F4B0}'} Encaisser {pot}</button>
+      </div>
+    </>
+  );
 }
 
 function ResultPhase({ data, onClose }) {

@@ -122,7 +122,7 @@ export function acceptEvent(set, get) {
     return;
   }
 
-  if (key === 'pari' || key === 'bonus' || key === 'jackpot' || key === 'sphinx' || key === 'tournoi') {
+  if (key === 'pari' || key === 'bonus' || key === 'jackpot' || key === 'sphinx' || key === 'tournoi' || key === 'vaTout') {
     eventAskQuestion(set, get);
     return;
   }
@@ -271,6 +271,26 @@ export function eventAnswerQuestion(set, get, chosenIndex) {
   const correct = chosenIndex === showEvent.data.eventQuestion.c;
   set({ showEvent: { ...showEvent, data: { ...showEvent.data, questionResult: correct, questionRevealed: true, questionSelected: chosenIndex } } });
   setTimeout(() => applyEventEffect(set, get), 2000);
+}
+
+// Va-tout : « Continuer » → réautorise un applyEventEffect et repose une question
+// (la mise et la série sont conservées dans data).
+export function eventVaToutContinue(set, get) {
+  if (!get().showEvent) return;
+  set({ eventApplied: false });
+  eventAskQuestion(set, get);
+}
+
+// Va-tout : « Encaisser » → verse la mise accumulée et clôt l'événement.
+export function eventVaToutCashOut(set, get) {
+  const { showEvent, teams, currentTeam, addLog } = get();
+  if (!showEvent) return;
+  const pot = showEvent.data?.vaToutPot || 0;
+  const nt = [...teams];
+  nt[currentTeam] = { ...nt[currentTeam], money: (nt[currentTeam].money || 0) + pot };
+  addLog(`\u{1F3B0} ${nt[currentTeam].emoji} ${nt[currentTeam].name} encaisse ${pot} \u{1FA99} !`);
+  set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `\u{1F3B0} Encaissé : +${pot} \u{1FA99} !` } } });
+  get().checkMoneyMilestone(currentTeam);
 }
 
 export function eventRechargeChoice(set, get, powerKey) {
@@ -466,6 +486,35 @@ export function applyEventEffect(set, get) {
   };
 
   switch (key) {
+    case 'vaTout': {
+      // Quitte-ou-double accumulé : bonne réponse → la mise grossit (+5,+10,+15…)
+      // et on propose de continuer ou d'encaisser ; mauvaise → mise PERDUE
+      // (jamais banquée) + recul d'1D10. La mise n'est versée qu'à l'encaissement.
+      const correct = data?.questionResult;
+      const streak = data?.vaToutStreak || 0;
+      const pot = data?.vaToutPot || 0;
+      if (correct) {
+        const newStreak = streak + 1;
+        const gain = newStreak * 5; // croissant : +5, +10, +15, +20…
+        set({
+          teams: newTeams,
+          showEvent: { ...showEvent, phase: 'vaToutChoice', data: {
+            ...data, vaToutStreak: newStreak, vaToutPot: pot + gain, lastGain: gain,
+            questionResult: undefined, questionRevealed: false, questionSelected: undefined,
+          } },
+        });
+        return; // boucle : on n'enchaîne PAS vers le résultat
+      }
+      // Raté : mise perdue (jamais ajoutée à l'or) + recul 1D10.
+      const dv = Math.floor(Math.random() * 10) + 1;
+      const r = moveBack(board, team.pos, dv);
+      newTeams[currentTeam] = { ...team, pos: r.finalPos };
+      pushMove(currentTeam, r.path, 'back');
+      message = pot > 0
+        ? `\u{1F3B0} Raté ! Mise de ${pot} \u{1FA99} perdue et recul de ${dv} case${dv > 1 ? 's' : ''} !`
+        : `\u{1F3B0} Raté ! Recul de ${dv} case${dv > 1 ? 's' : ''} !`;
+      break;
+    }
     case 'recul': {
       const r = moveBack(board, team.pos, 2);
       newTeams[currentTeam] = { ...team, pos: r.finalPos };

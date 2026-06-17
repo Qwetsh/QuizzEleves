@@ -1088,6 +1088,8 @@ export const useGameStore = create((set, get) => ({
   eventRollDice: () => eventH.eventRollDice(set, get),
   eventAskQuestion: () => eventH.eventAskQuestion(set, get),
   eventAnswerQuestion: (ci) => eventH.eventAnswerQuestion(set, get, ci),
+  eventVaToutContinue: () => eventH.eventVaToutContinue(set, get),
+  eventVaToutCashOut: () => eventH.eventVaToutCashOut(set, get),
   eventRechargeChoice: (pk) => eventH.eventRechargeChoice(set, get, pk),
   eventMarcheNoirBuy: (pk) => eventH.eventMarcheNoirBuy(set, get, pk),
   eventVolApply: (stealKey, giveKey) => eventH.eventVolApply(set, get, stealKey, giveKey),
