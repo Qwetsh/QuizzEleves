@@ -181,7 +181,7 @@ export const ITEMS = {
   },
   bouclierBois: {
     name: 'Bouclier de bois', icon: '🪵', slot: 'consumable', rarity: 'commun', price: 8,
-    desc: 'Annule le prochain recul après une mauvaise réponse.',
+    desc: 'Réduit ton prochain recul de 1 case (toutes sources : question, événement, duel…).',
     effects: [{ type: 'shieldNext', value: 1 }],
   },
   cristalEnergie: {

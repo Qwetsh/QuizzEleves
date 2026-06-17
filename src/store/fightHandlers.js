@@ -1,5 +1,5 @@
-import { moveBack } from '../logic/pathfinding.js';
-import { getEffectValue, reducedRecul, reducedSteal } from '../logic/itemEffects.js';
+import { getEffectValue, reducedSteal } from '../logic/itemEffects.js';
+import { applyRecul } from '../logic/turnHelpers.js';
 import { ITEMS } from '../data/items.js';
 import { pickLootItem, placeItem, normalizeBag, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { equipTriggerActions, runEffects } from './effectEngine.js';
@@ -93,10 +93,12 @@ function resolveBossOutcome(set, get, f) {
     message = `🏆 ${team.emoji} ${team.name} terrasse le Prof ! +${gold} \u{1F4B0}${lootKey ? ` et ${ITEMS[lootKey].icon} ${ITEMS[lootKey].name}${note}` : ''} !`;
   } else {
     const dv = Math.floor(Math.random() * 10) + 1;
-    const r = moveBack(board, team.pos, dv);
-    newTeams[idx] = { ...team, pos: r.finalPos };
-    if (r.path.length > 1) moves = [{ teamIndex: idx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
-    message = `👨‍🏫 Le Prof l'emporte ! ${team.emoji} ${team.name} recule de ${dv} case${dv > 1 ? 's' : ''}.`;
+    const rec = applyRecul(team, board, dv); // bouclier + équipement protègent du recul
+    newTeams[idx] = { ...team, ...rec.patch };
+    if (rec.path) moves = [{ teamIndex: idx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+    message = rec.applied > 0
+      ? `👨‍🏫 Le Prof l'emporte ! ${team.emoji} ${team.name} recule de ${rec.applied} case${rec.applied > 1 ? 's' : ''}${rec.absorbedBy ? ' (réduit)' : ''}.`
+      : `👨‍🏫 Le Prof l'emporte ! \u{1F6E1}️ ${team.emoji} ${team.name} encaisse mais le recul est absorbé !`;
   }
   addLog(message);
   set({ teams: newTeams, showFight: { ...f, phase: 'result', resultMessage: message }, ...(moves ? { movePath: moves } : {}) });
@@ -246,16 +248,17 @@ function applyFightReward(set, get) {
       ? `\u{1F4B0} ${winner.emoji} ${winner.name} pille ${stolen} pièce${stolen > 1 ? 's' : ''} à ${loser.emoji} ${loser.name} !`
       : `\u{1F9B9} ${loser.emoji} ${loser.name} protège ses pièces : rien à piller !`;
   } else {
-    // Equipement du perdant (reculReduction) : recul attenue
-    const n = reducedRecul(loser, f.reward.dice[0]);
-    const r = moveBack(board, loser.pos, n);
-    newTeams[loserIdx] = { ...loser, pos: r.finalPos };
-    if (r.path.length > 1) {
-      moves = [{ teamIndex: loserIdx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+    // Bouclier (bois + pouvoir) puis équipement du perdant : recul atténué.
+    const rec = applyRecul(loser, board, f.reward.dice[0]);
+    newTeams[loserIdx] = { ...loser, ...rec.patch };
+    if (rec.path) {
+      moves = [{ teamIndex: loserIdx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     }
-    message = n > 0
-      ? `⬅️ ${loser.emoji} ${loser.name} est repoussé de ${n} case${n > 1 ? 's' : ''} !`
-      : `\u{1F392} L'équipement de ${loser.emoji} ${loser.name} absorbe le recul !`;
+    message = rec.applied > 0
+      ? `⬅️ ${loser.emoji} ${loser.name} est repoussé de ${rec.applied} case${rec.applied > 1 ? 's' : ''}${rec.absorbedBy ? ' (réduit)' : ''} !`
+      : (rec.absorbedBy === 'equip'
+          ? `\u{1F392} L'équipement de ${loser.emoji} ${loser.name} absorbe le recul !`
+          : `\u{1F6E1}️ ${loser.emoji} ${loser.name} absorbe le recul avec son bouclier !`);
   }
 
   addLog(message);

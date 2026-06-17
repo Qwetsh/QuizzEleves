@@ -592,12 +592,22 @@ describe('effets passifs : questions', () => {
     delete ITEMS.__tpct;
   });
 
-  it('itemShield (bouclier de bois) absorbe le recul AVANT le pouvoir Bouclier', () => {
+  it('Bouclier de bois (−1 case) consommé AVANT le pouvoir, qui reste intact si recul absorbé', () => {
+    // Recul de 1 : le Bouclier de bois (−1) suffit, le pouvoir n'est pas entamé.
     const t = mkTeam(0, { itemShield: 1, powers: { bouclier: { charges: 2, level: 1 } } });
-    const r = resolveWrongAnswer(t, BOARD);
-    expect(r.updatedTeam.pos).toBe('n4'); // pas de recul
+    const r = resolveWrongAnswer(t, BOARD, 'Mauvaise réponse', 1);
+    expect(r.updatedTeam.pos).toBe('n4'); // recul 1 − 1 = 0
     expect(r.updatedTeam.itemShield).toBe(0);
     expect(r.updatedTeam.powers.bouclier.charges).toBe(2); // pouvoir intact
+  });
+
+  it('Bouclier de bois (−1) puis pouvoir Bouclier si le recul dépasse', () => {
+    // Recul de 3 : bois −1 → 2, puis pouvoir niv.1 −2 → 0 (les deux consommés).
+    const t = mkTeam(0, { itemShield: 1, powers: { bouclier: { charges: 1, level: 1 } } });
+    const r = resolveWrongAnswer(t, BOARD, 'Mauvaise réponse', 3);
+    expect(r.updatedTeam.pos).toBe('n4'); // recul absorbé
+    expect(r.updatedTeam.itemShield).toBe(0);
+    expect(r.updatedTeam.powers.bouclier.charges).toBe(0); // pouvoir entamé
   });
 
   it('indiceBoost élimine une réponse de plus', () => {
@@ -632,6 +642,18 @@ describe('effets passifs : pouvoirs offensifs', () => {
     useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
     S().applyOffensivePower(1);
     expect(team(1).pos).toBe('n3'); // 1D4=3, -2 (bottes) = 1 case de recul
+    vi.restoreAllMocks();
+  });
+
+  it('la Foudre (attaque offensive) IGNORE le pouvoir Bouclier de la cible', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // 1D4 → 3
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 1 } } };
+    teams[1] = { ...teams[1], powers: { bouclier: { charges: 1, level: 3 } } };
+    useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
+    S().applyOffensivePower(1);
+    expect(team(1).pos).toBe('n1'); // recul 3 plein : le bouclier ne protège pas
+    expect(team(1).powers.bouclier.charges).toBe(1); // charge non consommée
     vi.restoreAllMocks();
   });
 
@@ -683,6 +705,24 @@ describe('effets passifs : événements', () => {
     equip(0, 'feet', 'grappinVoyageur');
     runEvent('oubli');
     expect(team().pos).toBe('n1');
+  });
+
+  it('le pouvoir Bouclier absorbe un recul d’événement (bouclier universel)', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], powers: { bouclier: { charges: 1, level: 1 } } };
+    useGameStore.setState({ teams });
+    runEvent('recul'); // recul de 2, niv.1 retire 2
+    expect(team(0).pos).toBe('n4'); // pas de recul
+    expect(team(0).powers.bouclier.charges).toBe(0); // charge consommée
+  });
+
+  it('le Bouclier de bois réduit d’1 case un recul d’événement', () => {
+    const teams = [...S().teams];
+    teams[0] = { ...teams[0], itemShield: 1 };
+    useGameStore.setState({ teams });
+    runEvent('recul'); // recul de 2 − 1 (bois) = 1 : n4 → n3
+    expect(team(0).pos).toBe('n3');
+    expect(team(0).itemShield).toBe(0);
   });
 
   it('capeOmbre divise le vol de pièces par deux', () => {

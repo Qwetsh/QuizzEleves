@@ -510,7 +510,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     const money = team.money ?? 0;
     return (
       <>
-        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>
+        <p style={{ fontSize: 19, fontWeight: 700, marginBottom: 4, textAlign: 'center', color: 'var(--ink-800)' }}>
           {"1 charge \u00E0 moiti\u00E9 prix \u2014 tu as "}{money} <span className="coin" />
         </p>
         <div className="space-y-2" style={{ marginTop: 12 }}>
@@ -535,13 +535,13 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
                 }}
               >
                 <span className="text-2xl">{power.icon}</span>
-                <span style={{ fontFamily: 'var(--font-display)', flex: 1, textAlign: 'left' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--ink-900)', flex: 1, textAlign: 'left' }}>
                   {power.name}
-                  <span style={{ fontSize: 11, color: 'var(--ink-500)', marginLeft: 8 }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-600)', marginLeft: 8 }}>
                     {entry?.charges ?? 0} charge{(entry?.charges ?? 0) > 1 ? 's' : ''}
                   </span>
                 </span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--ink-900)' }}>
                   <s style={{ color: 'var(--ink-400)', marginRight: 6 }}>{power.price}</s>
                   {price} <span className="coin" />
                 </span>

@@ -179,6 +179,22 @@ describe('actions : déplacement', () => {
     expect(team(0).pos).toBe('n3');
   });
 
+  it('recul d’événement absorbé par le pouvoir Bouclier (bouclier universel)', () => {
+    // Le recul des effets (événements/consommables) passe désormais par la chaîne
+    // de bouclier : ici niv.2 (−4) absorbe un recul de 3, charge consommée.
+    freshGame([{ powers: { bouclier: { charges: 1, level: 2 } } }, {}]);
+    exec([{ action: 'move', target: 'self', dir: 'back', n: 3 }], { source: 'event' });
+    expect(team(0).pos).toBe('n4'); // pas de recul
+    expect(team(0).powers.bouclier.charges).toBe(0);
+  });
+
+  it('recul d’événement réduit de 1 case par le Bouclier de bois', () => {
+    freshGame([{ itemShield: 2 }, {}]);
+    exec([{ action: 'move', target: 'self', dir: 'back', n: 3 }], { source: 'event' });
+    expect(team(0).pos).toBe('n3'); // 3 − 2 (deux charges) = 1 case : n4 → n3
+    expect(team(0).itemShield).toBe(0);
+  });
+
   it('move self forward jusqu’à l’arrivée => victoire', () => {
     exec([{ action: 'move', target: 'self', dir: 'forward', n: 8 }], { source: 'item' });
     expect(team(0).pos).toBe('arrivee');

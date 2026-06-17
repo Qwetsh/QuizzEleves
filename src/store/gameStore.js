@@ -5,7 +5,7 @@ import { SUBJECTS, SUBJECT_KEYS } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
-import { moveForward, moveBack } from '../logic/pathfinding.js';
+import { moveForward } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';

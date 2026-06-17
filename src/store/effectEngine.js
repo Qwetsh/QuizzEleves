@@ -6,8 +6,10 @@
 //  + des « interrupts » (choix de cible/case/thème, lancer de d6, recharge,
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
-import { moveForward, moveBack } from '../logic/pathfinding.js';
-import { reducedSteal, reducedRecul, resolveAmount, diceLabel, passesChance, activeSetEffects } from '../logic/itemEffects.js';
+import { moveForward } from '../logic/pathfinding.js';
+import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects } from '../logic/itemEffects.js';
+import { applyRecul } from '../logic/turnHelpers.js';
+import { soundShield } from '../logic/sounds.js';
 import { SUBJECTS } from '../data/subjects.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { ITEMS } from '../data/items.js';
@@ -194,34 +196,39 @@ const OFFENSIVE = (action) =>
 function applyMoveOne(set, get, idx, dir, n, allowJunction) {
   const { board, teams } = get();
   const team = teams[idx];
-  let res;
-  let applied = n;
+
+  // Recul : passe par la chaîne de bouclier unifiée (buff noRecul → Bouclier de
+  // bois → pouvoir Bouclier → équipement). Vaut pour TOUS les reculs d'effet
+  // (événements, consommables, pièges). La Foudre est gérée à part (offensif).
   if (dir === 'back') {
-    const amt = reducedRecul(team, n); // l'équipement (reculReduction) atténue
-    if (amt <= 0) return { moved: false, applied: 0 };
-    applied = amt;
-    res = moveBack(board, team.pos, amt);
-  } else {
-    res = moveForward(board, team.pos, n, { throughJunctions: !allowJunction });
+    const r = applyRecul(team, board, n);
+    const nt = [...teams];
+    nt[idx] = { ...team, ...r.patch };
+    const movePath = r.path ? [{ teamIndex: idx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }] : null;
+    set({ teams: nt, ...(movePath ? { movePath } : {}) });
+    if (r.absorbedBy && r.absorbedBy !== 'equip') { soundShield(); get().emitVfx?.('shield', idx); }
+    return { moved: true, finalPos: r.patch.pos, applied: r.applied, base: n, detail: r.detail, absorbedBy: r.absorbedBy };
   }
+
+  const res = moveForward(board, team.pos, n, { throughJunctions: !allowJunction });
   const nt = [...teams];
   const patch = { pos: res.finalPos };
   // High-water-mark : mémorise la case la plus avancée (par x) jamais atteinte —
-  // sert à l'action `teleportFurthest`. Les reculs ne l'abaissent jamais.
-  if (dir !== 'back' && board[res.finalPos]) {
+  // sert à l'action `teleportFurthest`.
+  if (board[res.finalPos]) {
     const curMaxX = team.maxPos && board[team.maxPos] ? board[team.maxPos].x : -Infinity;
     if (board[res.finalPos].x > curMaxX) patch.maxPos = res.finalPos;
   }
   nt[idx] = { ...team, ...patch };
   const movePath = res.path.length > 1
-    ? [{ teamIndex: idx, waypoints: res.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: dir === 'back' ? 'back' : 'forward' }]
+    ? [{ teamIndex: idx, waypoints: res.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'forward' }]
     : null;
   set({ teams: nt, ...(movePath ? { movePath } : {}) });
   if (allowJunction && res.stoppedAtJunction) {
     set({ awaitingChoice: true, pendingMove: { remaining: res.remaining, noLanding: true, resumeEngine: true, teamIndex: idx } });
     return { suspended: true };
   }
-  return { moved: true, finalPos: res.finalPos, applied };
+  return { moved: true, finalPos: res.finalPos, applied: n };
 }
 
 function applyMoney(set, get, action, ctx, indices) {
@@ -404,21 +411,24 @@ function stepHead(set, get, action, ctx) {
         if (res.moved) {
           const tm = get().teams[idx];
           const applied = res.applied ?? n;
-          // Détail : recul atténué par l'équipement, ou formule (dé / à l'échelle).
-          let detail;
-          if (action.dir === 'back' && applied < n) {
-            detail = [
-              { label: 'Recul prévu', note: cases(n) },
-              { label: 'Équipement', note: `−${cases(n - applied)}` },
-              { label: 'Recul subi', note: cases(applied) },
-            ];
-          } else if (formula) {
-            detail = [{ label: formula, note: cases(applied) }];
+          if (action.dir === 'back') {
+            // Recul : la chaîne de bouclier (applyRecul) fournit déjà le détail.
+            const detail = res.detail || (formula ? [{ label: formula, note: cases(n) }] : undefined);
+            let text;
+            if (applied <= 0) {
+              text = res.absorbedBy === 'buff'
+                ? `🛟 ${tm.emoji} ${tm.name} : recul annulé (effet de durée) !`
+                : res.absorbedBy === 'equip'
+                  ? `🎒 ${tm.emoji} ${tm.name} : l'équipement absorbe le recul !`
+                  : `🛡️ ${tm.emoji} ${tm.name} : recul totalement absorbé !`;
+            } else {
+              text = `⬅️ ${tm.emoji} ${tm.name} recule de ${cases(applied)}${res.absorbedBy ? ' (réduit)' : ''}.`;
+            }
+            get().addLog({ text, detail });
+          } else {
+            const detail = formula ? [{ label: formula, note: cases(applied) }] : undefined;
+            get().addLog({ text: `➡️ ${tm.emoji} ${tm.name} avance de ${cases(applied)}.`, detail });
           }
-          get().addLog({
-            text: `${action.dir === 'back' ? '⬅️' : '➡️'} ${tm.emoji} ${tm.name} ${action.dir === 'back' ? 'recule' : 'avance'} de ${cases(applied)}.`,
-            detail,
-          });
         }
         if (res.finalPos && get().board[res.finalPos]?.type === 'arrivee') {
           get().addLog(`🏆 ${get().teams[idx].emoji} ${get().teams[idx].name} atteint l'arrivée !`);
@@ -482,8 +492,8 @@ function stepHead(set, get, action, ctx) {
     case 'shieldNext': {
       const sn = typeof action.n === 'number' ? (action.n || 1) : (resolveAmount(action.n, srcTeam) || 1);
       patchSource(set, get, (t) => ({ itemShield: (t.itemShield || 0) + sn }));
-      get().addLog(`🪵 ${sn > 1 ? `Les ${sn} prochains reculs seront annulés` : 'Le prochain recul sera annulé'}.`);
-      announce(set, get, '🛡️', `Bouclier armé${sn > 1 ? ` ×${sn}` : ''}${dieTag(action.n)}`, '#3b6cb3');
+      get().addLog(`🪵 Bouclier de bois armé : ton prochain recul sera réduit de ${sn} case${sn > 1 ? 's' : ''}.`);
+      announce(set, get, '🛡️', `Bouclier armé (−${sn} case${sn > 1 ? 's' : ''})${dieTag(action.n)}`, '#3b6cb3');
       return 'done';
     }
     case 'fumigene': {

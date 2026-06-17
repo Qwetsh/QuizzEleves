@@ -1,7 +1,7 @@
 import { POWERS } from '../data/powers.js';
-import { moveForward, moveBack, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
+import { moveForward, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
-import { randomSubject } from '../logic/turnHelpers.js';
+import { randomSubject, applyRecul } from '../logic/turnHelpers.js';
 import { hasEffect, reducedSteal, reducedTax, equippedSetCounts } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { SETS } from '../data/sets.js';
@@ -490,6 +490,20 @@ export function applyEventEffect(set, get) {
   const pushMove = (teamIndex, path, type) => {
     if (path && path.length > 1) moves.push({ teamIndex, waypoints: toWaypoints(board, path), type });
   };
+  // Recul d'événement via la chaîne de bouclier unifiée (buff noRecul → Bouclier
+  // de bois → pouvoir Bouclier → équipement) — comme les questions et le moteur.
+  // Met à jour newTeams[idx], pousse l'animation, et renvoie le nombre de cases
+  // effectivement reculées (0 = totalement absorbé) + le drapeau « réduit ».
+  const reculInto = (idx, base) => {
+    const rec = applyRecul(newTeams[idx], board, base);
+    newTeams[idx] = { ...newTeams[idx], ...rec.patch };
+    pushMove(idx, rec.path, 'back');
+    return { applied: rec.applied, reduced: !!rec.absorbedBy };
+  };
+  // Clause de message : « recul de N case(s) » ou « recul absorbé 🛡️ ».
+  const reculTxt = (applied) => applied > 0
+    ? `recul de ${applied} case${applied > 1 ? 's' : ''}`
+    : 'recul absorbé 🛡️';
 
   switch (key) {
     case 'vaTout': {
@@ -513,19 +527,15 @@ export function applyEventEffect(set, get) {
       }
       // Raté : mise perdue (jamais ajoutée à l'or) + recul 1D10.
       const dv = Math.floor(Math.random() * 10) + 1;
-      const r = moveBack(board, team.pos, dv);
-      newTeams[currentTeam] = { ...team, pos: r.finalPos };
-      pushMove(currentTeam, r.path, 'back');
+      const { applied } = reculInto(currentTeam, dv);
       message = pot > 0
-        ? `\u{1F3B0} Raté ! Mise de ${pot} \u{1FA99} perdue et recul de ${dv} case${dv > 1 ? 's' : ''} !`
-        : `\u{1F3B0} Raté ! Recul de ${dv} case${dv > 1 ? 's' : ''} !`;
+        ? `\u{1F3B0} Raté ! Mise de ${pot} \u{1FA99} perdue et ${reculTxt(applied)} !`
+        : `\u{1F3B0} Raté ! ${reculTxt(applied).charAt(0).toUpperCase()}${reculTxt(applied).slice(1)} !`;
       break;
     }
     case 'recul': {
-      const r = moveBack(board, team.pos, 2);
-      newTeams[currentTeam] = { ...team, pos: r.finalPos };
-      pushMove(currentTeam, r.path, 'back');
-      message = `${team.emoji} ${team.name} recule de 2 cases !`;
+      const { applied } = reculInto(currentTeam, 2);
+      message = `${team.emoji} ${team.name} ${reculTxt(applied)} !`;
       break;
     }
     case 'coupDePouce': {
@@ -549,16 +559,14 @@ export function applyEventEffect(set, get) {
     case 'oubli': {
       // Equipement (oubliProtect) : simple recul de 3 au lieu du retour au depart
       if (hasEffect(team, 'oubliProtect')) {
-        const r = moveBack(board, team.pos, 3);
-        newTeams[currentTeam] = { ...team, pos: r.finalPos };
-        pushMove(currentTeam, r.path, 'back');
-        message = `\u{1FA9D} Le grappin retient ${team.emoji} ${team.name} : recul de 3 cases seulement !`;
+        const { applied } = reculInto(currentTeam, 3);
+        message = `\u{1FA9D} Le grappin retient ${team.emoji} ${team.name} : ${reculTxt(applied)} seulement !`;
         break;
       }
-      const r = moveBack(board, team.pos, 9999);
-      newTeams[currentTeam] = { ...team, pos: 'depart' };
-      pushMove(currentTeam, r.path, 'back');
-      message = `\u{1F573}️ ${team.emoji} ${team.name} retourne au DÉPART !`;
+      const { applied } = reculInto(currentTeam, 9999);
+      message = applied > 0
+        ? `\u{1F573}️ ${team.emoji} ${team.name} retourne au DÉPART !`
+        : `\u{1F6E1}️ ${team.emoji} ${team.name} évite le retour au départ grâce à son bouclier !`;
       break;
     }
     case 'embuscade': {
@@ -581,9 +589,7 @@ export function applyEventEffect(set, get) {
           immune.push(`${newTeams[i].emoji} ${newTeams[i].name}`);
           continue;
         }
-        const r = moveBack(board, newTeams[i].pos, dv);
-        newTeams[i] = { ...newTeams[i], pos: r.finalPos };
-        pushMove(i, r.path, 'back');
+        reculInto(i, dv);
       }
       message = `\u{1F32A}️ Tempête ! TOUTES les équipes reculent de ${dv} case${dv > 1 ? 's' : ''}.`;
       if (immune.length) message += ` ⚓ ${immune.join(', ')} tient${immune.length > 1 ? 'nent' : ''} bon !`;
@@ -609,10 +615,8 @@ export function applyEventEffect(set, get) {
         pushMove(currentTeam, result.path, 'forward');
         message = `\u{1F3B0} ${dv} ! Ton lancer de ${moveRoll} est doublé : avance de ${gain} cases !`;
       } else {
-        const r = moveBack(board, team.pos, moveRoll);
-        newTeams[currentTeam] = { ...team, pos: r.finalPos };
-        pushMove(currentTeam, r.path, 'back');
-        message = `\u{1F3B0} ${dv}... Perdu ! Recule de ton lancer : ${moveRoll} case${moveRoll > 1 ? 's' : ''}.`;
+        const { applied } = reculInto(currentTeam, moveRoll);
+        message = `\u{1F3B0} ${dv}... Perdu ! ${reculTxt(applied).charAt(0).toUpperCase()}${reculTxt(applied).slice(1)}.`;
       }
       break;
     }
@@ -621,10 +625,8 @@ export function applyEventEffect(set, get) {
       const dv = data?.diceValue || 1;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        const r = moveBack(board, target.pos, dv);
-        newTeams[ti] = { ...target, pos: r.finalPos };
-        pushMove(ti, r.path, 'back');
-        message = `⚡ ${target.emoji} ${target.name} prend la décharge et recule de ${dv} case${dv > 1 ? 's' : ''} !`;
+        const { applied } = reculInto(ti, dv);
+        message = `⚡ ${target.emoji} ${target.name} prend la décharge et ${reculTxt(applied)} !`;
       }
       break;
     }
@@ -632,13 +634,9 @@ export function applyEventEffect(set, get) {
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        const rMe = moveBack(board, team.pos, 2);
-        const rTarget = moveBack(board, target.pos, 4);
-        newTeams[currentTeam] = { ...team, pos: rMe.finalPos };
-        newTeams[ti] = { ...target, pos: rTarget.finalPos };
-        pushMove(currentTeam, rMe.path, 'back');
-        pushMove(ti, rTarget.path, 'back');
-        message = `\u{1F91D} ${team.emoji} recule de 2, ${target.emoji} recule de 4 !`;
+        const me = reculInto(currentTeam, 2);
+        const tg = reculInto(ti, 4);
+        message = `\u{1F91D} ${team.emoji} ${reculTxt(me.applied)}, ${target.emoji} ${reculTxt(tg.applied)} !`;
       }
       break;
     }
@@ -680,15 +678,11 @@ export function applyEventEffect(set, get) {
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
         if (correct) {
-          const r = moveBack(board, team.pos, 2);
-          newTeams[currentTeam] = { ...team, pos: r.finalPos };
-          pushMove(currentTeam, r.path, 'back');
-          message = `⚔️ ${target.emoji} réussit le duel ! ${team.emoji} recule de 2.`;
+          const { applied } = reculInto(currentTeam, 2);
+          message = `⚔️ ${target.emoji} réussit le duel ! ${team.emoji} ${reculTxt(applied)}.`;
         } else {
-          const r = moveBack(board, target.pos, 2);
-          newTeams[ti] = { ...target, pos: r.finalPos };
-          pushMove(ti, r.path, 'back');
-          message = `⚔️ ${target.emoji} échoue ! ${target.emoji} recule de 2.`;
+          const { applied } = reculInto(ti, 2);
+          message = `⚔️ ${target.emoji} échoue ! ${target.emoji} ${reculTxt(applied)}.`;
         }
       }
       break;
@@ -701,10 +695,8 @@ export function applyEventEffect(set, get) {
         pushMove(currentTeam, result.path, 'forward');
         message = `\u{1F4B0} Pari gagné ! ${team.emoji} avance de 3 cases !`;
       } else {
-        const r = moveBack(board, team.pos, 3);
-        newTeams[currentTeam] = { ...team, pos: r.finalPos };
-        pushMove(currentTeam, r.path, 'back');
-        message = `\u{1F4B0} Pari perdu ! ${team.emoji} recule de 3 cases.`;
+        const { applied } = reculInto(currentTeam, 3);
+        message = `\u{1F4B0} Pari perdu ! ${team.emoji} ${reculTxt(applied)}.`;
       }
       break;
     }
