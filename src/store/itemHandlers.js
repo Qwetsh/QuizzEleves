@@ -128,21 +128,24 @@ const isConsumableKey = (k) => ITEMS[k]?.slot === 'consumable';
 
 // Tire `count` objets d'une catégorie ('consumable' | 'equipment') parmi les
 // objets activés, en excluant les clés déjà présentes (`exclude`).
-export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS), exclude = []) {
+export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS), exclude = [], allowFamilies = []) {
   const ex = new Set(exclude);
+  const fam = new Set(allowFamilies); // familles autorisées en vitrine (ext. active)
   const pool = enabledKeys.filter((k) => {
     const it = ITEMS[k];
-    if (!it || ex.has(k) || it.family) return false; // familles (alchimie/enchant) hors vitrine aléatoire
+    if (!it || ex.has(k)) return false;
+    if (it.family && !fam.has(it.family)) return false; // ingrédient/potion/parchemin : seulement si autorisé
     return category === 'consumable' ? it.slot === 'consumable' : it.slot !== 'consumable';
   });
   return pickWeightedItems(count, pool, shopWeightOf);
 }
 
 // Vitrine de la boutique : SHOP_CONSUMABLE_SLOTS consommables + SHOP_EQUIPMENT_SLOTS
-// équipements, dans un seul tableau plat (consommables d'abord).
-export function generateShopStock(enabledKeys = Object.keys(ITEMS)) {
+// équipements. `allowFamilies` (ex. ['ingredient','parchment']) ajoute ces familles
+// quand les extensions Alchimie/Enchantement sont actives.
+export function generateShopStock(enabledKeys = Object.keys(ITEMS), allowFamilies = []) {
   return [
-    ...pickShopItems('consumable', SHOP_CONSUMABLE_SLOTS, enabledKeys),
+    ...pickShopItems('consumable', SHOP_CONSUMABLE_SLOTS, enabledKeys, [], allowFamilies),
     ...pickShopItems('equipment', SHOP_EQUIPMENT_SLOTS, enabledKeys),
   ];
 }
@@ -150,9 +153,10 @@ export function generateShopStock(enabledKeys = Object.keys(ITEMS)) {
 // Objet de remplacement après un achat : même catégorie que `boughtKey`, absent
 // du stock courant ET différent de l'objet acheté (pour qu'il ne réapparaisse
 // pas aussitôt). null si le pool est épuisé.
-export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys(ITEMS)) {
+export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys(ITEMS), allowFamilies = []) {
   const category = isConsumableKey(boughtKey) ? 'consumable' : 'equipment';
-  const picked = pickShopItems(category, 1, enabledKeys, [...stock, boughtKey]);
+  // L'équipement ne reçoit jamais de famille ; les consommables oui (ext. active).
+  const picked = pickShopItems(category, 1, enabledKeys, [...stock, boughtKey], category === 'consumable' ? allowFamilies : []);
   return picked[0] || null;
 }
 
@@ -215,7 +219,7 @@ export function buyItem(set, get, itemKey) {
     set({ teams: newTeams, showShop: { ...showShop, stock: restStock } });
   } else {
     // Boutique : un nouvel objet de la même catégorie arrive aussitôt.
-    const replacement = pickReplacement(itemKey, restStock, get().enabledItems);
+    const replacement = pickReplacement(itemKey, restStock, get().enabledItems, get().shopFamilies?.() || []);
     set({ teams: newTeams, shopStock: replacement ? [...restStock, replacement] : restStock });
   }
   saveGame(get());

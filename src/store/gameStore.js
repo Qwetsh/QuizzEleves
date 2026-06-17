@@ -210,6 +210,12 @@ export const useGameStore = create((set, get) => ({
   },
   // Helper interne : l'extension « objets/équipement » est-elle active ?
   itemsEnabled: () => extOn(get().extensions, 'equipment'),
+  // Familles d'objets ajoutées à la boutique selon les extensions actives
+  // (ingrédients si Alchimie, parchemins si Enchantement).
+  shopFamilies: () => [
+    ...(extOn(get().extensions, 'alchemy') ? ['ingredient'] : []),
+    ...(extOn(get().extensions, 'enchant') ? ['parchment'] : []),
+  ],
 
   enabledEvents: Object.keys(EVENTS),
   toggleEvent: (key) => {
@@ -447,7 +453,7 @@ export const useGameStore = create((set, get) => ({
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
-      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems) : [],
+      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
       shopStockTurns: 0,
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
@@ -1741,7 +1747,7 @@ export const useGameStore = create((set, get) => ({
     // régénère si le stock est absent ou trop petit pour le nouveau format.
     if (get().itemsEnabled()
         && (!Array.isArray(saved.shopStock) || saved.shopStock.length < itemH.SHOP_CONSUMABLE_SLOTS)) {
-      set({ shopStock: itemH.generateShopStock(get().enabledItems), shopStockTurns: 0 });
+      set({ shopStock: itemH.generateShopStock(get().enabledItems, get().shopFamilies()), shopStockTurns: 0 });
     }
   },
 
