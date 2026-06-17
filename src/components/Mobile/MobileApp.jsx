@@ -247,6 +247,31 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
         )}
         <SetBonusInfo item={item} team={team} />
 
+        {/* Parchemin (Enchantement) : choisir la pièce équipée à enchanter */}
+        {canEdit && item.family === 'parchment' && loc.kind === 'bag' && (() => {
+          const ek = (v) => (typeof v === 'string' ? v : v?.key);
+          const slots = ['head', 'body', 'feet'].filter((s) => ITEMS[ek(team.equipment?.[s])]);
+          return (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 6 }}>{'📜'} Enchanter une pièce :</div>
+              {slots.length === 0 ? (
+                <div className="mob-empty">Aucune pièce équipée à enchanter.</div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {slots.map((s) => {
+                    const it = ITEMS[ek(team.equipment[s])];
+                    return (
+                      <button key={s} className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('enchant', { key: itemKey, slot: s })}>
+                        {it.icon} {SLOTS[s].name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Actions d'édition (sa propre équipe, hors résolution) */}
         {canEdit && (
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>

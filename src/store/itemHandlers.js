@@ -1,5 +1,6 @@
 import { ITEMS, SLOTS } from '../data/items.js';
 import { matchRecipe } from '../data/recipes.js';
+import { itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
@@ -35,8 +36,14 @@ export function cheapestStockPrice(stock) {
 // l'équipement reste toujours à 1 par case.
 export const cellKey = (c) => (c == null ? null : typeof c === 'string' ? c : c.key);
 export const cellN = (c) => (c == null ? 0 : typeof c === 'string' ? 1 : (Number(c.n) || 1));
-// Forme canonique : chaîne si 1 exemplaire, objet { key, n } si pile.
-export const mkCell = (key, n) => (n <= 1 ? key : { key, n });
+// Enchantements portés par une case (Enchantement) — vide si objet « nu ».
+export const cellEnchants = (c) => (c && typeof c === 'object' && Array.isArray(c.enchants) ? c.enchants : []);
+// Forme canonique : chaîne si 1 exemplaire nu ; objet { key, n } pour une pile ;
+// objet { key, n, enchants } pour une pièce enchantée (toujours non empilable).
+export const mkCell = (key, n, enchants) => {
+  if (enchants && enchants.length) return { key, n: Math.max(1, n || 1), enchants };
+  return n <= 1 ? key : { key, n };
+};
 
 // Le sac est un tableau de BAG_SIZE cases : les objets gardent leur case pour le
 // drag & drop. Tolère les anciennes sauvegardes (tableaux compacts plus courts,
@@ -45,7 +52,7 @@ export function normalizeBag(bag) {
   const arr = (Array.isArray(bag) ? bag.slice(0, BAG_SIZE) : []).map((c) => {
     const k = cellKey(c);
     if (!k || !ITEMS[k]) return null;
-    return mkCell(k, Math.min(Math.max(1, cellN(c)), STACK_MAX));
+    return mkCell(k, Math.min(Math.max(1, cellN(c)), STACK_MAX), cellEnchants(c));
   });
   while (arr.length < BAG_SIZE) arr.push(null);
   return arr;
@@ -67,17 +74,18 @@ function firstFreeCell(bag) {
 
 // Ajoute un objet : empile sur une pile compatible (même consommable, sous le
 // plafond) sinon première case libre. Retourne null si rien de possible (plein).
-function bagWith(bag, itemKey) {
+function bagWith(bag, itemKey, enchants = []) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const arr = normalizeBag(bag);
-  if (item.slot === 'consumable') {
-    const i = arr.findIndex((c) => cellKey(c) === itemKey && cellN(c) < STACK_MAX);
+  // Les objets ENCHANTÉS ne s'empilent jamais (chaque instance est unique).
+  if (item.slot === 'consumable' && !(enchants && enchants.length)) {
+    const i = arr.findIndex((c) => cellKey(c) === itemKey && !cellEnchants(c).length && cellN(c) < STACK_MAX);
     if (i !== -1) { arr[i] = mkCell(itemKey, cellN(arr[i]) + 1); return arr; }
   }
   const free = firstFreeCell(arr);
   if (free === -1) return null;
-  arr[free] = mkCell(itemKey, 1);
+  arr[free] = mkCell(itemKey, 1, enchants);
   return arr;
 }
 
@@ -231,7 +239,7 @@ export function sellEquipment(set, get, slot, teamIndex) {
   const { teams, currentTeam, addLog } = get();
   const idx = teamIndex ?? currentTeam;
   const team = teams[idx];
-  const itemKey = team?.equipment?.[slot];
+  const itemKey = itemKeyOf(team?.equipment?.[slot]);
   const item = ITEMS[itemKey];
   if (!item) return;
 
@@ -305,8 +313,13 @@ export function moveInventoryItem(set, get, fromKey, toKey, teamIndex) {
   // Écrit une valeur : l'équipement ne stocke que la CLÉ (jamais de pile) ; le
   // sac conserve la cellule telle quelle (préserve une pile lors d'un échange).
   const write = (key, value) => {
-    if (key.startsWith('equip:')) equipment[key.slice(6)] = cellKey(value);
-    else bag[+key.slice(4)] = value;
+    if (key.startsWith('equip:')) {
+      // Équipement : clé nue, OU instance { key, enchants } si la pièce est enchantée.
+      const ench = cellEnchants(value);
+      equipment[key.slice(6)] = ench.length ? { key: cellKey(value), enchants: ench } : cellKey(value);
+    } else {
+      bag[+key.slice(4)] = value;
+    }
   };
   const a = rawCell(equipment, bag, fromKey);
   const b = rawCell(equipment, bag, toKey);
@@ -331,15 +344,18 @@ export function moveInventoryItem(set, get, fromKey, toKey, teamIndex) {
 // Pure (pas de set/log) : retourne { team, outcome, refund } avec
 // outcome ∈ 'equipped' | 'bagged' | 'refunded', chaque appelant formate
 // son propre message à partir de l'outcome.
-export function placeItem(team, itemKey) {
+// `itemOrInstance` : une clé "casque" OU une instance { key, enchants } (Enchantement).
+export function placeItem(team, itemOrInstance) {
+  const itemKey = itemKeyOf(itemOrInstance);
+  const enchants = itemEnchantsOf(itemOrInstance);
   const item = ITEMS[itemKey];
   if (!item) return { team, outcome: 'refunded', refund: 0 }; // clé inconnue/supprimée : no-op sûr
   const equipment = { ...(team.equipment || { head: null, body: null, feet: null }) };
   if (item.slot !== 'consumable' && !equipment[item.slot]) {
-    equipment[item.slot] = itemKey;
+    equipment[item.slot] = enchants.length ? { key: itemKey, enchants } : itemKey;
     return { team: { ...team, equipment }, outcome: 'equipped', refund: 0 };
   }
-  const bag = bagWith(team.bag, itemKey);
+  const bag = bagWith(team.bag, itemKey, enchants);
   if (!bag) {
     const refund = sellPrice(item);
     return { team: { ...team, money: team.money + refund }, outcome: 'refunded', refund };
@@ -385,6 +401,15 @@ export function useConsumable(set, get, bagIndex) {
   const item = ITEMS[itemKey];
   if (!item || item.slot !== 'consumable') return;
 
+  // Parchemin d'enchantement : ne s'applique pas comme un effet — il faut choisir
+  // une PIÈCE équipée à enchanter (sélecteur). Voir enchantWith.
+  if (item.family === 'parchment') {
+    const slots = ['head', 'body', 'feet'].filter((s) => itemKeyOf(team.equipment?.[s]));
+    if (!slots.length) { addLog(`📜 ${team.emoji} ${team.name} : aucune pièce équipée à enchanter !`); return; }
+    set({ showEnchantPicker: { bagIndex, slots }, showInventory: false });
+    return;
+  }
+
   // Consomme UNE unité (la pile diminue ; la case se libère à 0).
   bag[bagIndex] = cellN(cell) > 1 ? mkCell(itemKey, cellN(cell) - 1) : null;
   const newTeams = [...teams];
@@ -416,6 +441,34 @@ export function useConsumable(set, get, bagIndex) {
     return;
   }
   runEffects(set, get, actions, { source: 'item', itemKey, bagIndex });
+}
+
+// === ENCHANTEMENT : applique un parchemin du sac sur une pièce équipée ========
+// L'enchantement est ajouté à l'INSTANCE de la pièce (clé + enchants) — il suit
+// donc l'objet (déséquiper, troc, etc.). Consomme le parchemin. { ok, reason? }.
+export function enchantWith(set, get, teamIdx, bagIndex, slot) {
+  const { teams } = get();
+  const team = teams[teamIdx];
+  if (!team) return { ok: false, reason: 'équipe invalide' };
+  const bag = normalizeBag(team.bag);
+  const pKey = cellKey(bag[bagIndex]);
+  const parch = ITEMS[pKey];
+  if (!parch || parch.family !== 'parchment' || !parch.enchant) return { ok: false, reason: 'pas un parchemin' };
+  if (!['head', 'body', 'feet'].includes(slot)) return { ok: false, reason: 'emplacement invalide' };
+  const cur = team.equipment?.[slot];
+  const curKey = itemKeyOf(cur);
+  if (!curKey || !ITEMS[curKey]) return { ok: false, reason: 'aucune pièce sur cet emplacement' };
+
+  const enchants = [...itemEnchantsOf(cur), parch.enchant];
+  const equipment = { ...team.equipment, [slot]: { key: curKey, enchants } };
+  const nbag = [...bag];
+  nbag[bagIndex] = cellN(bag[bagIndex]) > 1 ? mkCell(pKey, cellN(bag[bagIndex]) - 1) : null;
+  const nt = [...teams];
+  nt[teamIdx] = { ...team, equipment, bag: nbag };
+  set({ teams: nt });
+  get().addLog(`📜 ${team.emoji} ${team.name} enchante ${ITEMS[curKey].icon} ${ITEMS[curKey].name} (${SLOTS[slot].name}) avec ${parch.name} !`);
+  if (get().phase === 'game') saveGame(get());
+  return { ok: true };
 }
 
 // === ALCHIMIE : distillation de 3 ingrédients du sac en une potion ===========

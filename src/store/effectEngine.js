@@ -7,7 +7,7 @@
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
 import { moveForward } from '../logic/pathfinding.js';
-import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects } from '../logic/itemEffects.js';
+import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem } from '../logic/itemEffects.js';
 import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
@@ -111,7 +111,7 @@ export function equipOnRollActions(team, value) {
   const out = [];
   const consider = (t) => { if ((t.values || []).includes(value) && passesChance(t.chance)) out.push(...(t.do || [])); };
   for (const slot of SLOTS_EQUIP) {
-    const it = ITEMS[team?.equipment?.[slot]];
+    const it = mergedItem(team?.equipment?.[slot]);
     for (const t of triggersOf(it, 'roll')) consider(t);
   }
   for (const t of setTriggersOf(team, 'roll')) consider(t); // bonus de set
@@ -132,7 +132,7 @@ export function equipTriggerActions(team, on, subject) {
     if (passesChance(t.chance)) out.push(...(t.do || [])); // chance optionnelle
   };
   for (const slot of SLOTS_EQUIP) {
-    const it = ITEMS[team?.equipment?.[slot]];
+    const it = mergedItem(team?.equipment?.[slot]);
     for (const t of triggersOf(it, on)) consider(t);
   }
   for (const t of setTriggersOf(team, on)) consider(t); // bonus de set
@@ -149,7 +149,7 @@ export function questionRerollOptions(team, rerollUsed, subject) {
   // être dans la liste.
   const subjectMatches = (t) => !t.subjects?.length || (subject != null && t.subjects.includes(subject));
   for (const slot of SLOTS_EQUIP) {
-    const it = ITEMS[team?.equipment?.[slot]];
+    const it = mergedItem(team?.equipment?.[slot]);
     const trig = triggersOf(it, 'question').filter(subjectMatches);
     if (trig.length && !rerollUsed) {
       opts.push({ itemName: it.name, icon: it.icon, fromBag: false, actions: trig.flatMap((t) => t.do || []) });

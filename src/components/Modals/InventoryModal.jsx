@@ -256,7 +256,7 @@ export default function InventoryModal() {
                     k={k}
                     variant="equip"
                     glyph={SLOT_GLYPHS[s.key]}
-                    itemKey={equipment[s.key]}
+                    itemKey={cellKey(equipment[s.key])}
                     style={{ left: '21.3%', top: s.cy }}
                     refCb={(el) => { slotEls.current[k] = el; }}
                     onGrab={onGrab}

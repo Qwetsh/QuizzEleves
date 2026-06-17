@@ -78,7 +78,7 @@ function EquipmentStrip({ team, className }) {
   return (
     <div className={'ts-eq ' + (className || '')}>
       {Object.keys(SLOTS).map((slot) => {
-        const item = ITEMS[equipment[slot]];
+        const item = ITEMS[cellKey(equipment[slot])];
         const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
         return (
           <span
@@ -269,7 +269,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
       <div className="ts-pop-section">
         <div className="ts-pop-label">Équipement</div>
         {Object.keys(SLOTS).map((slot) => {
-          const item = ITEMS[equipment[slot]];
+          const item = ITEMS[cellKey(equipment[slot])];
           const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
           return (
             <div key={slot} className="ts-pop-eq-row">

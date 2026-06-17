@@ -65,7 +65,16 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       sablierActif: !!t.sablierActif,
       wager: t.wager ? true : null,
       buffs: (t.buffs || []).map((b) => ({ type: b.type, turns: b.turns, n: b.n, subject: b.subject })),
-      equipment: t.equipment || { head: null, body: null, feet: null },
+      // Équipement publié en CLÉS (le mobile lit des clés) + compteur d'enchants
+      // par emplacement (Enchantement) pour un éventuel marqueur ✦.
+      equipment: Object.fromEntries(['head', 'body', 'feet'].map((s) => {
+        const v = t.equipment?.[s];
+        return [s, typeof v === 'string' ? v : (v?.key ?? null)];
+      })),
+      enchants: Object.fromEntries(['head', 'body', 'feet'].map((s) => {
+        const v = t.equipment?.[s];
+        return [s, (v && typeof v === 'object' && Array.isArray(v.enchants)) ? v.enchants.length : 0];
+      })),
       bag: (t.bag || []).filter(Boolean),
       powers: t.powers || {},
       powerDef: t.powerDef, powerOff: t.powerOff,

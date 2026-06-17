@@ -3,11 +3,26 @@ import { SETS } from '../data/sets.js';
 
 // --- Sets d'équipement -------------------------------------------------
 // Compte les pièces équipées de chaque set.
+// --- Instances d'objet (Enchantement) ---------------------------------
+// Un objet peut être une CLÉ "casque" ou une INSTANCE { key, enchants:[effect] }.
+// Ces helpers normalisent la lecture partout (équipement ET sac).
+export function itemKeyOf(v) { return typeof v === 'string' ? v : v?.key; }
+export function itemEnchantsOf(v) { return (v && typeof v === 'object' && Array.isArray(v.enchants)) ? v.enchants : []; }
+// Définition d'objet AVEC ses enchantements fusionnés dans `effects` (passifs ET
+// déclencheurs) : tout le moteur (getEffectValue, triggersOf) en hérite sans
+// changer ses points d'appel.
+export function mergedItem(v) {
+  const base = ITEMS[itemKeyOf(v)];
+  if (!base) return null;
+  const enchants = itemEnchantsOf(v);
+  return enchants.length ? { ...base, effects: [...(base.effects || []), ...enchants] } : base;
+}
+
 export function equippedSetCounts(team) {
   const counts = {};
   const eq = team?.equipment || {};
   for (const slot of ['head', 'body', 'feet']) {
-    const it = ITEMS[eq[slot]];
+    const it = ITEMS[itemKeyOf(eq[slot])];
     if (it?.set) counts[it.set] = (counts[it.set] || 0) + 1;
   }
   return counts;
@@ -116,7 +131,7 @@ export function passesChance(chance) {
  */
 export function equippedItems(team) {
   const eq = team?.equipment || {};
-  return ['head', 'body', 'feet'].map((slot) => ITEMS[eq[slot]]).filter(Boolean);
+  return ['head', 'body', 'feet'].map((slot) => mergedItem(eq[slot])).filter(Boolean);
 }
 
 /**

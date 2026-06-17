@@ -130,7 +130,7 @@ export function acceptEvent(set, get) {
 
   if (key === 'troc') {
     const t = get().teams[get().currentTeam];
-    const hasItems = Object.values(t?.equipment || {}).some((k) => k && ITEMS[k])
+    const hasItems = Object.values(t?.equipment || {}).some((k) => ITEMS[cellKey(k)])
       || (t?.bag || []).some((c) => ITEMS[cellKey(c)]);
     if (!hasItems) {
       set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Tu n'as aucun objet à troquer !` } }, eventApplied: true });
@@ -209,7 +209,7 @@ export function eventSelectTarget(set, get, targetIndex) {
     const target = teams[targetIndex];
     // Ne compter que les objets EXISTANTS au catalogue (une clé périmée/supprimée
     // ne se rend pas dans la liste → éviterait un soft-lock de la modale).
-    const hasItems = Object.values(target?.equipment || {}).some((k) => k && ITEMS[k])
+    const hasItems = Object.values(target?.equipment || {}).some((k) => ITEMS[cellKey(k)])
       || (target?.bag || []).some((c) => ITEMS[cellKey(c)]);
     if (hasItems) {
       set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, targetIndex } } });
@@ -452,7 +452,7 @@ export function eventPillageApply(set, get, pick) {
   const newTeams = [...teams];
 
   if (pick.kind === 'equipment') {
-    itemKey = target.equipment?.[pick.slot];
+    itemKey = cellKey(target.equipment?.[pick.slot]);
     // Clé absente du catalogue (objet retiré d'une version future) : ignorer
     if (!itemKey || !ITEMS[itemKey]) return;
     newTeams[targetIndex] = { ...target, equipment: { ...target.equipment, [pick.slot]: null } };
@@ -830,7 +830,7 @@ export function applyEventEffect(set, get) {
       let candidates = started.length
         ? enabled.filter((k) => {
             const it = ITEMS[k];
-            return it && it.set && it.slot !== 'consumable' && started.includes(it.set) && team.equipment?.[it.slot] !== k;
+            return it && it.set && it.slot !== 'consumable' && started.includes(it.set) && cellKey(team.equipment?.[it.slot]) !== k;
           })
         : [];
       if (candidates.length === 0) candidates = enabled.filter((k) => ITEMS[k]?.set && ITEMS[k].slot !== 'consumable');
@@ -905,7 +905,7 @@ export function applyEventEffect(set, get) {
       // Perd UN objet au hasard (equipement OU sac). Filtre les cles perimees.
       const picks = [];
       for (const slot of ['head', 'body', 'feet']) {
-        const k = team.equipment?.[slot];
+        const k = cellKey(team.equipment?.[slot]);
         if (k && ITEMS[k]) picks.push({ kind: 'equipment', slot, key: k });
       }
       const bag = normalizeBag(team.bag);

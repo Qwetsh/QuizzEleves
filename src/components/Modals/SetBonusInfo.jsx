@@ -45,7 +45,8 @@ export default function SetBonusInfo({ item, team }) {
   // dans le slot correspondant un objet de ce set.
   const pieces = setPieceImgs(setKey);
   const hasPiece = (piece) => {
-    const eqKey = team?.equipment?.[SLOT_OF_PIECE[piece]];
+    const v = team?.equipment?.[SLOT_OF_PIECE[piece]];
+    const eqKey = typeof v === 'string' ? v : v?.key; // tolère une instance enchantée
     return !!(eqKey && ITEMS[eqKey]?.set === setKey);
   };
 

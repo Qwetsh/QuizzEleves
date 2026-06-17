@@ -207,7 +207,7 @@ function applyFightReward(set, get) {
     // Pioche un objet au hasard chez le perdant : equipement ou sac
     // Filtre sur ITEMS : ignore les clés périmées d'anciennes sauvegardes
     const pool = [
-      ...Object.entries(loser.equipment || {}).filter(([, k]) => k && ITEMS[k]).map(([slot, k]) => ({ kind: 'equipment', slot, key: k })),
+      ...Object.entries(loser.equipment || {}).filter(([, k]) => ITEMS[cellKey(k)]).map(([slot, k]) => ({ kind: 'equipment', slot, key: cellKey(k) })),
       ...(loser.bag || []).map((c, i) => ({ kind: 'bag', index: i, key: cellKey(c) })).filter((e) => e.key && ITEMS[e.key]),
     ];
 

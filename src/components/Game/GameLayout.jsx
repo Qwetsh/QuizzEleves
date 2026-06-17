@@ -22,6 +22,7 @@ import InventoryModal from '../Modals/InventoryModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
 import SpecPickerModal from '../Modals/SpecPickerModal';
+import EnchantPickerModal from '../Modals/EnchantPickerModal';
 import LootReveal from '../Modals/LootReveal';
 import StarterChest from '../Modals/StarterChest';
 import FightModal from '../Fight/FightModal';
@@ -244,6 +245,7 @@ export default function GameLayout() {
       <EventModal />
       <ChargePickerModal />
       <SpecPickerModal />
+      <EnchantPickerModal />
       <TargetPickerModal />
       <VictoryModal />
       <ShopModal />

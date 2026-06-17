@@ -285,6 +285,8 @@ export const useGameStore = create((set, get) => ({
   showChargePicker: false,
   // Choix de voie (Maîtrise) au passage L5/L10 : { powerKey, slot, teamIdx } | null
   showSpecPicker: null,
+  // Sélecteur de pièce à enchanter (parchemin) : { bagIndex, slots } | null
+  showEnchantPicker: null,
   awaitingChoice: false,
   // Révélation d'objet (visuel C) : { itemKey, title?, subtitle? } | null
   lootReveal: null,
@@ -1279,7 +1281,7 @@ export const useGameStore = create((set, get) => ({
     if (!team) return;
     const pool = [];
     if (category !== 'consumable') {
-      for (const [slot, k] of Object.entries(team.equipment || {})) if (k && ITEMS[k]) pool.push({ kind: 'equip', slot, key: k });
+      for (const [slot, v] of Object.entries(team.equipment || {})) { const k = itemH.cellKey(v); if (k && ITEMS[k]) pool.push({ kind: 'equip', slot, key: k }); }
     }
     if (category !== 'equipment') {
       itemH.normalizeBag(team.bag).forEach((c, i) => { const k = itemH.cellKey(c); if (k && ITEMS[k]) pool.push({ kind: 'bag', index: i, key: k }); });
@@ -1403,6 +1405,14 @@ export const useGameStore = create((set, get) => ({
   buyPowerCharge: (pk) => powerH.buyPowerCharge(set, get, pk),
   upgradePowerLevel: (pk) => powerH.upgradePowerLevel(set, get, pk),
   chooseSpec: (specKey) => powerH.chooseSpec(set, get, specKey),
+  // Enchantement : applique le parchemin sur la pièce du slot choisi.
+  chooseEnchantSlot: (slot) => {
+    const p = get().showEnchantPicker;
+    if (!p) return;
+    itemH.enchantWith(set, get, get().currentTeam, p.bagIndex, slot);
+    set({ showEnchantPicker: null });
+  },
+  cancelEnchant: () => set({ showEnchantPicker: null }),
 
   // --- Items / inventaire (delegated) ---
   openInventory: () => {
@@ -1449,6 +1459,10 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'craft') {
       // Alchimie : distille 3 ingrédients du sac (positions dans payload.bag).
       itemH.craftPotion(set, get, idx, payload.bag || []);
+    } else if (type === 'enchant') {
+      // Enchantement : applique le parchemin (payload.key) sur la pièce du slot.
+      const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
+      if (i >= 0) itemH.enchantWith(set, get, idx, i, payload.slot);
     }
   },
 
@@ -1478,14 +1492,16 @@ export const useGameStore = create((set, get) => ({
         const i = bag.findIndex((c) => itemH.cellKey(c) === key && ITEMS[key]);
         if (i < 0) return null;
         const n = itemH.cellN(bag[i]);
+        const ench = itemH.cellEnchants(bag[i]); // préserve un objet enchanté
         bag[i] = n > 1 ? itemH.mkCell(key, n - 1) : null;
-        items.push(key);
+        items.push(ench.length ? { key, enchants: ench } : key);
       }
       t.bag = bag;
       const equip = { ...(t.equipment || {}) };
       for (const slot of (spec.equip || [])) {
-        if (!equip[slot] || !ITEMS[equip[slot]]) return null;
-        items.push(equip[slot]);
+        const ek = itemH.cellKey(equip[slot]); // tolère une instance { key, enchants }
+        if (!ek || !ITEMS[ek]) return null;
+        items.push(equip[slot]); // transfère l'instance entière (avec ses enchants)
         equip[slot] = null;
       }
       t.equipment = equip;
@@ -1532,7 +1548,7 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'adminGiveItem') {
       if (ITEMS[payload.key]) itemH.grantItem(set, get, idx, payload.key);
     } else if (type === 'adminRemoveEquip') {
-      const cur = team.equipment?.[payload.slot];
+      const cur = itemH.cellKey(team.equipment?.[payload.slot]);
       if (cur) {
         const it = ITEMS[cur];
         const nt = [...st.teams];
@@ -1722,7 +1738,7 @@ export const useGameStore = create((set, get) => ({
         teams: resumedTeams.map((t) => {
           const eq = t.equipment || { head: null, body: null, feet: null };
           const cleaned = {};
-          for (const slot of ['head', 'body', 'feet']) cleaned[slot] = (eq[slot] && ITEMS[eq[slot]]) ? eq[slot] : null;
+          for (const slot of ['head', 'body', 'feet']) { const k = itemH.cellKey(eq[slot]); cleaned[slot] = (k && ITEMS[k]) ? eq[slot] : null; } // garde l'instance enchantée
           return { ...t, equipment: cleaned, bag: itemH.normalizeBag(t.bag) };
         }),
       });
