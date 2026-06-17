@@ -6,6 +6,16 @@ import { supabase } from './supabaseClient.js';
 import { logText } from './logFormat.js';
 
 const TABLE = 'quete_game_sessions';
+const LOBBY_TABLE = 'quete_lobby_teams';
+const INTENTS_TABLE = 'quete_intents';
+
+// Jeton secret d'une équipe créée depuis un téléphone : stocké dans le
+// localStorage du tel, il lui permet de « posséder » son équipe (reconnexion,
+// envoi d'intentions). Pas de compte (cf. décision : jeton local).
+export function randomToken() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+}
 // Sans I/O/0/1 pour éviter les confusions de lecture du code d'appairage.
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 
@@ -23,10 +33,13 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false }) {
   return {
     status,
     currentTeam,
+    // Édition d'équipement bloquée côté mobile pendant une résolution (question,
+    // duel, événement, déplacement…) — le TBI reste maître du timing.
+    locked: !!locked,
     extensions: extensions || null, // extensions actives (gate l'UI objets côté mobile)
     shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
     // Historique : on n'envoie que les dernières entrées (l'onglet mobile les
@@ -93,6 +106,77 @@ export function subscribeSession(code, onData) {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: TABLE, filter: `code=eq.${code}` },
       (payload) => onData(payload.new?.data ?? null))
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// --- Lobby : équipes créées depuis les téléphones (avant la partie) ---
+
+// Crée ou met à jour la fiche d'équipe d'un téléphone (clé = code + token).
+export async function upsertLobbyTeam(code, token, fields) {
+  const { error } = await supabase.from(LOBBY_TABLE)
+    .upsert({ code, token, ...fields, updated_at: new Date().toISOString() }, { onConflict: 'code,token' });
+  if (error) throw error;
+}
+
+// Liste des équipes d'un lobby (hors retirées), triées par ordre d'arrivée.
+export async function fetchLobbyTeams(code) {
+  const { data, error } = await supabase.from(LOBBY_TABLE)
+    .select('*').eq('code', code).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+// Le TBI retire une équipe (l'élève le voit via removed=true).
+export async function removeLobbyTeam(id) {
+  const { error } = await supabase.from(LOBBY_TABLE).update({ removed: true }).eq('id', id);
+  if (error) throw error;
+}
+
+// Au démarrage : le TBI inscrit l'index attribué à chaque équipe du lobby pour
+// que chaque téléphone retrouve « son » équipe (par son token).
+export async function assignLobbyIndices(code, byToken) {
+  await Promise.all(Object.entries(byToken).map(([token, idx]) =>
+    supabase.from(LOBBY_TABLE).update({ idx }).eq('code', code).eq('token', token)));
+}
+
+export function subscribeLobby(code, onChange) {
+  const channel = supabase
+    .channel(`quete-lobby-${code}`)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: LOBBY_TABLE, filter: `code=eq.${code}` },
+      () => onChange())
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// --- Intents : commandes mobile -> TBI (édition d'équipement en jeu) ---
+
+// Le téléphone envoie une intention ; le TBI (maître) la valide puis l'applique.
+export async function sendIntent(code, token, type, payload = {}) {
+  const { error } = await supabase.from(INTENTS_TABLE).insert({ code, token, type, payload });
+  if (error) throw error;
+}
+
+export async function fetchIntents(code) {
+  const { data, error } = await supabase.from(INTENTS_TABLE)
+    .select('*').eq('code', code).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function deleteIntent(id) {
+  const { error } = await supabase.from(INTENTS_TABLE).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Le TBI s'abonne aux nouvelles intentions (INSERT) d'une session.
+export function subscribeIntents(code, onInsert) {
+  const channel = supabase
+    .channel(`quete-intents-${code}`)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: INTENTS_TABLE, filter: `code=eq.${code}` },
+      (payload) => onInsert(payload.new))
     .subscribe();
   return () => { supabase.removeChannel(channel); };
 }

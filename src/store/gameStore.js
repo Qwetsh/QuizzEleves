@@ -70,6 +70,27 @@ function resolveStarterGold(cfg) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 
+// Convertit les fiches du lobby (créées depuis les téléphones) en setupTeams.
+// Dé-doublonne les noms (suffixe), assigne couleur/blason par défaut si absent,
+// et CONSERVE le `token` (lien interne équipe↔téléphone, jamais publié).
+export function buildLobbySetupTeams(rows) {
+  const counts = {};
+  return (rows || []).filter((r) => !r.removed).map((r, i) => {
+    let name = (r.name || '').trim() || `Équipe ${i + 1}`;
+    if (counts[name]) { counts[name] += 1; name = `${name} ${counts[name]}`; } else counts[name] = 1;
+    return {
+      name,
+      color: r.color || TEAM_COLORS[i % TEAM_COLORS.length],
+      emoji: r.emoji || TEAM_DEFAULT_EMOJIS[i] || '\u{1F3B2}',
+      blazonGlyph: TEAM_BLAZON_GLYPHS[i] || 'lion',
+      pos: 'depart', correct: 0, wrong: 0, streak: 0, money: 0,
+      powerDef: r.power_def || null, powerOff: r.power_off || null,
+      sablierActif: false, doubleActive: false, turnsSinceShop: 0,
+      token: r.token || null, // lien token↔équipe (interne au TBI, non publié)
+    };
+  });
+}
+
 // Compteur monotone d'id de VFX (foudre/bouclier) — un seul, partagé par tous
 // les overlays, pour qu'un id ne se répète jamais d'affilée sur le champ `vfx`.
 let vfxSeq = 0;
@@ -148,6 +169,17 @@ export const useGameStore = create((set, get) => ({
   // arrive sur une case occupée CHOISIT de défier (et qui) ou non.
   forcedDuels: false,
   setForcedDuels: (v) => set({ forcedDuels: v }),
+
+  // Mode de connexion (Setup) : 'board' = équipes créées au tableau (historique) ;
+  // 'phone' = équipes créées depuis les téléphones (lobby + QR).
+  connectionMode: 'board',
+  setConnectionMode: (m) => { if (get().phase === 'setup') set({ connectionMode: m }); },
+  // Session partagée (mode téléphone) : code de lobby/partie + équipes du lobby
+  // (live, alimentées depuis Supabase par LobbyPanel).
+  sessionCode: null,
+  lobbyTeams: [],
+  setSessionCode: (c) => set({ sessionCode: c }),
+  setLobbyTeams: (rows) => set({ lobbyTeams: Array.isArray(rows) ? rows : [] }),
 
   nbTeams: 3,
   setNbTeams: (n) => set({ nbTeams: n, setupTeams: createDefaultTeams(n) }),
@@ -418,7 +450,7 @@ export const useGameStore = create((set, get) => ({
   },
 
   advancePowerSetup: () => {
-    const { powerSetupIndex, powerSetupCategory, teams, addLog } = get();
+    const { powerSetupIndex, powerSetupCategory, teams } = get();
     // Idempotent : un double-tap sur la dernière carte (TBI) relançait la
     // transition et dupliquait le « Début de la partie ! » dans le journal
     if (get().phase !== 'powerSelect') return;
@@ -427,21 +459,42 @@ export const useGameStore = create((set, get) => ({
       if (powerSetupCategory === 'def') {
         set({ powerSetupCategory: 'off', powerSetupIndex: 0 });
       } else {
-        const finalTeams = teams.map((t) => {
-          const powers = { ...t.powers };
-          if (t.powerDef && !powers[t.powerDef]) powers[t.powerDef] = { charges: INITIAL_CHARGES, level: 1 };
-          if (t.powerOff && !powers[t.powerOff]) powers[t.powerOff] = { charges: INITIAL_CHARGES, level: 1 };
-          return { ...t, powers };
-        });
-        addLog(`\u{1F3B2} D\u00e9but de la partie ! ${finalTeams.length} \u00e9quipes en lice.`);
-        // Or du coffre r\u00e9solu UNE fois (m\u00eame montant pour toutes les \u00e9quipes si 'random').
-        const starterGold = resolveStarterGold(get().starterChestConfig || defaultStarterChestConfig());
-        set({ teams: finalTeams, phase: 'game', starterGold });
-        get().triggerStarterChest(); // 1re \u00e9quipe : coffre de d\u00e9part
+        get().finalizePowersAndPlay();
       }
     } else {
       set({ powerSetupIndex: nextIndex });
     }
+  },
+
+  // Finalise les pouvoirs choisis (powerDef/powerOff → charges) et lance la
+  // partie. Partagé par la fin de la sélection au tableau ET le démarrage depuis
+  // le lobby quand les pouvoirs ont déjà été choisis sur les téléphones.
+  finalizePowersAndPlay: () => {
+    const { teams, addLog } = get();
+    const finalTeams = teams.map((t) => {
+      const powers = { ...t.powers };
+      if (t.powerDef && !powers[t.powerDef]) powers[t.powerDef] = { charges: INITIAL_CHARGES, level: 1 };
+      if (t.powerOff && !powers[t.powerOff]) powers[t.powerOff] = { charges: INITIAL_CHARGES, level: 1 };
+      return { ...t, powers };
+    });
+    addLog(`\u{1F3B2} Début de la partie ! ${finalTeams.length} équipes en lice.`);
+    const starterGold = resolveStarterGold(get().starterChestConfig || defaultStarterChestConfig());
+    set({ teams: finalTeams, phase: 'game', starterGold });
+    get().triggerStarterChest();
+  },
+
+  // Démarre la partie à partir des équipes du lobby (mode téléphone). Construit
+  // les setupTeams (dédoublonnage des noms, token conservé), génère le plateau,
+  // puis : si toutes les équipes ont déjà leurs 2 pouvoirs (choisis au téléphone)
+  // on lance directement ; sinon on passe par la sélection des pouvoirs au tableau.
+  startFromLobby: () => {
+    const setupTeams = buildLobbySetupTeams(get().lobbyTeams);
+    if (!setupTeams.length) return false;
+    set({ setupTeams, nbTeams: setupTeams.length });
+    get().startGame();
+    const allHavePowers = setupTeams.every((t) => t.powerDef && t.powerOff);
+    if (allHavePowers) get().finalizePowersAndPlay();
+    return true;
   },
 
   // --- Dice ---
