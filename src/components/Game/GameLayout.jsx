@@ -8,6 +8,7 @@ import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
+import TradeConsumer from './TradeConsumer';
 import DevItemGiver from './DevItemGiver';
 import { bagUnitCount } from '../../store/itemHandlers';
 import QuestionModal from '../Modals/QuestionModal';
@@ -228,6 +229,7 @@ export default function GameLayout() {
 
       {/* Logique : applique les commandes d'équipement venues des téléphones */}
       <IntentConsumer />
+      <TradeConsumer />
 
       {/* Animations */}
       <FlyingCoins />

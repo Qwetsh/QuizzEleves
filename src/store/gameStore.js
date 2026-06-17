@@ -1443,6 +1443,66 @@ export const useGameStore = create((set, get) => ({
     }
   },
 
+  // --- Troc entre équipes (extension « trade ») : application ATOMIQUE ---
+  // `trade` = ligne quete_trades { from_idx, to_idx, give, want } où give/want =
+  // { gold, bag:[itemKey], equip:[slot] }. On re-vérifie la possession des deux
+  // côtés À L'INSTANT T puis on transfère en un seul set (jamais d'état perdu).
+  // Renvoie { ok, reason } ; le TradeConsumer journalise/efface l'offre.
+  applyTrade: (trade) => {
+    const st = get();
+    const A = trade?.from_idx, B = trade?.to_idx;
+    if (st.finished) return { ok: false, reason: 'partie terminée' };
+    if (A == null || B == null || A === B || !st.teams[A] || !st.teams[B]) return { ok: false, reason: 'équipe invalide' };
+    const resolving = !!(st.showQuestion || st.showEvent || st.showFight || st.showDuelChoice
+      || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
+    if ((A === st.currentTeam || B === st.currentTeam) && resolving) return { ok: false, reason: 'résolution en cours' };
+
+    // Retire `spec` d'une équipe (or + objets sac + équipement) ; null si impossible.
+    const takeFrom = (team, spec = {}) => {
+      const t = { ...team };
+      const items = [];
+      const gold = Math.max(0, Math.trunc(spec.gold || 0));
+      if ((t.money || 0) < gold) return null;
+      t.money = (t.money || 0) - gold;
+      const bag = itemH.normalizeBag(t.bag);
+      for (const key of (spec.bag || [])) {
+        const i = bag.findIndex((c) => itemH.cellKey(c) === key && ITEMS[key]);
+        if (i < 0) return null;
+        const n = itemH.cellN(bag[i]);
+        bag[i] = n > 1 ? itemH.mkCell(key, n - 1) : null;
+        items.push(key);
+      }
+      t.bag = bag;
+      const equip = { ...(t.equipment || {}) };
+      for (const slot of (spec.equip || [])) {
+        if (!equip[slot] || !ITEMS[equip[slot]]) return null;
+        items.push(equip[slot]);
+        equip[slot] = null;
+      }
+      t.equipment = equip;
+      return { team: t, items, gold };
+    };
+    // Donne or + objets (équipement reçu va dans le sac ; sac plein → revente auto).
+    const giveTo = (team, items, gold) => {
+      let t = { ...team, money: (team.money || 0) + (gold || 0) };
+      for (const key of items) { t = itemH.placeItem(t, key).team; }
+      return t;
+    };
+
+    const ra = takeFrom(st.teams[A], trade.give);
+    const rb = takeFrom(st.teams[B], trade.want);
+    if (!ra || !rb) return { ok: false, reason: 'objets ou or indisponibles' };
+    let ta = giveTo(ra.team, rb.items, rb.gold); // A reçoit ce que B donnait (want)
+    let tb = giveTo(rb.team, ra.items, ra.gold); // B reçoit ce que A donnait (give)
+    const nt = [...st.teams];
+    nt[A] = ta; nt[B] = tb;
+    set({ teams: nt });
+    get().addLog(`🤝 ${st.teams[A].emoji} ${st.teams[A].name} et ${st.teams[B].emoji} ${st.teams[B].name} ont fait affaire !`);
+    get().checkMoneyMilestone(A); get().checkMoneyMilestone(B);
+    if (get().phase === 'game') saveGame(get());
+    return { ok: true };
+  },
+
   // --- Intentions ADMIN (interface prof sur téléphone, code 54150) ---
   // Contrôle total : agit sur N'IMPORTE quelle équipe (par index), SANS verrou.
   // Types : adminMoney {teamIdx, delta} · adminGiveItem {teamIdx, key} ·

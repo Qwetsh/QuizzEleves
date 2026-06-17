@@ -8,6 +8,7 @@ import { logText } from './logFormat.js';
 const TABLE = 'quete_game_sessions';
 const LOBBY_TABLE = 'quete_lobby_teams';
 const INTENTS_TABLE = 'quete_intents';
+const TRADES_TABLE = 'quete_trades';
 
 // Jeton secret d'une équipe créée depuis un téléphone : stocké dans le
 // localStorage du tel, il lui permet de « posséder » son équipe (reconnexion,
@@ -177,6 +178,45 @@ export function subscribeIntents(code, onInsert) {
     .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: INTENTS_TABLE, filter: `code=eq.${code}` },
       (payload) => onInsert(payload.new))
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// --- Troc : propositions d'échange entre équipes (extension « trade ») ---
+// Une offre : { code, from_idx, from_token, to_idx, give:{gold,bag[],equip[]},
+// want:{...}, status:'pending'|'accepted'|'declined'|'cancelled'|'applied'|'failed' }.
+// Le TBI (maître) re-vérifie et applique atomiquement les offres « accepted ».
+
+export async function createTrade(code, fromToken, fromIdx, toIdx, give, want) {
+  const { error } = await supabase.from(TRADES_TABLE)
+    .insert({ code, from_token: fromToken, from_idx: fromIdx, to_idx: toIdx, give: give || {}, want: want || {}, status: 'pending' });
+  if (error) throw error;
+}
+
+export async function fetchTrades(code) {
+  const { data, error } = await supabase.from(TRADES_TABLE)
+    .select('*').eq('code', code).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function setTradeStatus(id, status) {
+  const { error } = await supabase.from(TRADES_TABLE).update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteTrade(id) {
+  const { error } = await supabase.from(TRADES_TABLE).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Abonnement à toutes les évolutions d'offres d'une session (TBI + mobiles).
+export function subscribeTrades(code, onChange) {
+  const channel = supabase
+    .channel(`quete-trades-${code}`)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: TRADES_TABLE, filter: `code=eq.${code}` },
+      (payload) => onChange(payload))
     .subscribe();
   return () => { supabase.removeChannel(channel); };
 }

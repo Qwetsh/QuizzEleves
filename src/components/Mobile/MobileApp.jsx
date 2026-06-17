@@ -3,7 +3,7 @@
 // et ses pouvoirs/charges — y compris pendant le tour adverse. Le TBI publie
 // l'état ; ici on ne fait que lire (l'édition viendra en Phase 3).
 import { useState, useEffect, useRef } from 'react';
-import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent } from '../../logic/sessionConfig';
+import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent, createTrade, fetchTrades, setTradeStatus, deleteTrade, subscribeTrades } from '../../logic/sessionConfig';
 import { POWERS } from '../../data/powers';
 import { describePowerScale, specSlotForLevel, specOptionsFor } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
@@ -515,6 +515,139 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
   );
 }
 
+// Résumé lisible d'un côté de troc (or + objets) — `equipOf(slot)` résout l'item porté.
+function tradeSideText(spec, equipOf) {
+  const parts = [];
+  if (spec?.gold) parts.push(`${spec.gold} 🪙`);
+  for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
+  for (const s of (spec?.equip || [])) { const k = equipOf?.(s); if (k && ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`); }
+  return parts.length ? parts.join(' + ') : 'rien';
+}
+
+// Compositeur de troc : cible + « je donne » (mon inventaire) / « je veux » (le sien).
+function TradeComposer({ session, teamIdx, onClose, onSend }) {
+  const me = session.teams[teamIdx];
+  const others = session.teams.map((t, i) => ({ t, i })).filter((x) => x.i !== teamIdx);
+  const [toIdx, setToIdx] = useState(others[0]?.i ?? null);
+  const [give, setGive] = useState({ gold: 0, bag: [], equip: [] });
+  const [want, setWant] = useState({ gold: 0, bag: [], equip: [] });
+  const target = toIdx != null ? session.teams[toIdx] : null;
+
+  const bagKeys = (t) => (t?.bag || []).map((c) => cellKey(c)).filter((k) => ITEMS[k]);
+  const equipSlots = (t) => Object.keys(SLOTS).filter((s) => t?.equipment?.[s] && ITEMS[t.equipment[s]]);
+  const toggle = (spec, set, field, val) => {
+    const arr = spec[field];
+    const i = arr.indexOf(val);
+    set({ ...spec, [field]: i >= 0 ? arr.filter((_, j) => j !== i) : [...arr, val] });
+  };
+
+  const Panel = ({ title, team, spec, set }) => (
+    <div className="mob-trade-panel">
+      <div className="mob-trade-panel-title">{title}</div>
+      <label className="mob-trade-gold">🪙 <input type="number" min="0" max={team?.money ?? 0} value={spec.gold}
+        onChange={(e) => set({ ...spec, gold: Math.max(0, Math.min(team?.money ?? 0, Number(e.target.value) || 0)) })} /> / {team?.money ?? 0}</label>
+      {bagKeys(team).map((k, n) => (
+        <button key={`b${n}`} className={'mob-trade-it' + (spec.bag.includes(k) ? ' on' : '')} onClick={() => toggle(spec, set, 'bag', k)}>
+          {ITEMS[k].icon} {ITEMS[k].name}
+        </button>
+      ))}
+      {equipSlots(team).map((s) => (
+        <button key={`e${s}`} className={'mob-trade-it' + (spec.equip.includes(s) ? ' on' : '')} onClick={() => toggle(spec, set, 'equip', s)}>
+          {ITEMS[team.equipment[s]].icon} {ITEMS[team.equipment[s]].name} <small>(porté)</small>
+        </button>
+      ))}
+    </div>
+  );
+
+  const empty = (s) => !s.gold && !s.bag.length && !s.equip.length;
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 20, padding: 16, border: '1px solid rgba(122,94,58,0.25)' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>🤝 Proposer un troc</div>
+        <div className="mob-trade-targets">
+          {others.map(({ t, i }) => (
+            <button key={i} className={'mob-trade-target' + (toIdx === i ? ' on' : '')} onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
+              {t.emoji} {t.name}
+            </button>
+          ))}
+        </div>
+        {target && <Panel title="Je donne" team={me} spec={give} set={setGive} />}
+        {target && <Panel title={`Je veux (de ${target.emoji})`} team={target} spec={want} set={setWant} />}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} disabled={toIdx == null || (empty(give) && empty(want))}
+            onClick={() => onSend(toIdx, give, want)}>Envoyer</button>
+          <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={onClose}>Annuler</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Onglet « Troc » : offres reçues / envoyées + compositeur (mode téléphone).
+function TradeView({ session, teamIdx, code, token }) {
+  const [trades, setTrades] = useState([]);
+  const [compose, setCompose] = useState(false);
+  const me = session.teams[teamIdx];
+
+  useEffect(() => {
+    if (!code) return;
+    let alive = true;
+    const refresh = () => fetchTrades(code).then((r) => { if (alive) setTrades(r); }).catch(() => {});
+    refresh();
+    const unsub = subscribeTrades(code, refresh);
+    return () => { alive = false; unsub(); };
+  }, [code]);
+
+  const incoming = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending');
+  const outgoing = trades.filter((t) => t.from_idx === teamIdx && t.status === 'pending');
+  const nameOf = (i) => session.teams[i] ? `${session.teams[i].emoji} ${session.teams[i].name}` : `#${i}`;
+  const equipOfTeam = (i) => (slot) => session.teams[i]?.equipment?.[slot];
+
+  return (
+    <div className="mob-root" style={{ '--accent': me.color, paddingBottom: 76 }}>
+      <div className="mob-pick-head">{'🤝'} Troc</div>
+
+      <section className="mob-section">
+        <h2 className="mob-section-title">Offres reçues {incoming.length > 0 && <span className="mob-count">{incoming.length}</span>}</h2>
+        {incoming.length === 0 ? <div className="mob-empty">Aucune offre.</div> : incoming.map((tr) => (
+          <div key={tr.id} className="mob-trade-card">
+            <div className="mob-trade-from">De {nameOf(tr.from_idx)}</div>
+            <div className="mob-trade-line"><b>Tu reçois :</b> {tradeSideText(tr.give, equipOfTeam(tr.from_idx))}</div>
+            <div className="mob-trade-line"><b>Tu donnes :</b> {tradeSideText(tr.want, equipOfTeam(teamIdx))}</div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'accepted').catch(() => {})}>Accepter</button>
+              <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'declined').catch(() => {})}>Refuser</button>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mob-section">
+        <h2 className="mob-section-title">Offres envoyées {outgoing.length > 0 && <span className="mob-count">{outgoing.length}</span>}</h2>
+        {outgoing.length === 0 ? <div className="mob-empty">Aucune.</div> : outgoing.map((tr) => (
+          <div key={tr.id} className="mob-trade-card">
+            <div className="mob-trade-from">À {nameOf(tr.to_idx)} · en attente…</div>
+            <div className="mob-trade-line"><b>Tu donnes :</b> {tradeSideText(tr.give, equipOfTeam(teamIdx))}</div>
+            <div className="mob-trade-line"><b>Tu veux :</b> {tradeSideText(tr.want, equipOfTeam(tr.to_idx))}</div>
+            <button className="mob-btn mob-btn--ghost" style={{ marginTop: 8 }} onClick={() => deleteTrade(tr.id).catch(() => {})}>Annuler</button>
+          </div>
+        ))}
+      </section>
+
+      <div style={{ padding: '4px 14px 0' }}>
+        <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={() => setCompose(true)}>+ Proposer un troc</button>
+      </div>
+      <div className="mob-foot">Le troc s'applique automatiquement dès que l'autre équipe accepte.</div>
+
+      {compose && (
+        <TradeComposer session={session} teamIdx={teamIdx}
+          onClose={() => setCompose(false)}
+          onSend={(toIdx, give, want) => { createTrade(code, token, teamIdx, toIdx, give, want).catch(() => {}); setCompose(false); }} />
+      )}
+    </div>
+  );
+}
+
 // Onglet Historique : le journal publié par le TBI, du plus récent au plus ancien.
 function HistoryView({ session }) {
   const log = session.log || [];
@@ -643,8 +776,8 @@ function AdminPanel({ code, session, onClose }) {
   );
 }
 
-// Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Historique).
-function TabBar({ tab, setTab, hasShop }) {
+// Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
+function TabBar({ tab, setTab, hasShop, hasTrade }) {
   const Tab = ({ id, icon, label }) => (
     <button
       onClick={() => setTab(id)}
@@ -668,6 +801,7 @@ function TabBar({ tab, setTab, hasShop }) {
       <Tab id="team" icon={'\u{1F6E1}️'} label="Équipe" />
       <Tab id="powers" icon={'⚡'} label="Pouvoirs" />
       {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label="Boutique" />}
+      {hasTrade && <Tab id="trade" icon={'🤝'} label="Troc" />}
       <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
     </nav>
   );
@@ -764,14 +898,17 @@ export default function MobileApp() {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
     const hasShop = extOn(session.extensions, 'equipment');
+    // Troc : seulement pour l'équipe du téléphone (token), extension active.
+    const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} />
+      : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} />
       : <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} />
       </>
     );
   }

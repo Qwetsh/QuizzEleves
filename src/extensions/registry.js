@@ -31,6 +31,14 @@ export const EXTENSIONS = [
     desc: 'Pouvoirs améliorables jusqu’au niveau 10, avec un embranchement stratégique (3 voies) aux niveaux 5 et 10. Désactivé : pouvoirs classiques à 3 niveaux.',
     default: true,
   },
+  {
+    id: 'trade',
+    name: 'Troc entre équipes',
+    icon: '🤝',
+    desc: 'Les équipes proposent des échanges depuis leur téléphone (objets, or, équipement). Nécessite le mode téléphone et l’extension Objets pour échanger des objets.',
+    default: true,
+    needsItems: true,
+  },
 ];
 
 // État par défaut : { equipment: true, ... }
