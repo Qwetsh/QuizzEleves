@@ -1,5 +1,5 @@
 import { POWERS } from '../data/powers.js';
-import { moveBack } from '../logic/pathfinding.js';
+import { moveBack, findPrevJunction } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
 import { reducedRecul, resolveAmount, diceLabel, moveDieSides } from '../logic/itemEffects.js';
 import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
@@ -81,14 +81,21 @@ export function useIndice(set, get) {
   // le boost), pour ne pas masquer deux fois la meme reponse.
   const already = get().indiceHidden || [];
   const fresh = wrongIndices.filter((i) => !already.includes(i));
-  // count (cœur) + extraHide (branche Clairvoyance, Maîtrise).
-  const want = (effect.count ?? 2) + (effect.extraHide || 0);
+  // count (cœur) + extraHide (Clairvoyance). 50/50 ne laisse que 2 réponses ;
+  // Omniscience (revealAnswer) ne laisse que la bonne.
+  let want = (effect.count ?? 2) + (effect.extraHide || 0);
+  if (effect.keepTwo) want = Math.max(want, wrongIndices.length - 1);
+  if (effect.revealAnswer) want = wrongIndices.length;
   const hideMore = Math.min(want, fresh.length);
   const hidden = [...already, ...fresh.slice(0, hideMore)];
+  // Bonus de temps : palier + Sérénité (timerMult) + Maître du temps (noTimer).
+  let bonusTime = effect.bonusTime || 0;
+  if (effect.timerMult) bonusTime += Math.round(30 * (effect.timerMult - 1));
+  if (effect.noTimer) bonusTime += 999;
 
   // Rien \u00e0 \u00e9liminer en plus (\u00e9quipement a d\u00e9j\u00e0 tout masqu\u00e9) ET pas de bonus de
   // temps : on NE consomme PAS la charge (sinon perte s\u00e8che).
-  if (hideMore === 0 && !(effect.bonusTime > 0)) {
+  if (hideMore === 0 && bonusTime <= 0 && !effect.bonusMoneyOnCorrect) {
     addLog(`\u{1F4A1} ${team.emoji} ${team.name} : toutes les mauvaises r\u00e9ponses sont d\u00e9j\u00e0 \u00e9limin\u00e9es.`);
     return;
   }
@@ -98,14 +105,21 @@ export function useIndice(set, get) {
 
   const newTeams = [...teams];
   newTeams[currentTeam] = result.updatedTeam;
+  // Omniscience (L10) : coûte 1 charge de plus.
+  if (effect.revealAnswer) {
+    const extra = consumePowerCharge(newTeams[currentTeam], 'indice');
+    if (extra) newTeams[currentTeam] = extra.updatedTeam;
+  }
 
   addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideMore} r\u00e9ponse${hideMore > 1 ? 's' : ''} \u00e9limin\u00e9e${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}.`);
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
   announce(set, get, '💡', `Indice — ${hideMore} réponse${hideMore > 1 ? 's' : ''} éliminée${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}`, POWERS.indice?.color || '#e8b117');
 
-  if (effect.bonusTime > 0) {
-    set({ showQuestion: { ...get().showQuestion, bonusTime: effect.bonusTime } });
-  }
+  // Bonus de temps (palier + Sérénité + Maître du temps) et Antisèche (or si bonne réponse).
+  const patchQ = {};
+  if (bonusTime > 0) patchQ.bonusTime = (get().showQuestion?.bonusTime || 0) + bonusTime;
+  if (effect.bonusMoneyOnCorrect) patchQ.indiceBonusMoney = effect.bonusMoneyOnCorrect;
+  if (Object.keys(patchQ).length) set({ showQuestion: { ...get().showQuestion, ...patchQ } });
 }
 
 export function useRelance(set, get) {
@@ -234,7 +248,14 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       // Temp\u00EAte cibl\u00E9e : vol d'or.
       if (effect.stealGold) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
       const amt = reducedRecul(v, rolled);
-      const rr = moveBack(board, v.pos, amt);
+      // Bannissement (L10) : renvoie à la dernière jonction ; sinon recul classique.
+      let rr;
+      if (effect.toPrevJunction) {
+        const pj = findPrevJunction(board, v.pos);
+        rr = pj && pj !== v.pos ? { finalPos: pj, path: [v.pos, pj] } : moveBack(board, v.pos, amt);
+      } else {
+        rr = moveBack(board, v.pos, amt);
+      }
       newTeams[ti] = { ...v, pos: rr.finalPos };
       if (rr.path.length > 1) moves.push({ teamIndex: ti, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' });
     }

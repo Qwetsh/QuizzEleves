@@ -173,6 +173,29 @@ describe('branches Foudre câblées', () => {
   });
 });
 
+describe('branches Indice câblées', () => {
+  const S = () => useGameStore.getState();
+  const setup = (over) => useGameStore.setState({
+    phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+    extensions: { equipment: true, mastery: true }, indiceUsed: false, indiceHidden: [],
+    showQuestion: { question: { a: ['A', 'B', 'C', 'D'], c: 1 }, subject: 'maths' },
+    teams: [teamWith('indice', over)],
+  });
+
+  it('50/50 (L5) : ne laisse que 2 réponses (2 éliminées sur 3)', () => {
+    setup({ level: 5, spec5: 'fifty', charges: 1 });
+    S().useIndice();
+    expect(S().indiceHidden).toHaveLength(2);
+  });
+
+  it('Omniscience (L10) : élimine toutes les mauvaises (3) et coûte 2 charges', () => {
+    setup({ level: 10, spec10: 'omni', charges: 2 });
+    S().useIndice();
+    expect(S().indiceHidden).toHaveLength(3);
+    expect(S().teams[0].powers.indice.charges).toBe(0); // 2 charges consommées
+  });
+});
+
 describe('branches Bouclier câblées (or)', () => {
   it('Rempart doré (L5) : +1 or par case de recul absorbée', () => {
     const t = teamWith('bouclier', { level: 5, spec5: 'gold', charges: 1 });

@@ -13,6 +13,7 @@ import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
 import { randomSubject, resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET } from '../logic/turnHelpers.js';
+import { resolvePowerEffect } from '../logic/powerEffects.js';
 import { soundShield, soundTrap } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
 import * as powerH from './powerHandlers.js';
@@ -910,7 +911,7 @@ export const useGameStore = create((set, get) => ({
     const { showQuestion, teams, currentTeam, addLog } = get();
     if (!showQuestion) return;
 
-    const { question, timerHalved, timerDivisor, itemBonusTime } = showQuestion;
+    const { question, timerHalved, timerDivisor, itemBonusTime, indiceBonusMoney } = showQuestion;
     const correct = chosenIndex === question.c;
     const team = teams[currentTeam];
     const newTeams = [...teams];
@@ -933,7 +934,8 @@ export const useGameStore = create((set, get) => ({
       const bonusBreak = explainEffectValue(tTeam, 'moneyPerCorrect');
       // Facteur d'or de la rafale Double (Chrono partagé ×1.5 / Rafale tranquille ÷2).
       const gFactor = team.doubleActive ? (team.doubleGoldFactor || 1) : 1;
-      const gain = Math.round((base + bonusBreak.total) * gFactor);
+      // Antisèche (Indice L10) : bonus d'or forfaitaire sur cette bonne réponse.
+      const gain = Math.round((base + bonusBreak.total) * gFactor) + (indiceBonusMoney || 0);
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
@@ -958,6 +960,15 @@ export const useGameStore = create((set, get) => ({
       addLog({ text: logMessage, detail });
       if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
       if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
+
+      // Contre (Bouclier L5) : recul absorbé → relance gratuitement la question (2e chance).
+      const bEff = resolvePowerEffect(team, 'bouclier', extOn(get().extensions, 'mastery'));
+      if (bEff.rerollQuestionOnAbsorb && bouclierAbsorbed(team, updatedTeam) && !team.doubleActive) {
+        set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+        addLog(`🔁 ${team.emoji} ${team.name} : Contre ! Nouvelle question.`);
+        get().askQuestion(randomSubject());
+        return;
+      }
 
       // Double/triple: wrong answer stops immediately, clear double state
       if (team.doubleActive) {
