@@ -55,7 +55,7 @@ export function buffValue(team, type) {
 // une CHAÎNE décrivant un dé : 'd4' | 'd6' | 'd10'. Le tirage est fait au
 // moment de la CONSOMMATION (donc rejoué à chaque question / bonne réponse /
 // événement pour les bonus passifs d'équipement).
-const DICE_SIDES = { d2: 2, d3: 3, d4: 4, d6: 6, d10: 10 };
+const DICE_SIDES = { d2: 2, d3: 3, d4: 4, d6: 6, d8: 8, d10: 10, d12: 12 };
 
 // Métriques d'équipe pour les quantités « à l'échelle » :
 // - streak : bonnes réponses d'affilée (cassé sur erreur, persiste entre tours)

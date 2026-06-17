@@ -2,6 +2,8 @@ import { POWERS } from '../data/powers.js';
 import { moveBack } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
 import { reducedRecul, resolveAmount, diceLabel, moveDieSides } from '../logic/itemEffects.js';
+import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
+import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
 import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
 import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
@@ -9,10 +11,13 @@ import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
 
+// L'extension « Maîtrise » est-elle active ? (pouvoirs L1→10 + branches)
+const masteryActive = (get) => extOn(get().extensions, 'mastery');
 
-// Effet du niveau courant d'un pouvoir — seule source de verite : powers.js
-function levelEffect(powerKey, level) {
-  return POWERS[powerKey]?.levels?.[level - 1]?.effect || {};
+// Effet EFFECTIF du pouvoir d'une équipe (cœur + branches si Maîtrise active).
+// Remplace l'ancien levelEffect : seule source de vérité = resolvePowerEffect.
+function powerEffectOf(get, team, powerKey) {
+  return resolvePowerEffect(team, powerKey, masteryActive(get));
 }
 
 // --- Power usage ---
@@ -57,7 +62,7 @@ export function useIndice(set, get) {
   if (!question) return;
 
   const level = team.powers?.indice?.level ?? 1;
-  const effect = levelEffect('indice', level);
+  const effect = powerEffectOf(get, team, 'indice');
 
   const wrongIndices = question.a
     .map((_, i) => i)
@@ -71,7 +76,9 @@ export function useIndice(set, get) {
   // le boost), pour ne pas masquer deux fois la meme reponse.
   const already = get().indiceHidden || [];
   const fresh = wrongIndices.filter((i) => !already.includes(i));
-  const hideMore = Math.min(effect.count ?? 2, fresh.length);
+  // count (cœur) + extraHide (branche Clairvoyance, Maîtrise).
+  const want = (effect.count ?? 2) + (effect.extraHide || 0);
+  const hideMore = Math.min(want, fresh.length);
   const hidden = [...already, ...fresh.slice(0, hideMore)];
 
   // Rien \u00e0 \u00e9liminer en plus (\u00e9quipement a d\u00e9j\u00e0 tout masqu\u00e9) ET pas de bonus de
@@ -125,7 +132,7 @@ export function useRelance(set, get) {
       clearInterval(interval);
       set({ diceValue: finalValue, rolling: false });
 
-      const mode = levelEffect('relance', level).mode || 'replace';
+      const mode = powerEffectOf(get, team, 'relance').mode || 'replace';
       let effectiveValue;
       if (mode === 'sum') effectiveValue = prevValue + finalValue;
       else if (mode === 'best') effectiveValue = Math.max(prevValue, finalValue);
@@ -163,15 +170,15 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   }
 
   const level = team.powers?.[powerKey]?.level ?? 1;
-  const effect = levelEffect(powerKey, level);
+  const effect = powerEffectOf(get, team, powerKey);
   let foudreMove = null;
   let lightning = false;
 
   if (powerKey === 'foudre') {
     // Recul = lancer de dé (1D4 / 1D6 / 1D10 selon le niveau), atténué par
     // l'équipement de la cible (reculReduction).
-    const rolled = resolveAmount(effect.amount ?? 'd4', target);
-    const dieLabel = diceLabel(effect.amount ?? 'd4');
+    const rolled = resolveAmount(effect.amount ?? 'd4', target) + (effect.flat || 0);
+    const dieLabel = diceLabel(effect.amount ?? 'd4') + (effect.flat ? ` +${effect.flat}` : '');
     const reculAmount = reducedRecul(target, rolled);
     const r = moveBack(board, target.pos, reculAmount);
     newTeams[targetTeamIndex] = { ...target, pos: r.finalPos };
@@ -285,15 +292,37 @@ export function upgradePowerLevel(set, get, powerKey) {
   const team = teams[currentTeam];
   const power = POWERS[powerKey];
   if (!power) return;
+  const mastery = masteryActive(get);
   const currentLevel = team.powers?.[powerKey]?.level ?? 1;
-  if (currentLevel >= 3) return;
-  const cost = power.upgradeCosts[currentLevel - 1];
-  if (team.money < cost) return;
+  if (currentLevel >= maxPowerLevel(powerKey, mastery)) return; // 10 avec Ma\u00EEtrise, sinon 3
+  const cost = powerUpgradeCost(powerKey, currentLevel, mastery);
+  if (cost == null || team.money < cost) return;
 
+  const newLevel = currentLevel + 1;
   const newTeams = [...teams];
-  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], level: currentLevel + 1 } };
+  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], level: newLevel } };
   newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
-  addLog(`\u2B06\uFE0F ${team.emoji} ${team.name} am\u00e9liore ${power.name} au niveau ${currentLevel + 1} ! (-${cost} \u{1F4B0})`);
-  set({ teams: newTeams });
+  addLog(`\u2B06\uFE0F ${team.emoji} ${team.name} am\u00e9liore ${power.name} au niveau ${newLevel} ! (-${cost} \u{1F4B0})`);
+
+  // Niveaux 5 et 10 (Ma\u00EEtrise) : ouvrir le choix de voie (3 sp\u00e9cialisations).
+  const slot = mastery ? specSlotForLevel(newLevel) : null;
+  set({ teams: newTeams, ...(slot ? { showSpecPicker: { powerKey, slot, teamIdx: currentTeam } } : {}) });
+  saveGame(get());
+}
+
+// Choix d'une voie (spec5/spec10) au passage de niveau. Verrouill\u00e9 pour la partie.
+export function chooseSpec(set, get, specKey) {
+  const picker = get().showSpecPicker;
+  if (!picker) return;
+  const { powerKey, slot, teamIdx } = picker;
+  const teams = get().teams;
+  const team = teams[teamIdx];
+  if (!team?.powers?.[powerKey]) { set({ showSpecPicker: null }); return; }
+  const opt = specOptionsFor(powerKey, slot).find((o) => o.key === specKey);
+  if (!opt) return;
+  const newTeams = [...teams];
+  newTeams[teamIdx] = { ...team, powers: { ...team.powers, [powerKey]: { ...team.powers[powerKey], [slot]: specKey } } };
+  get().addLog(`${opt.icon || '\u2728'} ${team.emoji} ${team.name} \u2014 ${POWERS[powerKey].name} : voie \u00AB ${opt.name} \u00BB choisie !`);
+  set({ teams: newTeams, showSpecPicker: null });
   saveGame(get());
 }

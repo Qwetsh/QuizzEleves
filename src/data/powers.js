@@ -1,7 +1,11 @@
+// Coûts d'or pour passer de Ln à Ln+1 (extension « Maîtrise », niveaux 4→10).
+// 9 entrées : L1→2 … L9→10. Calibrable via balanceConfig à terme.
+export const TREE_COSTS = [20, 30, 45, 65, 90, 120, 155, 195, 240];
+
 export const POWERS = {
   bouclier: {
     name: 'Bouclier',
-    icon: '\u{1F6E1}\uFE0F',
+    icon: '\u{1F6E1}️',
     desc: 'Amortit le recul apres une mauvaise reponse.',
     type: 'passive',
     category: 'def',
@@ -16,6 +20,33 @@ export const POWERS = {
       { desc: 'Recul reduit de 4 cases', effect: { type: 'reduceRecul', amount: 4 } },
       { desc: 'Recul reduit de 6 cases + 5 pieces', effect: { type: 'reduceRecul', amount: 6, bonusMoney: 5 } },
     ],
+    // Extension « Maîtrise » (niveaux 1→10 + embranchements).
+    tree: {
+      // Cœur : cases retirées au recul (amount). L1-3 = identique aux `levels`.
+      scale: [
+        { type: 'reduceRecul', amount: 2 },
+        { type: 'reduceRecul', amount: 4 },
+        { type: 'reduceRecul', amount: 6, bonusMoney: 5 },
+        { type: 'reduceRecul', amount: 7, bonusMoney: 5 },
+        { type: 'reduceRecul', amount: 8, bonusMoney: 5 },
+        { type: 'reduceRecul', amount: 9, bonusMoney: 8 },
+        { type: 'reduceRecul', amount: 10, bonusMoney: 8 },
+        { type: 'reduceRecul', amount: 11, bonusMoney: 10 },
+        { type: 'reduceRecul', amount: 12, bonusMoney: 10 },
+        { type: 'reduceRecul', amount: 14, bonusMoney: 15 },
+      ],
+      branch5: [
+        { key: 'gold', name: 'Rempart doré', icon: '🪙', desc: '+1 or par case de recul absorbée.', effect: { goldPerCaseAbsorbed: 1 } },
+        { key: 'counter', name: 'Contre', icon: '🔁', desc: 'Quand le recul est absorbé, relance gratuitement la question.', effect: { rerollQuestionOnAbsorb: true } },
+        { key: 'aegis', name: 'Égide', icon: '🛡️', desc: 'Protège aussi contre la Foudre adverse.', effect: { protectFoudre: true } },
+      ],
+      branch10: [
+        { key: 'fortress', name: 'Forteresse', icon: '🏰', desc: 'Recul totalement annulé en permanence.', effect: { amount: 99 } },
+        { key: 'reflect', name: 'Réflexion', icon: '↩️', desc: 'L’attaquant subit la moitié du recul qu’il voulait infliger.', effect: { reflectFraction: 0.5 } },
+        { key: 'warchest', name: 'Trésor de guerre', icon: '💰', desc: 'Chaque absorption : +10 or et 1 charge aléatoire.', effect: { absorbBonusMoney: 10, absorbBonusCharge: true } },
+      ],
+      upgradeCosts: TREE_COSTS,
+    },
   },
   indice: {
     name: 'Indice',
@@ -32,6 +63,32 @@ export const POWERS = {
       { desc: 'Elimine 1 reponse + 5s de bonus', effect: { type: 'hideAnswers', count: 1, bonusTime: 5 } },
       { desc: 'Elimine 2 mauvaises reponses', effect: { type: 'hideAnswers', count: 2, bonusTime: 0 } },
     ],
+    tree: {
+      // Cœur : nombre de mauvaises réponses éliminées (count) + bonus de temps.
+      scale: [
+        { type: 'hideAnswers', count: 1, bonusTime: 0 },
+        { type: 'hideAnswers', count: 1, bonusTime: 5 },
+        { type: 'hideAnswers', count: 2, bonusTime: 0 },
+        { type: 'hideAnswers', count: 2, bonusTime: 5 },
+        { type: 'hideAnswers', count: 2, bonusTime: 8 },
+        { type: 'hideAnswers', count: 2, bonusTime: 10 },
+        { type: 'hideAnswers', count: 3, bonusTime: 5 },
+        { type: 'hideAnswers', count: 3, bonusTime: 8 },
+        { type: 'hideAnswers', count: 3, bonusTime: 10 },
+        { type: 'hideAnswers', count: 3, bonusTime: 15 },
+      ],
+      branch5: [
+        { key: 'clair', name: 'Clairvoyance', icon: '👁️', desc: '−1 mauvaise réponse de plus et révèle le thème à l’avance.', effect: { extraHide: 1, revealTheme: true } },
+        { key: 'serenity', name: 'Sérénité', icon: '😌', desc: 'Temps de réponse ×1,5.', effect: { timerMult: 1.5 } },
+        { key: 'fifty', name: '50/50', icon: '⚖️', desc: 'Garde toujours 2 réponses (questions à 4 choix).', effect: { keepTwo: true } },
+      ],
+      branch10: [
+        { key: 'omni', name: 'Omniscience', icon: '🔮', desc: 'Révèle la bonne réponse (1×/tour, coûte 2 charges).', effect: { revealAnswer: true } },
+        { key: 'notimer', name: 'Maître du temps', icon: '⏳', desc: 'Aucun timer sur la question (1×/tour).', effect: { noTimer: true } },
+        { key: 'cheat', name: 'Antisèche', icon: '📝', desc: '50/50 garanti + bonus d’or si bonne réponse.', effect: { keepTwo: true, bonusMoneyOnCorrect: 5 } },
+      ],
+      upgradeCosts: TREE_COSTS,
+    },
   },
   relance: {
     name: 'Relance',
@@ -48,10 +105,36 @@ export const POWERS = {
       { desc: 'Relance + garde le meilleur resultat', effect: { type: 'reroll', mode: 'best' } },
       { desc: 'Relance + avance du total des 2 des', effect: { type: 'reroll', mode: 'sum' } },
     ],
+    tree: {
+      // Cœur : mode de relance. L1-3 = identique aux `levels` (replace/best/sum).
+      scale: [
+        { type: 'reroll', mode: 'replace' },
+        { type: 'reroll', mode: 'best' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'sum' },
+      ],
+      branch5: [
+        { key: 'dbldice', name: 'Double dé', icon: '🎲', desc: 'Avance de la somme de 2 dés.', effect: { mode: 'sum' } },
+        { key: 'lucky', name: 'Dé chanceux', icon: '🍀', desc: 'Relance jusqu’à obtenir au moins 4.', effect: { minRoll: 4 } },
+        { key: 'pilot', name: 'Pilote', icon: '🧭', desc: 'Après la relance, choisis ta voie aux jonctions.', effect: { choosePathAfter: true } },
+      ],
+      branch10: [
+        { key: 'triple', name: 'Triple chance', icon: '🎯', desc: 'Garde le meilleur de 3 dés.', effect: { rerollCount: 3, mode: 'best' } },
+        { key: 'leap', name: 'Bond', icon: '🦘', desc: 'Avance jusqu’à la prochaine case avantageuse.', effect: { leapToAdvantage: true } },
+        { key: 'overload', name: 'Surcharge', icon: '✨', desc: 'La relance recharge aussi un pouvoir au hasard.', effect: { rechargeRandom: true } },
+      ],
+      upgradeCosts: TREE_COSTS,
+    },
   },
   foudre: {
     name: 'Foudre',
-    icon: '\u26A1',
+    icon: '⚡',
     desc: 'Recule un adversaire.',
     type: 'target',
     category: 'off',
@@ -64,10 +147,36 @@ export const POWERS = {
       { desc: 'Recule la cible de 1D6 cases', effect: { type: 'reculTarget', amount: 'd6' } },
       { desc: 'Recule la cible de 1D10 cases', effect: { type: 'reculTarget', amount: 'd10' } },
     ],
+    tree: {
+      // Cœur : dé de recul. L1-3 = identique aux `levels` (d4/d6/d10).
+      scale: [
+        { type: 'reculTarget', amount: 'd4' },
+        { type: 'reculTarget', amount: 'd6' },
+        { type: 'reculTarget', amount: 'd10' },
+        { type: 'reculTarget', amount: 'd10', flat: 1 },
+        { type: 'reculTarget', amount: 'd12', flat: 1 },
+        { type: 'reculTarget', amount: 'd12', flat: 2 },
+        { type: 'reculTarget', amount: 'd12', flat: 4 },
+        { type: 'reculTarget', amount: 'd12', flat: 6 },
+        { type: 'reculTarget', amount: 'd12', flat: 8 },
+        { type: 'reculTarget', amount: 'd12', flat: 10 },
+      ],
+      branch5: [
+        { key: 'chain', name: 'Chaîne', icon: '⛓️', desc: 'Touche aussi l’équipe la mieux placée.', effect: { chain: true } },
+        { key: 'surge', name: 'Surcharge', icon: '💥', desc: 'Recul +50 % mais coûte 1 charge de plus.', effect: { amountMult: 1.5, extraChargeCost: 1 } },
+        { key: 'storm', name: 'Tempête ciblée', icon: '🌩️', desc: 'La cible perd aussi 5 or.', effect: { stealGold: 5 } },
+      ],
+      branch10: [
+        { key: 'cataclysm', name: 'Cataclysme', icon: '🌋', desc: 'Recule toutes les autres équipes.', effect: { allOthers: true } },
+        { key: 'banish', name: 'Bannissement', icon: '🕳️', desc: 'Renvoie la cible à la dernière jonction.', effect: { toPrevJunction: true } },
+        { key: 'orage', name: 'Orage', icon: '🌩️', desc: 'Pose un piège-foudre sur une case.', effect: { placeTrap: true } },
+      ],
+      upgradeCosts: TREE_COSTS,
+    },
   },
   sablier: {
     name: 'Sablier',
-    icon: '\u23F1\uFE0F',
+    icon: '⏱️',
     desc: 'Reduit le timer de la cible.',
     type: 'target',
     category: 'off',
@@ -80,10 +189,36 @@ export const POWERS = {
       { desc: 'Timer divise par 3 (10s)', effect: { type: 'timerReduce', divisor: 3 } },
       { desc: 'Timer divise par 4 (7s)', effect: { type: 'timerReduce', divisor: 4 } },
     ],
+    tree: {
+      // Cœur : diviseur du timer. L1-3 = identique aux `levels` (2/3/4).
+      scale: [
+        { type: 'timerReduce', divisor: 2 },
+        { type: 'timerReduce', divisor: 3 },
+        { type: 'timerReduce', divisor: 4 },
+        { type: 'timerReduce', divisor: 4 },
+        { type: 'timerReduce', divisor: 5 },
+        { type: 'timerReduce', divisor: 5 },
+        { type: 'timerReduce', divisor: 6 },
+        { type: 'timerReduce', divisor: 6 },
+        { type: 'timerReduce', divisor: 7 },
+        { type: 'timerReduce', divisor: 8 },
+      ],
+      branch5: [
+        { key: 'tax', name: 'Taxe du temps', icon: '💸', desc: 'La cible perd 5 or si elle dépasse le temps.', effect: { goldPenaltyOnTimeout: 5 } },
+        { key: 'confuse', name: 'Confusion', icon: '🌀', desc: 'Masque brièvement l’énoncé.', effect: { confuse: true } },
+        { key: 'silence', name: 'Silence', icon: '🔇', desc: 'La cible ne peut pas utiliser de pouvoir à son prochain tour.', effect: { silenceNextTurn: true } },
+      ],
+      branch10: [
+        { key: 'freeze', name: 'Gel', icon: '🧊', desc: 'La cible saute son prochain lancer.', effect: { skipNextRoll: true } },
+        { key: 'stealtime', name: 'Vol de temps', icon: '⏲️', desc: 'Le temps retiré est ajouté à ton prochain tour.', effect: { stealTime: true } },
+        { key: 'sandstorm', name: 'Tempête de sable', icon: '🏜️', desc: 'Timer réduit pour toutes les autres équipes.', effect: { allOthers: true } },
+      ],
+      upgradeCosts: TREE_COSTS,
+    },
   },
   double: {
     name: 'Double question',
-    icon: '\u2753',
+    icon: '❓',
     desc: 'Ajoute des questions au prochain tour de la cible (cumulable).',
     type: 'target',
     category: 'off',
@@ -96,5 +231,31 @@ export const POWERS = {
       { desc: '+2 questions au prochain tour (cumulable, sans bonus)', effect: { type: 'multiQuestion', add: 2, noBonus: true } },
       { desc: '+2 questions (cumulable) + timer divise par 2', effect: { type: 'multiQuestion', add: 2, noBonus: true, timerDivisor: 2 } },
     ],
+    tree: {
+      // Cœur : questions ajoutées. L1-3 = identique aux `levels`.
+      scale: [
+        { type: 'multiQuestion', add: 1, noBonus: true },
+        { type: 'multiQuestion', add: 2, noBonus: true },
+        { type: 'multiQuestion', add: 2, noBonus: true, timerDivisor: 2 },
+        { type: 'multiQuestion', add: 3, noBonus: true, timerDivisor: 2 },
+        { type: 'multiQuestion', add: 3, noBonus: true, timerDivisor: 2 },
+        { type: 'multiQuestion', add: 4, noBonus: true, timerDivisor: 2 },
+        { type: 'multiQuestion', add: 4, noBonus: true, timerDivisor: 2 },
+        { type: 'multiQuestion', add: 5, noBonus: true, timerDivisor: 2 },
+        { type: 'multiQuestion', add: 5, noBonus: true, timerDivisor: 3 },
+        { type: 'multiQuestion', add: 6, noBonus: true, timerDivisor: 3 },
+      ],
+      branch5: [
+        { key: 'exam', name: 'Examen surprise', icon: '🎓', desc: 'Une question est Hardcore : gros bonus si tout est juste, recul aggravé sinon.', effect: { hardcoreOne: true } },
+        { key: 'shared', name: 'Chrono partagé', icon: '⏳', desc: 'Un seul timer pour toute la rafale, mais +50 % d’or par bonne réponse.', effect: { sharedTimer: true, goldMult: 1.5 } },
+        { key: 'calm', name: 'Rafale tranquille', icon: '📚', desc: '+1 question, mais gain par question divisé par 2.', effect: { extraAdd: 1, goldDiv: 2 } },
+      ],
+      branch10: [
+        { key: 'general', name: 'Interro générale', icon: '🏫', desc: 'La cible subit aussi la double au tour suivant.', effect: { reflectToTarget: true } },
+        { key: 'allin', name: 'Tout ou rien', icon: '🎰', desc: '×2 gains si 100 % réussi, 0 sinon.', effect: { allOrNothing: true } },
+        { key: 'marathon', name: 'Marathon+', icon: '🏃', desc: 'Encore +2 questions + chrono partagé.', effect: { extraAdd: 2, sharedTimer: true } },
+      ],
+      upgradeCosts: TREE_COSTS,
+    },
   },
 };

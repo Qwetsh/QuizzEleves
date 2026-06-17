@@ -20,6 +20,7 @@ import DuelChoiceModal from '../Modals/DuelChoiceModal';
 import InventoryModal from '../Modals/InventoryModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
+import SpecPickerModal from '../Modals/SpecPickerModal';
 import LootReveal from '../Modals/LootReveal';
 import StarterChest from '../Modals/StarterChest';
 import FightModal from '../Fight/FightModal';
@@ -240,6 +241,7 @@ export default function GameLayout() {
       <QuestionModal />
       <EventModal />
       <ChargePickerModal />
+      <SpecPickerModal />
       <TargetPickerModal />
       <VictoryModal />
       <ShopModal />

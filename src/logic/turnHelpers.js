@@ -2,6 +2,7 @@ import { POWERS } from '../data/powers.js';
 import { SUBJECT_KEYS } from '../data/subjects.js';
 import { moveBack } from './pathfinding.js';
 import { getEffectValue, hasBuff } from './itemEffects.js';
+import { resolvePowerEffect } from './powerEffects.js';
 
 const cases = (n) => `${n} case${Math.abs(n) > 1 ? 's' : ''}`;
 
@@ -32,7 +33,7 @@ export function randomSubject() {
  *  - absorbedBy  : 'buff' | 'wooden' | 'power' | 'equip' | null (bouclier le plus fort)
  *  - bonusMoney  : or gagn\u00e9 via le Bouclier niv.3
  */
-export function applyRecul(team, board, base) {
+export function applyRecul(team, board, base, masteryOn = false) {
   const detail = [{ label: 'Recul pr\u00e9vu', note: cases(base) }];
   const patch = {};
   let recul = base;
@@ -60,7 +61,7 @@ export function applyRecul(team, board, base) {
   const charges = team.powers?.bouclier?.charges ?? 0;
   if (charges > 0 && recul > 0) {
     const level = team.powers.bouclier.level ?? 1;
-    const effect = POWERS.bouclier.levels[level - 1]?.effect || {};
+    const effect = resolvePowerEffect(team, 'bouclier', masteryOn);
     const reduction = effect.amount ?? 0;
     bonusMoney = effect.bonusMoney ?? 0;
     recul = Math.max(0, recul - reduction);
@@ -92,8 +93,8 @@ export function applyRecul(team, board, base) {
  * Resolve a wrong answer: applique la cha\u00eene de bouclier (applyRecul) et compose
  * le message de journal. Returns { updatedTeam, logMessage, detail, path }.
  */
-export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse', reculBase = 2) {
-  const r = applyRecul(team, board, reculBase);
+export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse', reculBase = 2, masteryOn = false) {
+  const r = applyRecul(team, board, reculBase, masteryOn);
   const updatedTeam = { ...team, ...r.patch, wrong: team.wrong + 1 };
   const coins = r.bonusMoney ? ` +${r.bonusMoney} \u{1F4B0}` : '';
   let logMessage;

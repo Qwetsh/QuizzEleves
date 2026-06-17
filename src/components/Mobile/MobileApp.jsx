@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent } from '../../logic/sessionConfig';
 import { POWERS } from '../../data/powers';
+import { describePowerScale, specSlotForLevel, specOptionsFor } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
@@ -266,15 +267,39 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
   );
 }
 
-// Une « branche » d'arbre de talent pour un pouvoir : ses 3 niveaux empilés, le
-// niveau actuel mis en avant, les niveaux supérieurs montrant leur coût
-// d'amélioration et leur effet. Lecture seule (l'amélioration se fait au TBI).
-function TalentBranch({ powerKey, entry, active }) {
+// Bloc d'embranchement (L5/L10) : les 3 voies, la voie choisie mise en avant.
+function BranchBlock({ powerKey, slot, chosen, reached }) {
+  const options = specOptionsFor(powerKey, slot);
+  if (!options.length) return null;
+  return (
+    <div className="mob-tt-branch">
+      <div className="mob-tt-branch-label">{reached ? (chosen ? 'Voie choisie' : 'Choisis ta voie') : 'Embranchement'}</div>
+      {options.map((o) => {
+        const picked = chosen === o.key;
+        return (
+          <div key={o.key} className={'mob-tt-opt' + (picked ? ' is-picked' : '') + (reached && !chosen ? ' is-open' : '')}>
+            <span className="mob-tt-opt-ic">{o.icon}</span>
+            <div className="mob-tt-opt-body">
+              <div className="mob-tt-opt-name">{o.name}{picked && <span className="mob-tt-tag mob-tt-tag--cur"> choisie</span>}</div>
+              <div className="mob-tt-opt-desc">{o.desc}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Une « branche » d'arbre de talent pour un pouvoir. Avec l'extension Maîtrise :
+// 10 niveaux + embranchements L5/L10. Sinon : 3 niveaux classiques. Lecture seule
+// (l'amélioration et le choix de voie se font au TBI).
+function TalentBranch({ powerKey, entry, active, masteryOn }) {
   const info = POWERS[powerKey];
   if (!info) return null;
   const level = entry?.level ?? 1;
-  const levels = info.levels || [];
-  const maxLvl = levels.length || 3;
+  const useTree = masteryOn && info.tree;
+  const count = useTree ? info.tree.scale.length : (info.levels?.length || 3);
+  const costs = useTree ? info.tree.upgradeCosts : info.upgradeCosts;
   return (
     <div className="mob-tt-card" style={{ '--accent': info.color }}>
       <div className="mob-tt-head">
@@ -285,15 +310,17 @@ function TalentBranch({ powerKey, entry, active }) {
             {active && <span className="mob-tt-active">{'✦'} actif</span>}
           </div>
           <div className="mob-tt-cat">
-            {info.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`} · Niv. {level}/{maxLvl}
+            {info.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`} · Niv. {level}/{count}
           </div>
         </div>
       </div>
       <div className="mob-tt-track">
-        {levels.map((lv, i) => {
+        {Array.from({ length: count }, (_, i) => {
           const n = i + 1;
           const state = n < level ? 'done' : n === level ? 'current' : n === level + 1 ? 'next' : 'locked';
-          const cost = n >= 2 ? (info.upgradeCosts?.[n - 2] ?? null) : null;
+          const cost = n >= 2 ? (costs?.[n - 2] ?? null) : null;
+          const desc = useTree ? describePowerScale(powerKey, n, true) : info.levels[i]?.desc;
+          const slot = useTree ? specSlotForLevel(n) : null;
           return (
             <div key={n} className={'mob-tt-node is-' + state}>
               <div className="mob-tt-bullet">{state === 'done' ? '✓' : n}</div>
@@ -305,8 +332,10 @@ function TalentBranch({ powerKey, entry, active }) {
                   {(state === 'next' || state === 'locked') && cost != null && (
                     <span className="mob-tt-tag mob-tt-tag--cost">{'\u{1FA99}'} {cost}</span>
                   )}
+                  {slot && <span className="mob-tt-tag mob-tt-tag--branch">🌟 voie</span>}
                 </div>
-                <div className="mob-tt-desc">{lv.desc}</div>
+                <div className="mob-tt-desc">{desc}</div>
+                {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n} />}
               </div>
             </div>
           );
@@ -320,6 +349,7 @@ function TalentBranch({ powerKey, entry, active }) {
 function PowersView({ session, teamIdx }) {
   const t = session.teams[teamIdx];
   const pKeys = powerKeysOf(t);
+  const masteryOn = extOn(session.extensions, 'mastery');
   const activeKeys = new Set([t.powerDef, t.powerOff].filter(Boolean));
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
@@ -332,7 +362,7 @@ function PowersView({ session, teamIdx }) {
       ) : (
         <div className="mob-tt">
           {pKeys.map((k) => (
-            <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} />
+            <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} masteryOn={masteryOn} />
           ))}
         </div>
       )}

@@ -24,6 +24,13 @@ export const EXTENSIONS = [
     desc: 'Équipement porté, consommables, sac, boutique & Marché Noir, coffres, butin, sets et événements liés aux objets. Désactivé : partie « pure » sans économie d’objets.',
     default: true,
   },
+  {
+    id: 'mastery',
+    name: 'Maîtrise des pouvoirs',
+    icon: '⚡',
+    desc: 'Pouvoirs améliorables jusqu’au niveau 10, avec un embranchement stratégique (3 voies) aux niveaux 5 et 10. Désactivé : pouvoirs classiques à 3 niveaux.',
+    default: true,
+  },
 ];
 
 // État par défaut : { equipment: true, ... }

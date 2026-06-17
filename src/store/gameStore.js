@@ -276,6 +276,8 @@ export const useGameStore = create((set, get) => ({
   _landingId: 0,
   freeActivation: false,
   showChargePicker: false,
+  // Choix de voie (Maîtrise) au passage L5/L10 : { powerKey, slot, teamIdx } | null
+  showSpecPicker: null,
   awaitingChoice: false,
   // Révélation d'objet (visuel C) : { itemKey, title?, subtitle? } | null
   lootReveal: null,
@@ -938,7 +940,7 @@ export const useGameStore = create((set, get) => ({
       if (team.wager) addLog(`\u{1F3B2} D\u00e9fi r\u00e9ussi ! R\u00e9compense \u00e0 la cl\u00e9.`);
     } else {
       // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-      const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse', get().preRollValue || 2);
+      const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse', get().preRollValue || 2, extOn(get().extensions, 'mastery'));
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
       addLog({ text: logMessage, detail });
@@ -1063,7 +1065,7 @@ export const useGameStore = create((set, get) => ({
     const newTeams = [...teams];
 
     // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-    const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2);
+    const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2, extOn(get().extensions, 'mastery'));
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
     addLog({ text: logMessage, detail });
@@ -1319,6 +1321,7 @@ export const useGameStore = create((set, get) => ({
   buyNewPower: (pk) => powerH.buyNewPower(set, get, pk),
   buyPowerCharge: (pk) => powerH.buyPowerCharge(set, get, pk),
   upgradePowerLevel: (pk) => powerH.upgradePowerLevel(set, get, pk),
+  chooseSpec: (specKey) => powerH.chooseSpec(set, get, specKey),
 
   // --- Items / inventaire (delegated) ---
   openInventory: () => {

@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
+import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
+import { extOn } from '../../extensions/registry';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -153,11 +155,8 @@ function RechargeStall({ ownedPowers, money, onBuyCharge }) {
 }
 
 /* ---------- Étal : améliorer ---------- */
-function UpgradeStall({ ownedPowers, money, onUpgrade }) {
-  const upgradeable = ownedPowers.filter(([key, tp]) => {
-    const maxLevel = POWERS[key].levels.length;
-    return (tp?.level || 1) < maxLevel;
-  });
+function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
+  const upgradeable = ownedPowers.filter(([key, tp]) => (tp?.level || 1) < maxPowerLevel(key, masteryOn));
   if (upgradeable.length === 0) return null;
 
   return (
@@ -165,10 +164,12 @@ function UpgradeStall({ ownedPowers, money, onUpgrade }) {
       {upgradeable.map(([key, teamPower]) => {
         const power = POWERS[key];
         const level = teamPower?.level || 1;
-        const cost = power.upgradeCosts[level - 1];
-        const canUpgrade = money >= cost;
-        const currentDesc = power.levels[level - 1]?.desc;
-        const nextDesc = power.levels[level]?.desc;
+        const cost = powerUpgradeCost(key, level, masteryOn);
+        const canUpgrade = cost != null && money >= cost;
+        // Mode Maîtrise : résumés générés (10 niveaux) ; sinon descriptions des `levels`.
+        const currentDesc = masteryOn ? describePowerScale(key, level, true) : power.levels[level - 1]?.desc;
+        const nextDesc = masteryOn ? describePowerScale(key, level + 1, true) : power.levels[level]?.desc;
+        const branchNext = masteryOn ? specSlotForLevel(level + 1) : null; // 5 ou 10 = embranchement
 
         return (
           <div className="shop-card shop-card--wide" key={key}>
@@ -185,6 +186,7 @@ function UpgradeStall({ ownedPowers, money, onUpgrade }) {
               <div className="shop-card-desc">
                 <div>Actuel : {currentDesc}</div>
                 <div className="shop-card-next">Suivant : {nextDesc}</div>
+                {branchNext && <div className="shop-card-next" style={{ color: power.color, fontWeight: 700 }}>🌟 Choix de voie au niveau {level + 1} !</div>}
               </div>
               <button
                 className="shop-buy shop-buy--purple"
@@ -248,6 +250,7 @@ export default function ShopModal() {
   const shopStock = useGameStore((s) => s.shopStock);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
+  const masteryOn = useGameStore((s) => extOn(s.extensions, 'mastery'));
 
   const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs'
 
@@ -329,6 +332,7 @@ export default function ShopModal() {
                       ownedPowers={ownedPowers}
                       money={team.money}
                       onUpgrade={upgradePowerLevel}
+                      masteryOn={masteryOn}
                     />
                     <UnlockStall
                       unownedPowers={unownedPowers}

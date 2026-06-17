@@ -9,6 +9,7 @@
 import { moveForward } from '../logic/pathfinding.js';
 import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects } from '../logic/itemEffects.js';
 import { applyRecul } from '../logic/turnHelpers.js';
+import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
 import { SUBJECTS } from '../data/subjects.js';
 import { pickQuestion } from '../logic/questionPicker.js';
@@ -201,7 +202,7 @@ function applyMoveOne(set, get, idx, dir, n, allowJunction) {
   // bois → pouvoir Bouclier → équipement). Vaut pour TOUS les reculs d'effet
   // (événements, consommables, pièges). La Foudre est gérée à part (offensif).
   if (dir === 'back') {
-    const r = applyRecul(team, board, n);
+    const r = applyRecul(team, board, n, extOn(get().extensions, 'mastery'));
     const nt = [...teams];
     nt[idx] = { ...team, ...r.patch };
     const movePath = r.path ? [{ teamIndex: idx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }] : null;

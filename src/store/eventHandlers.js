@@ -7,6 +7,7 @@ import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { SETS } from '../data/sets.js';
 import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { LOOT } from '../logic/balanceConfig.js';
+import { extOn } from '../extensions/registry.js';
 import { runEffects } from './effectEngine.js';
 
 // Etal du marchand ambulant : 3 objets distincts parmi les objets actives,
@@ -494,8 +495,9 @@ export function applyEventEffect(set, get) {
   // de bois → pouvoir Bouclier → équipement) — comme les questions et le moteur.
   // Met à jour newTeams[idx], pousse l'animation, et renvoie le nombre de cases
   // effectivement reculées (0 = totalement absorbé) + le drapeau « réduit ».
+  const _masteryOn = extOn(get().extensions, 'mastery');
   const reculInto = (idx, base) => {
-    const rec = applyRecul(newTeams[idx], board, base);
+    const rec = applyRecul(newTeams[idx], board, base, _masteryOn);
     newTeams[idx] = { ...newTeams[idx], ...rec.patch };
     pushMove(idx, rec.path, 'back');
     return { applied: rec.applied, reduced: !!rec.absorbedBy };

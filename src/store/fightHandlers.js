@@ -1,5 +1,6 @@
 import { getEffectValue, reducedSteal } from '../logic/itemEffects.js';
 import { applyRecul } from '../logic/turnHelpers.js';
+import { extOn } from '../extensions/registry.js';
 import { ITEMS } from '../data/items.js';
 import { pickLootItem, placeItem, normalizeBag, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { equipTriggerActions, runEffects } from './effectEngine.js';
@@ -93,7 +94,7 @@ function resolveBossOutcome(set, get, f) {
     message = `🏆 ${team.emoji} ${team.name} terrasse le Prof ! +${gold} \u{1F4B0}${lootKey ? ` et ${ITEMS[lootKey].icon} ${ITEMS[lootKey].name}${note}` : ''} !`;
   } else {
     const dv = Math.floor(Math.random() * 10) + 1;
-    const rec = applyRecul(team, board, dv); // bouclier + équipement protègent du recul
+    const rec = applyRecul(team, board, dv, extOn(get().extensions, 'mastery')); // bouclier + équipement protègent du recul
     newTeams[idx] = { ...team, ...rec.patch };
     if (rec.path) moves = [{ teamIndex: idx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     message = rec.applied > 0
@@ -249,7 +250,7 @@ function applyFightReward(set, get) {
       : `\u{1F9B9} ${loser.emoji} ${loser.name} protège ses pièces : rien à piller !`;
   } else {
     // Bouclier (bois + pouvoir) puis équipement du perdant : recul atténué.
-    const rec = applyRecul(loser, board, f.reward.dice[0]);
+    const rec = applyRecul(loser, board, f.reward.dice[0], extOn(get().extensions, 'mastery'));
     newTeams[loserIdx] = { ...loser, ...rec.patch };
     if (rec.path) {
       moves = [{ teamIndex: loserIdx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
