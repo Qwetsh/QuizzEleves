@@ -256,11 +256,10 @@ function TalentBranch({ powerKey, entry, active }) {
   const info = POWERS[powerKey];
   if (!info) return null;
   const level = entry?.level ?? 1;
-  const charges = entry?.charges ?? 0;
   const levels = info.levels || [];
   const maxLvl = levels.length || 3;
   return (
-    <div className={'mob-tt-card' + (charges <= 0 ? ' is-spent' : '')} style={{ '--accent': info.color }}>
+    <div className="mob-tt-card" style={{ '--accent': info.color }}>
       <div className="mob-tt-head">
         <span className="mob-tt-disc">{info.icon}</span>
         <div className="mob-tt-headtxt">
@@ -272,9 +271,6 @@ function TalentBranch({ powerKey, entry, active }) {
             {info.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`} · Niv. {level}/{maxLvl}
           </div>
         </div>
-        <span className="mob-tt-charges">
-          <b>{charges}</b><small>charge{charges > 1 ? 's' : ''}</small>
-        </span>
       </div>
       <div className="mob-tt-track">
         {levels.map((lv, i) => {
@@ -312,7 +308,6 @@ function PowersView({ session, teamIdx }) {
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{'⚡'} Arbre de talents</div>
       <div className="mob-tt-bank">
-        <span className="mob-stat mob-stat--coin">{'\u{1FA99}'} <b>{t.money}</b></span>
         <span className="mob-tt-hint">Améliorations à acheter sur le tableau (boutique)</span>
       </div>
       {pKeys.length === 0 ? (
@@ -344,6 +339,7 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
   const bagCells = (t.bag || []).map((c) => ({ key: cellKey(c), n: cellN(c) })).filter((c) => ITEMS[c.key]);
   const bagUnits = bagCells.reduce((s, c) => s + c.n, 0);
   const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
+  const pKeys = powerKeysOf(t);
   const totalQ = (t.correct ?? 0) + (t.wrong ?? 0);
   const rate = totalQ ? Math.round((t.correct / totalQ) * 100) : null;
 
@@ -368,6 +364,20 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
         <div className="mob-stat mob-stat--bad">{'✗'} <b>{t.wrong ?? 0}</b></div>
         {rate !== null && <div className="mob-stat mob-stat--rate">{'◎'} <b>{rate}%</b></div>}
       </div>
+
+      {pKeys.length > 0 && (
+        <div className="mob-charges">
+          {pKeys.map((k) => {
+            const info = POWERS[k];
+            const ch = t.powers[k]?.charges ?? 0;
+            return (
+              <span key={k} className={'mob-charge' + (ch <= 0 ? ' is-empty' : '')} style={{ '--accent': info.color }} title={`${info.name} · ${ch} charge${ch > 1 ? 's' : ''}`}>
+                <span className="mob-charge-disc">{info.icon}</span><b>{ch}</b>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {effects.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px', marginBottom: 4 }}>
