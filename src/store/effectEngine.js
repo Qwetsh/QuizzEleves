@@ -772,13 +772,9 @@ function finishQueue(set, get) {
   if (deferred) { set({ deferredTurnEnd: null }); deferred(); return; }
 
   if (ctx.source === 'roll') {
-    // Reprend la résolution post-lancer (jonction / dé de 1 / atterrissage).
+    // Reprend la résolution post-lancer (jonction / atterrissage).
     if (ctx.postRoll && get().resolvePostRoll) {
       get().resolvePostRoll(ctx.diceValue, ctx.postRoll);
-    } else if (ctx.diceValue === 1) {
-      const t = get().teams[get().currentTeam];
-      get().addLog(`✨ ${t.emoji} A fait 1 ! Choisis un pouvoir à recharger gratuitement !`);
-      set({ showChargePicker: { source: 'dice' }, freeActivation: true, pendingLanding: true });
     } else {
       set({ pendingLanding: true });
     }

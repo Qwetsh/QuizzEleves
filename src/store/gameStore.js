@@ -593,11 +593,8 @@ export const useGameStore = create((set, get) => ({
       addLog(`\u2194\uFE0F Choisis une voie !`);
       return;
     }
-    if (value === 1) {
-      addLog(`\u2728 ${team.emoji} A fait 1 ! Choisis un pouvoir \u00e0 recharger gratuitement !`);
-      set({ showChargePicker: { source: 'dice' }, freeActivation: true, pendingLanding: true });
-      return;
-    }
+    // (Le d\u00e9 de 1 ne recharge plus de pouvoir : cet effet passe d\u00e9sormais par
+    //  l'\u00e9quipement \u2014 d\u00e9clencheur on:roll \u2192 action gainCharge.)
     set({ pendingLanding: true });
   },
 

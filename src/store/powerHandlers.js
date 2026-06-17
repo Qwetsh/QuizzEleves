@@ -213,13 +213,12 @@ export function cancelTargetPicker(set, get) {
   // Stay in pendingLanding — player can use other powers or click "Continuer"
 }
 
-// --- Charge picker (rolled a 1) ---
+// --- Charge picker (gainCharge : consommable / équipement) ---
 
 export function chargePickerChoice(set, get, powerKey) {
   const { teams, currentTeam, addLog } = get();
-  // Source : 'dice' (dé de 1), 'item' (consommable legacy) ou 'engine' (moteur d'effets)
+  // Source : 'item' (consommable legacy) ou 'engine' (moteur d'effets / équipement)
   const source = get().showChargePicker?.source;
-  const fromDice = source !== 'item' && source !== 'engine';
   const team = teams[currentTeam];
   const newTeams = [...teams];
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
@@ -232,15 +231,7 @@ export function chargePickerChoice(set, get, powerKey) {
 
   // Moteur d'effets : reprendre la file après la recharge (l'action gainCharge est résolue).
   if (source === 'engine') { resumeEngineQueue(set, get, { chargeDone: true }); return; }
-
-  // Seul le flux "dé de 1" enchaîne sur une activation offensive immédiate ;
-  // un consommable (Cristal d'énergie...) ne fait que recharger.
-  const power = POWERS[powerKey];
-  if (fromDice && power?.category === 'off') {
-    set({ showTargetPicker: { powerKey } });
-    return;
-  }
-  // Defensive: stay in pendingLanding — player clicks "Continuer" when ready
+  // Sinon (consommable) : on a juste rechargé — le joueur poursuit son tour.
 }
 
 export function chargePickerSkip(set, get) {
