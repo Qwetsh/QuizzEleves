@@ -80,8 +80,9 @@ function LobbyCreateScreen({ code, token, onSubmitted }) {
   const defPowers = Object.entries(POWERS).filter(([, p]) => p.category !== 'off');
   const offPowers = Object.entries(POWERS).filter(([, p]) => p.category === 'off');
 
+  const incomplete = name.trim().length < 1 || !powerDef || !powerOff;
   const submit = async () => {
-    if (busy || name.trim().length < 1) return;
+    if (busy || incomplete) return;
     setBusy(true); setErr(null);
     try {
       await upsertLobbyTeam(code, token, { name: name.trim(), emoji, power_def: powerDef, power_off: powerOff, ready: true });
@@ -148,9 +149,14 @@ function LobbyCreateScreen({ code, token, onSubmitted }) {
       <label className="mob-field-label" style={{ marginTop: 12 }}>⚔️ Pouvoir d'attaque</label>
       <PowerGrid list={offPowers} value={powerOff} onPick={setPowerOff} />
 
-      <button className="mob-btn mob-btn--gold" style={{ marginTop: 20 }} disabled={busy || name.trim().length < 1} onClick={submit}>
+      <button className="mob-btn mob-btn--gold" style={{ marginTop: 20 }} disabled={busy || incomplete} onClick={submit}>
         {busy ? 'Envoi…' : 'Rejoindre la partie'}
       </button>
+      {incomplete && !busy && (
+        <p className="mob-sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 12.5 }}>
+          {name.trim().length < 1 ? 'Choisis un nom' : !powerDef ? 'Choisis ton pouvoir de défense 🛡️' : 'Choisis ton pouvoir d\'attaque ⚔️'}
+        </p>
+      )}
       {err && <p className="mob-error">{err}</p>}
     </div>
   );
@@ -584,19 +590,10 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
 }
 
 // Onglet « Troc » : offres reçues / envoyées + compositeur (mode téléphone).
-function TradeView({ session, teamIdx, code, token }) {
-  const [trades, setTrades] = useState([]);
+// `trades` est alimenté par l'abonnement partagé de MobileApp (badge + vue).
+function TradeView({ session, teamIdx, code, token, trades = [] }) {
   const [compose, setCompose] = useState(false);
   const me = session.teams[teamIdx];
-
-  useEffect(() => {
-    if (!code) return;
-    let alive = true;
-    const refresh = () => fetchTrades(code).then((r) => { if (alive) setTrades(r); }).catch(() => {});
-    refresh();
-    const unsub = subscribeTrades(code, refresh);
-    return () => { alive = false; unsub(); };
-  }, [code]);
 
   const incoming = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending');
   const outgoing = trades.filter((t) => t.from_idx === teamIdx && t.status === 'pending');
@@ -777,19 +774,29 @@ function AdminPanel({ code, session, onClose }) {
 }
 
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
-function TabBar({ tab, setTab, hasShop, hasTrade }) {
-  const Tab = ({ id, icon, label }) => (
+function TabBar({ tab, setTab, hasShop, hasTrade, tradeAlert = 0 }) {
+  const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
       onClick={() => setTab(id)}
       style={{
-        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
         padding: '8px 0 10px', border: 'none', cursor: 'pointer', font: 'inherit',
         background: 'transparent', color: tab === id ? 'var(--accent, #b8862c)' : '#9a8a6a',
         fontWeight: tab === id ? 800 : 600, fontSize: 12,
         borderTop: tab === id ? '2px solid var(--accent, #b8862c)' : '2px solid transparent',
       }}
     >
-      <span style={{ fontSize: 20 }}>{icon}</span>{label}
+      <span style={{ fontSize: 20, position: 'relative' }}>
+        {icon}
+        {badge > 0 && (
+          <span style={{
+            position: 'absolute', top: -4, right: -10, minWidth: 16, height: 16, padding: '0 4px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#d23b2f', color: '#fff', borderRadius: 999, fontSize: 10.5, fontWeight: 800,
+            border: '1.5px solid #fffefb', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }}>{badge > 9 ? '9+' : badge}</span>
+        )}
+      </span>{label}
     </button>
   );
   return (
@@ -801,7 +808,7 @@ function TabBar({ tab, setTab, hasShop, hasTrade }) {
       <Tab id="team" icon={'\u{1F6E1}️'} label="Équipe" />
       <Tab id="powers" icon={'⚡'} label="Pouvoirs" />
       {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label="Boutique" />}
-      {hasTrade && <Tab id="trade" icon={'🤝'} label="Troc" />}
+      {hasTrade && <Tab id="trade" icon={'🤝'} label="Troc" badge={tradeAlert} />}
       <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
     </nav>
   );
@@ -817,6 +824,7 @@ export default function MobileApp() {
   const [token, setToken] = useState(''); // jeton « propriétaire » de l'équipe (mode téléphone)
   const [owned, setOwned] = useState(false); // l'équipe affichée est-elle CELLE du téléphone (édition autorisée)
   const [admin, setAdmin] = useState(false); // interface prof (contrôle total), déverrouillée au triple-tap + code
+  const [trades, setTrades] = useState([]); // offres de troc de la session (badge + onglet Troc)
   const adminTap = useRef({ n: 0, t: 0 });
 
   // Triple-tap (< 700 ms) puis code 54150 → ouvre l'interface admin (même code
@@ -886,6 +894,19 @@ export default function MobileApp() {
     return () => { alive = false; };
   }, [session, teamIdx, token, code]);
 
+  // Suivi des trocs (mode téléphone, équipe possédée) : alimente le badge de
+  // l'onglet Troc ET la vue Troc (abonnement unique partagé).
+  const canTrade = !!(session && session.status !== 'lobby' && teamIdx != null && owned && token && extOn(session.extensions, 'trade'));
+  useEffect(() => {
+    if (!canTrade || !code) { setTrades([]); return; }
+    let alive = true;
+    const refresh = () => fetchTrades(code).then((r) => { if (alive) setTrades(r); }).catch(() => {});
+    refresh();
+    const unsub = subscribeTrades(code, refresh);
+    return () => { alive = false; unsub(); };
+  }, [canTrade, code]);
+  const tradeAlert = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending').length;
+
   let content;
   if (!code || code.length < 4 || (error && !session)) {
     content = <CodeScreen code={code} setCode={setCode} error={error} connecting={connecting} />;
@@ -902,13 +923,13 @@ export default function MobileApp() {
     const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} />
-      : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} />
+      : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} />
       : tab === 'history' ? <HistoryView session={session} />
       : <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} tradeAlert={tradeAlert} />
       </>
     );
   }
