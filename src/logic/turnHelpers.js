@@ -143,6 +143,8 @@ export const BURST_RESET = {
   doubleAllOrNothing: false,
   doubleBank: undefined,
   doubleReflectTo: undefined,
+  doubleSharedTimer: false,
+  burstTimeLeft: undefined,
   sablierActif: false,
   sablierDivisor: undefined,
 };

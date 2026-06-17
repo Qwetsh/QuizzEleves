@@ -171,6 +171,20 @@ describe('branches Foudre câblées', () => {
     expect(S().teams[1].skipNextRoll).toBe(true);
     after();
   });
+
+  it('Confusion (Sablier L5) : pose le drapeau confused sur la cible', () => {
+    base([teamWith('sablier', { level: 5, spec5: 'confuse' }), { ...teamWith('foudre'), pos: 'n8' }], 'sablier');
+    S().applyOffensivePower(1);
+    expect(S().teams[1].confused).toBe(true);
+    after();
+  });
+
+  it('Orage (Foudre L10) : ouvre le sélecteur de case (pose de piège)', () => {
+    base([teamWith('foudre', { level: 10, spec10: 'orage' }), { ...teamWith('foudre'), pos: 'n8' }], 'foudre');
+    S().applyOffensivePower(1);
+    expect(S().showTilePicker).toBeTruthy();
+    after();
+  });
 });
 
 describe('branches Indice câblées', () => {
@@ -227,5 +241,10 @@ describe('branches Double câblées', () => {
   it('Examen surprise (L5) : force une question Hardcore sur la cible', () => {
     cast({ level: 5, spec5: 'exam' }, { questions: { hardcore: [{ q: '?', a: ['A', 'B', 'C', 'D'], c: 0 }] } });
     expect(S().teams[1].forcedSubject).toBe('hardcore');
+  });
+
+  it('Chrono partagé (L5) : pose le drapeau doubleSharedTimer', () => {
+    cast({ level: 5, spec5: 'shared' });
+    expect(S().teams[1].doubleSharedTimer).toBe(true);
   });
 });

@@ -103,9 +103,12 @@ export default function QuestionModal() {
   const bonusTime = showQuestion?.bonusTime || 0;
   // Bonus d'equipement / consommable (calcule par le store dans askQuestion)
   const itemBonusTime = showQuestion?.itemBonusTime || 0;
+  // Chrono partagé (Double L5) : temps de DÉPART imposé pour cette question de rafale.
+  const sharedStart = showQuestion?.sharedStart;
+  const confused = showQuestion?.confused; // Confusion (Sablier L5) : énoncé brouillé au départ
   const team = teams[currentTeam];
   const subjectInfo = SUBJECTS[subject] || {};
-  const duration = Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime;
+  const duration = sharedStart != null ? Math.max(1, sharedStart) : Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime;
 
   // Rafale de questions (Double cumulable) : « Question X / N » + ambiance maudite
   const multiIndex = showQuestion?.multiIndex;
@@ -123,10 +126,21 @@ export default function QuestionModal() {
     if (question) {
       setSelected(null);
       setRevealed(false);
-      setTimeLeft(Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime);
+      setTimeLeft(sharedStart != null ? sharedStart : Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime);
       bonusApplied.current = false;
     }
-  }, [question, timerDivisor, itemBonusTime]);
+  }, [question, timerDivisor, itemBonusTime, sharedStart]);
+
+  // Confusion : l'énoncé est flouté pendant ~3 s au début de la question.
+  const [blurStmt, setBlurStmt] = useState(false);
+  useEffect(() => {
+    if (confused && question) {
+      setBlurStmt(true);
+      const t = setTimeout(() => setBlurStmt(false), 3000);
+      return () => clearTimeout(t);
+    }
+    setBlurStmt(false);
+  }, [confused, question]);
 
   // Indice niv.2 : secondes bonus ajoutees une seule fois
   useEffect(() => {
@@ -248,9 +262,10 @@ export default function QuestionModal() {
               <span>{subjectInfo.name} {subjectInfo.biome ? `\u00b7 ${subjectInfo.biome}` : ''}</span>
             </div>
 
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.25, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.25, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)', filter: blurStmt ? 'blur(8px)' : 'none', transition: 'filter 0.4s ease', userSelect: blurStmt ? 'none' : 'auto' }}>
               {question.q}
             </div>
+            {blurStmt && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>🌀 Confusion… l'énoncé se précise.</div>}
 
             {/* Timer bar */}
             <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden', marginTop: 18 }}>

@@ -6,7 +6,7 @@ import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, 
 import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
 import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
-import { resumeQueue as resumeEngineQueue, announce } from './effectEngine.js';
+import { resumeQueue as resumeEngineQueue, announce, runEffects } from './effectEngine.js';
 
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
@@ -131,8 +131,10 @@ export function useRelance(set, get) {
   const result = consumePowerCharge(team, 'relance');
   if (!result) return;
 
+  const rEff0 = powerEffectOf(get, team, 'relance');
   const newTeams = [...teams];
-  newTeams[currentTeam] = { ...result.updatedTeam, pos: preRollPos || team.pos };
+  // Pilote (L5) : autorise le choix de voie même si l'équipe aurait avancé au hasard.
+  newTeams[currentTeam] = { ...result.updatedTeam, pos: preRollPos || team.pos, ...(rEff0.choosePathAfter ? { pilotNext: true } : {}) };
 
   addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !`);
   soundDice();
@@ -161,6 +163,18 @@ export function useRelance(set, get) {
       if (mode === 'sum') effectiveValue = prevValue + finalValue;
       else if (mode === 'best') effectiveValue = Math.max(prevValue, finalValue);
       else effectiveValue = finalValue;
+
+      // Bond (L10) : avance jusqu'à la prochaine case événement (sinon valeur normale).
+      if (rEff.leapToAdvantage) {
+        const board = get().board;
+        let node = preRollPos || team.pos, dist = 0;
+        while (dist < 15) {
+          const nx = board[node]?.next?.[0];
+          if (!nx) break;
+          node = nx; dist++;
+          if (board[node]?.type === 'event') { effectiveValue = dist; break; }
+        }
+      }
 
       addLog(`\u{1F3B2} Relance : ${finalValue} !${mode !== 'replace' ? ` (effectif: ${effectiveValue})` : ''}`);
       // Surcharge (L10) : recharge un pouvoir au hasard parmi ceux possédés.
@@ -209,6 +223,17 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   const effect = powerEffectOf(get, team, powerKey);
   let foudreMove = null;
   let lightning = false;
+
+  if (powerKey === 'foudre' && effect.placeTrap) {
+    // Orage (L10) : pose un piège-foudre sur une case (réutilise le moteur de pièges).
+    set({ teams: newTeams, showTargetPicker: null });
+    addLog(`🌩️ ${team.emoji} ${team.name} prépare un Orage : choisis une case piégée !`);
+    runEffects(set, get, [{
+      action: 'placeTrap',
+      trap: { label: 'Orage', icon: '⚡', do: [{ action: 'move', target: 'self', dir: 'back', n: effect.amount || 'd10' }] },
+    }], { source: 'item', sourceTeam: currentTeam });
+    return;
+  }
 
   if (powerKey === 'foudre') {
     // Recul de la/les cible(s), atténué par leur équipement et leur Bouclier (Égide).
@@ -284,6 +309,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
         ...(effect.silenceNextTurn ? { silencedNextTurn: true } : {}),
         ...(effect.skipNextRoll ? { skipNextRoll: true } : {}),
         ...(effect.goldPenaltyOnTimeout ? { timeoutPenalty: effect.goldPenaltyOnTimeout } : {}),
+        ...(effect.confuse ? { confused: true } : {}),
       };
     }
     // Vol de temps (L10) : le temps retiré est crédité au lanceur (prochaine question).
@@ -318,7 +344,9 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     const hcFx = (effect.hardcoreOne && hcPool) ? { forcedSubject: 'hardcore' } : {};
     // Interro générale (L10) : à la fin de la rafale, la cible renvoie une Double sur l'attaquant.
     const reflFx = effect.reflectToTarget ? { doubleReflectTo: currentTeam } : {};
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx, ...reflFx };
+    // Chrono partagé (L5) : un seul chrono pour toute la rafale.
+    const stFx = effect.sharedTimer ? { doubleSharedTimer: true } : {};
+    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx, ...reflFx, ...stFx };
     soundPower();
     addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
     announce(set, get, '❓', `Double sur ${target.emoji} ${target.name} — ${1 + newExtra} questions`, POWERS[powerKey].color);

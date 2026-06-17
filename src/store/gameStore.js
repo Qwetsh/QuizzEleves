@@ -587,6 +587,15 @@ export const useGameStore = create((set, get) => ({
       // Voie al\u00E9atoire : buff de dur\u00E9e, effet d'\u00E9quipement, OU flag one-shot
       // (randomPathNext, pos\u00E9 par un consommable/effet cibl\u00E9) : on choisit pour
       // le joueur. Le flag one-shot est consomm\u00E9 ici.
+      // Pilote (Relance L5) : un one-shot qui force le choix MANUEL de voie, même
+      // si l'équipe aurait normalement avancé au hasard.
+      if (team.pilotNext) {
+        const nt = [...teams];
+        nt[currentTeam] = { ...team, pilotNext: false };
+        set({ teams: nt, awaitingChoice: true, pendingMove: { remaining: postRoll.remaining } });
+        addLog(`🧭 Pilote : choisis ta voie !`);
+        return;
+      }
       if (hasBuff(team, 'randomPath') || getEffectValue(team, 'randomPath') > 0 || team.randomPathNext) {
         const opts = get().board[team.pos]?.next || [];
         if (opts.length) {
@@ -876,6 +885,24 @@ export const useGameStore = create((set, get) => ({
       set({ teams: nt });
     }
 
+    // Chrono partagé (Double L5) : un seul chrono pour TOUTE la rafale.
+    let sharedStart;
+    {
+      const ct2 = get().teams[currentTeam];
+      if (ct2.doubleActive && ct2.doubleSharedTimer) {
+        const base = Math.floor(30 / (timerDivisor || 1)) + itemBonusTime;
+        const first = (ct2.doubleAsked || 1) <= 1 || ct2.burstTimeLeft == null;
+        sharedStart = Math.max(0, first ? base : ct2.burstTimeLeft);
+        if (first) { const nt = [...get().teams]; nt[currentTeam] = { ...ct2, burstTimeLeft: base }; set({ teams: nt }); }
+      }
+    }
+    // Confusion (Sablier L5) : énoncé brouillé quelques secondes (one-shot).
+    let confused = false;
+    {
+      const ct3 = get().teams[currentTeam];
+      if (ct3.confused) { confused = true; const nt = [...get().teams]; nt[currentTeam] = { ...ct3, confused: false }; set({ teams: nt }); }
+    }
+
     // Equipement (indiceBoost) : elimine passivement des mauvaises reponses a
     // CHAQUE question. getEffectValue resout le de et la probabilite a chaque
     // appel (ex. 'd3' a 100% => 1 a 3 reponses retirees ; un 3 les retire toutes).
@@ -895,7 +922,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     set({
-      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal },
+      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false, indiceHidden, rerollUsed: false,
     });
@@ -949,7 +976,9 @@ export const useGameStore = create((set, get) => ({
         if (turnComplete) { payNow = bank * 2; addLog(`🎰 Tout-ou-rien réussi ! Gains doublés : +${payNow} 💰`); }
         else { payNow = 0; aonPatch = { doubleBank: bank }; }
       }
-      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + payNow, wager: undefined, ...aonPatch };
+      // Chrono partagé : on reporte le temps restant à la prochaine question de la rafale.
+      const stPatch = (team.doubleActive && team.doubleSharedTimer) ? { burstTimeLeft: timeLeft } : {};
+      newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + payNow, wager: undefined, ...aonPatch, ...stPatch };
       // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
       let gainDetail;
       if (bonusBreak.parts.length > 0) {
