@@ -175,20 +175,60 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   let lightning = false;
 
   if (powerKey === 'foudre') {
-    // Recul = lancer de dé (1D4 / 1D6 / 1D10 selon le niveau), atténué par
-    // l'équipement de la cible (reculReduction).
-    const rolled = resolveAmount(effect.amount ?? 'd4', target) + (effect.flat || 0);
-    const dieLabel = diceLabel(effect.amount ?? 'd4') + (effect.flat ? ` +${effect.flat}` : '');
-    const reculAmount = reducedRecul(target, rolled);
-    const r = moveBack(board, target.pos, reculAmount);
-    newTeams[targetTeamIndex] = { ...target, pos: r.finalPos };
-    if (r.path.length > 1) {
-      foudreMove = [{ teamIndex: targetTeamIndex, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+    // Recul de la/les cible(s), atténué par leur équipement et leur Bouclier (Égide).
+    const masteryOn = masteryActive(get);
+    // Surcharge (L5) : consomme 1 charge de Foudre suppl\u00E9mentaire.
+    if (effect.extraChargeCost) {
+      const extra = consumePowerCharge(newTeams[currentTeam], 'foudre');
+      if (extra) newTeams[currentTeam] = extra.updatedTeam;
     }
+    const baseRoll = Math.round((resolveAmount(effect.amount ?? 'd4', target) + (effect.flat || 0)) * (effect.amountMult || 1));
+    const dieLabel = diceLabel(effect.amount ?? 'd4') + (effect.flat ? ` +${effect.flat}` : '') + (effect.amountMult ? ` \u00D7${effect.amountMult}` : '');
+
+    // Cibles : la choisie + (Cataclysme) tous les adversaires + (Cha\u00EEne) la mieux plac\u00E9e.
+    const opponents = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
+    const targets = new Set([targetTeamIndex]);
+    if (effect.allOthers) opponents.forEach((i) => targets.add(i));
+    if (effect.chain && opponents.length) {
+      let best = opponents[0], bestX = -Infinity;
+      for (const i of opponents) { const x = board[newTeams[i].pos]?.x ?? -Infinity; if (x > bestX) { bestX = x; best = i; } }
+      targets.add(best);
+    }
+
+    const moves = [];
+    let reflectTotal = 0, stolenTotal = 0;
+    for (const ti of targets) {
+      let v = newTeams[ti];
+      let rolled = baseRoll;
+      const vEff = resolvePowerEffect(v, 'bouclier', masteryOn);
+      const vCharges = v.powers?.bouclier?.charges ?? 0;
+      // \u00C9gide (cible) : le bouclier prot\u00E8ge de la Foudre (consomme 1 charge).
+      if (vEff.protectFoudre && vCharges > 0) {
+        rolled = Math.max(0, rolled - (vEff.amount ?? 0));
+        v = { ...v, powers: { ...v.powers, bouclier: { ...v.powers.bouclier, charges: vCharges - 1 } } };
+      }
+      // R\u00E9flexion (cible) : une fraction du recul pr\u00E9vu revient \u00E0 l'attaquant.
+      if (vEff.reflectFraction && vCharges > 0) reflectTotal += Math.round(rolled * vEff.reflectFraction);
+      // Temp\u00EAte cibl\u00E9e : vol d'or.
+      if (effect.stealGold) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      const amt = reducedRecul(v, rolled);
+      const rr = moveBack(board, v.pos, amt);
+      newTeams[ti] = { ...v, pos: rr.finalPos };
+      if (rr.path.length > 1) moves.push({ teamIndex: ti, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' });
+    }
+    if (stolenTotal > 0) newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) + stolenTotal };
+    if (reflectTotal > 0) {
+      const amt = reducedRecul(newTeams[currentTeam], reflectTotal);
+      const rr = moveBack(board, newTeams[currentTeam].pos, amt);
+      newTeams[currentTeam] = { ...newTeams[currentTeam], pos: rr.finalPos };
+      if (rr.path.length > 1) moves.push({ teamIndex: currentTeam, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' });
+    }
+    foudreMove = moves.length ? moves : null;
     lightning = true;
     soundThunder();
-    addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}, ${dieLabel} \u2192 ${rolled}) sur ${target.emoji} ${target.name} ! Recul de ${reculAmount} case${reculAmount > 1 ? 's' : ''}.`);
-    announce(set, get, '⚡', `Foudre sur ${target.emoji} ${target.name} — ${dieLabel} → −${reculAmount} case${reculAmount > 1 ? 's' : ''}`, POWERS[powerKey].color);
+    const nT = targets.size;
+    addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}, ${dieLabel})${nT > 1 ? ` sur ${nT} \u00E9quipes` : ` sur ${target.emoji} ${target.name}`} !${stolenTotal ? ` Vol de ${stolenTotal} or.` : ''}${reflectTotal ? ' \u21A9\uFE0F Recul r\u00E9fl\u00E9chi !' : ''}`);
+    announce(set, get, '⚡', `Foudre ${dieLabel}${nT > 1 ? ` ×${nT}` : ` sur ${target.emoji} ${target.name}`}`, POWERS[powerKey].color);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
     newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };

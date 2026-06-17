@@ -1,6 +1,6 @@
 // Extension « Maîtrise » : résolveur central, paliers 1→10, embranchements L5/L10,
 // compatibilité 3 niveaux (sans extension) et flux d'amélioration via le store.
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { POWERS } from '../data/powers.js';
 import { resolveWrongAnswer } from '../logic/turnHelpers.js';
@@ -121,5 +121,40 @@ describe('flux store : amélioration jusqu’à L10 + choix de voie', () => {
     for (let i = 0; i < 6; i++) S().upgradePowerLevel('double');
     expect(S().teams[0].powers.double.level).toBe(3);
     expect(S().showSpecPicker).toBeNull();
+  });
+});
+
+describe('branches Foudre câblées', () => {
+  const S = () => useGameStore.getState();
+  const base = (teams) => useGameStore.setState({
+    phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0,
+    log: [], extensions: { equipment: true, mastery: true }, showTargetPicker: { powerKey: 'foudre' },
+    teams, emitVfx: () => {},
+  });
+  beforeEach(() => vi.spyOn(Math, 'random').mockReturnValue(0.5));
+  const after = () => vi.restoreAllMocks();
+
+  it('Cataclysme (L10) recule TOUTES les autres équipes', () => {
+    base([
+      teamWith('foudre', { level: 10, spec10: 'cataclysm' }),
+      { ...teamWith('foudre'), pos: 'n10', powers: {} },
+      { ...teamWith('foudre'), pos: 'n8', powers: {} },
+    ]);
+    S().applyOffensivePower(1);
+    expect(S().teams[1].pos).not.toBe('n10');
+    expect(S().teams[2].pos).not.toBe('n8'); // touchée aussi
+    after();
+  });
+
+  it('Égide (L5) : la cible protège son recul avec son Bouclier (charge consommée)', () => {
+    base([
+      teamWith('foudre', { level: 1 }), // d4 → recul 3 (mock 0.5)
+      { ...teamWith('bouclier', { level: 5, spec5: 'aegis', charges: 1 }), pos: 'n10' },
+    ]);
+    S().applyOffensivePower(1);
+    // bouclier niv.5 retire 6 ≥ 3 → recul absorbé, charge consommée
+    expect(S().teams[1].pos).toBe('n10');
+    expect(S().teams[1].powers.bouclier.charges).toBe(0);
+    after();
   });
 });
