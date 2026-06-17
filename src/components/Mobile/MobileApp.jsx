@@ -214,11 +214,28 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
             <div style={{ fontSize: 12, color }}>{RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name}</div>
           </div>
         </div>
-        {item.desc && <div style={{ fontSize: 13.5, color: 'var(--ink-700)', marginBottom: 8 }}>{item.desc}</div>}
+        {item.desc && (
+          <div style={{
+            fontSize: 14, color: 'var(--ink-600)', fontStyle: 'italic', lineHeight: 1.4,
+            margin: '2px 0 12px', paddingLeft: 12, borderLeft: `3px solid ${color}66`,
+          }}>{item.desc}</div>
+        )}
         {fx.length > 0 && (
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--ink-800)', lineHeight: 1.5 }}>
-            {fx.map((l, i) => <li key={i}>{l}</li>)}
-          </ul>
+          <div style={{
+            background: `${color}12`, border: `1px solid ${color}40`,
+            borderRadius: 12, padding: '10px 12px', marginTop: 2,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color, marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {'⚙️'} Effets
+            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {fx.map((l, i) => (
+                <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: 'var(--ink-800)', lineHeight: 1.4 }}>
+                  <span style={{ color, flexShrink: 0, fontWeight: 700 }}>{'▸'}</span><span>{l}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         <SetBonusInfo item={item} team={team} />
 
