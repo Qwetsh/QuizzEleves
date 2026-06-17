@@ -249,17 +249,81 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
   );
 }
 
-function PowerRow({ powerKey, charges, level }) {
+// Une « branche » d'arbre de talent pour un pouvoir : ses 3 niveaux empilés, le
+// niveau actuel mis en avant, les niveaux supérieurs montrant leur coût
+// d'amélioration et leur effet. Lecture seule (l'amélioration se fait au TBI).
+function TalentBranch({ powerKey, entry, active }) {
   const info = POWERS[powerKey];
   if (!info) return null;
+  const level = entry?.level ?? 1;
+  const charges = entry?.charges ?? 0;
+  const levels = info.levels || [];
+  const maxLvl = levels.length || 3;
   return (
-    <div className={'mob-power ' + (charges <= 0 ? 'is-empty' : '')} style={{ '--accent': info.color }}>
-      <span className="mob-power-disc">{info.icon}</span>
-      <div className="mob-power-text">
-        <div className="mob-power-name">{info.name} {level > 1 && <span className="mob-power-lvl">Niv.{level}</span>}</div>
-        <div className="mob-power-desc">{info.category === 'off' ? 'Attaque' : 'Défense'} · {info.desc}</div>
+    <div className={'mob-tt-card' + (charges <= 0 ? ' is-spent' : '')} style={{ '--accent': info.color }}>
+      <div className="mob-tt-head">
+        <span className="mob-tt-disc">{info.icon}</span>
+        <div className="mob-tt-headtxt">
+          <div className="mob-tt-name">
+            {info.name}
+            {active && <span className="mob-tt-active">{'✦'} actif</span>}
+          </div>
+          <div className="mob-tt-cat">
+            {info.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`} · Niv. {level}/{maxLvl}
+          </div>
+        </div>
+        <span className="mob-tt-charges">
+          <b>{charges}</b><small>charge{charges > 1 ? 's' : ''}</small>
+        </span>
       </div>
-      <span className="mob-power-charges">{charges}</span>
+      <div className="mob-tt-track">
+        {levels.map((lv, i) => {
+          const n = i + 1;
+          const state = n < level ? 'done' : n === level ? 'current' : n === level + 1 ? 'next' : 'locked';
+          const cost = n >= 2 ? (info.upgradeCosts?.[n - 2] ?? null) : null;
+          return (
+            <div key={n} className={'mob-tt-node is-' + state}>
+              <div className="mob-tt-bullet">{state === 'done' ? '✓' : n}</div>
+              <div className="mob-tt-node-body">
+                <div className="mob-tt-node-top">
+                  <span className="mob-tt-lvl">Niv. {n}</span>
+                  {state === 'current' && <span className="mob-tt-tag mob-tt-tag--cur">niveau actuel</span>}
+                  {state === 'done' && <span className="mob-tt-tag mob-tt-tag--done">{'✓'} acquis</span>}
+                  {(state === 'next' || state === 'locked') && cost != null && (
+                    <span className="mob-tt-tag mob-tt-tag--cost">{'\u{1FA99}'} {cost}</span>
+                  )}
+                </div>
+                <div className="mob-tt-desc">{lv.desc}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Onglet « Pouvoirs » : arbre de talent pour chaque pouvoir possédé par l'équipe.
+function PowersView({ session, teamIdx }) {
+  const t = session.teams[teamIdx];
+  const pKeys = powerKeysOf(t);
+  const activeKeys = new Set([t.powerDef, t.powerOff].filter(Boolean));
+  return (
+    <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
+      <div className="mob-pick-head">{'⚡'} Arbre de talents</div>
+      <div className="mob-tt-bank">
+        <span className="mob-stat mob-stat--coin">{'\u{1FA99}'} <b>{t.money}</b></span>
+        <span className="mob-tt-hint">Améliorations à acheter sur le tableau (boutique)</span>
+      </div>
+      {pKeys.length === 0 ? (
+        <div className="mob-empty" style={{ margin: 14 }}>Aucun pouvoir pour l'instant…</div>
+      ) : (
+        <div className="mob-tt">
+          {pKeys.map((k) => (
+            <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -280,7 +344,6 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
   const bagCells = (t.bag || []).map((c) => ({ key: cellKey(c), n: cellN(c) })).filter((c) => ITEMS[c.key]);
   const bagUnits = bagCells.reduce((s, c) => s + c.n, 0);
   const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
-  const pKeys = powerKeysOf(t);
   const totalQ = (t.correct ?? 0) + (t.wrong ?? 0);
   const rate = totalQ ? Math.round((t.correct / totalQ) * 100) : null;
 
@@ -372,12 +435,6 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
           <div className="mob-foot" style={{ marginTop: 6 }}>Achats sur le tableau (lecture seule ici).</div>
         </section>
       )}
-
-      <section className="mob-section">
-        <h2 className="mob-section-title">Pouvoirs</h2>
-        {pKeys.length === 0 ? <div className="mob-empty">Aucun pouvoir</div>
-          : pKeys.map((k) => <PowerRow key={k} powerKey={k} charges={t.powers[k]?.charges ?? 0} level={t.powers[k]?.level ?? 1} />)}
-      </section>
 
       <div className="mob-foot">{owned ? "Touche un objet pour l'équiper, le ranger ou le vendre" : "Lecture seule · l'écran se met à jour en direct"}</div>
 
@@ -537,6 +594,7 @@ function TabBar({ tab, setTab }) {
       boxShadow: '0 -4px 16px rgba(0,0,0,0.12)',
     }}>
       <Tab id="team" icon={'\u{1F6E1}️'} label="Mon équipe" />
+      <Tab id="powers" icon={'⚡'} label="Pouvoirs" />
       <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
     </nav>
   );
@@ -636,6 +694,8 @@ export default function MobileApp() {
       <>
         {tab === 'team'
           ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />
+          : tab === 'powers'
+          ? <PowersView session={session} teamIdx={teamIdx} />
           : <HistoryView session={session} />}
         <TabBar tab={tab} setTab={setTab} />
       </>

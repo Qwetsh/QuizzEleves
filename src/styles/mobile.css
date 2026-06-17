@@ -166,31 +166,86 @@
 .mob-bag-name { flex: 1; min-width: 0; }
 .mob-shop-price { font-weight: 700; color: #8a6418; white-space: nowrap; }
 
-.mob-power {
-  --accent: #888;
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px; margin-bottom: 8px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 8%, #fffdf7), color-mix(in oklab, var(--accent) 16%, #fffdf7));
-  border: 1px solid color-mix(in oklab, var(--accent) 40%, rgba(122,94,58,0.2));
+/* === Onglet « Pouvoirs » : arbre de talent ============================== */
+.mob-tt-bank { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 14px 8px; }
+.mob-tt-bank .mob-stat--coin { font-size: 16px; }
+.mob-tt-hint { flex: 1; min-width: 120px; font-size: 11.5px; color: var(--ink-500, #8a7858); font-style: italic; line-height: 1.25; }
+
+.mob-tt { display: flex; flex-direction: column; gap: 14px; padding: 2px 14px 8px; }
+
+.mob-tt-card {
+  --accent: #888; border-radius: 18px; overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 6%, #fffdf7), color-mix(in oklab, var(--accent) 12%, #fffdf7));
+  border: 1.5px solid color-mix(in oklab, var(--accent) 42%, rgba(122,94,58,0.2));
+  box-shadow: 0 6px 16px rgba(60,42,18,0.1);
 }
-.mob-power.is-empty { filter: saturate(0.4); opacity: 0.6; }
-.mob-power-disc {
-  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff;
+.mob-tt-card.is-spent { filter: saturate(0.55); opacity: 0.82; }
+
+.mob-tt-head {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 22%, #fffdf7), color-mix(in oklab, var(--accent) 10%, #fffdf7));
+  border-bottom: 1px solid color-mix(in oklab, var(--accent) 30%, rgba(122,94,58,0.15));
+}
+.mob-tt-disc {
+  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 26px; color: #fff;
   background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 55%, #fff), var(--accent));
-  box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.22);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.22), 0 3px 6px rgba(0,0,0,0.18);
   text-shadow: 0 1px 0 rgba(0,0,0,0.25);
 }
-.mob-power-text { flex: 1; min-width: 0; }
-.mob-power-name { font-family: var(--font-display); font-size: 16px; }
-.mob-power-lvl { font-size: 11px; color: #7434b0; font-family: var(--font-ui); font-weight: 700; }
-.mob-power-desc { font-size: 12px; color: var(--ink-600, #5a4424); line-height: 1.3; }
-.mob-power-charges {
-  flex-shrink: 0; min-width: 30px; height: 30px; padding: 0 8px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 999px; background: var(--ink-800, #2a1d0a); color: var(--gold-400, #f3c969);
-  font-family: var(--font-display); font-size: 16px; border: 1.5px solid var(--gold-500, #c79120);
+.mob-tt-headtxt { flex: 1; min-width: 0; }
+.mob-tt-name { font-family: var(--font-display); font-size: 19px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mob-tt-active {
+  font-family: var(--font-ui); font-size: 10.5px; font-weight: 800; letter-spacing: .03em;
+  padding: 2px 7px; border-radius: 999px; color: #fff; text-shadow: none;
+  background: color-mix(in oklab, var(--accent) 80%, #000);
 }
+.mob-tt-cat { font-size: 12px; color: var(--ink-600, #5a4424); margin-top: 2px; }
+.mob-tt-charges {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; line-height: 1;
+  min-width: 46px; padding: 6px 8px; border-radius: 12px;
+  background: var(--ink-800, #2a1d0a); color: var(--gold-400, #f3c969); border: 1.5px solid var(--gold-500, #c79120);
+}
+.mob-tt-charges b { font-family: var(--font-display); font-size: 18px; }
+.mob-tt-charges small { font-size: 8.5px; opacity: .85; margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+
+.mob-tt-track { position: relative; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.mob-tt-track::before {
+  content: ''; position: absolute; left: 28px; top: 26px; bottom: 26px; width: 3px; border-radius: 2px;
+  background: color-mix(in oklab, var(--accent) 30%, rgba(122,94,58,0.18));
+}
+.mob-tt-node { position: relative; display: flex; gap: 12px; align-items: flex-start; }
+.mob-tt-bullet {
+  position: relative; z-index: 1; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  background: #f2ead8; color: #8a7858; border: 2.5px solid #d8c9a6;
+}
+.mob-tt-node.is-done .mob-tt-bullet {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 60%, #fff), var(--accent));
+  color: #fff; border-color: var(--accent); text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+.mob-tt-node.is-current .mob-tt-bullet {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 45%, #fff), var(--accent));
+  color: #fff; border-color: #fff;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 12px color-mix(in oklab, var(--accent) 70%, transparent);
+}
+.mob-tt-node.is-next .mob-tt-bullet { background: #fffdf7; color: var(--accent); border-color: var(--accent); border-style: dashed; }
+.mob-tt-node.is-locked { opacity: 0.5; }
+.mob-tt-node-body {
+  flex: 1; min-width: 0; padding: 6px 10px; border-radius: 12px;
+  background: rgba(255,255,255,0.6); border: 1px solid rgba(122,94,58,0.12);
+}
+.mob-tt-node.is-current .mob-tt-node-body {
+  background: #fff; border-color: color-mix(in oklab, var(--accent) 45%, rgba(122,94,58,0.2));
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+.mob-tt-node-top { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
+.mob-tt-lvl { font-family: var(--font-display); font-size: 13px; color: var(--ink-700, #43331a); }
+.mob-tt-tag { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px; letter-spacing: .02em; }
+.mob-tt-tag--cur { background: color-mix(in oklab, var(--accent) 85%, #000); color: #fff; }
+.mob-tt-tag--done { background: #e3efe0; color: #2f6b34; }
+.mob-tt-tag--cost { background: var(--ink-800, #2a1d0a); color: var(--gold-400, #f3c969); border: 1px solid var(--gold-500, #c79120); }
+.mob-tt-desc { font-size: 12.5px; color: var(--ink-600, #5a4424); line-height: 1.35; }
 
 .mob-foot { text-align: center; font-size: 12px; color: var(--ink-500, #8a7858); padding: 18px 16px 4px; font-style: italic; }
