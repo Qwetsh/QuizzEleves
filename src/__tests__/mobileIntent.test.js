@@ -78,3 +78,47 @@ describe('applyTeamIntent', () => {
     expect(S().teams[1].equipment.head).toBeNull();
   });
 });
+
+describe('applyAdminIntent (contrôle total)', () => {
+  it('adminMoney ajoute/retire et plafonne à 0', () => {
+    setup();
+    useGameStore.setState({ teams: [{ ...S().teams[0], money: 10 }, S().teams[1]] });
+    S().applyAdminIntent('adminMoney', { teamIdx: 0, delta: 5 });
+    expect(S().teams[0].money).toBe(15);
+    S().applyAdminIntent('adminMoney', { teamIdx: 0, delta: -100 });
+    expect(S().teams[0].money).toBe(0); // clamp
+  });
+
+  it('adminGiveItem équipe un objet (slot libre)', () => {
+    setup();
+    S().applyAdminIntent('adminGiveItem', { teamIdx: 1, key: EQUIP });
+    expect(S().teams[1].equipment.head).toBe(EQUIP);
+  });
+
+  it('adminRemoveEquip retire sans rembourser', () => {
+    setup();
+    useGameStore.setState({ teams: [S().teams[0], { ...S().teams[1], equipment: { head: EQUIP, body: null, feet: null }, money: 7 }] });
+    S().applyAdminIntent('adminRemoveEquip', { teamIdx: 1, slot: 'head' });
+    expect(S().teams[1].equipment.head).toBeNull();
+    expect(S().teams[1].money).toBe(7); // pas de remboursement (admin)
+  });
+
+  it('adminRemoveBag retire une unité', () => {
+    setup();
+    useGameStore.setState({ teams: [S().teams[0], { ...S().teams[1], bag: ['painVoyageur'] }] });
+    S().applyAdminIntent('adminRemoveBag', { teamIdx: 1, key: 'painVoyageur' });
+    expect(occupied(S().teams[1].bag)).toEqual([]);
+  });
+
+  it('admin agit MÊME pendant une résolution (pas de verrou)', () => {
+    setup({ currentTeam: 0, showQuestion: { question: {} } });
+    useGameStore.setState({ teams: [{ ...S().teams[0], money: 0 }, S().teams[1]] });
+    S().applyAdminIntent('adminMoney', { teamIdx: 0, delta: 50 });
+    expect(S().teams[0].money).toBe(50); // override
+  });
+
+  it('teamIdx invalide : aucune erreur', () => {
+    setup();
+    expect(() => S().applyAdminIntent('adminMoney', { teamIdx: 9, delta: 5 })).not.toThrow();
+  });
+});

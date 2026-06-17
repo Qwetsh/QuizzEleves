@@ -9,20 +9,24 @@ import { subscribeIntents, fetchIntents, deleteIntent } from '../../logic/sessio
 export default function IntentConsumer() {
   const sessionCode = useGameStore((s) => s.sessionCode);
   const applyTeamIntent = useGameStore((s) => s.applyTeamIntent);
+  const applyAdminIntent = useGameStore((s) => s.applyAdminIntent);
 
   useEffect(() => {
     if (!sessionCode) return;
     let alive = true;
     const handle = (row) => {
       if (!row) return;
-      try { applyTeamIntent(row.token, row.type, row.payload || {}); } catch { /* commande ignorée */ }
+      try {
+        if (typeof row.type === 'string' && row.type.startsWith('admin')) applyAdminIntent(row.type, row.payload || {});
+        else applyTeamIntent(row.token, row.type, row.payload || {});
+      } catch { /* commande ignorée */ }
       deleteIntent(row.id).catch(() => {});
     };
     // Rattrapage des intentions arrivées avant l'abonnement.
     fetchIntents(sessionCode).then((rows) => { if (alive) rows.forEach(handle); }).catch(() => {});
     const unsub = subscribeIntents(sessionCode, handle);
     return () => { alive = false; unsub(); };
-  }, [sessionCode, applyTeamIntent]);
+  }, [sessionCode, applyTeamIntent, applyAdminIntent]);
 
   return null;
 }

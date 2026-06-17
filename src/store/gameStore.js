@@ -1309,6 +1309,51 @@ export const useGameStore = create((set, get) => ({
     }
   },
 
+  // --- Intentions ADMIN (interface prof sur téléphone, code 54150) ---
+  // Contrôle total : agit sur N'IMPORTE quelle équipe (par index), SANS verrou.
+  // Types : adminMoney {teamIdx, delta} · adminGiveItem {teamIdx, key} ·
+  // adminRemoveEquip {teamIdx, slot} · adminRemoveBag {teamIdx, key}.
+  applyAdminIntent: (type, payload = {}) => {
+    const st = get();
+    const idx = Number(payload.teamIdx);
+    const team = st.teams[idx];
+    if (!team) return;
+
+    if (type === 'adminMoney') {
+      const delta = Math.trunc(Number(payload.delta) || 0);
+      const nt = [...st.teams];
+      nt[idx] = { ...team, money: Math.max(0, (team.money ?? 0) + delta) };
+      set({ teams: nt });
+      get().addLog(`🛠️ ${team.emoji} ${team.name} : ${delta >= 0 ? '+' : ''}${delta} 🪙 (admin)`);
+      get().checkMoneyMilestone(idx);
+    } else if (type === 'adminGiveItem') {
+      if (ITEMS[payload.key]) itemH.grantItem(set, get, idx, payload.key);
+    } else if (type === 'adminRemoveEquip') {
+      const cur = team.equipment?.[payload.slot];
+      if (cur) {
+        const it = ITEMS[cur];
+        const nt = [...st.teams];
+        nt[idx] = { ...team, equipment: { ...team.equipment, [payload.slot]: null } };
+        set({ teams: nt });
+        get().addLog(`🛠️ ${team.emoji} ${team.name} perd ${it?.icon || ''} ${it?.name || payload.slot} (admin)`);
+      }
+    } else if (type === 'adminRemoveBag') {
+      const bag = itemH.normalizeBag(team.bag);
+      const i = bag.findIndex((c) => itemH.cellKey(c) === payload.key);
+      if (i >= 0) {
+        const n = itemH.cellN(bag[i]);
+        bag[i] = n > 1 ? itemH.mkCell(payload.key, n - 1) : null;
+        const nt = [...st.teams];
+        nt[idx] = { ...team, bag };
+        set({ teams: nt });
+        const it = ITEMS[payload.key];
+        get().addLog(`🛠️ ${team.emoji} ${team.name} perd ${it?.icon || ''} ${it?.name || payload.key} (admin)`);
+      }
+    }
+    if (get().phase === 'game') saveGame(get());
+  },
+
+
   // --- Moteur d'effets composable (objets) : routeurs des interruptions ---
   // Sélecteur de cible générique : route vers le pouvoir (legacy) ou le moteur.
   selectTarget: (i) => {

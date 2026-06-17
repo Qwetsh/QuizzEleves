@@ -2,7 +2,7 @@
 // (QR), choisit son équipe, et suit en direct son or, son équipement, son sac
 // et ses pouvoirs/charges — y compris pendant le tour adverse. Le TBI publie
 // l'état ; ici on ne fait que lire (l'édition viendra en Phase 3).
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent } from '../../logic/sessionConfig';
 import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
@@ -409,6 +409,111 @@ function HistoryView({ session }) {
   );
 }
 
+// Sélecteur d'objet (admin) : recherche + grille de tout le catalogue.
+function AdminItemPicker({ onPick, onClose }) {
+  const [q, setQ] = useState('');
+  const keys = Object.keys(ITEMS).filter((k) => !q || ITEMS[k].name.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'flex-end' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: '80vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: '14px 16px 24px' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: '#8a6418', marginBottom: 8 }}>Donner un objet</div>
+        <input className="mob-text-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher…" style={{ marginBottom: 10 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {keys.map((k) => {
+            const item = ITEMS[k];
+            const color = RARITIES[item.rarity]?.color || '#888';
+            return (
+              <button key={k} onClick={() => onPick(k)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: `1.5px solid ${color}55`, background: '#fffefb', cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ width: 30, height: 30, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>{itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.icon}</span>
+                <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{item.name}</span>
+              </button>
+            );
+          })}
+        </div>
+        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>Annuler</button>
+      </div>
+    </div>
+  );
+}
+
+// Interface ADMINISTRATEUR (prof) : contrôle total sur chaque équipe (or,
+// équipement, sac). Envoie des intents 'admin*' que le TBI applique sans verrou.
+function AdminPanel({ code, session, onClose }) {
+  const [picker, setPicker] = useState(null); // index d'équipe pour le choix d'objet
+  const send = (type, payload) => sendIntent(code, 'admin', type, payload).catch(() => {});
+  const teams = session.teams || [];
+
+  const MoneyBtn = ({ idx, delta }) => (
+    <button onClick={() => send('adminMoney', { teamIdx: idx, delta })}
+      style={{ padding: '6px 10px', borderRadius: 9, border: '1.5px solid rgba(122,94,58,0.3)', background: delta >= 0 ? '#e6f3d6' : '#f7d7d2', color: delta >= 0 ? '#2f5a18' : '#7a1320', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
+      {delta >= 0 ? `+${delta}` : delta}
+    </button>
+  );
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'linear-gradient(180deg,#fff7e6,#f0e2c4)', overflowY: 'auto', padding: '14px 14px 30px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#8a1f2e' }}>🛠️ Admin — {code}</div>
+        <button className="mob-btn mob-btn--ghost" style={{ minWidth: 0, padding: '8px 16px' }} onClick={onClose}>Fermer</button>
+      </div>
+
+      {teams.length === 0 && <div className="mob-empty">Aucune équipe pour l'instant.</div>}
+
+      {teams.map((t) => {
+        const equipped = Object.keys(SLOTS).filter((s) => t.equipment?.[s]);
+        const bagCells = (t.bag || []).map((c) => ({ key: cellKey(c), n: cellN(c) })).filter((c) => ITEMS[c.key]);
+        return (
+          <div key={t.idx} style={{ border: `2px solid ${t.color}`, borderRadius: 14, padding: 12, marginBottom: 12, background: '#fffefb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 22 }}>{t.emoji}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: t.color, flex: 1 }}>{t.name}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{'\u{1FA99}'} {t.money}</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              <MoneyBtn idx={t.idx} delta={-10} /><MoneyBtn idx={t.idx} delta={-5} />
+              <MoneyBtn idx={t.idx} delta={5} /><MoneyBtn idx={t.idx} delta={10} />
+              <button onClick={() => { const v = window.prompt("Modifier l'or (ex. 25 ou -15) :"); const d = parseInt(v, 10); if (!Number.isNaN(d)) send('adminMoney', { teamIdx: t.idx, delta: d }); }}
+                style={{ padding: '6px 10px', borderRadius: 9, border: '1.5px solid rgba(122,94,58,0.3)', background: '#fffdf7', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>💰…</button>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>ÉQUIPEMENT</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {equipped.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>rien</span>
+                : equipped.map((s) => {
+                  const it = ITEMS[t.equipment[s]];
+                  return (
+                    <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 999, background: 'rgba(122,94,58,0.08)', border: '1px solid rgba(122,94,58,0.25)', fontSize: 12 }}>
+                      {it.icon} {it.name}
+                      <button onClick={() => send('adminRemoveEquip', { teamIdx: t.idx, slot: s })} style={{ border: 'none', background: '#f7d7d2', color: '#7a1320', borderRadius: 6, cursor: 'pointer', fontWeight: 700, padding: '0 5px' }}>✕</button>
+                    </span>
+                  );
+                })}
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>SAC</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              {bagCells.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>vide</span>
+                : bagCells.map((c, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 999, background: 'rgba(122,94,58,0.08)', border: '1px solid rgba(122,94,58,0.25)', fontSize: 12 }}>
+                    {ITEMS[c.key].icon} {ITEMS[c.key].name}{c.n > 1 ? ` ×${c.n}` : ''}
+                    <button onClick={() => send('adminRemoveBag', { teamIdx: t.idx, key: c.key })} style={{ border: 'none', background: '#f7d7d2', color: '#7a1320', borderRadius: 6, cursor: 'pointer', fontWeight: 700, padding: '0 5px' }}>✕</button>
+                  </span>
+                ))}
+            </div>
+
+            <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, padding: '8px 16px', fontSize: 14 }} onClick={() => setPicker(t.idx)}>🎁 Donner un objet</button>
+          </div>
+        );
+      })}
+
+      {picker != null && (
+        <AdminItemPicker onPick={(key) => { send('adminGiveItem', { teamIdx: picker, key }); setPicker(null); }} onClose={() => setPicker(null)} />
+      )}
+    </div>
+  );
+}
+
 // Barre d'onglets fixe en bas (Mon équipe / Historique).
 function TabBar({ tab, setTab }) {
   const Tab = ({ id, icon, label }) => (
@@ -446,6 +551,20 @@ export default function MobileApp() {
   const [tab, setTab] = useState('team');
   const [token, setToken] = useState(''); // jeton « propriétaire » de l'équipe (mode téléphone)
   const [owned, setOwned] = useState(false); // l'équipe affichée est-elle CELLE du téléphone (édition autorisée)
+  const [admin, setAdmin] = useState(false); // interface prof (contrôle total), déverrouillée au triple-tap + code
+  const adminTap = useRef({ n: 0, t: 0 });
+
+  // Triple-tap (< 700 ms) puis code 54150 → ouvre l'interface admin (même code
+  // que les outils d'édition du tableau).
+  const onAdminTap = () => {
+    const now = Date.now();
+    const c = adminTap.current;
+    if (now - c.t > 700) c.n = 0;
+    c.t = now; c.n += 1;
+    if (c.n < 3) return;
+    c.n = 0;
+    if (window.prompt('Code administrateur :') === '54150') setAdmin(true);
+  };
 
   // Jeton local par code : permet de retrouver SON équipe (reconnexion / lobby).
   useEffect(() => {
@@ -502,21 +621,36 @@ export default function MobileApp() {
     return () => { alive = false; };
   }, [session, teamIdx, token, code]);
 
+  let content;
   if (!code || code.length < 4 || (error && !session)) {
-    return <CodeScreen code={code} setCode={setCode} error={error} connecting={connecting} />;
+    content = <CodeScreen code={code} setCode={setCode} error={error} connecting={connecting} />;
+  } else if (!session) {
+    content = <Centered>Connexion à la partie {code}…</Centered>;
+  } else if (session.status === 'lobby') {
+    // Lobby (mode téléphone) : l'élève crée son équipe et attend le démarrage.
+    content = token ? <LobbyCreateScreen code={code} token={token} /> : <Centered>Connexion à la partie {code}…</Centered>;
+  } else if (teamIdx == null || !session.teams?.[teamIdx]) {
+    content = <TeamPicker session={session} onPick={chooseTeam} />;
+  } else {
+    content = (
+      <>
+        {tab === 'team'
+          ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />
+          : <HistoryView session={session} />}
+        <TabBar tab={tab} setTab={setTab} />
+      </>
+    );
   }
-  if (!session) return <Centered>Connexion à la partie {code}…</Centered>;
-  // Lobby (mode téléphone) : l'élève crée son équipe et attend le démarrage.
-  if (session.status === 'lobby') {
-    return token ? <LobbyCreateScreen code={code} token={token} /> : <Centered>Connexion à la partie {code}…</Centered>;
-  }
-  if (teamIdx == null || !session.teams?.[teamIdx]) return <TeamPicker session={session} onPick={chooseTeam} />;
+
   return (
     <>
-      {tab === 'team'
-        ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />
-        : <HistoryView session={session} />}
-      <TabBar tab={tab} setTab={setTab} />
+      {content}
+      {/* Zone discrète (coin haut-gauche) : triple-tap + code 54150 → admin. */}
+      {code && code.length >= 4 && !admin && (
+        <button onClick={onAdminTap} aria-label="Accès administrateur"
+          style={{ position: 'fixed', top: 0, left: 0, width: 84, height: 46, opacity: 0, zIndex: 70, border: 'none', background: 'transparent' }} />
+      )}
+      {admin && session && <AdminPanel code={code} session={session} onClose={() => setAdmin(false)} />}
     </>
   );
 }
