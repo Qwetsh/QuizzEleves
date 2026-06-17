@@ -323,6 +323,41 @@ function PowersView({ session, teamIdx }) {
   );
 }
 
+// Onglet « Boutique » : vitrine en lecture seule (achats sur le tableau).
+function ShopView({ session, teamIdx }) {
+  const [sheet, setSheet] = useState(null);
+  const t = session.teams[teamIdx];
+  const itemsOn = extOn(session.extensions, 'equipment');
+  const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
+  return (
+    <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
+      <div className="mob-pick-head">{'\u{1F6D2}'} Boutique</div>
+      {!itemsOn ? (
+        <div className="mob-empty" style={{ margin: 14 }}>Objets désactivés pour cette partie.</div>
+      ) : shopKeys.length === 0 ? (
+        <div className="mob-empty" style={{ margin: 14 }}>Étal vide pour l'instant…</div>
+      ) : (
+        <section className="mob-section">
+          <div className="mob-bag">
+            {shopKeys.map((k, i) => {
+              const item = ITEMS[k];
+              return (
+                <button key={i} className="mob-bag-item" onClick={() => setSheet({ itemKey: k, loc: { kind: 'shop' } })} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
+                  {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
+                  <span className="mob-bag-name">{item.name}</span>
+                  <span className="mob-shop-price">{'\u{1FA99}'} {item.price}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mob-foot" style={{ marginTop: 10 }}>Achats sur le tableau (lecture seule ici).</div>
+        </section>
+      )}
+      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={false} locked={false} onAction={() => {}} onClose={() => setSheet(null)} />}
+    </div>
+  );
+}
+
 function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
@@ -338,7 +373,6 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
   const itemsOn = extOn(session.extensions, 'equipment');
   const bagCells = (t.bag || []).map((c) => ({ key: cellKey(c), n: cellN(c) })).filter((c) => ITEMS[c.key]);
   const bagUnits = bagCells.reduce((s, c) => s + c.n, 0);
-  const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
   const pKeys = powerKeysOf(t);
   const totalQ = (t.correct ?? 0) + (t.wrong ?? 0);
   const rate = totalQ ? Math.round((t.correct / totalQ) * 100) : null;
@@ -425,25 +459,6 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
           </div>
         )}
       </section>
-      )}
-
-      {shopKeys.length > 0 && (
-        <section className="mob-section">
-          <h2 className="mob-section-title">{'\u{1F6D2}'} Boutique <span className="mob-count">{shopKeys.length}</span></h2>
-          <div className="mob-bag">
-            {shopKeys.map((k, i) => {
-              const item = ITEMS[k];
-              return (
-                <button key={i} className="mob-bag-item" onClick={() => setSheet({ itemKey: k, loc: { kind: 'shop' } })} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
-                  {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
-                  <span className="mob-bag-name">{item.name}</span>
-                  <span className="mob-shop-price">{'\u{1FA99}'} {item.price}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mob-foot" style={{ marginTop: 6 }}>Achats sur le tableau (lecture seule ici).</div>
-        </section>
       )}
 
       <div className="mob-foot">{owned ? "Touche un objet pour l'équiper, le ranger ou le vendre" : "Lecture seule · l'écran se met à jour en direct"}</div>
@@ -581,8 +596,8 @@ function AdminPanel({ code, session, onClose }) {
   );
 }
 
-// Barre d'onglets fixe en bas (Mon équipe / Historique).
-function TabBar({ tab, setTab }) {
+// Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Historique).
+function TabBar({ tab, setTab, hasShop }) {
   const Tab = ({ id, icon, label }) => (
     <button
       onClick={() => setTab(id)}
@@ -603,8 +618,9 @@ function TabBar({ tab, setTab }) {
       background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTop: '1px solid rgba(122,94,58,0.2)',
       boxShadow: '0 -4px 16px rgba(0,0,0,0.12)',
     }}>
-      <Tab id="team" icon={'\u{1F6E1}️'} label="Mon équipe" />
+      <Tab id="team" icon={'\u{1F6E1}️'} label="Équipe" />
       <Tab id="powers" icon={'⚡'} label="Pouvoirs" />
+      {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label="Boutique" />}
       <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
     </nav>
   );
@@ -700,14 +716,15 @@ export default function MobileApp() {
   } else if (teamIdx == null || !session.teams?.[teamIdx]) {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
+    const hasShop = extOn(session.extensions, 'equipment');
+    const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} />
+      : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} />
+      : tab === 'history' ? <HistoryView session={session} />
+      : <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />;
     content = (
       <>
-        {tab === 'team'
-          ? <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />
-          : tab === 'powers'
-          ? <PowersView session={session} teamIdx={teamIdx} />
-          : <HistoryView session={session} />}
-        <TabBar tab={tab} setTab={setTab} />
+        {view}
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} />
       </>
     );
   }
