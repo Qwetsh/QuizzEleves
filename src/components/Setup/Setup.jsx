@@ -16,6 +16,8 @@ import ItemsChecklist from './ItemsChecklist';
 import StarterChestConfig from './StarterChestConfig';
 import ExtensionsChecklist from './ExtensionsChecklist';
 import RulesConfig from './RulesConfig';
+import ConnectionMode from './ConnectionMode';
+import LobbyPanel from './LobbyPanel';
 import { extOn } from '../../extensions/registry';
 
 // Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
@@ -113,6 +115,8 @@ export default function Setup() {
   const resumeGame = useGameStore((s) => s.resumeGame);
   const extensions = useGameStore((s) => s.extensions);
   const itemsOn = extOn(extensions, 'equipment');
+  const connectionMode = useGameStore((s) => s.connectionMode);
+  const phoneMode = connectionMode === 'phone';
   const [hasSave, setHasSave] = useState(false);
   // Accès aux outils d'édition hors dev : triple-clic sur le dé + code.
   const [toolsUnlocked, setToolsUnlocked] = useState(() => {
@@ -183,13 +187,15 @@ export default function Setup() {
               {"Jeu de plateau p\u00e9dagogique \u00b7 Cycle 4"}
             </div>
           </div>
-          <button
-            onClick={startGame}
-            className="btn btn--green btn--lg"
-            style={{ marginLeft: 'auto', padding: '16px 36px' }}
-          >
-            {"\u{1F680} Lancer la partie"}
-          </button>
+          {!phoneMode && (
+            <button
+              onClick={startGame}
+              className="btn btn--green btn--lg"
+              style={{ marginLeft: 'auto', padding: '16px 36px' }}
+            >
+              {"\u{1F680} Lancer la partie"}
+            </button>
+          )}
         </div>
 
         {hasSave && (
@@ -210,8 +216,17 @@ export default function Setup() {
             <LevelSelect />
           </div>
           <div className="panel">
-            <TeamCount />
-            <TeamCustomization />
+            <ConnectionMode />
+          </div>
+          <div className="panel">
+            {phoneMode ? (
+              <LobbyPanel />
+            ) : (
+              <>
+                <TeamCount />
+                <TeamCustomization />
+              </>
+            )}
           </div>
           <div className="panel">
             <ExtensionsChecklist />

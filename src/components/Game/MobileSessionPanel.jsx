@@ -13,7 +13,14 @@ export default function MobileSessionPanel() {
   const shopStock = useGameStore((s) => s.shopStock);
   const log = useGameStore((s) => s.log);
   const extensions = useGameStore((s) => s.extensions);
-  const [code, setCode] = useState(null);
+  // Code de session partagé (créé ici en mode tableau, ou par le lobby en mode
+  // téléphone) — source unique dans le store.
+  const code = useGameStore((s) => s.sessionCode);
+  const setSessionCode = useGameStore((s) => s.setSessionCode);
+  // Verrou d'édition mobile : pendant une résolution (question/duel/événement/
+  // déplacement), les téléphones ne peuvent pas modifier l'équipement.
+  const locked = useGameStore((s) => !!(s.showQuestion || s.showEvent || s.showFight || s.showDuelChoice
+    || s.rolling || s.showDiceModal || s.awaitingChoice || s.pendingActions || s.pendingLanding));
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -22,17 +29,17 @@ export default function MobileSessionPanel() {
   // (débounce léger pour grouper les rafales de mise à jour).
   useEffect(() => {
     if (!code) return;
-    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions });
+    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked });
     const id = setTimeout(() => { publishSession(code, payload).catch(() => {}); }, 250);
     return () => clearTimeout(id);
-  }, [code, teams, currentTeam, finished, shopStock, log, extensions]);
+  }, [code, teams, currentTeam, finished, shopStock, log, extensions, locked]);
 
   async function activate() {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions });
-      setCode(await createSession(payload));
+      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked });
+      setSessionCode(await createSession(payload));
       setOpen(true);
     } catch (e) { setError(e.message || 'Connexion impossible'); }
     setBusy(false);
