@@ -69,6 +69,7 @@ function resetToDefaults() {
     // muter les valeurs par défaut (idempotence préservée même si un effet
     // contient un objet imbriqué à l'avenir).
     p.levels = d.levels.map((lv) => JSON.parse(JSON.stringify(lv)));
+    if (d.tree) p.tree = clone(d.tree); // arbre Maîtrise (scale 1-10 + branches + coûts)
   }
   Object.assign(LOOT, DEFAULT_LOOT);
   // Sets : restaure name/bonus2/bonus3 d'origine (clone profond).
@@ -94,6 +95,14 @@ export function applyBalance(overrides) {
     if (Array.isArray(o.upgradeCosts)) p.upgradeCosts = o.upgradeCosts.slice();
     if (Array.isArray(o.levels)) {
       o.levels.forEach((lvOv, i) => { if (lvOv && p.levels[i]) deepAssign(p.levels[i].effect, lvOv); });
+    }
+    // Arbre Maîtrise : coûts L1→10, valeurs par niveau (scale) et effets de branches.
+    if (o.tree && p.tree) {
+      if (Array.isArray(o.tree.upgradeCosts)) p.tree.upgradeCosts = o.tree.upgradeCosts.slice();
+      if (Array.isArray(o.tree.scale)) o.tree.scale.forEach((s, i) => { if (s && p.tree.scale[i]) deepAssign(p.tree.scale[i], s); });
+      for (const b of ['branch5', 'branch10']) {
+        if (Array.isArray(o.tree[b])) o.tree[b].forEach((br, j) => { if (br?.effect && p.tree[b][j]) deepAssign(p.tree[b][j].effect, br.effect); });
+      }
     }
   }
 

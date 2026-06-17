@@ -1,8 +1,9 @@
 // Extension « Maîtrise » : résolveur central, paliers 1→10, embranchements L5/L10,
 // compatibilité 3 niveaux (sans extension) et flux d'amélioration via le store.
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { POWERS } from '../data/powers.js';
+import { applyBalance } from '../logic/balanceConfig.js';
 import { resolveWrongAnswer, applyRecul } from '../logic/turnHelpers.js';
 import {
   resolvePowerEffect, maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel,
@@ -217,6 +218,26 @@ describe('branches Bouclier câblées (or)', () => {
     const r = applyRecul(t, BOARD, 3, true); // niv.5 : +5 or de palier + 3 (1/case absorbée)
     expect(r.bonusMoney).toBe(8);
     expect(r.patch.money).toBe(8);
+  });
+});
+
+describe('éditeur d’équilibrage : overrides de l’arbre Maîtrise', () => {
+  afterEach(() => applyBalance({})); // restaure POWERS pour les autres tests
+
+  it('override des coûts d’amélioration (L1→10)', () => {
+    applyBalance({ powers: { foudre: { tree: { upgradeCosts: [5, 5, 5, 5, 5, 5, 5, 5, 5] } } } });
+    expect(powerUpgradeCost('foudre', 1, true)).toBe(5);
+    expect(powerUpgradeCost('foudre', 9, true)).toBe(5);
+  });
+
+  it('override d’une valeur de palier (scale)', () => {
+    applyBalance({ powers: { sablier: { tree: { scale: [{ divisor: 9 }] } } } });
+    expect(resolvePowerEffect({ powers: { sablier: { level: 1 } } }, 'sablier', true).divisor).toBe(9);
+  });
+
+  it('override d’un effet de branche (L5)', () => {
+    applyBalance({ powers: { foudre: { tree: { branch5: [{}, {}, { effect: { stealGold: 25 } }] } } } });
+    expect(resolvePowerEffect({ powers: { foudre: { level: 5, spec5: 'storm' } } }, 'foudre', true).stealGold).toBe(25);
   });
 });
 

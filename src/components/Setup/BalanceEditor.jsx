@@ -63,6 +63,14 @@ const SLOT_FILTERS = [{ slot: 'all', label: 'Tout' }, ...GROUPS.map((g) => ({ sl
 const FX_LABELS = {
   amount: 'Valeur', count: 'Nombre', bonusTime: 'Bonus temps (s)', bonusMoney: 'Bonus pièces',
   divisor: 'Diviseur du timer', timerDivisor: 'Diviseur timer (rafale)',
+  // Arbre Maîtrise — cœur
+  add: 'Questions ajoutées', flat: 'Bonus fixe (cases)', mode: 'Mode de relance',
+  // Arbre Maîtrise — branches
+  goldPerCaseAbsorbed: 'Or / case absorbée', absorbBonusMoney: 'Or par absorption', reflectFraction: 'Recul réfléchi (×)',
+  extraHide: 'Réponses éliminées (+)', timerMult: 'Temps de réponse (×)', bonusMoneyOnCorrect: 'Or si bonne réponse',
+  minRoll: 'Relance jusqu’à ≥', rerollCount: 'Nb de dés (meilleur)',
+  amountMult: 'Recul (×)', extraChargeCost: 'Charges en plus', stealGold: 'Or volé', goldPenaltyOnTimeout: 'Taxe (or)',
+  goldMult: 'Or rafale (×)', goldDiv: 'Or rafale (÷)', extraAdd: 'Questions en plus',
 };
 const LOOT_FIELDS = [
   { k: 'chestLegendaryChance', label: 'Chance légendaire — coffre', pct: true },
@@ -221,6 +229,31 @@ export default function BalanceEditor({ onClose }) {
       return { ...prev, powers };
     });
   };
+  // --- Pouvoirs : arbre « Maîtrise » (coûts L1→10, valeurs par niveau, branches) ---
+  const treeCost = (key, i) => ov.powers?.[key]?.tree?.upgradeCosts?.[i] ?? DEFAULTS.powers[key].tree.upgradeCosts[i];
+  const treeScale = (key, lvl, fxKey) => ov.powers?.[key]?.tree?.scale?.[lvl]?.[fxKey] ?? DEFAULTS.powers[key].tree.scale[lvl][fxKey];
+  const treeBranch = (key, slot, j, fxKey) => ov.powers?.[key]?.tree?.[slot]?.[j]?.effect?.[fxKey] ?? DEFAULTS.powers[key].tree[slot][j].effect[fxKey];
+  const mutTree = (key, fn) => {
+    setStatus(null);
+    setOv((prev) => {
+      const powers = { ...(prev.powers || {}) };
+      const cur = { ...(powers[key] || {}) };
+      const dTree = DEFAULTS.powers[key].tree;
+      const tree = {
+        upgradeCosts: cur.tree?.upgradeCosts ? [...cur.tree.upgradeCosts] : [...dTree.upgradeCosts],
+        scale: cur.tree?.scale ? cur.tree.scale.map((s) => ({ ...s })) : dTree.scale.map((s) => ({ ...s })),
+        branch5: cur.tree?.branch5 ? cur.tree.branch5.map((b) => ({ ...b, effect: { ...b.effect } })) : dTree.branch5.map((b) => ({ ...b, effect: { ...b.effect } })),
+        branch10: cur.tree?.branch10 ? cur.tree.branch10.map((b) => ({ ...b, effect: { ...b.effect } })) : dTree.branch10.map((b) => ({ ...b, effect: { ...b.effect } })),
+      };
+      fn(tree);
+      cur.tree = tree; powers[key] = cur;
+      return { ...prev, powers };
+    });
+  };
+  const setTreeCost = (key, i, v) => mutTree(key, (t) => { t.upgradeCosts[i] = v; });
+  const setTreeScale = (key, lvl, fxKey, v) => mutTree(key, (t) => { t.scale[lvl] = { ...t.scale[lvl], [fxKey]: v }; });
+  const setTreeBranch = (key, slot, j, fxKey, v) => mutTree(key, (t) => { t[slot][j] = { ...t[slot][j], effect: { ...t[slot][j].effect, [fxKey]: v } }; });
+
   const resetPower = (key) => { setStatus(null); setOv((prev) => { const powers = { ...(prev.powers || {}) }; delete powers[key]; return { ...prev, powers }; }); };
 
   // --- Sets (bonus à 2/3 pièces) : valeur effective override ?? défaut ---
@@ -413,6 +446,7 @@ export default function BalanceEditor({ onClose }) {
                       <Stepper value={pVal(k, 'upgradeCosts')[1]} onChange={(v) => setPowerField(k, 'upgradeCosts', [pVal(k, 'upgradeCosts')[0], v])} max={999} />
                       <span className="bal-default">défaut : {d.upgradeCosts[1]}</span></div>
 
+                    <div className="bal-default" style={{ marginTop: 14, fontWeight: 700 }}>Sans l'extension Maîtrise — 3 niveaux :</div>
                     {d.levels.map((lv, i) => {
                       const numKeys = Object.entries(lv.effect).filter(([, v]) => typeof v === 'number');
                       return (
@@ -430,6 +464,70 @@ export default function BalanceEditor({ onClose }) {
                       );
                     })}
 
+                    {/* === Extension « Maîtrise » : arbre niveaux 1→10 + branches === */}
+                    {p.tree && (
+                      <>
+                        <div className="qed-field" style={{ marginTop: 18 }}>
+                          <label className="qed-label">{'⚡'} Maîtrise — Coûts d'amélioration (niv. 1→10)</label>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                            {d.tree.upgradeCosts.map((c, i) => (
+                              <div key={i} className="bal-row">
+                                <span className="bal-label">Niv.{i + 1}→{i + 2}</span>
+                                <input className="qed-input" style={{ width: 64 }} type="number" min="0"
+                                  value={treeCost(k, i)} onChange={(e) => setTreeCost(k, i, Math.max(0, Math.round(Number(e.target.value) || 0)))} />
+                                <span className="bal-default">déf. {c}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="qed-field" style={{ marginTop: 10 }}>
+                          <label className="qed-label">Valeurs par niveau (1→10)</label>
+                          {d.tree.scale.map((s, lvl) => {
+                            const keys = Object.entries(s).filter(([key]) => key !== 'type');
+                            if (!keys.length) return null;
+                            return (
+                              <div key={lvl} style={{ marginTop: 6 }}>
+                                <div className="bal-default" style={{ fontWeight: 700, color: 'var(--ink-700)' }}>Niveau {lvl + 1}</div>
+                                {keys.map(([fxKey, dv]) => (
+                                  <div key={fxKey} className="bal-row">
+                                    <span className="bal-label">{FX_LABELS[fxKey] || fxKey}</span>
+                                    {typeof dv === 'string'
+                                      ? <input className="qed-input" style={{ width: 64 }} value={treeScale(k, lvl, fxKey)} onChange={(e) => setTreeScale(k, lvl, fxKey, e.target.value)} />
+                                      : <input className="qed-input" style={{ width: 64 }} type="number" step="any" value={treeScale(k, lvl, fxKey)} onChange={(e) => setTreeScale(k, lvl, fxKey, e.target.value === '' ? dv : Number(e.target.value))} />}
+                                    <span className="bal-default">déf. {String(dv)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {[['branch5', 5], ['branch10', 10]].map(([slot, lvl]) => (
+                          <div key={slot} className="qed-field" style={{ marginTop: 10 }}>
+                            <label className="qed-label">{'🌟'} Embranchement niv.{lvl} — les 3 voies</label>
+                            {d.tree[slot].map((br, j) => {
+                              const keys = Object.entries(br.effect).filter(([, v]) => typeof v === 'number' || typeof v === 'string');
+                              return (
+                                <div key={j} style={{ marginTop: 6 }}>
+                                  <div className="bal-default" style={{ fontWeight: 700, color: 'var(--ink-700)' }}>{br.icon} {br.name}</div>
+                                  {keys.length === 0 && <div className="bal-default">aucune valeur réglable</div>}
+                                  {keys.map(([fxKey, dv]) => (
+                                    <div key={fxKey} className="bal-row">
+                                      <span className="bal-label">{FX_LABELS[fxKey] || fxKey}</span>
+                                      {typeof dv === 'string'
+                                        ? <input className="qed-input" style={{ width: 64 }} value={treeBranch(k, slot, j, fxKey)} onChange={(e) => setTreeBranch(k, slot, j, fxKey, e.target.value)} />
+                                        : <input className="qed-input" style={{ width: 64 }} type="number" step="any" value={treeBranch(k, slot, j, fxKey)} onChange={(e) => setTreeBranch(k, slot, j, fxKey, e.target.value === '' ? dv : Number(e.target.value))} />}
+                                      <span className="bal-default">déf. {String(dv)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </>
                 );
               })()}
