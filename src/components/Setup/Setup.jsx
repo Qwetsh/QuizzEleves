@@ -18,6 +18,7 @@ import ExtensionsChecklist from './ExtensionsChecklist';
 import RulesConfig from './RulesConfig';
 import ConnectionMode from './ConnectionMode';
 import LobbyPanel from './LobbyPanel';
+import EventsEditor from './EventsEditor';
 import { extOn } from '../../extensions/registry';
 
 // Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
@@ -87,6 +88,7 @@ function DevFightPanel() {
 function EditorTools() {
   const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
+  const [showEventsEditor, setShowEventsEditor] = useState(false);
   return (
     <div className="panel" style={{ border: '2px dashed #2f6dc9', background: 'rgba(47,109,201,0.04)' }}>
       <div className="field-label" style={{ color: '#2f6dc9' }}>{'\u{1F6E0}️'} Outils d'édition</div>
@@ -100,9 +102,13 @@ function EditorTools() {
         <button onClick={() => setShowBalanceEditor(true)} className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
           {"⚖️ Éditer l'équilibrage"}
         </button>
+        <button onClick={() => setShowEventsEditor(true)} className="btn btn--blue btn--sm" style={{ gridColumn: '1 / -1', justifyContent: 'center' }}>
+          {"✨ Éditer les événements"}
+        </button>
       </div>
       {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
       {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}
+      {showEventsEditor && <EventsEditor onClose={() => setShowEventsEditor(false)} />}
     </div>
   );
 }

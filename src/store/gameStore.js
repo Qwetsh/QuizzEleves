@@ -216,6 +216,20 @@ export const useGameStore = create((set, get) => ({
     set({ enabledEvents: enabledEvents.includes(key) ? enabledEvents.filter((k) => k !== key) : [...enabledEvents, key] });
   },
   setAllEvents: (enabled) => set({ enabledEvents: enabled ? Object.keys(EVENTS) : [] }),
+  // Réconcilie enabledEvents avec le catalogue après chargement des événements
+  // custom : les NOUVELLES clés (jamais vues, suivies par knownEventKeys) sont
+  // activées par défaut ; un événement décoché n'est pas re-coché. Setup only.
+  knownEventKeys: Object.keys(EVENTS),
+  syncEnabledEvents: () => {
+    const all = Object.keys(EVENTS);
+    set((s) => {
+      if (s.phase !== 'setup') return { knownEventKeys: all };
+      const known = s.knownEventKeys || [];
+      const fresh = all.filter((k) => !known.includes(k));
+      const enabled = [...(s.enabledEvents || []).filter((k) => EVENTS[k]), ...fresh];
+      return { enabledEvents: [...new Set(enabled)], knownEventKeys: all };
+    });
+  },
 
   // Objets actives (boutique, coffres, marchand, butin) — meme principe que les evenements
   enabledItems: Object.keys(ITEMS),
@@ -1548,6 +1562,7 @@ export const useGameStore = create((set, get) => ({
     // garde "objet jamais vu" se baserait sur le catalogue courant). Anciennes
     // sauvegardes sans ce champ : on retombe sur le catalogue connu actuel.
     if (!Array.isArray(saved.knownItemKeys)) set({ knownItemKeys: Object.keys(ITEMS) });
+    if (!Array.isArray(saved.knownEventKeys)) set({ knownEventKeys: Object.keys(EVENTS) });
     // Le catalogue ITEMS est dynamique (édité via l'éditeur) : purger des équipes
     // les clés d'objets qui n'existent plus, sinon un slot reste occupé par un
     // « fantôme » (objet invisible, effet perdu, slot bloqué). Le sac est filtré

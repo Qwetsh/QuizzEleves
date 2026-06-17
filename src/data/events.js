@@ -1,4 +1,6 @@
-export const EVENTS = {
+// Événements INTÉGRÉS (codés). Les événements PERSONNALISÉS (éditeur, table
+// Supabase quete_events) sont fusionnés par-dessus via setCustomEvents.
+const BUILTIN_EVENTS = {
   rejouer:      { name: 'Rejouer',           icon: '\u{1F3B2}', desc: 'Lance le de et avance du resultat.',                                             optional: false, weight: 1 },
   recul:        { name: 'Recul force',       icon: '\u2B05\uFE0F', desc: 'Recule de 2 cases.',                                                         optional: false, weight: 1 },
   decharge:     { name: 'Decharge electrique', icon: '\u26A1',   desc: 'Choisis une equipe et lance le de : elle recule du resultat.',                  optional: true,  weight: 1 },
@@ -55,3 +57,15 @@ export const EVENTS = {
   reliquaire:       { name: 'Le Reliquaire',     icon: '🏺', desc: 'Une relique t\'attire : recois une piece d\'un SET que tu as deja commence !', category: 'item', optional: false, weight: 0.45, needsItems: true },
   tournoi:          { name: 'Tournoi eclair',    icon: '🏅', desc: 'Reponds vite ! Bonne reponse : tu remportes un consommable. Mauvaise : un adversaire le rafle !', needsQuestion: true, category: 'item', optional: true, weight: 0.5, needsItems: true },
 };
+
+// EVENTS = base + personnalisés. `let` + export → liaison vivante : les modules
+// qui lisent EVENTS au moment de l'appel (eventPicker, eventHandlers) voient les
+// événements custom dès que setCustomEvents est appelé (boot / éditeur).
+export let EVENTS = { ...BUILTIN_EVENTS };
+
+export { BUILTIN_EVENTS };
+
+// Fusionne les événements personnalisés (clé → objet) par-dessus les intégrés.
+export function setCustomEvents(custom) {
+  EVENTS = { ...BUILTIN_EVENTS, ...(custom && typeof custom === 'object' ? custom : {}) };
+}

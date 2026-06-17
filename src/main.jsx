@@ -6,6 +6,7 @@ import './styles/index.css';
 import './styles/animations.css';
 import { applyCachedBalance, refreshBalance } from './logic/balanceConfig';
 import { applyCachedItems, refreshItems } from './logic/itemsConfig';
+import { applyCachedEvents, refreshEvents } from './logic/eventsConfig';
 import { applyCachedQuestions, refreshQuestions } from './logic/questionsConfig';
 import { useGameStore } from './store/gameStore';
 
@@ -27,6 +28,13 @@ if (joinMode) {
   useGameStore.getState().syncEnabledItems();
   refreshItems()
     .then((n) => { if (n) useGameStore.getState().syncEnabledItems(); })
+    .catch(() => {});
+
+  // Événements personnalisés (table quete_events) fusionnés par-dessus les intégrés.
+  applyCachedEvents();
+  useGameStore.getState().syncEnabledEvents();
+  refreshEvents()
+    .then(() => useGameStore.getState().syncEnabledEvents())
     .catch(() => {});
 
   applyCachedQuestions();
