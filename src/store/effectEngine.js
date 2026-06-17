@@ -170,6 +170,7 @@ function resolveTargets(get, target, ctx) {
   switch (target) {
     case 'self': return { indices: [src] };
     case 'all': return { indices: teams.map((_, i) => i) };
+    case 'allOthers': return { indices: teams.map((_, i) => i).filter((i) => i !== src) };
     case 'randomOpponent': {
       const opp = teams.map((_, i) => i).filter((i) => i !== src);
       if (!opp.length) return { indices: [] };
@@ -275,6 +276,18 @@ function applyMoney(set, get, action, ctx, indices) {
         });
       }
     }
+  } else if (action.mode === 'give') {
+    // La SOURCE distribue de l'or : chaque cible reçoit `n`, la source paie le total.
+    let total = 0;
+    for (const i of indices) {
+      if (i === src) continue;
+      const t = nt[i];
+      const amt = amountFor(t);
+      nt[i] = { ...t, money: (t.money ?? 0) + amt };
+      total += amt;
+      addLog(`💰 ${t.emoji} ${t.name} reçoit ${amt} pièce${amt > 1 ? 's' : ''}.`);
+    }
+    if (total > 0) nt[src] = { ...nt[src], money: Math.max(0, (nt[src].money ?? 0) - total) };
   } else { // gain
     for (const i of indices) {
       const t = nt[i];
@@ -603,6 +616,43 @@ function stepHead(set, get, action, ctx) {
     case 'loot': {
       // Loot immédiat d'un objet (catégorie optionnelle) pour l'équipe source.
       if (get().engineLoot) get().engineLoot(ctx.sourceTeam ?? get().currentTeam, action.category);
+      return 'done';
+    }
+    case 'loseItem': {
+      // Retire un objet (catégorie optionnelle) à la/les cible(s) ; repli sur l'or.
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineLoseItem?.(idx, action.category, action.fallbackGold);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'curseTimer': {
+      // Malédiction : timer divisé au prochain tour (réutilise le Sablier).
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const div = action.divisor || 2;
+      const nt = [...get().teams];
+      for (const idx of t.indices) nt[idx] = { ...nt[idx], sablierActif: true, sablierDivisor: div };
+      set({ teams: nt });
+      get().addLog(`⏱️ Malédiction : timer ÷${div} au prochain tour !`);
+      announce(set, get, '⏱️', `Timer ÷${div}`, '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'curseExtraQuestion': {
+      // Malédiction : question(s) en plus au prochain tour (réutilise le Double).
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const add = Math.max(1, resolveAmount(action.n, srcTeam) || 1);
+      const nt = [...get().teams];
+      for (const idx of t.indices) {
+        const tm = nt[idx];
+        nt[idx] = { ...tm, doubleActive: true, doubleExtra: Math.min((tm.doubleExtra || 0) + add, 4) };
+      }
+      set({ teams: nt });
+      get().addLog(`❓ Malédiction : +${add} question${add > 1 ? 's' : ''} au prochain tour !`);
+      announce(set, get, '❓', `+${add} question${add > 1 ? 's' : ''}`, '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
     case 'placeTrap': {

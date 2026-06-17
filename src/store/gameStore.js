@@ -1177,6 +1177,44 @@ export const useGameStore = create((set, get) => ({
     }
   },
 
+  // Retire un objet à une équipe (action `loseItem`). category : 'equipment' |
+  // 'consumable' | undefined (les deux). Repli : perte de `fallbackGold` si rien.
+  engineLoseItem: (teamIdx, category, fallbackGold = 0) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const pool = [];
+    if (category !== 'consumable') {
+      for (const [slot, k] of Object.entries(team.equipment || {})) if (k && ITEMS[k]) pool.push({ kind: 'equip', slot, key: k });
+    }
+    if (category !== 'equipment') {
+      itemH.normalizeBag(team.bag).forEach((c, i) => { const k = itemH.cellKey(c); if (k && ITEMS[k]) pool.push({ kind: 'bag', index: i, key: k }); });
+    }
+    const nt = [...get().teams];
+    if (pool.length === 0) {
+      const g = Math.max(0, Math.trunc(fallbackGold) || 0);
+      if (g > 0) {
+        nt[idx] = { ...team, money: Math.max(0, (team.money || 0) - g) };
+        set({ teams: nt });
+        get().addLog(`💸 ${team.emoji} ${team.name} n'a aucun objet : perd ${g} 🪙.`);
+        get().checkMoneyMilestone(idx);
+      }
+      return;
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const it = ITEMS[pick.key];
+    if (pick.kind === 'equip') {
+      nt[idx] = { ...team, equipment: { ...team.equipment, [pick.slot]: null } };
+    } else {
+      const bag = itemH.normalizeBag(team.bag);
+      const c = bag[pick.index];
+      bag[pick.index] = itemH.cellN(c) > 1 ? itemH.mkCell(pick.key, itemH.cellN(c) - 1) : null;
+      nt[idx] = { ...team, bag };
+    }
+    set({ teams: nt });
+    get().addLog(`💔 ${team.emoji} ${team.name} perd ${it.icon} ${it.name} !`);
+  },
+
   // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---
   devGiveItem: (key) => { if (get().teams.length) itemH.grantItem(set, get, get().currentTeam, key); },
 

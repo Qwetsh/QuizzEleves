@@ -21,6 +21,9 @@ const ACTIONS = [
   { key: 'extraTime', label: '⏳ Temps en +' },
   { key: 'buff', label: '🕒 Effet de durée (X tours)' },
   { key: 'loot', label: '🎁 Loot un objet' },
+  { key: 'loseItem', label: '💔 Perdre un objet' },
+  { key: 'curseTimer', label: '⏱️ Malédiction : timer réduit' },
+  { key: 'curseExtraQuestion', label: '❓ Malédiction : question(s) en +' },
 ];
 
 // Types d'effet de durée (buff) — voir gameStore (application) et teamStatus (affichage).
@@ -37,10 +40,12 @@ const BUFF_TYPES = [
 const TARGETS = [
   { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
   { key: 'randomOpponent', label: 'un adversaire au hasard' }, { key: 'all', label: 'toutes les équipes' },
+  { key: 'allOthers', label: 'toutes les autres équipes' },
 ];
 const TRAP_TARGETS = [
   { key: 'self', label: 'celui qui marche dessus' }, { key: 'target', label: 'une autre équipe' },
   { key: 'randomOpponent', label: 'une autre équipe au hasard' }, { key: 'all', label: 'toutes les équipes' },
+  { key: 'allOthers', label: 'toutes les autres équipes' },
 ];
 
 export const defaultAction = () => ({ action: 'money', mode: 'gain', target: 'self', n: 5, unit: 'flat' });
@@ -83,7 +88,10 @@ export function describeAction(a) {
   const who = TARGETS.find((t) => t.key === a.target)?.label || a.target;
   switch (a.action) {
     case 'move': return `${a.dir === 'back' ? 'reculer' : 'avancer'} ${who} de ${amountLabel(a.n)}`;
-    case 'money': return `${a.mode === 'steal' ? 'voler' : a.mode === 'lose' ? 'retirer' : 'donner'} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or à ${who}`;
+    case 'money': return `${a.mode === 'steal' ? 'voler' : a.mode === 'lose' ? 'retirer' : a.mode === 'give' ? 'distribuer' : 'donner'} ${amountLabel(a.n)}${a.unit === 'percent' ? '%' : ''} d'or à ${who}`;
+    case 'loseItem': return `faire perdre un ${a.category === 'equipment' ? 'équipement' : a.category === 'consumable' ? 'consommable' : 'objet'} à ${who}${a.fallbackGold ? ` (sinon ${a.fallbackGold} or)` : ''}`;
+    case 'curseTimer': return `malédiction : timer ÷${a.divisor || 2} pour ${who}`;
+    case 'curseExtraQuestion': return `malédiction : +${amountLabel(a.n)} question(s) pour ${who}`;
     case 'rerollQuestion': {
       const sl = (s) => s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s;
       return typeof a.chance === 'number'
@@ -222,6 +230,9 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
         if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
         if (k === 'loot') base.category = '';
+        if (k === 'loseItem') Object.assign(base, { target: 'self', category: '', fallbackGold: 10 });
+        if (k === 'curseTimer') Object.assign(base, { target: 'all', divisor: 2 });
+        if (k === 'curseExtraQuestion') Object.assign(base, { target: 'all', n: 1 });
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -245,7 +256,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
       {a.action === 'money' && (
         <>
           <select className="qed-select fx-blank" value={a.mode} onChange={(e) => upd({ mode: e.target.value })}>
-            <option value="gain">donner</option><option value="lose">retirer</option><option value="steal">voler</option>
+            <option value="gain">donner</option><option value="lose">retirer</option><option value="steal">voler</option><option value="give">distribuer (je paie)</option>
           </select>
           <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
           <select className="qed-select fx-blank" value={a.unit} onChange={(e) => upd({ unit: e.target.value })}>
@@ -311,6 +322,41 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
             <option value="consumable">consommable</option>
             <option value="equipment">équipement</option>
           </select>
+        </>
+      )}
+
+      {a.action === 'loseItem' && (
+        <>
+          <W>fait perdre un</W>
+          <select className="qed-select fx-blank" value={a.category || ''} onChange={(e) => upd({ category: e.target.value || undefined })}>
+            <option value="">objet (au hasard)</option>
+            <option value="consumable">consommable</option>
+            <option value="equipment">équipement</option>
+          </select>
+          <W>à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>(sinon</W>
+          <AmountInput value={a.fallbackGold ?? 0} onChange={(v) => upd({ fallbackGold: v })} min={0} />
+          <W>or)</W>
+        </>
+      )}
+
+      {a.action === 'curseTimer' && (
+        <>
+          <W>timer ÷</W>
+          <select className="qed-select fx-blank" value={a.divisor ?? 2} onChange={(e) => upd({ divisor: Number(e.target.value) })}>
+            <option value={2}>2</option><option value={3}>3</option><option value={4}>4</option>
+          </select>
+          <W>au prochain tour de</W>
+          <TargetSelect value={a.target || 'all'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
+      {a.action === 'curseExtraQuestion' && (
+        <>
+          <AmountInput value={a.n ?? 1} onChange={(v) => upd({ n: v })} min={1} />
+          <W>question(s) en + au prochain tour de</W>
+          <TargetSelect value={a.target || 'all'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
         </>
       )}
 
