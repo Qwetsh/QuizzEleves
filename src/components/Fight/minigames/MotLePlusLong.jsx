@@ -104,10 +104,14 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
   // boards[side][slotIdx] = index de tuile du chevalet (0-8) ou null
   const [boards, setBoards] = useState({ attacker: [], defender: [] });
   const [validated, setValidated] = useState({ attacker: false, defender: false });
+  // Horodatage de validation (ms) par équipe : départage les ÉGALITÉS de score
+  // (même mot / même nombre de points) → le premier à avoir validé gagne.
+  const [validatedAt, setValidatedAt] = useState({ attacker: null, defender: null });
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [phase, setPhase] = useState('play');                   // 'play' | 'reveal'
   const [results, setResults] = useState(null);                 // { side: { word, valid, score } }
   const [winner, setWinner] = useState(null);                   // 'attacker' | 'defender' | 'tie'
+  const [tieBreak, setTieBreak] = useState(false);              // égalité départagée à la vitesse
   const reported = useRef(false);     // garde anti-double onRoundWin
   const revealed = useRef(false);     // garde anti-double révélation
   const slotRefs = useRef({ attacker: [], defender: [] });
@@ -120,10 +124,12 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
       defender: Array(RACK_SIZE).fill(null),
     });
     setValidated({ attacker: false, defender: false });
+    setValidatedAt({ attacker: null, defender: null });
     setTimeLeft(ROUND_SECONDS);
     setPhase('play');
     setResults(null);
     setWinner(null);
+    setTieBreak(false);
     reported.current = false;
     revealed.current = false;
     didDrag.current = {};
@@ -156,8 +162,22 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
     setResults(res);
     setPhase('reveal');
 
-    if (res.attacker.score > res.defender.score || res.defender.score > res.attacker.score) {
-      const side = res.attacker.score > res.defender.score ? 'attacker' : 'defender';
+    // Gagnant : score le plus élevé ; en cas d'ÉGALITÉ de points (≥1, ex. même
+    // mot), le PREMIER à avoir validé l'emporte. Aucun mot valide des deux
+    // côtés (0-0) ou égalité sans aucune validation → nouveau tirage.
+    let side = null;
+    if (res.attacker.score !== res.defender.score) {
+      side = res.attacker.score > res.defender.score ? 'attacker' : 'defender';
+    } else if (res.attacker.score > 0) {
+      const ta = validatedAt.attacker;
+      const td = validatedAt.defender;
+      if (ta != null && td != null) { side = ta <= td ? 'attacker' : 'defender'; setTieBreak(true); }
+      else if (ta != null) { side = 'attacker'; setTieBreak(true); }
+      else if (td != null) { side = 'defender'; setTieBreak(true); }
+      // sinon (égalité sans aucune validation) : side reste null → nouveau tirage
+    }
+
+    if (side) {
       setWinner(side);
       soundCorrect();
       if (!reported.current) {
@@ -169,7 +189,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
       soundWrong();
       setTimeout(startRound, 3000);
     }
-  }, [timeLeft, validated, phase, letters, boards]);
+  }, [timeLeft, validated, validatedAt, phase, letters, boards]);
 
   if (!letters) return null;
 
@@ -224,6 +244,8 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
     if (!canEdit(side)) return;
     if (boards[side].filter((ri) => ri != null).length < 2) return;
     setValidated((prev) => ({ ...prev, [side]: true }));
+    // Mémorise l'instant de validation (1re fois) pour départager les égalités.
+    setValidatedAt((prev) => (prev[side] != null ? prev : { ...prev, [side]: Date.now() }));
   };
 
   const renderPlaySide = (side, team) => {
@@ -440,7 +462,9 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
     if (winner === 'tie') bannerText = '⚖️ Égalité ! Nouveau tirage…';
     else {
       const team = winner === 'attacker' ? attacker : defender;
-      bannerText = `${team.emoji} ${team.name} gagne la manche !`;
+      bannerText = tieBreak
+        ? `⚡ Égalité — ${team.emoji} ${team.name} a validé en premier !`
+        : `${team.emoji} ${team.name} gagne la manche !`;
     }
   } else {
     bannerText = 'Compose le mot le plus long avec ces lettres !';
