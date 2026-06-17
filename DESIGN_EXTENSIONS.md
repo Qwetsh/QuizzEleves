@@ -277,3 +277,67 @@ Nouvelle table `quete_trades` :
 ### Tests transverses
 - Build + suite Vitest verte à chaque phase.
 - Garde-fous de migration de save (specs absents, niveaux > 3 ignorés sans extension).
+
+---
+---
+
+# Design — Extensions « Alchimie » & « Enchantement »
+
+> Cadrage validé le 2026-06-18. Décisions actées :
+> Alchimie = **recettes fixes prédéfinies** (découvertes en trouvant le bon combo), grimoire **par équipe**,
+> ingrédient utilisé seul = **bonus mineur + le révèle** au grimoire.
+> Enchantement = lié à la **pièce précise** (suit l'objet si déséquipé/troqué/vendu) → objets en **instances**.
+> Les deux dépendent de l'extension Objets (`needsItems`).
+
+## ⚗️ Extension « Alchimie »
+
+### Modèle de données
+- Les consommables gagnent un champ `family: 'ingredient' | 'potion'` (absent = consommable normal).
+- **Ingrédient** : un consommable `family:'ingredient'` avec un **effet mineur** (ses `effects` habituels, faibles).
+- **Potion** : un consommable `family:'potion'` avec un effet **majeur**.
+- **Recettes** (data + éditeur) : `{ id, ingredients:[keyA,keyB,keyC], potion: potionKey }`. L'ordre des 3 ingrédients n'importe pas (comparaison par multiset).
+- État par équipe : `team.knownIngredients: Set<key>` (révélés en utilisant seul) et `team.knownRecipes: Set<recipeId>` (réussis).
+
+### Flux
+- **Ingrédient utilisé seul** (carte active, comme un consommable) → applique son effet mineur **et** ajoute la clé à `knownIngredients`.
+- **Atelier (mobile)** : 3 emplacements + bouton **« Distiller »** (animé). → intent `craft { bag:[i,j,k] }`.
+- **TBI (`applyCraft`)** : vérifie 3 ingrédients distincts du sac, cherche une recette correspondante (multiset).
+  - **Match** : consomme les 3, ajoute la **potion** au sac (placeItem), `knownRecipes.add(id)`, log « ✨ Recette découverte ! ».
+  - **Pas de match** : consomme les 3 (ou 1 seul ? — décision d'implémentation : on consomme les 3, ratage = « eau trouble » sans effet) et log « 💨 Distillation ratée ».
+- **Grimoire (mobile)** : liste des recettes — **découvertes** affichées en clair (ingrédients → potion), **non découvertes** en `? + ? + ? → ?`. Ingrédients du sac : effet mineur affiché si `knownIngredients`.
+
+### Publication / mobile
+- `buildSessionPayload` publie `knownRecipes` + `knownIngredients` de l'équipe + le catalogue des recettes (ids + état). Le mobile résout ITEMS/recettes localement (comme POWERS/ITEMS).
+- Catalogue de recettes : table Supabase `quete_recipes` **OU** (plus simple) un fichier `src/data/recipes.js` éditable comme les events. **Décision implémentation : fichier + éditeur léger** (pas de table au début).
+
+### UI
+- Atelier : 3 cases (tap un ingrédient du sac → le pose), bouton Distiller (animation de bulles), résultat révélé.
+- Grimoire : onglet ou section, liste recettes avec `?` masquant le non-découvert.
+
+## 📜 Extension « Enchantement »
+
+### Modèle d'instance (refonte douce du modèle d'objet)
+- Un objet peut désormais être soit une **clé** `"casque"`, soit une **instance** `{ key, enchants:[effect,…] }`.
+- Sac : la cellule passe de `null | "key" | {key,n}` à pouvoir contenir `{key, n, enchants}` (un objet enchanté = **non empilable**, n=1).
+- Équipement : `team.equipment[slot]` = clé **ou** instance `{key, enchants}`.
+- Helpers centraux (itemHandlers) : `itemKeyOf(x)`, `itemEnchantsOf(x)`, normalisation préservant `enchants`. `cellKey/cellN` déjà tolérants ; ajout de `cellEnchants`.
+
+### Lecture des effets
+- `equippedItems(team)` renvoie, pour chaque slot, l'objet + ses `enchants`. `getEffectValue` / `triggersOf` / `equipOnRollActions` somment **effets de base + enchantements**.
+- Donc un parchemin `on:roll 5 → +15 or` posé sur la tête se comporte comme si le casque avait ce déclencheur.
+
+### Parchemins
+- Consommable `family:'parchment'` avec un champ `enchant` = un **effet/déclencheur** (réutilise le schéma de l'éditeur d'effets : passif `{type,value}` ou `{kind:'trigger', on, do}`).
+- **Utiliser un parchemin** → ouvre un sélecteur de **pièce équipée** (slots non vides) → ajoute `enchant` aux `enchants` de **cette instance** (équipe-la en instance si besoin). Consomme le parchemin.
+- L'enchantement **suit la pièce** : déséquiper (→ sac) garde l'instance enchantée ; troc/vente transfèrent l'instance entière.
+
+### Impacts
+- itemHandlers : placeItem/normalizeBag/move/sell tolèrent les instances (pas d'empilement des enchantés ; prix de revente inchangé ou +bonus).
+- Trade (`applyTrade`) : transférer l'**instance** (clé + enchants), pas juste la clé.
+- Mobile : afficher un liseré/✦ sur les objets enchantés + lister leurs effets ; action « Enchanter » au tap d'un parchemin.
+- Éditeur d'objets : créer des parchemins (`family:'parchment'` + champ enchant via EffectBuilder).
+
+## Plan d'implémentation (ordre)
+1. **Socle commun** : champ `family` sur les consommables ; entrées registre `alchemy` + `enchant` (needsItems).
+2. **Alchimie** : data ingrédients/potions/recettes ; usage seul (effet mineur + reveal) ; `applyCraft` (TBI) + intent ; atelier + grimoire mobile ; publication ; éditeur de recettes ; tests.
+3. **Enchantement** : modèle d'instance (`itemKeyOf`/`itemEnchantsOf`, normalisation) ; lecture d'effets enchantés ; parchemins (`family:'parchment'` + enchant) ; usage → sélecteur de pièce → applique ; trade/sell/mobile ; éditeur ; tests.
