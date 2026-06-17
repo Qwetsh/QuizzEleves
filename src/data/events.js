@@ -39,6 +39,9 @@ export const EVENTS = {
   tempeteMagnetique:{ name: 'Tempete magnetique', icon: '\u{1F9F2}', desc: 'Un champ magnetique brouille tout : la prochaine voie de CHAQUE equipe sera aleatoire !', category: 'item', optional: false, weight: 0.45,
     actions: [{ action: 'randomPathNext', target: 'all' }] },
 
+  // --- Boss : combat contre le professeur (choix du mini-jeu) ---
+  bossProf:         { name: 'Boss : le Prof',     icon: '\u{1F468}‍\u{1F3EB}', desc: 'Le professeur te barre la route ! Choisis ton mini-jeu et affronte-le. Victoire : +50 pieces et un objet. Defaite : recul d\'1D10 !', category: 'item', optional: true, weight: 0.3, needsChoice: true },
+
   // --- Pari d'argent / question a enjeu ---
   vaTout:           { name: 'Le Va-tout',         icon: '\u{1F3B0}', desc: 'Empile les pieces : chaque bonne reponse rapporte de plus en plus (+5, +10, +15...). Encaisse quand tu veux ! Mais une seule erreur et tu perds toute ta mise + recul d\'1D10.', category: 'money', optional: true, weight: 0.7 },
   loterie:          { name: 'Loterie',           icon: '\u{1F39F}️', desc: 'Tente ta chance : 50% de remporter 40 pieces, sinon tu perds 15 pieces.', category: 'money', optional: true, weight: 0.7 },

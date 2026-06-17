@@ -45,6 +45,63 @@ export function startFight(set, get, defenderIndex, subject) {
   });
 }
 
+// Adversaire « Boss » : le professeur. Non-équipe (defenderIndex = -1), joué par
+// le prof sur le côté droit du mini-jeu. Issue FIXE (pas de choix de récompense).
+export const BOSS_PROF = { emoji: '👨‍🏫', name: 'Le Prof', color: '#8a1f2e', powers: {}, equipment: { head: null, body: null, feet: null }, bag: [], money: 0 };
+
+/**
+ * Démarre un COMBAT DE BOSS : l'équipe active affronte le Prof sur le mini-jeu
+ * choisi (déterminé par `subject`). Victoire = +50 or + 1 objet ; défaite = recul 1D10.
+ */
+export function startBossFight(set, get, subject) {
+  const { currentTeam, teams, addLog } = get();
+  const att = teams[currentTeam];
+  addLog(`👨‍🏫 ${att.emoji} ${att.name} défie LE PROF dans un combat de boss !`);
+  set({
+    showFight: {
+      attackerIndex: currentTeam,
+      defenderIndex: -1,
+      boss: BOSS_PROF,
+      bossFight: true,
+      subject,
+      phase: 'versus',
+      round: 1,
+      wins: { attacker: 0, defender: 0 },
+      winnerSide: null,
+      reward: null,
+      resultMessage: null,
+    },
+  });
+}
+
+// Issue d'un combat de boss (pas de choix de récompense) : applique le gain ou
+// la pénalité à l'équipe puis passe en phase résultat.
+function resolveBossOutcome(set, get, f) {
+  const { teams, board, addLog } = get();
+  const idx = f.attackerIndex;
+  const team = teams[idx];
+  const newTeams = [...teams];
+  let message; let moves = null;
+
+  if (f.winnerSide === 'attacker') {
+    const gold = 50;
+    let placed = { ...team, money: (team.money || 0) + gold };
+    const lootKey = pickLootItem(LOOT.fightLegendaryChance, get().enabledItems || Object.keys(ITEMS));
+    let note = '';
+    if (lootKey) { const r = receiveItem(placed, lootKey); placed = r.team; note = r.note; }
+    newTeams[idx] = placed;
+    message = `🏆 ${team.emoji} ${team.name} terrasse le Prof ! +${gold} \u{1F4B0}${lootKey ? ` et ${ITEMS[lootKey].icon} ${ITEMS[lootKey].name}${note}` : ''} !`;
+  } else {
+    const dv = Math.floor(Math.random() * 10) + 1;
+    const r = moveBack(board, team.pos, dv);
+    newTeams[idx] = { ...team, pos: r.finalPos };
+    if (r.path.length > 1) moves = [{ teamIndex: idx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+    message = `👨‍🏫 Le Prof l'emporte ! ${team.emoji} ${team.name} recule de ${dv} case${dv > 1 ? 's' : ''}.`;
+  }
+  addLog(message);
+  set({ teams: newTeams, showFight: { ...f, phase: 'result', resultMessage: message }, ...(moves ? { movePath: moves } : {}) });
+}
+
 // Fin de l'ecran versus -> ecran d'explication (briefing) du mini-jeu
 export function fightBegin(set, get) {
   const f = get().showFight;
@@ -66,12 +123,12 @@ export function fightRoundWin(set, get, side) {
   const wins = { ...f.wins, [side]: f.wins[side] + 1 };
   const { teams, addLog } = get();
   const teamIdx = side === 'attacker' ? f.attackerIndex : f.defenderIndex;
-  const t = teams[teamIdx];
+  const t = teams[teamIdx] || f.boss; // côté boss : non-équipe
   addLog(`⚔️ Manche ${f.round} pour ${t.emoji} ${t.name} !`);
 
   if (wins[side] >= FIGHT_ROUNDS_TO_WIN) {
-    const winner = teams[teamIdx];
-    addLog(`\u{1F3C5} ${winner.emoji} ${winner.name} remporte le duel !`);
+    addLog(`\u{1F3C5} ${t.emoji} ${t.name} remporte le duel !`);
+    if (f.bossFight) { resolveBossOutcome(set, get, { ...f, wins, winnerSide: side }); return; }
     set({ showFight: { ...f, wins, winnerSide: side, phase: 'reward' } });
   } else {
     set({ showFight: { ...f, wins, round: f.round + 1 } });
@@ -87,8 +144,9 @@ export function fightMatchWin(set, get, side) {
   if (!f || f.phase !== 'minigame') return;
   const { teams, addLog } = get();
   const idx = side === 'attacker' ? f.attackerIndex : f.defenderIndex;
-  const winner = teams[idx];
+  const winner = teams[idx] || f.boss;
   addLog(`\u{1F3C5} ${winner.emoji} ${winner.name} remporte le duel !`);
+  if (f.bossFight) { resolveBossOutcome(set, get, { ...f, wins: { ...f.wins, [side]: FIGHT_ROUNDS_TO_WIN }, winnerSide: side }); return; }
   set({ showFight: { ...f, wins: { ...f.wins, [side]: FIGHT_ROUNDS_TO_WIN }, winnerSide: side, phase: 'reward' } });
 }
 

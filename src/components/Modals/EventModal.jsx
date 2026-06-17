@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
-import { SUBJECTS } from '../../data/subjects';
+import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { getMinigame } from '../Fight/minigames';
 import { POWERS } from '../../data/powers';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { merchantPrice } from '../../store/eventHandlers';
@@ -33,6 +34,7 @@ export default function EventModal() {
   const eventAnswerQuestion = useGameStore((s) => s.eventAnswerQuestion);
   const eventVaToutContinue = useGameStore((s) => s.eventVaToutContinue);
   const eventVaToutCashOut = useGameStore((s) => s.eventVaToutCashOut);
+  const startBossFight = useGameStore((s) => s.startBossFight);
   const eventRechargeChoice = useGameStore((s) => s.eventRechargeChoice);
   const eventMarcheNoirBuy = useGameStore((s) => s.eventMarcheNoirBuy);
   const eventVolApply = useGameStore((s) => s.eventVolApply);
@@ -111,6 +113,7 @@ export default function EventModal() {
                 onChooseGift={eventChooseGift}
                 onTrade={eventTrade}
                 onPillageApply={eventPillageApply}
+                onStartBoss={startBossFight}
                 onSkip={declineEvent}
               />
             )}
@@ -398,9 +401,32 @@ function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
   );
 }
 
-function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onChooseGift, onTrade, onPillageApply, onSkip }) {
+function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onChooseGift, onTrade, onPillageApply, onStartBoss, onSkip }) {
   // Vol en 2 etapes : pouvoir vole chez la cible, puis pouvoir recharge chez soi
   const [stealKey, setStealKey] = useState(null);
+
+  if (eventKey === 'bossProf') {
+    return (
+      <>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
+          {'\u{1F468}‍\u{1F3EB}'} Choisis ton arme pour affronter le Prof :
+        </p>
+        <div className="space-y-2">
+          {SUBJECT_KEYS.map((s) => (
+            <button
+              key={s}
+              onClick={() => { soundClick(); onStartBoss(s); }}
+              className="btn btn--ghost btn--lg"
+              style={{ width: '100%', justifyContent: 'flex-start', gap: 10 }}
+            >
+              <span style={{ fontSize: 22 }}>{SUBJECTS[s]?.icon}</span>
+              <span>{getMinigame(s).name}</span>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   if (eventKey === 'recharge') {
     const owned = Object.entries(team.powers || {}).filter(([k]) => POWERS[k]);

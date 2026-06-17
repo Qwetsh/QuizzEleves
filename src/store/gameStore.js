@@ -1209,6 +1209,11 @@ export const useGameStore = create((set, get) => ({
   },
 
   // --- Fight (delegated) ---
+  // Combat de boss lancé depuis l'événement « Boss : le Prof » (choix du mini-jeu).
+  startBossFight: (subject) => {
+    set({ showEvent: null, eventApplied: true });
+    fightH.startBossFight(set, get, subject);
+  },
   fightBegin: () => fightH.fightBegin(set, get),
   fightStart: () => fightH.fightStart(set, get),
   fightRoundWin: (side) => fightH.fightRoundWin(set, get, side),

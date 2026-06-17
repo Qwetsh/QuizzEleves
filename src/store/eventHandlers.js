@@ -144,6 +144,12 @@ export function acceptEvent(set, get) {
     return;
   }
 
+  if (key === 'bossProf') {
+    // Choix du mini-jeu (la liste est construite côté UI depuis le registre).
+    set({ showEvent: { ...showEvent, phase: 'choice' } });
+    return;
+  }
+
   if (key === 'marcheNoir') {
     // Ouvre la BOUTIQUE en mode « marché noir » : stock louche (objets rares/
     // légendaires normalement introuvables) + remise. Fermer la boutique

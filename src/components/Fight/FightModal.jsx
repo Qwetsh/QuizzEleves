@@ -24,7 +24,9 @@ export default function FightModal() {
 
   if (!showFight) return null;
   const attacker = teams[showFight.attackerIndex];
-  const defender = teams[showFight.defenderIndex];
+  // Boss : le défenseur n'est pas une équipe du plateau (defenderIndex = -1) →
+  // adversaire virtuel porté par showFight.boss.
+  const defender = teams[showFight.defenderIndex] ?? showFight.boss;
   if (!attacker || !defender) return null;
 
   return (
