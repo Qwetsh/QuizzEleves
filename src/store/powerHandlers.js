@@ -25,6 +25,11 @@ function powerEffectOf(get, team, powerKey) {
 export function usePower(set, get, powerKey) {
   const { teams, currentTeam, rolling, finished, showQuestion, showEvent, awaitingChoice, diceValue, pendingLanding } = get();
   const team = teams[currentTeam];
+  // Silence (Sablier L5) : aucun pouvoir ce tour-ci.
+  if (team.silencedNextTurn) {
+    get().addLog(`🔇 ${team.emoji} ${team.name} est réduit au silence : aucun pouvoir ce tour-ci.`);
+    return;
+  }
   const charges = team.powers?.[powerKey]?.charges ?? 0;
   if (charges <= 0) return;
 
@@ -123,7 +128,12 @@ export function useRelance(set, get) {
 
   // Mêmes faces que le dé de mouvement de l'équipe (D4/D6/D10).
   const sides = moveDieSides(team);
-  const finalValue = Math.floor(Math.random() * sides) + 1;
+  const rEff = powerEffectOf(get, team, 'relance');
+  // Triple chance : meilleur de N dés. Dé chanceux : relance jusqu'à atteindre minRoll.
+  let roll = Math.floor(Math.random() * sides) + 1;
+  for (let k = 1; k < (rEff.rerollCount || 1); k++) roll = Math.max(roll, Math.floor(Math.random() * sides) + 1);
+  if (rEff.minRoll) { let tries = 0; while (roll < rEff.minRoll && tries < 30) { roll = Math.floor(Math.random() * sides) + 1; tries++; } }
+  const finalValue = roll;
   let count = 0;
   const interval = setInterval(() => {
     set({ diceValue: Math.floor(Math.random() * sides) + 1 });
@@ -132,13 +142,25 @@ export function useRelance(set, get) {
       clearInterval(interval);
       set({ diceValue: finalValue, rolling: false });
 
-      const mode = powerEffectOf(get, team, 'relance').mode || 'replace';
+      const mode = rEff.mode || 'replace';
       let effectiveValue;
       if (mode === 'sum') effectiveValue = prevValue + finalValue;
       else if (mode === 'best') effectiveValue = Math.max(prevValue, finalValue);
       else effectiveValue = finalValue;
 
       addLog(`\u{1F3B2} Relance : ${finalValue} !${mode !== 'replace' ? ` (effectif: ${effectiveValue})` : ''}`);
+      // Surcharge (L10) : recharge un pouvoir au hasard parmi ceux possédés.
+      if (rEff.rechargeRandom) {
+        const t = get().teams[currentTeam];
+        const keys = Object.keys(t.powers || {}).filter((k) => POWERS[k]);
+        if (keys.length) {
+          const pick = keys[Math.floor(Math.random() * keys.length)];
+          const nt = [...get().teams];
+          nt[currentTeam] = { ...t, powers: { ...t.powers, [pick]: { ...t.powers[pick], charges: (t.powers[pick].charges ?? 0) + 1 } } };
+          set({ teams: nt });
+          addLog(`✨ Surcharge : +1 charge de ${POWERS[pick].name} !`);
+        }
+      }
       // skipOnRoll : ne pas re-déclencher le bonus on:roll de l'équipement (déjà
       // accordé au lancer initial) → pas de double bonus via la Relance.
       get().handleDiceResult(effectiveValue, { skipOnRoll: true });
@@ -231,20 +253,38 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     announce(set, get, '⚡', `Foudre ${dieLabel}${nT > 1 ? ` ×${nT}` : ` sur ${target.emoji} ${target.name}`}`, POWERS[powerKey].color);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
-    newTeams[targetTeamIndex] = { ...target, sablierActif: true, sablierDivisor: divisor };
+    // Tempête de sable (L10) : toutes les autres équipes ; sinon la cible choisie.
+    const sablierOpp = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
+    const sablierTargets = effect.allOthers ? new Set(sablierOpp) : new Set([targetTeamIndex]);
+    for (const ti of sablierTargets) {
+      newTeams[ti] = {
+        ...newTeams[ti],
+        sablierActif: true, sablierDivisor: divisor,
+        ...(effect.silenceNextTurn ? { silencedNextTurn: true } : {}),
+        ...(effect.skipNextRoll ? { skipNextRoll: true } : {}),
+        ...(effect.goldPenaltyOnTimeout ? { timeoutPenalty: effect.goldPenaltyOnTimeout } : {}),
+      };
+    }
+    const nS = sablierTargets.size;
     soundPower();
-    addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level}) sur ${target.emoji} ${target.name} ! Timer /${divisor} au prochain tour.`);
-    announce(set, get, '⏱️', `Sablier sur ${target.emoji} ${target.name} — timer /${divisor}`, POWERS[powerKey].color);
+    const extrasS = `${effect.silenceNextTurn ? ' \u00B7 \uD83D\uDD07 Silence' : ''}${effect.skipNextRoll ? ' \u00B7 \uD83E\uDDCA Gel du lancer' : ''}${effect.goldPenaltyOnTimeout ? ` \u00B7 \uD83D\uDCB8 Taxe ${effect.goldPenaltyOnTimeout}` : ''}`;
+    addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level})${nS > 1 ? ` sur ${nS} \u00E9quipes` : ` sur ${target.emoji} ${target.name}`} ! Timer /${divisor}${extrasS}.`);
+    announce(set, get, '⏱️', `Sablier /${divisor}${nS > 1 ? ` ×${nS}` : ` sur ${target.emoji} ${target.name}`}`, POWERS[powerKey].color);
   } else if (powerKey === 'double') {
     // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
-    const add = effect.add ?? 1;
+    // extraAdd : questions supplémentaires des voies (Rafale tranquille / Marathon+).
+    const add = (effect.add ?? 1) + (effect.extraAdd || 0);
     const newExtra = Math.min((target.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
-    const noBonus = !!effect.noBonus || !!target.doubleNoBonus; // collant
+    // Facteur d'or de la rafale : Chrono partagé (×1.5) / Rafale tranquille (÷2).
+    // Ces voies font GAGNER de l'or à la cible (avec le facteur) → on lève le « sans bonus ».
+    const goldFactor = (effect.goldMult || 1) / (effect.goldDiv || 1);
+    const goldFx = goldFactor !== 1 ? { doubleGoldFactor: goldFactor } : {};
+    const noBonus = goldFactor !== 1 ? false : (!!effect.noBonus || !!target.doubleNoBonus); // collant
     // Niv.3 : timer reduit persistant sur la rafale — champ separe du Sablier
     // (un Sablier adverse one-shot ne doit pas heriter de cette persistance)
     const newDiv = Math.max(target.doubleTimerDivisor || 1, effect.timerDivisor || 1);
     const pressure = newDiv > 1 ? { doubleTimerDivisor: newDiv } : {};
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure };
+    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx };
     soundPower();
     addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
     announce(set, get, '❓', `Double sur ${target.emoji} ${target.name} — ${1 + newExtra} questions`, POWERS[powerKey].color);

@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { POWERS } from '../data/powers.js';
-import { resolveWrongAnswer } from '../logic/turnHelpers.js';
+import { resolveWrongAnswer, applyRecul } from '../logic/turnHelpers.js';
 import {
   resolvePowerEffect, maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel,
 } from '../logic/powerEffects.js';
@@ -126,9 +126,9 @@ describe('flux store : amélioration jusqu’à L10 + choix de voie', () => {
 
 describe('branches Foudre câblées', () => {
   const S = () => useGameStore.getState();
-  const base = (teams) => useGameStore.setState({
+  const base = (teams, pk = 'foudre') => useGameStore.setState({
     phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0,
-    log: [], extensions: { equipment: true, mastery: true }, showTargetPicker: { powerKey: 'foudre' },
+    log: [], extensions: { equipment: true, mastery: true }, showTargetPicker: { powerKey: pk },
     teams, emitVfx: () => {},
   });
   beforeEach(() => vi.spyOn(Math, 'random').mockReturnValue(0.5));
@@ -156,5 +156,29 @@ describe('branches Foudre câblées', () => {
     expect(S().teams[1].pos).toBe('n10');
     expect(S().teams[1].powers.bouclier.charges).toBe(0);
     after();
+  });
+
+  it('Silence (Sablier L5) : pose le drapeau + bloque le pouvoir de la cible', () => {
+    base([teamWith('sablier', { level: 5, spec5: 'silence' }), { ...teamWith('foudre', { charges: 2 }), pos: 'n8' }], 'sablier');
+    S().applyOffensivePower(1);
+    expect(S().teams[1].silencedNextTurn).toBe(true);
+    after();
+  });
+
+  it('Gel (Sablier L10) : pose skipNextRoll sur la cible', () => {
+    base([teamWith('sablier', { level: 10, spec10: 'freeze' }), { ...teamWith('foudre'), pos: 'n8' }], 'sablier');
+    S().applyOffensivePower(1);
+    expect(S().teams[1].skipNextRoll).toBe(true);
+    after();
+  });
+});
+
+describe('branches Bouclier câblées (or)', () => {
+  it('Rempart doré (L5) : +1 or par case de recul absorbée', () => {
+    const t = teamWith('bouclier', { level: 5, spec5: 'gold', charges: 1 });
+    t.money = 0;
+    const r = applyRecul(t, BOARD, 3, true); // niv.5 : +5 or de palier + 3 (1/case absorbée)
+    expect(r.bonusMoney).toBe(8);
+    expect(r.patch.money).toBe(8);
   });
 });

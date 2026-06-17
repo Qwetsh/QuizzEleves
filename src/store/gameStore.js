@@ -520,6 +520,16 @@ export const useGameStore = create((set, get) => ({
     // Bloque le dé pendant une séquence d'effet (choix de case/cible/d6...) ou
     // tant que le tour n'est pas résolu (atterrissage, jonction, question).
     if (pendingActions || pendingLanding || awaitingChoice || showQuestion || showEvent) return;
+    // Gel (Sablier L10) : l'équipe saute son lancer (flag consommé).
+    if (teams[currentTeam]?.skipNextRoll) {
+      const t = teams[currentTeam];
+      const nt = [...teams];
+      nt[currentTeam] = { ...t, skipNextRoll: false };
+      set({ teams: nt });
+      get().addLog(`🧊 ${t.emoji} ${t.name} est gelé : tour sauté !`);
+      get().nextTurn();
+      return;
+    }
     // Faces du dé de mouvement (D4/D6/D10 selon l'équipement ; 6 par défaut).
     const sides = moveDieSides(teams[currentTeam]);
     const finalValue = Math.floor(Math.random() * sides) + 1;
@@ -921,7 +931,9 @@ export const useGameStore = create((set, get) => ({
       // explainEffectValue D\u00c9TAILLE chaque source (objet, set, \u00d7s\u00e9rie\u2026) en un seul tirage.
       const base = noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime);
       const bonusBreak = explainEffectValue(tTeam, 'moneyPerCorrect');
-      const gain = base + bonusBreak.total;
+      // Facteur d'or de la rafale Double (Chrono partagé ×1.5 / Rafale tranquille ÷2).
+      const gFactor = team.doubleActive ? (team.doubleGoldFactor || 1) : 1;
+      const gain = Math.round((base + bonusBreak.total) * gFactor);
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
@@ -1069,6 +1081,12 @@ export const useGameStore = create((set, get) => ({
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
     addLog({ text: logMessage, detail });
+    // Taxe du temps (Sablier L5) : la cible perd de l'or en d\u00e9passant le temps.
+    if (team.timeoutPenalty) {
+      const pen = Math.min(team.timeoutPenalty, newTeams[currentTeam].money || 0);
+      newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) - pen, timeoutPenalty: undefined };
+      if (pen > 0) addLog(`\u{1F4B8} ${team.emoji} ${team.name} d\u00e9passe le temps : \u2212${pen} or (Taxe du temps).`);
+    }
     if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
     if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
 
@@ -1494,6 +1512,11 @@ export const useGameStore = create((set, get) => ({
     // Buffs à durée (tours) : on décrémente quand l'équipe REGAGNE la main ;
     // expiration à 0. (Fumigène posé avec une durée X ; autres buffs à venir.)
     let nt = get().teams;
+    // Silence/Taxe (Sablier) : consommés à la fin du tour de l'équipe visée.
+    if (nt[currentTeam]?.silencedNextTurn || nt[currentTeam]?.timeoutPenalty) {
+      nt = [...nt];
+      nt[currentTeam] = { ...nt[currentTeam], silencedNextTurn: false, timeoutPenalty: undefined };
+    }
     const ct = nt[newCurrent];
     if (ct?.itemFumigeneTurns > 0) {
       const left = ct.itemFumigeneTurns - 1;

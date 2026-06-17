@@ -63,10 +63,12 @@ export function applyRecul(team, board, base, masteryOn = false) {
     const level = team.powers.bouclier.level ?? 1;
     const effect = resolvePowerEffect(team, 'bouclier', masteryOn);
     const reduction = effect.amount ?? 0;
-    bonusMoney = effect.bonusMoney ?? 0;
+    const absorbed = Math.min(recul, reduction); // cases r\u00e9ellement absorb\u00e9es par le pouvoir
     recul = Math.max(0, recul - reduction);
     patch.powers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: charges - 1 } };
     detail.push({ label: `Bouclier niv.${level}`, note: `\u2212${cases(reduction)}` });
+    // Or : bonus de palier + Rempart dor\u00e9 (or/case absorb\u00e9e) + Tr\u00e9sor de guerre (forfait).
+    bonusMoney = (effect.bonusMoney ?? 0) + (effect.goldPerCaseAbsorbed || 0) * absorbed + (effect.absorbBonusMoney || 0);
     if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: 'Bonus du bouclier', amount: bonusMoney }); }
     shield = 'power';
   }
@@ -124,6 +126,7 @@ export const BURST_RESET = {
   doubleAsked: 0,
   doubleNoBonus: false,
   doubleTimerDivisor: undefined,
+  doubleGoldFactor: undefined,
   sablierActif: false,
   sablierDivisor: undefined,
 };
