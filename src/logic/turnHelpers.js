@@ -39,6 +39,7 @@ export function applyRecul(team, board, base, masteryOn = false) {
   let recul = base;
   let shield = null; // 'wooden' | 'power'
   let bonusMoney = 0;
+  let reflectOut = 0; // Réflexion (Bouclier L10) : cases renvoyées à l'attaquant (duel)
 
   // 0. Buff \u00ab pas de recul \u00bb (effet de dur\u00e9e d'un consommable) \u2014 priorit\u00e9 absolue.
   if (recul > 0 && hasBuff(team, 'noRecul')) {
@@ -70,6 +71,18 @@ export function applyRecul(team, board, base, masteryOn = false) {
     // Or : bonus de palier + Rempart dor\u00e9 (or/case absorb\u00e9e) + Tr\u00e9sor de guerre (forfait).
     bonusMoney = (effect.bonusMoney ?? 0) + (effect.goldPerCaseAbsorbed || 0) * absorbed + (effect.absorbBonusMoney || 0);
     if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: 'Bonus du bouclier', amount: bonusMoney }); }
+    // Trésor de guerre (L10) : +1 charge d'un pouvoir au hasard à chaque absorption.
+    if (effect.absorbBonusCharge) {
+      const baseP = patch.powers;
+      const keys = Object.keys(baseP).filter((k) => POWERS[k]);
+      if (keys.length) {
+        const pick = keys[Math.floor(Math.random() * keys.length)];
+        patch.powers = { ...baseP, [pick]: { ...baseP[pick], charges: (baseP[pick].charges ?? 0) + 1 } };
+        detail.push({ label: 'Trésor de guerre', note: `+1 charge ${POWERS[pick].name}` });
+      }
+    }
+    // Réflexion (L10) : une fraction du recul prévu est renvoyée à l'attaquant (géré par l'appelant, ex. duel).
+    if (effect.reflectFraction) reflectOut = Math.round(base * effect.reflectFraction);
     shield = 'power';
   }
 
@@ -84,7 +97,7 @@ export function applyRecul(team, board, base, masteryOn = false) {
   detail.push({ label: 'Recul subi', note: cases(recul) });
 
   const reduced = shield || recul !== base; // un d\u00e9tail n'a d'int\u00e9r\u00eat que si on a r\u00e9duit
-  const out = { patch, detail: reduced ? detail : undefined, bonusMoney };
+  const out = { patch, detail: reduced ? detail : undefined, bonusMoney, reflect: reflectOut };
   if (recul <= 0) return { ...out, applied: 0, path: null, absorbedBy: shield || 'equip' };
   const { finalPos, path } = moveBack(board, team.pos, recul);
   patch.pos = finalPos;
@@ -129,6 +142,7 @@ export const BURST_RESET = {
   doubleGoldFactor: undefined,
   doubleAllOrNothing: false,
   doubleBank: undefined,
+  doubleReflectTo: undefined,
   sablierActif: false,
   sablierDivisor: undefined,
 };

@@ -1,4 +1,5 @@
-import { getEffectValue, reducedSteal } from '../logic/itemEffects.js';
+import { getEffectValue, reducedSteal, reducedRecul } from '../logic/itemEffects.js';
+import { moveBack } from '../logic/pathfinding.js';
 import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { ITEMS } from '../data/items.js';
@@ -260,6 +261,14 @@ function applyFightReward(set, get) {
       : (rec.absorbedBy === 'equip'
           ? `\u{1F392} L'équipement de ${loser.emoji} ${loser.name} absorbe le recul !`
           : `\u{1F6E1}️ ${loser.emoji} ${loser.name} absorbe le recul avec son bouclier !`);
+    // Réflexion (Bouclier L10 du perdant) : une partie du recul revient au vainqueur.
+    if (rec.reflect > 0 && winnerIdx >= 0) {
+      const w = newTeams[winnerIdx];
+      const r2 = moveBack(board, w.pos, reducedRecul(w, rec.reflect));
+      newTeams[winnerIdx] = { ...w, pos: r2.finalPos };
+      if (r2.path.length > 1) moves = [...(moves || []), { teamIndex: winnerIdx, waypoints: r2.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+      message += ` ↩️ Réflexion : ${winner.emoji} recule aussi !`;
+    }
   }
 
   addLog(message);

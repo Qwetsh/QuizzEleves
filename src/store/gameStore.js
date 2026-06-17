@@ -854,10 +854,11 @@ export const useGameStore = create((set, get) => ({
     }
 
     // Bonus de temps : equipement (permanent) + consommable Sablier de poche (one-shot)
-    const itemBonusTime = getEffectValue(team, 'timerBonus') + (team.itemTimerBonus || 0);
-    if (team.itemTimerBonus) {
+    // + crédit « Vol de temps » (Sablier L10, one-shot).
+    const itemBonusTime = getEffectValue(team, 'timerBonus') + (team.itemTimerBonus || 0) + (team.timeCredit || 0);
+    if (team.itemTimerBonus || team.timeCredit) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...nt[currentTeam], itemTimerBonus: 0 };
+      nt[currentTeam] = { ...nt[currentTeam], itemTimerBonus: 0, timeCredit: 0 };
       set({ teams: nt });
     }
 
@@ -1025,6 +1026,13 @@ export const useGameStore = create((set, get) => ({
       } else if (doubleResult.updatedTeam !== updatedTeam) {
         const nt = [...get().teams];
         nt[currentTeam] = doubleResult.updatedTeam;
+        // Interro générale : la rafale terminée renvoie une Double sur l'attaquant.
+        const refl = updatedTeam.doubleReflectTo;
+        if (refl != null && nt[refl] && refl !== currentTeam) {
+          const r = nt[refl];
+          nt[refl] = { ...r, doubleActive: true, doubleExtra: Math.min((r.doubleExtra || 0) + 1, 4), doubleNoBonus: true };
+          addLog(`🏫 Interro générale ! ${r.emoji} ${r.name} subit aussi la Double au prochain tour.`);
+        }
         set({ teams: nt });
       }
 

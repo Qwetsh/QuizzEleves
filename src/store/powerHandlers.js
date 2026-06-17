@@ -286,6 +286,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
         ...(effect.goldPenaltyOnTimeout ? { timeoutPenalty: effect.goldPenaltyOnTimeout } : {}),
       };
     }
+    // Vol de temps (L10) : le temps retiré est crédité au lanceur (prochaine question).
+    if (effect.stealTime) {
+      const credit = Math.max(0, Math.round(30 - 30 / divisor));
+      newTeams[currentTeam] = { ...newTeams[currentTeam], timeCredit: (newTeams[currentTeam].timeCredit || 0) + credit };
+    }
     const nS = sablierTargets.size;
     soundPower();
     const extrasS = `${effect.silenceNextTurn ? ' \u00B7 \uD83D\uDD07 Silence' : ''}${effect.skipNextRoll ? ' \u00B7 \uD83E\uDDCA Gel du lancer' : ''}${effect.goldPenaltyOnTimeout ? ` \u00B7 \uD83D\uDCB8 Taxe ${effect.goldPenaltyOnTimeout}` : ''}`;
@@ -311,7 +316,9 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     // Examen surprise : la 1re question de la rafale sera Hardcore (si le pool existe).
     const hcPool = (get().questions?.hardcore || []).length > 0;
     const hcFx = (effect.hardcoreOne && hcPool) ? { forcedSubject: 'hardcore' } : {};
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx };
+    // Interro générale (L10) : à la fin de la rafale, la cible renvoie une Double sur l'attaquant.
+    const reflFx = effect.reflectToTarget ? { doubleReflectTo: currentTeam } : {};
+    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx, ...reflFx };
     soundPower();
     addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
     announce(set, get, '❓', `Double sur ${target.emoji} ${target.name} — ${1 + newExtra} questions`, POWERS[powerKey].color);
