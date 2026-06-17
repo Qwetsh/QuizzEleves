@@ -24,9 +24,9 @@ function EliminatedAnswer({ idx, answer }) {
       transition={{ duration: 0.25 }}
       style={{
         position: 'relative', overflow: 'hidden',
-        padding: '16px 18px', borderRadius: 14,
+        padding: '18px 20px', borderRadius: 14,
         border: '2px solid rgba(122,94,58,0.12)', background: 'var(--parch-100)',
-        fontSize: 16, color: 'var(--ink-500)',
+        fontSize: 22, color: 'var(--ink-500)',
         display: 'flex', alignItems: 'center', gap: 12,
       }}
     >
@@ -61,9 +61,9 @@ function EliminatedAnswer({ idx, answer }) {
         </>
       )}
       <span style={{
-        width: 30, height: 30, borderRadius: 8, background: 'var(--parch-200)',
+        width: 38, height: 38, borderRadius: 9, background: 'var(--parch-200)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-400)', flexShrink: 0,
+        fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--ink-400)', flexShrink: 0,
       }}>
         {String.fromCharCode(65 + idx)}
       </span>
@@ -195,7 +195,7 @@ export default function QuestionModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <ModalOverlay className={`max-w-[640px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''} ${isBurst ? 'quiz-cursed' : ''} ${isHardcore ? 'quiz-hardcore' : ''}`} panelStyle={STONE_PANEL}>
+        <ModalOverlay className={`max-w-[820px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''} ${isBurst ? 'quiz-cursed' : ''} ${isHardcore ? 'quiz-hardcore' : ''}`} panelStyle={STONE_PANEL}>
           <div className="tm-stone"><div className="tm-parch">
           {/* Quiz Header */}
           <div
@@ -248,7 +248,7 @@ export default function QuestionModal() {
               <span>{subjectInfo.name} {subjectInfo.biome ? `\u00b7 ${subjectInfo.biome}` : ''}</span>
             </div>
 
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: 1.3, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.25, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)' }}>
               {question.q}
             </div>
 
@@ -376,7 +376,7 @@ export default function QuestionModal() {
                 padding: 14, borderRadius: 14,
                 background: 'var(--parch-50)',
                 border: '1px solid rgba(122,94,58,0.16)',
-                fontSize: 14, lineHeight: 1.5, color: 'var(--ink-700)',
+                fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)',
               }}>
                 <strong>Explication :</strong> {question.e}
               </div>
