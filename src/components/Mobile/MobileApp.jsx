@@ -7,6 +7,7 @@ import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, rando
 import { POWERS } from '../../data/powers';
 import { describePowerScale, specSlotForLevel, specOptionsFor } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { RECIPES } from '../../data/recipes';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
@@ -645,6 +646,89 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
   );
 }
 
+// Onglet « Alchimie » : atelier (3 emplacements + distiller) + grimoire (recettes).
+function AlchemyView({ session, teamIdx, code, token }) {
+  const t = session.teams[teamIdx];
+  const [slots, setSlots] = useState([null, null, null]); // positions du sac
+  const [busy, setBusy] = useState(false);
+  const bagIngredients = (t.bag || []).map((c, i) => ({ i, key: cellKey(c) })).filter((x) => ITEMS[x.key]?.family === 'ingredient');
+  const known = new Set(t.knownIngredients || []);
+  const knownRec = new Set(t.knownRecipes || []);
+
+  const toggle = (bagIdx) => {
+    setSlots((s) => {
+      if (s.includes(bagIdx)) return s.map((x) => (x === bagIdx ? null : x));
+      const free = s.indexOf(null);
+      if (free < 0) return s;
+      const ns = [...s]; ns[free] = bagIdx; return ns;
+    });
+  };
+  const filled = slots.filter((x) => x != null).length;
+  const distill = () => {
+    if (filled !== 3 || busy) return;
+    setBusy(true);
+    sendIntent(code, token, 'craft', { bag: slots.filter((x) => x != null) }).catch(() => {});
+    setTimeout(() => { setSlots([null, null, null]); setBusy(false); }, 1400);
+  };
+
+  return (
+    <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
+      <div className="mob-pick-head">{'⚗️'} Alchimie</div>
+
+      <section className="mob-section">
+        <h2 className="mob-section-title">Atelier</h2>
+        <div className={'mob-alch-slots' + (busy ? ' is-busy' : '')}>
+          {slots.map((bagIdx, n) => {
+            const key = bagIdx != null ? cellKey(t.bag[bagIdx]) : null;
+            return (
+              <button key={n} className={'mob-alch-slot' + (key ? ' on' : '')} onClick={() => { if (bagIdx != null) toggle(bagIdx); }}>
+                {key ? <span style={{ fontSize: 28 }}>{ITEMS[key].icon}</span> : <span className="mob-alch-plus">+</span>}
+              </button>
+            );
+          })}
+        </div>
+        <button className="mob-btn mob-btn--gold" style={{ width: '100%', marginTop: 10 }} disabled={filled !== 3 || busy} onClick={distill}>
+          {busy ? '✨ Distillation…' : 'Distiller'}
+        </button>
+
+        <div className="mob-alch-bag">
+          {bagIngredients.length === 0
+            ? <div className="mob-empty">Aucun ingrédient dans ton sac.</div>
+            : bagIngredients.map(({ i, key }) => (
+              <button key={i} className={'mob-alch-ing' + (slots.includes(i) ? ' picked' : '')} onClick={() => toggle(i)}>
+                <span style={{ fontSize: 20 }}>{ITEMS[key].icon}</span>
+                <span className="mob-alch-ing-name">{ITEMS[key].name}{cellN(t.bag[i]) > 1 ? ` ×${cellN(t.bag[i])}` : ''}</span>
+                {known.has(key) && <small>{ITEMS[key].desc?.replace(/^Ingr[ée]dient\.\s*/i, '')}</small>}
+              </button>
+            ))}
+        </div>
+      </section>
+
+      <section className="mob-section">
+        <h2 className="mob-section-title">{'📖'} Grimoire <span className="mob-count">{knownRec.size}/{RECIPES.length}</span></h2>
+        {RECIPES.map((r) => {
+          const found = knownRec.has(r.id);
+          return (
+            <div key={r.id} className={'mob-alch-recipe' + (found ? ' found' : '')}>
+              {found ? (
+                <>
+                  <span>{r.ingredients.map((k) => ITEMS[k]?.icon || '?').join(' + ')}</span>
+                  <span className="mob-alch-arrow">→</span>
+                  <span>{ITEMS[r.potion]?.icon} <b>{ITEMS[r.potion]?.name}</b></span>
+                </>
+              ) : (
+                <span className="mob-alch-unknown">? + ? + ? &nbsp;→&nbsp; ?</span>
+              )}
+            </div>
+          );
+        })}
+      </section>
+
+      <div className="mob-foot">Goûte un ingrédient (carte active en jeu) pour révéler son effet. Combine 3 ingrédients pour découvrir une potion !</div>
+    </div>
+  );
+}
+
 // Onglet Historique : le journal publié par le TBI, du plus récent au plus ancien.
 function HistoryView({ session }) {
   const log = session.log || [];
@@ -774,7 +858,7 @@ function AdminPanel({ code, session, onClose }) {
 }
 
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
-function TabBar({ tab, setTab, hasShop, hasTrade, tradeAlert = 0 }) {
+function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0 }) {
   const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
       onClick={() => setTab(id)}
@@ -809,6 +893,7 @@ function TabBar({ tab, setTab, hasShop, hasTrade, tradeAlert = 0 }) {
       <Tab id="powers" icon={'⚡'} label="Pouvoirs" />
       {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label="Boutique" />}
       {hasTrade && <Tab id="trade" icon={'🤝'} label="Troc" badge={tradeAlert} />}
+      {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label="Alchi" />}
       <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
     </nav>
   );
@@ -921,15 +1006,17 @@ export default function MobileApp() {
     const hasShop = extOn(session.extensions, 'equipment');
     // Troc : seulement pour l'équipe du téléphone (token), extension active.
     const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
+    const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} />
       : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} />
+      : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} />
       : <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} tradeAlert={tradeAlert} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} hasAlchemy={hasAlchemy} tradeAlert={tradeAlert} />
       </>
     );
   }

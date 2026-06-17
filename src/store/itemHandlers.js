@@ -1,4 +1,5 @@
 import { ITEMS, SLOTS } from '../data/items.js';
+import { matchRecipe } from '../data/recipes.js';
 import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
@@ -131,7 +132,7 @@ export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS),
   const ex = new Set(exclude);
   const pool = enabledKeys.filter((k) => {
     const it = ITEMS[k];
-    if (!it || ex.has(k)) return false;
+    if (!it || ex.has(k) || it.family) return false; // familles (alchimie/enchant) hors vitrine aléatoire
     return category === 'consumable' ? it.slot === 'consumable' : it.slot !== 'consumable';
   });
   return pickWeightedItems(count, pool, shopWeightOf);
@@ -160,7 +161,7 @@ export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys
 // opts.category : 'all' (défaut), 'consumable' ou 'equipment' pour restreindre le pool.
 // Retourne null si aucun objet n'est activé dans la catégorie.
 export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(ITEMS), { category = 'all' } = {}) {
-  let valid = enabledKeys.filter((k) => ITEMS[k]);
+  let valid = enabledKeys.filter((k) => ITEMS[k] && !ITEMS[k].family); // pas d'ingrédient/potion/parchemin en loot aléatoire
   if (category === 'consumable') valid = valid.filter((k) => ITEMS[k].slot === 'consumable');
   else if (category === 'equipment') valid = valid.filter((k) => ITEMS[k].slot !== 'consumable');
   if (valid.length === 0) return null;
@@ -383,7 +384,13 @@ export function useConsumable(set, get, bagIndex) {
   // Consomme UNE unité (la pile diminue ; la case se libère à 0).
   bag[bagIndex] = cellN(cell) > 1 ? mkCell(itemKey, cellN(cell) - 1) : null;
   const newTeams = [...teams];
-  newTeams[currentTeam] = { ...team, bag };
+  // Alchimie : utiliser un ingrédient seul le RÉVÈLE dans le grimoire de l'équipe.
+  const teamPatch = { bag };
+  if (item.family === 'ingredient') {
+    const known = team.knownIngredients || [];
+    if (!known.includes(itemKey)) teamPatch.knownIngredients = [...known, itemKey];
+  }
+  newTeams[currentTeam] = { ...team, ...teamPatch };
   set({ teams: newTeams, showInventory: false });
   addLog(`${item.icon} ${team.emoji} ${team.name} utilise ${item.name} !`);
 
@@ -405,4 +412,40 @@ export function useConsumable(set, get, bagIndex) {
     return;
   }
   runEffects(set, get, actions, { source: 'item', itemKey, bagIndex });
+}
+
+// === ALCHIMIE : distillation de 3 ingrédients du sac en une potion ===========
+// `indices` = 3 positions DISTINCTES du sac (ingrédients). Cherche une recette
+// (multiset), consomme les 3, ajoute la potion (placeItem) et enregistre la
+// recette dans le grimoire de l'équipe. Renvoie { ok, potion?, discovered? }.
+export function craftPotion(set, get, teamIdx, indices) {
+  const { teams, addLog } = get();
+  const team = teams[teamIdx];
+  if (!team) return { ok: false, reason: 'équipe invalide' };
+  const bag = normalizeBag(team.bag);
+  const idx = [...new Set((indices || []).map(Number))].filter((i) => Number.isInteger(i) && i >= 0 && i < bag.length);
+  if (idx.length !== 3) return { ok: false, reason: '3 ingrédients distincts requis' };
+  const keys = idx.map((i) => cellKey(bag[i]));
+  if (keys.some((k) => !k || ITEMS[k]?.family !== 'ingredient')) return { ok: false, reason: 'ingrédients invalides' };
+
+  // Consomme une unité de chaque ingrédient.
+  let t = { ...team, bag: [...bag] };
+  for (const i of idx) { const c = t.bag[i]; t.bag[i] = cellN(c) > 1 ? mkCell(cellKey(c), cellN(c) - 1) : null; }
+
+  const recipe = matchRecipe(keys);
+  const nt = [...teams];
+  if (recipe && ITEMS[recipe.potion]) {
+    t = placeItem(t, recipe.potion).team;
+    const known = t.knownRecipes || [];
+    const discovered = !known.includes(recipe.id);
+    if (discovered) t = { ...t, knownRecipes: [...known, recipe.id] };
+    nt[teamIdx] = t; set({ teams: nt });
+    addLog(`⚗️ ${team.emoji} ${team.name} distille ${ITEMS[recipe.potion].icon} ${ITEMS[recipe.potion].name} !${discovered ? ' ✨ Recette découverte !' : ''}`);
+    if (get().phase === 'game') saveGame(get());
+    return { ok: true, potion: recipe.potion, discovered };
+  }
+  nt[teamIdx] = t; set({ teams: nt });
+  addLog(`💨 ${team.emoji} ${team.name} : distillation ratée (eau trouble).`);
+  if (get().phase === 'game') saveGame(get());
+  return { ok: false, reason: 'aucune recette' };
 }

@@ -14,9 +14,9 @@ describe('registre des extensions', () => {
     expect(extOn({ equipment: false }, 'equipment')).toBe(false);
     expect(extOn({ equipment: true }, 'equipment')).toBe(true);
   });
-  it('defaultExtensions : toutes activées par défaut', () => {
+  it('defaultExtensions : reflète le défaut de chaque extension', () => {
     const d = defaultExtensions();
-    for (const e of EXTENSIONS) expect(d[e.id]).toBe(true);
+    for (const e of EXTENSIONS) expect(d[e.id]).toBe(e.default !== false);
   });
 });
 

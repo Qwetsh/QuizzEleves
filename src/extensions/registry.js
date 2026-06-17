@@ -39,6 +39,22 @@ export const EXTENSIONS = [
     default: true,
     needsItems: true,
   },
+  {
+    id: 'alchemy',
+    name: 'Alchimie',
+    icon: '⚗️',
+    desc: 'Ingrédients à combiner par 3 pour distiller des potions (recettes à découvrir). Atelier et grimoire sur le téléphone. Désactivée : pas d’ingrédients ni de potions.',
+    default: false,
+    needsItems: true,
+  },
+  {
+    id: 'enchant',
+    name: 'Enchantement',
+    icon: '📜',
+    desc: 'Parchemins à appliquer sur une pièce d’équipement pour l’enchanter pendant la partie (l’effet suit l’objet). Désactivée : pas de parchemins.',
+    default: false,
+    needsItems: true,
+  },
 ];
 
 // État par défaut : { equipment: true, ... }

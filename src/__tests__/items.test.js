@@ -75,6 +75,9 @@ describe('catalogue items.js', () => {
       expect(item.desc, key).toBeTruthy();
       expect(['head', 'body', 'feet', 'consumable'], key).toContain(item.slot);
       expect(Object.keys(RARITIES), key).toContain(item.rarity);
+      // Familles alchimie/enchant : règles propres (potions price 0, parchemins
+      // sans `effects` mais avec `enchant`) — validées par leurs tests dédiés.
+      if (item.family) continue;
       expect(item.price, key).toBeGreaterThan(0);
       expect(item.effects.length, key).toBeGreaterThan(0);
       const allowed = item.slot === 'consumable' ? CONSUMABLE_EFFECTS : EQUIP_EFFECTS;
@@ -87,6 +90,7 @@ describe('catalogue items.js', () => {
 
   it('les légendaires sont lootOnly (et seulement eux)', () => {
     for (const [key, item] of Object.entries(ITEMS)) {
+      if (item.family) continue; // potions/parchemins : hors rotation boutique/loot
       expect(!!item.lootOnly, key).toBe(item.rarity === 'legendaire');
     }
   });

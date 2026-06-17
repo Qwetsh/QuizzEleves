@@ -203,6 +203,30 @@ export const ITEMS = {
       { type: 'extraTime', value: 5 },
     ],
   },
+
+  // === ALCHIMIE — ingrédients (effet mineur en usage seul) ==================
+  // family:'ingredient'. Se combinent par 3 (recettes dans data/recipes.js).
+  herbeDoree:    { name: 'Herbe dorée',      icon: '🌿', slot: 'consumable', family: 'ingredient', rarity: 'commun', price: 4, desc: 'Ingrédient. Seule : +3 pièces.', effects: [{ type: 'gainMoney', value: 3 }] },
+  champignonBleu:{ name: 'Champignon bleu',  icon: '🍄', slot: 'consumable', family: 'ingredient', rarity: 'commun', price: 4, desc: 'Ingrédient. Seul : +4s à ta prochaine question.', effects: [{ type: 'extraTime', value: 4 }] },
+  racinePierre:  { name: 'Racine de pierre', icon: '🪨', slot: 'consumable', family: 'ingredient', rarity: 'commun', price: 4, desc: 'Ingrédient. Seule : annule ton prochain recul.', effects: [{ type: 'shieldNext', value: 1 }] },
+  aileFee:       { name: 'Aile de fée',      icon: '🦋', slot: 'consumable', family: 'ingredient', rarity: 'commun', price: 4, desc: 'Ingrédient. Seule : avance d’1 case.', effects: [{ type: 'moveForward', value: 1 }] },
+  fleurLune:     { name: 'Fleur de lune',    icon: '🌙', slot: 'consumable', family: 'ingredient', rarity: 'commun', price: 4, desc: 'Ingrédient. Seule : +3 pièces.', effects: [{ type: 'gainMoney', value: 3 }] },
+  cendreDragon:  { name: 'Cendre de dragon', icon: '🔥', slot: 'consumable', family: 'ingredient', rarity: 'rare',   price: 6, desc: 'Ingrédient. Seule : +4s à ta prochaine question.', effects: [{ type: 'extraTime', value: 4 }] },
+  larmeCristal:  { name: 'Larme de cristal', icon: '💧', slot: 'consumable', family: 'ingredient', rarity: 'rare',   price: 6, desc: 'Ingrédient. Seule : avance d’1 case.', effects: [{ type: 'moveForward', value: 1 }] },
+  ecailleArgent: { name: 'Écaille d’argent', icon: '🐟', slot: 'consumable', family: 'ingredient', rarity: 'rare',   price: 6, desc: 'Ingrédient. Seule : annule ton prochain recul.', effects: [{ type: 'shieldNext', value: 1 }] },
+
+  // === ALCHIMIE — potions (effet majeur, obtenues par distillation) =========
+  potionOr:      { name: 'Potion d’or',       icon: '🟡', slot: 'consumable', family: 'potion', rarity: 'rare',       price: 0, lootOnly: true, desc: 'Potion : +15 pièces.', effects: [{ type: 'gainMoney', value: 15 }] },
+  elixirTemps:   { name: 'Élixir du temps',   icon: '⏳', slot: 'consumable', family: 'potion', rarity: 'rare',       price: 0, lootOnly: true, desc: 'Potion : +12s à ta prochaine question.', effects: [{ type: 'extraTime', value: 12 }] },
+  potionPierre:  { name: 'Potion de pierre',  icon: '🛡️', slot: 'consumable', family: 'potion', rarity: 'rare',       price: 0, lootOnly: true, desc: 'Potion : annule tes 2 prochains reculs.', effects: [{ type: 'shieldNext', value: 2 }] },
+  potionRuee:    { name: 'Potion de ruée',     icon: '🚀', slot: 'consumable', family: 'potion', rarity: 'rare',       price: 0, lootOnly: true, desc: 'Potion : avance de 4 cases.', effects: [{ type: 'moveForward', value: 4 }] },
+  elixirSupreme: { name: 'Élixir suprême',    icon: '🌟', slot: 'consumable', family: 'potion', rarity: 'legendaire', price: 0, lootOnly: true, desc: 'Potion : +20 pièces, +8s et recharge 1 pouvoir.', effects: [{ type: 'gainMoney', value: 20 }, { type: 'extraTime', value: 8 }, { type: 'gainCharge', value: 1 }] },
+
+  // === ENCHANTEMENT — parchemins (posés sur une pièce équipée) ==============
+  // family:'parchment'. `enchant` = effet/déclencheur ajouté à la pièce visée.
+  parchemoinOr5: { name: 'Parchemin de l’avare', icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +15 pièces quand tu fais 5.', enchant: { kind: 'trigger', on: 'roll', values: [5], do: [{ action: 'money', mode: 'gain', target: 'self', n: 15, unit: 'flat' }] } },
+  parchemoinTemps:{ name: 'Parchemin du sage',  icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +3s au temps de réponse.', enchant: { type: 'timerBonus', value: 3 } },
+  parchemoinRecul:{ name: 'Parchemin du roc',   icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : recul subi réduit d’1 case.', enchant: { type: 'reculReduction', value: 1 } },
 };
 
 // Remplace le contenu de ITEMS en gardant la MÊME référence (mutée en place),

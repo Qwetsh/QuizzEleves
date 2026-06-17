@@ -69,6 +69,9 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       bag: (t.bag || []).filter(Boolean),
       powers: t.powers || {},
       powerDef: t.powerDef, powerOff: t.powerOff,
+      // Alchimie : grimoire de l'équipe (ingrédients goûtés + recettes trouvées).
+      knownIngredients: t.knownIngredients || [],
+      knownRecipes: t.knownRecipes || [],
     })),
   };
 }

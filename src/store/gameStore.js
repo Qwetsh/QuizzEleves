@@ -1440,6 +1440,9 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'sellBag') {
       const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
       if (i >= 0) itemH.sellBagItem(set, get, i, idx);
+    } else if (type === 'craft') {
+      // Alchimie : distille 3 ingrédients du sac (positions dans payload.bag).
+      itemH.craftPotion(set, get, idx, payload.bag || []);
     }
   },
 
