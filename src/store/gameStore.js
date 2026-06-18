@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { EVENTS } from '../data/events.js';
-import { SUBJECTS, SUBJECT_KEYS } from '../data/subjects.js';
+import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
@@ -165,6 +165,15 @@ export const useGameStore = create((set, get) => ({
   // Pool de questions « spécial Brevet » (DNB) ajouté par-dessus le niveau choisi
   useBrevet: false,
   setUseBrevet: (v) => set({ useBrevet: v }),
+
+  // Matières activées sur le plateau (sous-ensemble de SUBJECT_KEYS). Défaut =
+  // les 6 historiques ; Allemand/Espagnol s'activent quand elles ont du contenu.
+  selectedSubjects: DEFAULT_BOARD_SUBJECTS.slice(),
+  toggleSubject: (key) => set((s) => {
+    const cur = Array.isArray(s.selectedSubjects) ? s.selectedSubjects : DEFAULT_BOARD_SUBJECTS;
+    const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
+    return { selectedSubjects: next.length ? next : cur }; // garder ≥ 1 matière
+  }),
 
   // Duels : true = duel forcé automatique (historique) ; false = l'équipe qui
   // arrive sur une case occupée CHOISIT de défier (et qui) ou non.
@@ -442,14 +451,19 @@ export const useGameStore = create((set, get) => ({
 
   // --- Start game ---
   startGame: () => {
-    const { setupTeams, boardParams, level, useBrevet } = get();
-    const { nodes, viewBox } = generateBoard(boardParams);
+    const { setupTeams, boardParams, level, useBrevet, selectedSubjects } = get();
+    const questions = getQuestions(level, { brevet: useBrevet });
+    // Matières effectives = sélection ∩ matières ayant réellement des questions
+    // (au niveau choisi) → on n'envoie jamais une matière au pool vide sur le
+    // plateau. Repli sur toutes les matières avec contenu si la sélection est vide.
+    let subjects = (selectedSubjects || DEFAULT_BOARD_SUBJECTS).filter((k) => questions[k]?.length);
+    if (!subjects.length) subjects = SUBJECT_KEYS.filter((k) => questions[k]?.length);
+    const { nodes, viewBox } = generateBoard({ ...boardParams, subjects });
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
       equipment: { head: null, body: null, feet: null },
       bag: Array(itemH.BAG_SIZE).fill(null),
     }));
-    const questions = getQuestions(level, { brevet: useBrevet });
     set({
       devSandbox: false,
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,

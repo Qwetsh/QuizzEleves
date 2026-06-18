@@ -35,7 +35,11 @@ export function generateBoard(params) {
     voieFinale = 'court-long',
     couloirsMix = 2,
     eventEveryX = 3,
+    // Matières à répartir sur les voies (défaut = toutes). Permet de restreindre
+    // le plateau à une sélection (cf. selectedSubjects au Setup).
+    subjects = SUBJECT_KEYS,
   } = params;
+  const subjectPool = (Array.isArray(subjects) && subjects.length) ? subjects : SUBJECT_KEYS;
 
   const nodes = {};
   let x = 80;
@@ -53,8 +57,8 @@ export function generateBoard(params) {
     x += SX;
   }
 
-  // Pool de matieres melange aleatoirement
-  let availablePool = shuffleArray(SUBJECT_KEYS);
+  // Pool de matieres melange aleatoirement (restreint à la sélection)
+  let availablePool = shuffleArray(subjectPool);
 
   for (let s = 0; s < nbSections; s++) {
     // Jonction d'entree
@@ -64,8 +68,10 @@ export function generateBoard(params) {
     x += SX + 10;
 
     // Choix des matieres et positions y
-    if (availablePool.length < nbVoies) {
-      availablePool = availablePool.concat(shuffleArray(SUBJECT_KEYS));
+    // `while` (et non `if`) : si la sélection est plus petite que le nb de voies,
+    // on recharge autant que nécessaire (sinon des voies resteraient sans matière).
+    while (availablePool.length < nbVoies) {
+      availablePool = availablePool.concat(shuffleArray(subjectPool));
     }
     const subjs = availablePool.slice(0, nbVoies);
     availablePool = availablePool.slice(nbVoies);

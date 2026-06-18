@@ -8,6 +8,7 @@ import LootReveal from '../Modals/LootReveal';
 import QuestionsEditor from './QuestionsEditor';
 import BalanceEditor from './BalanceEditor';
 import LevelSelect from './LevelSelect';
+import SubjectSelect from './SubjectSelect';
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
 import BoardParams from './BoardParams';
@@ -229,6 +230,9 @@ export default function Setup() {
         <div className="flex flex-col gap-4">
           <div className="panel">
             <LevelSelect />
+          </div>
+          <div className="panel">
+            <SubjectSelect />
           </div>
           {!OFFLINE && (
             <div className="panel">

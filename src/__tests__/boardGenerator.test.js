@@ -43,6 +43,24 @@ describe('generateBoard', () => {
     expect(typeof result.viewBox).toBe('object');
   });
 
+  it('restreint les matières du plateau à la sélection `subjects`', () => {
+    const { nodes } = generateBoard({ ...defaultParams, subjects: ['maths', 'histoire'] });
+    const used = new Set(
+      Object.values(nodes)
+        .filter((n) => n.type === 'subject' && n.subject !== 'multi')
+        .map((n) => n.subject),
+    );
+    for (const s of used) expect(['maths', 'histoire']).toContain(s);
+    expect(used.size).toBeGreaterThan(0);
+  });
+
+  it('une seule matière sélectionnée : toutes les cases sujet la portent', () => {
+    const { nodes } = generateBoard({ ...defaultParams, subjects: ['maths'] });
+    const subj = Object.values(nodes).filter((n) => n.type === 'subject' && n.subject !== 'multi');
+    expect(subj.length).toBeGreaterThan(0);
+    for (const n of subj) expect(n.subject).toBe('maths');
+  });
+
   it('nodes contains depart and arrivee keys', () => {
     const { nodes } = generateBoard(defaultParams);
     expect(nodes).toHaveProperty('depart');
