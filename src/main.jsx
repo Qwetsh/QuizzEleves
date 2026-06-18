@@ -2,6 +2,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import MobileApp from './components/Mobile/MobileApp';
+// Polices auto-hébergées (bundlées) au lieu du CDN Google Fonts : fonctionnent
+// hors ligne et évitent tout appel réseau. Familles : Lilita One (display),
+// Fredoka (UI), Inter (corps) — cf. --font-display/--font-ui/--font-body.
+import '@fontsource/lilita-one/400.css';
+import '@fontsource/fredoka/400.css';
+import '@fontsource/fredoka/500.css';
+import '@fontsource/fredoka/600.css';
+import '@fontsource/fredoka/700.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 import './styles/index.css';
 import './styles/animations.css';
 import { applyCachedBalance, refreshBalance } from './logic/balanceConfig';

@@ -17,6 +17,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/fredoka": "^5.2.10",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/lilita-one": "^5.2.8",
     "@supabase/supabase-js": "^2.108.1",
     "framer-motion": "^12.40.0",
     "qrcode.react": "^4.2.0",

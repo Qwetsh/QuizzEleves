@@ -26,10 +26,10 @@ npm run build:offline   # 1 fois EN LIGNE : snapshot de la base + build → dist
 modules ES). Il faut le servir (serveur statique local) **ou** passer par
 l'application native ci-dessous.
 
-### Reste en ligne : les polices
-Les polices (Lilita One / Fredoka / Inter) sont encore chargées depuis Google
-Fonts. Sans connexion, l'app retombe sur les polices système (thème dégradé mais
-fonctionnel). Pour un offline 100 % fidèle : héberger les polices en local.
+### Polices : auto-hébergées
+Les polices (Lilita One / Fredoka / Inter) sont bundlées via **@fontsource**
+(importées dans `src/main.jsx`) — plus aucun appel à Google Fonts. Le rendu est
+donc identique hors ligne, sans réseau.
 
 ## 2. Application native Windows (Tauri)
 
