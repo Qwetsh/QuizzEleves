@@ -1006,9 +1006,11 @@ export default function MobileApp() {
     return () => { alive = false; };
   }, [session, teamIdx, token, code]);
 
-  // Suivi des trocs (mode téléphone, équipe possédée) : alimente le badge de
-  // l'onglet Troc ET la vue Troc (abonnement unique partagé).
-  const canTrade = !!(session && session.status !== 'lobby' && teamIdx != null && owned && token && extOn(session.extensions, 'trade'));
+  // Suivi des trocs : alimente le badge de l'onglet Troc ET la vue Troc
+  // (abonnement unique partagé). Dès qu'une équipe est sélectionnée (créée au
+  // lobby OU choisie à la main), le téléphone peut troquer pour elle — l'appli
+  // côté TBI (applyTrade) ne valide que from_idx/to_idx, jamais le jeton.
+  const canTrade = !!(session && session.status !== 'lobby' && teamIdx != null && token && extOn(session.extensions, 'trade'));
   useEffect(() => {
     if (!canTrade || !code) { setTrades([]); return; }
     let alive = true;
@@ -1031,8 +1033,10 @@ export default function MobileApp() {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
     const hasShop = extOn(session.extensions, 'equipment');
-    // Troc : seulement pour l'équipe du téléphone (token), extension active.
-    const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
+    // Troc : pour toute équipe sélectionnée (possédée au lobby ou choisie à la
+    // main), tant que l'extension est active. Ne dépend plus de `owned` —
+    // l'application du troc côté TBI revérifie or/objets, pas le jeton.
+    const hasTrade = extOn(session.extensions, 'trade') && !!token;
     const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} />
