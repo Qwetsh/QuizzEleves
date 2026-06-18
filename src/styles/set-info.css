@@ -24,9 +24,15 @@
 }
 .setinfo-piece {
   flex: 1;
+  min-width: 0;
   height: 58px;
-  display: grid;
-  place-items: center;
+  /* Flex (et non grid) : le conteneur a une hauteur DÉFINIE, donc le
+     `max-height: %` de l'image se résout — sinon (grid, piste auto) l'image
+     gardait sa taille naturelle et débordait de la case. overflow:hidden = filet. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   border-radius: 9px;
   background: linear-gradient(160deg, rgba(255, 252, 235, 0.6), rgba(255, 248, 225, 0.25));
   box-shadow: inset 0 0 0 1.5px var(--set-edge);
