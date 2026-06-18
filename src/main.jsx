@@ -8,6 +8,7 @@ import { applyCachedBalance, refreshBalance } from './logic/balanceConfig';
 import { applyCachedItems, refreshItems } from './logic/itemsConfig';
 import { applyCachedEvents, refreshEvents } from './logic/eventsConfig';
 import { applyCachedQuestions, refreshQuestions } from './logic/questionsConfig';
+import { applyCachedRecipes, refreshRecipes } from './logic/recipesConfig';
 import { useGameStore } from './store/gameStore';
 
 // Le companion mobile s'ouvre via l'URL d'appairage (?join=CODE) : c'est une
@@ -15,9 +16,11 @@ import { useGameStore } from './store/gameStore';
 const joinMode = new URLSearchParams(window.location.search).has('join');
 
 if (joinMode) {
-  // Mobile : on a seulement besoin du catalogue d'objets pour résoudre noms/images.
+  // Mobile : catalogue d'objets (noms/images) + recettes (grimoire d'alchimie).
   applyCachedItems();
   refreshItems().catch(() => {});
+  applyCachedRecipes();
+  refreshRecipes().catch(() => {});
 } else {
   // TBI complet — applique les caches (synchrone, offline-safe) AVANT le 1er rendu,
   // puis rafraîchit depuis Supabase en arrière-plan.
@@ -41,6 +44,10 @@ if (joinMode) {
   refreshQuestions()
     .then((n) => { if (n) useGameStore.getState().bumpQuestionsVersion(); })
     .catch(() => {});
+
+  // Recettes d'alchimie personnalisées (table quete_recipes) par-dessus les intégrées.
+  applyCachedRecipes();
+  refreshRecipes().catch(() => {});
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

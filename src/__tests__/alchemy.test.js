@@ -1,8 +1,8 @@
 // Extension « Alchimie » : recettes (multiset), distillation, découverte.
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { craftPotion, generateShopStock, generateBlackMarketStock, pickLootItem } from '../store/itemHandlers.js';
-import { matchRecipe, RECIPES } from '../data/recipes.js';
+import { matchRecipe, RECIPES, setCustomRecipes } from '../data/recipes.js';
 import { ITEMS } from '../data/items.js';
 
 const set = (p) => useGameStore.setState(p);
@@ -24,6 +24,21 @@ describe('recettes (matchRecipe)', () => {
   it('renvoie null sans recette', () => {
     expect(matchRecipe(['herbeDoree', 'herbeDoree', 'herbeDoree'])).toBeNull();
     expect(matchRecipe(['herbeDoree', 'fleurLune'])).toBeNull(); // pas 3
+  });
+});
+
+describe('recettes personnalisées (éditeur)', () => {
+  afterEach(() => setCustomRecipes([])); // restaure les recettes intégrées
+
+  it('une recette custom est ajoutée et matchée (ordre indifférent)', () => {
+    setCustomRecipes([{ id: 'custom1', ingredients: ['aileFee', 'racinePierre', 'larmeCristal'], potion: 'potionOr' }]);
+    expect(RECIPES.some((r) => r.id === 'custom1')).toBe(true);
+    expect(matchRecipe(['larmeCristal', 'aileFee', 'racinePierre'])?.potion).toBe('potionOr');
+  });
+
+  it('les recettes intégrées restent présentes', () => {
+    setCustomRecipes([{ id: 'custom1', ingredients: ['aileFee', 'racinePierre', 'larmeCristal'], potion: 'potionOr' }]);
+    expect(matchRecipe(['herbeDoree', 'fleurLune', 'champignonBleu'])?.id).toBe('or');
   });
 });
 
