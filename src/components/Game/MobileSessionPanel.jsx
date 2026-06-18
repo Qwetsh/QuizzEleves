@@ -13,6 +13,7 @@ export default function MobileSessionPanel() {
   const shopStock = useGameStore((s) => s.shopStock);
   const log = useGameStore((s) => s.log);
   const extensions = useGameStore((s) => s.extensions);
+  const lv2Mode = useGameStore((s) => s.lv2Mode);
   // Code de session partagé (créé ici en mode tableau, ou par le lobby en mode
   // téléphone) — source unique dans le store.
   const code = useGameStore((s) => s.sessionCode);
@@ -29,7 +30,7 @@ export default function MobileSessionPanel() {
   // (débounce léger pour grouper les rafales de mise à jour).
   useEffect(() => {
     if (!code) return;
-    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked });
+    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode });
     const id = setTimeout(() => { publishSession(code, payload).catch(() => {}); }, 250);
     return () => clearTimeout(id);
   }, [code, teams, currentTeam, finished, shopStock, log, extensions, locked]);
@@ -38,7 +39,7 @@ export default function MobileSessionPanel() {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked });
+      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode });
       setSessionCode(await createSession(payload));
       setOpen(true);
     } catch (e) { setError(e.message || 'Connexion impossible'); }

@@ -10,11 +10,16 @@ export default function SubjectSelect() {
   const useBrevet = useGameStore((s) => s.useBrevet);
   const selected = useGameStore((s) => s.selectedSubjects);
   const toggleSubject = useGameStore((s) => s.toggleSubject);
+  const lv2Mode = useGameStore((s) => s.lv2Mode);
+  const setLv2Mode = useGameStore((s) => s.setLv2Mode);
   // Re-render quand les questions sont (re)chargées depuis Supabase.
   useGameStore((s) => s.questionsVersion);
 
   const sel = Array.isArray(selected) ? selected : [];
   const pools = getQuestions(level, { brevet: useBrevet });
+  // Le mode « LV2 au choix » n'a de sens que si les deux langues sont actives ET
+  // ont du contenu au niveau choisi.
+  const bothLv2 = ['allemand', 'espagnol'].every((k) => sel.includes(k) && (pools[k]?.length || 0) > 0);
 
   return (
     <div>
@@ -53,6 +58,30 @@ export default function SubjectSelect() {
           );
         })}
       </div>
+
+      {bothLv2 && (
+        <button
+          type="button"
+          onClick={() => setLv2Mode(!lv2Mode)}
+          aria-pressed={lv2Mode}
+          style={{
+            marginTop: 10, width: '100%', textAlign: 'left', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12,
+            border: `2px solid ${lv2Mode ? 'var(--gold-600)' : 'rgba(122,94,58,0.22)'}`,
+            background: lv2Mode ? 'rgba(232,169,88,0.12)' : '#fffefb',
+          }}
+        >
+          <span style={{ fontSize: 22 }}>🗣️</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 14, color: 'var(--ink-800)' }}>
+              {lv2Mode ? '✓ ' : ''}LV2 au choix (Allemand + Espagnol fusionnés)
+            </span>
+            <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-500)', lineHeight: 1.3 }}>
+              Une seule case « LV2 » sur le plateau ; chaque équipe choisit sa langue à la création et répond dedans.
+            </span>
+          </span>
+        </button>
+      )}
     </div>
   );
 }

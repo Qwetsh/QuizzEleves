@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { EVENTS } from '../data/events.js';
-import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS } from '../data/subjects.js';
+import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
@@ -12,7 +12,7 @@ import { defaultExtensions, extOn } from '../extensions/registry.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
-import { randomSubject, resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET } from '../logic/turnHelpers.js';
+import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET } from '../logic/turnHelpers.js';
 import { resolvePowerEffect } from '../logic/powerEffects.js';
 import { soundShield, soundTrap } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
@@ -86,6 +86,7 @@ export function buildLobbySetupTeams(rows) {
       blazonGlyph: TEAM_BLAZON_GLYPHS[i] || 'lion',
       pos: 'depart', correct: 0, wrong: 0, streak: 0, money: 0,
       powerDef: r.power_def || null, powerOff: r.power_off || null,
+      lv2: r.lv2 || null, // langue LV2 choisie au téléphone (si mode LV2 actif)
       sablierActif: false, doubleActive: false, turnsSinceShop: 0,
       token: r.token || null, // lien token↔équipe (interne au TBI, non publié)
     };
@@ -174,6 +175,28 @@ export const useGameStore = create((set, get) => ({
     const next = cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key];
     return { selectedSubjects: next.length ? next : cur }; // garder ≥ 1 matière
   }),
+
+  // Mode « LV2 au choix » : quand Allemand ET Espagnol sont sélectionnés, fusionne
+  // les deux en une seule filière `lv2` sur le plateau ; chaque équipe répond dans
+  // SA langue (team.lv2, choisie à la création d'équipe).
+  lv2Mode: false,
+  setLv2Mode: (v) => set({ lv2Mode: !!v }),
+
+  // Matières réellement posées sur le plateau (set au démarrage) : sert à
+  // `randomBoardSubject` pour que les cases « multi »/jonctions ne tirent que
+  // parmi la sélection effective (et 'lv2' si le mode est actif).
+  boardSubjects: SUBJECT_KEYS.slice(),
+  randomBoardSubject: () => {
+    const pool = get().boardSubjects;
+    const list = Array.isArray(pool) && pool.length ? pool : SUBJECT_KEYS;
+    return list[Math.floor(Math.random() * list.length)];
+  },
+  // Résout une filière 'lv2' vers la langue concrète d'une équipe (team.lv2),
+  // avec repli espagnol. Les autres sujets sont renvoyés tels quels.
+  resolveSubjectFor: (subject, teamIdx) => {
+    if (subject !== 'lv2') return subject;
+    return get().teams[teamIdx]?.lv2 || 'espagnol';
+  },
 
   // Duels : true = duel forcé automatique (historique) ; false = l'équipe qui
   // arrive sur une case occupée CHOISIT de défier (et qui) ou non.
@@ -451,22 +474,30 @@ export const useGameStore = create((set, get) => ({
 
   // --- Start game ---
   startGame: () => {
-    const { setupTeams, boardParams, level, useBrevet, selectedSubjects } = get();
+    const { setupTeams, boardParams, level, useBrevet, selectedSubjects, lv2Mode } = get();
     const questions = getQuestions(level, { brevet: useBrevet });
     // Matières effectives = sélection ∩ matières ayant réellement des questions
     // (au niveau choisi) → on n'envoie jamais une matière au pool vide sur le
     // plateau. Repli sur toutes les matières avec contenu si la sélection est vide.
     let subjects = (selectedSubjects || DEFAULT_BOARD_SUBJECTS).filter((k) => questions[k]?.length);
     if (!subjects.length) subjects = SUBJECT_KEYS.filter((k) => questions[k]?.length);
+    // LV2 au choix : si Allemand ET Espagnol sont présents, on les remplace par la
+    // filière unique 'lv2' (chaque équipe répondra dans sa langue, cf. team.lv2).
+    const lv2On = lv2Mode && LV2_SUBJECTS.every((k) => subjects.includes(k));
+    if (lv2On) subjects = [...subjects.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
     const { nodes, viewBox } = generateBoard({ ...boardParams, subjects });
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
+      // Langue LV2 de l'équipe (choisie à la création) ; repli espagnol si le mode
+      // est actif mais qu'aucun choix n'a été fait.
+      lv2: lv2On ? (t.lv2 || 'espagnol') : null,
       equipment: { head: null, body: null, feet: null },
       bag: Array(itemH.BAG_SIZE).fill(null),
     }));
     set({
       devSandbox: false,
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
+      boardSubjects: subjects,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
@@ -742,7 +773,7 @@ export const useGameStore = create((set, get) => ({
     if (node.type !== 'depart') {
       const present = teams.filter((t, i) => i !== currentTeam && t.pos === team.pos);
       if (present.length) {
-        const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : randomSubject();
+        const subj = node.type === 'subject' && node.subject !== 'multi' ? node.subject : get().randomBoardSubject();
         // Immunité (passif/buff) : l'arrivant immunisé ne duelle pas ; un défenseur
         // immunisé est exclu de la liste des cibles possibles.
         if (isDuelImmune(team)) {
@@ -785,16 +816,16 @@ export const useGameStore = create((set, get) => ({
       const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled() });
       if (picked) {
         addLog(`\u{1F381} ${team.emoji} ${team.name} tombe sur : ${picked.event.icon} ${picked.event.name}`);
-        set({ pendingEventQuestion: { subject: node.subject || randomSubject() } });
+        set({ pendingEventQuestion: { subject: node.subject || get().randomBoardSubject() } });
         eventH.triggerEvent(set, get, picked);
         return;
       }
-      get().askQuestion(node.subject || randomSubject());
+      get().askQuestion(node.subject || get().randomBoardSubject());
       return;
     }
 
     if (node.type === 'subject') {
-      const subj = node.subject === 'multi' ? randomSubject() : node.subject;
+      const subj = node.subject === 'multi' ? get().randomBoardSubject() : node.subject;
       get().askQuestion(subj);
       return;
     }
@@ -802,7 +833,7 @@ export const useGameStore = create((set, get) => ({
     if (node.type === 'depart') { get().nextTurn(); return; }
 
     if (node.type === 'jonction') {
-      get().askQuestion(randomSubject());
+      get().askQuestion(get().randomBoardSubject());
       return;
     }
 
@@ -831,6 +862,8 @@ export const useGameStore = create((set, get) => ({
     // équipe) prioritaire, sinon le forçage global historique. Consommé ici, et
     // s'applique à la PROCHAINE question de l'équipe concernée.
     const cur = get().currentTeam;
+    // LV2 au choix : la case 'lv2' devient la langue de l'équipe (team.lv2).
+    if (subject === 'lv2') subject = get().resolveSubjectFor('lv2', cur);
     const teamForced = get().teams[cur]?.forcedSubject;
     const forced = teamForced || get().forcedSubject;
     if (forced) {
@@ -1027,7 +1060,7 @@ export const useGameStore = create((set, get) => ({
       if (bEff.rerollQuestionOnAbsorb && bouclierAbsorbed(team, updatedTeam) && !team.doubleActive) {
         set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
         addLog(`🔁 ${team.emoji} ${team.name} : Contre ! Nouvelle question.`);
-        get().askQuestion(randomSubject());
+        get().askQuestion(get().randomBoardSubject());
         return;
       }
 
@@ -1071,7 +1104,7 @@ export const useGameStore = create((set, get) => ({
         nt[currentTeam] = doubleResult.updatedTeam;
         set({ teams: nt });
         addLog(doubleResult.logMessage);
-        get().askQuestion(randomSubject());
+        get().askQuestion(get().randomBoardSubject());
         if (get().phase === 'game') saveGame(get());
         return;
       } else if (doubleResult.updatedTeam !== updatedTeam) {
@@ -1220,7 +1253,7 @@ export const useGameStore = create((set, get) => ({
     const peq = get().pendingEventQuestion;
     if (peq) {
       set({ pendingEventQuestion: null });
-      get().askQuestion(peq.subject || randomSubject());
+      get().askQuestion(peq.subject || get().randomBoardSubject());
       return;
     }
     get().nextTurn();
@@ -1370,7 +1403,10 @@ export const useGameStore = create((set, get) => ({
   closeFight: () => fightH.closeFight(set, get),
   // Tire une question pour un mini-jeu de combat (marquee comme posee)
   fightPickQuestion: (subject) => {
-    const { questions, askedQuestions } = get();
+    const st = get();
+    // LV2 : en duel, on tire dans la langue de l'équipe qui arrive (attaquant).
+    if (subject === 'lv2') subject = st.resolveSubjectFor('lv2', st.showFight?.attackerIndex ?? st.currentTeam);
+    const { questions, askedQuestions } = st;
     const pool = questions[subject] || [];
     const asked = askedQuestions[subject] || new Set();
     const result = pickQuestion(pool, asked);

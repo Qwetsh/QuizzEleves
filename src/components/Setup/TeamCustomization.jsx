@@ -5,6 +5,7 @@ import { EMOJI_OPTIONS } from '../../data/teamPresets';
 export default function TeamCustomization() {
   const setupTeams = useGameStore((s) => s.setupTeams);
   const updateSetupTeam = useGameStore((s) => s.updateSetupTeam);
+  const lv2Mode = useGameStore((s) => s.lv2Mode);
   // Index de l'equipe dont le picker d'avatar est ouvert (null = ferme)
   const [pickerOpen, setPickerOpen] = useState(null);
 
@@ -70,6 +71,30 @@ export default function TeamCustomization() {
                 }}
               />
             </div>
+
+            {lv2Mode && (
+              <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-600)', flexShrink: 0 }}>🗣️ LV2 :</span>
+                {[['allemand', '🦅 Allemand'], ['espagnol', '☀️ Espagnol']].map(([key, label]) => {
+                  const cur = (team.lv2 || 'espagnol') === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => updateSetupTeam(i, { lv2: key })}
+                      style={{
+                        flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 9, cursor: 'pointer',
+                        fontSize: 12.5, fontWeight: 600,
+                        border: `2px solid ${cur ? 'var(--gold-600)' : 'rgba(122,94,58,0.2)'}`,
+                        background: cur ? 'rgba(232,169,88,0.15)' : '#fffefb',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {isOpen && (
               <div

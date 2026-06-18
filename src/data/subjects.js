@@ -10,6 +10,9 @@ export const SUBJECTS = {
   allemand:   { name: 'Allemand',      short: 'DE',  icon: '\u{1F985}', color: '#3a3f7a', colorSoft: '#d4d6e8', colorDeep: '#23264d', biome: 'Le Ch\u00e2teau de Brume' },
   espagnol:   { name: 'Espagnol',      short: 'ES',  icon: '\u2600\ufe0f', color: '#cb3a3a', colorSoft: '#f1d2d2', colorDeep: '#6e1717', biome: 'La Cour des Alc\u00e1zars' },
   multi:      { name: 'Multi-mati\u00e8re', short: '?', icon: '\u{1F3B2}', color: '#e0a458', colorSoft: '#f0e0b2', colorDeep: '#8a5f1a', biome: 'Carrefour' },
+  // Fili\u00e8re \u00ab LV2 au choix \u00bb : fusion Allemand+Espagnol. Pos\u00e9e sur le plateau
+  // quand le mode lv2 est actif ; chaque \u00e9quipe r\u00e9pond dans SA langue (team.lv2).
+  lv2:        { name: 'LV2', short: 'LV2', icon: '\ud83d\udde3\ufe0f', color: '#5b6cc4', colorSoft: '#dadef2', colorDeep: '#2f3a78', biome: 'Le Carrefour des Langues' },
   // Mati\u00e8res \u00ab forc\u00e9-only \u00bb : jamais sur le plateau, seulement d\u00e9clench\u00e9es par un
   // effet \u00ab question forc\u00e9e \u00bb. Pas de filtrage par niveau (transverses).
   cultureG:   { name: 'Culture g\u00e9n\u00e9rale', short: 'CG', icon: '\u{1F9E0}', color: '#7a5ea8', colorSoft: '#e2d9f0', colorDeep: '#41306b', biome: 'La Grande Biblioth\u00e8que' },
@@ -23,6 +26,9 @@ export const SUBJECT_KEYS = ['francais', 'maths', 'histoire', 'geographie', 'svt
 // S\u00e9lection de mati\u00e8res ACTIV\u00c9ES par d\u00e9faut au Setup (les 6 historiques). Une
 // mati\u00e8re sans question est de toute fa\u00e7on \u00e9cart\u00e9e du plateau au d\u00e9marrage.
 export const DEFAULT_BOARD_SUBJECTS = ['francais', 'maths', 'histoire', 'geographie', 'svt', 'anglais'];
+
+// Langues vivantes 2 fusionnables en une fili\u00e8re \u00ab LV2 au choix \u00bb.
+export const LV2_SUBJECTS = ['allemand', 'espagnol'];
 // Mati\u00e8res suppl\u00e9mentaires \u00ab forc\u00e9-only \u00bb (jamais tir\u00e9es par une case, uniquement
 // via un effet). Charg\u00e9es dans les pools de questions, hors filtrage par niveau.
 export const FORCED_SUBJECT_KEYS = ['cultureG', 'hardcore'];

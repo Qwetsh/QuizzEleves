@@ -1,7 +1,7 @@
 import { POWERS } from '../data/powers.js';
 import { moveForward, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
-import { randomSubject, applyRecul } from '../logic/turnHelpers.js';
+import { applyRecul } from '../logic/turnHelpers.js';
 import { hasEffect, reducedSteal, reducedTax, equippedSetCounts } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { SETS } from '../data/sets.js';
@@ -254,8 +254,10 @@ export function eventAskQuestion(set, get) {
   // en fin de tour (on efface le flag posé à l'atterrissage).
   if (get().pendingEventQuestion) set({ pendingEventQuestion: null });
 
-  // Thème forcé par l'événement (ex. Sphinx → 'hardcore'), sinon aléatoire.
-  const subject = showEvent.event?.subject || randomSubject();
+  // Thème forcé par l'événement (ex. Sphinx → 'hardcore'), sinon aléatoire parmi
+  // les matières du plateau. 'lv2' → la langue de l'équipe active.
+  let subject = showEvent.event?.subject || get().randomBoardSubject();
+  if (subject === 'lv2') subject = get().resolveSubjectFor('lv2', get().currentTeam);
   const pool = questions[subject] || [];
   const asked = askedQuestions[subject] || new Set();
   const result = pickQuestion(pool, asked);

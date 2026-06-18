@@ -34,7 +34,7 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false, lv2Mode = false }) {
   return {
     status,
     currentTeam,
@@ -42,6 +42,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
     // duel, événement, déplacement…) — le TBI reste maître du timing.
     locked: !!locked,
     extensions: extensions || null, // extensions actives (gate l'UI objets côté mobile)
+    lv2Mode: !!lv2Mode, // mode « LV2 au choix » : le mobile montre le choix de langue au lobby
     shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
     // Historique : on n'envoie que les dernières entrées (l'onglet mobile les
     // affiche du plus récent au plus ancien). Les entrées structurées

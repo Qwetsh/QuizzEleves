@@ -77,11 +77,12 @@ const EMOJI_CHOICES = ['🦁', '🐯', '🦅', '🐺', '🦊', '🐻', '🐉', '
 // Écran « crée ton équipe » (mode téléphone, statut lobby). L'élève saisit un
 // nom + un logo, et peut choisir ses 2 pouvoirs. À l'envoi, sa fiche est
 // poussée dans le lobby (upsert par token) ; il attend que le prof démarre.
-function LobbyCreateScreen({ code, token, onSubmitted }) {
+function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
   const [powerDef, setPowerDef] = useState(null);
   const [powerOff, setPowerOff] = useState(null);
+  const [lv2, setLv2] = useState('espagnol'); // langue LV2 (si le mode est actif)
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -94,7 +95,7 @@ function LobbyCreateScreen({ code, token, onSubmitted }) {
     if (busy || incomplete) return;
     setBusy(true); setErr(null);
     try {
-      await upsertLobbyTeam(code, token, { name: name.trim(), emoji, power_def: powerDef, power_off: powerOff, ready: true });
+      await upsertLobbyTeam(code, token, { name: name.trim(), emoji, power_def: powerDef, power_off: powerOff, lv2: lv2Mode ? lv2 : null, ready: true });
       setSubmitted(true);
       onSubmitted?.();
     } catch (e) { setErr(e.message || 'Envoi impossible'); }
@@ -157,6 +158,25 @@ function LobbyCreateScreen({ code, token, onSubmitted }) {
       <PowerGrid list={defPowers} value={powerDef} onPick={setPowerDef} />
       <label className="mob-field-label" style={{ marginTop: 12 }}>⚔️ Pouvoir d'attaque</label>
       <PowerGrid list={offPowers} value={powerOff} onPick={setPowerOff} />
+
+      {lv2Mode && (
+        <>
+          <label className="mob-field-label" style={{ marginTop: 16 }}>🗣️ Ta LV2</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[['allemand', '🦅 Allemand'], ['espagnol', '☀️ Espagnol']].map(([key, label]) => {
+              const on = lv2 === key;
+              return (
+                <button key={key} type="button" onClick={() => setLv2(key)}
+                  style={{
+                    padding: '10px', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 700,
+                    border: `2px solid ${on ? 'var(--gold-600)' : 'rgba(122,94,58,0.25)'}`,
+                    background: on ? 'rgba(232,169,88,0.18)' : '#fffefb',
+                  }}>{label}</button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <button className="mob-btn mob-btn--gold" style={{ marginTop: 20 }} disabled={busy || incomplete} onClick={submit}>
         {busy ? 'Envoi…' : 'Rejoindre la partie'}
@@ -1173,7 +1193,7 @@ export default function MobileApp() {
     content = <Centered>Connexion à la partie {code}…</Centered>;
   } else if (session.status === 'lobby') {
     // Lobby (mode téléphone) : l'élève crée son équipe et attend le démarrage.
-    content = token ? <LobbyCreateScreen code={code} token={token} /> : <Centered>Connexion à la partie {code}…</Centered>;
+    content = token ? <LobbyCreateScreen code={code} token={token} lv2Mode={!!session?.lv2Mode} /> : <Centered>Connexion à la partie {code}…</Centered>;
   } else if (teamIdx == null || !session.teams?.[teamIdx]) {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {

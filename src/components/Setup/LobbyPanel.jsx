@@ -18,6 +18,7 @@ export default function LobbyPanel() {
   const setLobbyTeams = useGameStore((s) => s.setLobbyTeams);
   const startFromLobby = useGameStore((s) => s.startFromLobby);
   const extensions = useGameStore((s) => s.extensions);
+  const lv2Mode = useGameStore((s) => s.lv2Mode);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -35,7 +36,7 @@ export default function LobbyPanel() {
     if (busy) return;
     setBusy(true); setErr(null);
     try {
-      const payload = buildSessionPayload({ teams: [], currentTeam: 0, status: 'lobby', shopStock: [], log: [], extensions });
+      const payload = buildSessionPayload({ teams: [], currentTeam: 0, status: 'lobby', shopStock: [], log: [], extensions, lv2Mode });
       setSessionCode(await createSession(payload));
     } catch (e) { setErr(e.message || 'Connexion impossible'); }
     setBusy(false);
