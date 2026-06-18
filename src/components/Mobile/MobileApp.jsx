@@ -180,20 +180,22 @@ function TeamPicker({ session, onPick }) {
   );
 }
 
-function EquipSlot({ itemKey, slot, onTap }) {
+function EquipSlot({ itemKey, slot, onTap, enchanted = 0 }) {
   const item = ITEMS[itemKey];
   const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
   return (
     <div className="mob-eq" onClick={item ? () => onTap(itemKey) : undefined} style={item ? { cursor: 'pointer' } : undefined}>
       <span className="mob-eq-icon" style={{
+        position: 'relative',
         background: item ? `radial-gradient(circle at 50% 38%, ${color}33, ${color}1a 70%), linear-gradient(160deg,#efe8cf,#ded2ac)` : 'rgba(122,94,58,0.08)',
         border: item ? `1.5px solid ${color}` : '1.5px dashed rgba(122,94,58,0.3)',
       }}>
         {item ? (itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>) : <span className="mob-eq-emoji" style={{ opacity: 0.4 }}>{SLOTS[slot].icon}</span>}
+        {item && enchanted > 0 && <span className="mob-ench-badge" title="Enchanté">✦{enchanted > 1 ? enchanted : ''}</span>}
       </span>
       <div className="mob-eq-text">
         <div className="mob-eq-slot">{SLOTS[slot].name}</div>
-        <div className="mob-eq-name">{item ? item.name : <em>vide</em>}</div>
+        <div className="mob-eq-name">{item ? item.name : <em>vide</em>}{item && enchanted > 0 && <span style={{ color: '#9b59d0', marginLeft: 6, fontSize: 12 }}>✦ enchanté</span>}</div>
         {item && <div className="mob-eq-desc">{item.desc}{itemEffectLines(item).length > 0 ? ' · toucher pour les effets' : ''}</div>}
       </div>
     </div>
@@ -515,7 +517,7 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
       {itemsOn && (
       <section className="mob-section">
         <h2 className="mob-section-title">Équipement</h2>
-        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} />)}
+        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} enchanted={t.enchants?.[slot] || 0} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} />)}
       </section>
       )}
 

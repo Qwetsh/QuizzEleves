@@ -24,6 +24,9 @@ function rowToItem(r) {
     price: r.price,
     lootOnly: !!r.loot_only,
     effects: Array.isArray(r.effects) ? r.effects : [],
+    // Alchimie / Enchantement : sous-famille de consommable + effet de parchemin.
+    family: r.family || undefined,
+    enchant: r.enchant || undefined,
   };
 }
 
@@ -42,6 +45,8 @@ export function itemToPayload(it) {
     price: it.price,
     loot_only: !!it.lootOnly,
     effects: it.effects || [],
+    family: it.family || null,
+    enchant: it.enchant || null,
     enabled: it.enabled !== false,
     ord: it.ord ?? null,
     updated_at: new Date().toISOString(),

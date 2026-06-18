@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
-import { cellKey, cellN } from '../../store/itemHandlers';
+import { cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { itemImg } from '../../logic/itemAssets';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
@@ -79,13 +79,15 @@ function EquipmentStrip({ team, className }) {
     <div className={'ts-eq ' + (className || '')}>
       {Object.keys(SLOTS).map((slot) => {
         const item = ITEMS[cellKey(equipment[slot])];
+        const ench = cellEnchants(equipment[slot]).length;
         const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
         return (
           <span
             key={slot}
             className="ts-eq-slot"
-            title={item ? `${SLOTS[slot].name} : ${item.name}\n${item.desc}` : `${SLOTS[slot].name} : vide`}
+            title={item ? `${SLOTS[slot].name} : ${item.name}${ench ? ` (✦ enchanté ×${ench})` : ''}\n${item.desc}` : `${SLOTS[slot].name} : vide`}
             style={{
+              position: 'relative',
               background: item ? `linear-gradient(180deg, ${color}cc, ${color})` : 'rgba(122,94,58,0.1)',
               border: item ? `1px solid ${color}` : '1px dashed rgba(122,94,58,0.3)',
               opacity: item ? 1 : 0.5,
@@ -96,6 +98,7 @@ function EquipmentStrip({ team, className }) {
                   ? <img src={itemImg(item)} alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
                   : item.icon)
               : SLOTS[slot].icon}
+            {item && ench > 0 && <span style={{ position: 'absolute', top: -5, right: -5, background: 'linear-gradient(180deg,#b07de0,#8a4fc0)', color: '#fff', fontSize: 9, fontWeight: 800, minWidth: 13, height: 13, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #fffdf7' }}>✦</span>}
           </span>
         );
       })}
