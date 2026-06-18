@@ -9,6 +9,7 @@ import BottomBar from './BottomBar';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
 import TradeConsumer from './TradeConsumer';
+import TestLinksPanel from './TestLinksPanel';
 import DevItemGiver from './DevItemGiver';
 import { OFFLINE } from '../../logic/offline';
 import { bagUnitCount } from '../../store/itemHandlers';
@@ -233,6 +234,7 @@ export default function GameLayout() {
           Hors ligne : pas de Realtime → composants non montés. */}
       {!OFFLINE && <IntentConsumer />}
       {!OFFLINE && <TradeConsumer />}
+      {!OFFLINE && <TestLinksPanel />}
 
       {/* Animations */}
       <FlyingCoins />

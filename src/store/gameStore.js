@@ -1479,6 +1479,18 @@ export const useGameStore = create((set, get) => ({
     }
   },
 
+  // Lie un jeton à une équipe : permet à un téléphone de « posséder » l'équipe
+  // (édition/achats/troc) sans passer par le lobby. Utilisé par les LIENS DE TEST
+  // du TBI (?claim=idx&token=…) pour jouer plusieurs équipes en fenêtres séparées.
+  applyClaimIntent: (token, payload = {}) => {
+    const idx = Number(payload.idx);
+    const st = get();
+    if (!token || !Number.isInteger(idx) || !st.teams[idx]) return;
+    const newTeams = [...st.teams];
+    newTeams[idx] = { ...newTeams[idx], token };
+    set({ teams: newTeams });
+  },
+
   // --- Troc entre équipes (extension « trade ») : application ATOMIQUE ---
   // `trade` = ligne quete_trades { from_idx, to_idx, give, want } où give/want =
   // { gold, bag:[itemKey], equip:[slot] }. On re-vérifie la possession des deux

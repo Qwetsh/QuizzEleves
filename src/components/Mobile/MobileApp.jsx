@@ -24,6 +24,14 @@ function readInitialCode() {
   return (p.get('join') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
 }
 
+// Liens de test (générés par le TBI) : ?token=<jeton imposé>&claim=<idx> permet
+// d'ouvrir une fenêtre déjà propriétaire d'une équipe donnée, sans le lobby.
+function readTestParams() {
+  const p = new URLSearchParams(window.location.search);
+  const claim = p.get('claim');
+  return { token: p.get('token') || '', claim: claim != null && claim !== '' ? Number(claim) : null };
+}
+
 const powerKeysOf = (t) => {
   const powers = t.powers || {};
   const { powerDef: d, powerOff: o } = t;
@@ -1070,8 +1078,12 @@ export default function MobileApp() {
   };
 
   // Jeton local par code : permet de retrouver SON équipe (reconnexion / lobby).
+  // Lien de test : un jeton imposé par l'URL a priorité (identité distincte par
+  // fenêtre, sans dépendre du localStorage partagé entre onglets).
   useEffect(() => {
     if (!code || code.length < 4) return;
+    const tp = readTestParams();
+    if (tp.token) { setToken(tp.token); return; }
     const k = `quete_team_token_${code}`;
     let t = '';
     try { t = localStorage.getItem(k) || ''; } catch { /* mode privé */ }
@@ -1097,9 +1109,24 @@ export default function MobileApp() {
 
   useEffect(() => {
     if (!code) return;
+    if (readTestParams().claim != null) return; // lien de test : l'équipe est réclamée plus bas
     const saved = localStorage.getItem(`quete_mobile_team_${code}`);
     if (saved != null) setTeamIdx(Number(saved));
   }, [code]);
+
+  // Lien de test : réclame l'équipe (?claim=idx) une seule fois → propriété
+  // immédiate (achats/troc/édition) sans passer par le lobby.
+  const claimedRef = useRef(false);
+  useEffect(() => {
+    if (claimedRef.current) return;
+    const { claim } = readTestParams();
+    if (claim == null || !session || session.status === 'lobby' || !token || !code) return;
+    if (!session.teams?.[claim]) return;
+    claimedRef.current = true;
+    sendIntent(code, token, 'claimTeam', { idx: claim }).catch(() => {});
+    setTeamIdx(claim);
+    setOwned(true);
+  }, [session, token, code]);
 
   const chooseTeam = (idx) => {
     setTeamIdx(idx);

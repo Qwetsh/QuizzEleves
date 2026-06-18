@@ -63,6 +63,15 @@ describe('applyTeamIntent : achats par équipe (téléphone)', () => {
     expect(S().teams[1].powers.foudre.level).toBe(1);
   });
 
+  it('claimTeam : lie un jeton à une équipe puis l’achat via ce jeton s’applique', () => {
+    setup([team(0), team(1)], { shopStock: ['bouclierBois'] });
+    S().applyClaimIntent('phoneX', { idx: 0 });
+    expect(S().teams[0].token).toBe('phoneX');
+    const before = S().teams[0].money;
+    S().applyTeamIntent('phoneX', 'buyItem', { key: 'bouclierBois' });
+    expect(S().teams[0].money).toBeLessThan(before);
+  });
+
   it('bloqué si l’équipe du jeton est ACTIVE et en pleine résolution', () => {
     setup([team(0), team(1, { powers: { bouclier: { charges: 1, level: 1 } } })],
       { currentTeam: 1, showQuestion: { question: {} } });

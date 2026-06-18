@@ -10,6 +10,7 @@ export default function IntentConsumer() {
   const sessionCode = useGameStore((s) => s.sessionCode);
   const applyTeamIntent = useGameStore((s) => s.applyTeamIntent);
   const applyAdminIntent = useGameStore((s) => s.applyAdminIntent);
+  const applyClaimIntent = useGameStore((s) => s.applyClaimIntent);
 
   useEffect(() => {
     if (!sessionCode) return;
@@ -17,7 +18,8 @@ export default function IntentConsumer() {
     const handle = (row) => {
       if (!row) return;
       try {
-        if (typeof row.type === 'string' && row.type.startsWith('admin')) applyAdminIntent(row.type, row.payload || {});
+        if (row.type === 'claimTeam') applyClaimIntent(row.token, row.payload || {});
+        else if (typeof row.type === 'string' && row.type.startsWith('admin')) applyAdminIntent(row.type, row.payload || {});
         else applyTeamIntent(row.token, row.type, row.payload || {});
       } catch { /* commande ignorée */ }
       deleteIntent(row.id).catch(() => {});
@@ -26,7 +28,7 @@ export default function IntentConsumer() {
     fetchIntents(sessionCode).then((rows) => { if (alive) rows.forEach(handle); }).catch(() => {});
     const unsub = subscribeIntents(sessionCode, handle);
     return () => { alive = false; unsub(); };
-  }, [sessionCode, applyTeamIntent, applyAdminIntent]);
+  }, [sessionCode, applyTeamIntent, applyAdminIntent, applyClaimIntent]);
 
   return null;
 }
