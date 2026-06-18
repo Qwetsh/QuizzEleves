@@ -1463,6 +1463,19 @@ export const useGameStore = create((set, get) => ({
       // Enchantement : applique le parchemin (payload.key) sur la pièce du slot.
       const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
       if (i >= 0) itemH.enchantWith(set, get, idx, i, payload.slot);
+    } else if (type === 'buyItem') {
+      // Achat d'un objet de la boutique pour l'équipe du téléphone.
+      itemH.buyItem(set, get, payload.key, idx);
+    } else if (type === 'buyPower') {
+      // Déblocage d'un nouveau pouvoir.
+      powerH.buyNewPower(set, get, payload.key, idx);
+    } else if (type === 'buyPowerCharge') {
+      powerH.buyPowerCharge(set, get, payload.key, idx);
+    } else if (type === 'upgradePower') {
+      powerH.upgradePowerLevel(set, get, payload.key, idx);
+    } else if (type === 'chooseSpec') {
+      // Choix d'une voie (Maîtrise, niv. 5/10) à distance.
+      powerH.chooseSpecFor(set, get, idx, payload.key, payload.slot, payload.specKey);
     }
   },
 

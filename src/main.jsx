@@ -44,6 +44,11 @@ if (import.meta.env.VITE_OFFLINE === '1') {
   refreshItems().catch(() => {});
   applyCachedRecipes();
   refreshRecipes().catch(() => {});
+  // Équilibrage : aligne prix/coûts des pouvoirs sur les valeurs du TBI (sinon
+  // l'achat afficherait les valeurs par défaut alors que le TBI applique les
+  // valeurs équilibrées). Mute POWERS/LOOT en place.
+  applyCachedBalance();
+  refreshBalance().catch(() => {});
 } else {
   // TBI complet — applique les caches (synchrone, offline-safe) AVANT le 1er rendu,
   // puis rafraîchit depuis Supabase en arrière-plan.

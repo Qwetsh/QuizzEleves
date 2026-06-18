@@ -393,35 +393,39 @@ export function chargePickerSkip(set, get) {
 
 // --- Shop ---
 
-export function buyNewPower(set, get, powerKey) {
+// teamIndex (optionnel) : par d\u00e9faut l'\u00e9quipe active ; pr\u00e9cis\u00e9 pour les achats
+// pilot\u00e9s depuis un t\u00e9l\u00e9phone (cf. applyTeamIntent).
+export function buyNewPower(set, get, powerKey, teamIndex) {
   const { teams, currentTeam, addLog } = get();
-  const team = teams[currentTeam];
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
   const power = POWERS[powerKey];
-  if (!power) return;
+  if (!power || !team) return;
   const price = power.price;
   if (team.money < price) return;
   if (team.powers?.[powerKey]) return;
 
   const newTeams = [...teams];
   const newPowers = { ...team.powers, [powerKey]: { charges: 1, level: 1 } };
-  newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
+  newTeams[idx] = { ...team, money: team.money - price, powers: newPowers };
   addLog(`\u{1F6D2} ${team.emoji} ${team.name} d\u00e9bloque ${power.name} ! (-${price} \u{1F4B0})`);
   set({ teams: newTeams });
   saveGame(get());
 }
 
-export function buyPowerCharge(set, get, powerKey) {
+export function buyPowerCharge(set, get, powerKey, teamIndex) {
   const { teams, currentTeam, addLog } = get();
-  const team = teams[currentTeam];
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
   // On ne recharge qu'un pouvoir D\u00c9J\u00c0 poss\u00e9d\u00e9 (\u00e9vite une entr\u00e9e sans `level`).
-  if (!team.powers?.[powerKey]) return;
+  if (!team?.powers?.[powerKey]) return;
   const price = POWERS[powerKey]?.price || 15;
   if (team.money < price) return;
 
   const newTeams = [...teams];
   const currentCharges = team.powers[powerKey].charges ?? 0;
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
-  newTeams[currentTeam] = { ...team, money: team.money - price, powers: newPowers };
+  newTeams[idx] = { ...team, money: team.money - price, powers: newPowers };
 
   const pName = POWERS[powerKey]?.name || powerKey;
   addLog(`\u{1F6D2} ${team.emoji} ${team.name} ach\u00e8te 1 charge de ${pName} (${price} \u{1F4B0})`);
@@ -429,11 +433,12 @@ export function buyPowerCharge(set, get, powerKey) {
   if (get().phase === 'game') saveGame(get());
 }
 
-export function upgradePowerLevel(set, get, powerKey) {
+export function upgradePowerLevel(set, get, powerKey, teamIndex) {
   const { teams, currentTeam, addLog } = get();
-  const team = teams[currentTeam];
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
   const power = POWERS[powerKey];
-  if (!power) return;
+  if (!power || !team) return;
   const mastery = masteryActive(get);
   const currentLevel = team.powers?.[powerKey]?.level ?? 1;
   if (currentLevel >= maxPowerLevel(powerKey, mastery)) return; // 10 avec Ma\u00EEtrise, sinon 3
@@ -443,12 +448,35 @@ export function upgradePowerLevel(set, get, powerKey) {
   const newLevel = currentLevel + 1;
   const newTeams = [...teams];
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], level: newLevel } };
-  newTeams[currentTeam] = { ...team, powers: newPowers, money: team.money - cost };
+  newTeams[idx] = { ...team, powers: newPowers, money: team.money - cost };
   addLog(`\u2B06\uFE0F ${team.emoji} ${team.name} am\u00e9liore ${power.name} au niveau ${newLevel} ! (-${cost} \u{1F4B0})`);
 
-  // Niveaux 5 et 10 (Ma\u00EEtrise) : ouvrir le choix de voie (3 sp\u00e9cialisations).
+  // Niveaux 5 et 10 (Ma\u00EEtrise) : ouvrir le choix de voie. Le picker modal du TBI
+  // n'est ouvert que pour l'\u00e9quipe ACTIVE ; un achat \u00E0 distance (t\u00e9l\u00e9phone d'une
+  // autre \u00e9quipe) laisse la voie \u00AB \u00E0 choisir \u00BB c\u00F4t\u00e9 mobile (cf. chooseSpecFor).
   const slot = mastery ? specSlotForLevel(newLevel) : null;
-  set({ teams: newTeams, ...(slot ? { showSpecPicker: { powerKey, slot, teamIdx: currentTeam } } : {}) });
+  set({ teams: newTeams, ...(slot && idx === currentTeam ? { showSpecPicker: { powerKey, slot, teamIdx: idx } } : {}) });
+  saveGame(get());
+}
+
+// Choix d'une voie \u00E0 distance (t\u00e9l\u00e9phone) : applique directement pour `teamIndex`
+// sans passer par le modal showSpecPicker du TBI. Verrouill\u00e9 une fois choisi.
+export function chooseSpecFor(set, get, teamIndex, powerKey, slot, specKey) {
+  if (!masteryActive(get)) return;
+  if (slot !== 'spec5' && slot !== 'spec10') return;
+  const teams = get().teams;
+  const team = teams[teamIndex];
+  const entry = team?.powers?.[powerKey];
+  if (!entry) return;
+  const need = slot === 'spec5' ? 5 : 10;
+  if ((entry.level ?? 1) < need) return; // niveau d'embranchement non atteint
+  if (entry[slot]) return;               // d\u00e9j\u00E0 choisi (verrouill\u00e9)
+  const opt = specOptionsFor(powerKey, slot).find((o) => o.key === specKey);
+  if (!opt) return;
+  const newTeams = [...teams];
+  newTeams[teamIndex] = { ...team, powers: { ...team.powers, [powerKey]: { ...entry, [slot]: specKey } } };
+  get().addLog(`${opt.icon || '\u2728'} ${team.emoji} ${team.name} \u2014 ${POWERS[powerKey].name} : voie \u00AB ${opt.name} \u00BB choisie !`);
+  set({ teams: newTeams });
   saveGame(get());
 }
 

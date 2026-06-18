@@ -196,10 +196,14 @@ export function generateBlackMarketStock(count = 5, enabledKeys = Object.keys(IT
   );
 }
 
-export function buyItem(set, get, itemKey) {
+// teamIndex (optionnel) : par défaut l'équipe active ; précisé pour un achat
+// piloté depuis un téléphone (cf. applyTeamIntent).
+export function buyItem(set, get, itemKey, teamIndex) {
   const { teams, currentTeam, shopStock, showShop, addLog } = get();
-  const team = teams[currentTeam];
+  const idx = teamIndex ?? currentTeam;
+  const team = teams[idx];
   const item = ITEMS[itemKey];
+  if (!team) return;
   // Mode Marché Noir : stock + remise portés par showShop ; sinon boutique normale.
   const mn = showShop && typeof showShop === 'object' && showShop.marcheNoir;
   const stock = mn ? (showShop.stock || []) : shopStock;
@@ -214,12 +218,12 @@ export function buyItem(set, get, itemKey) {
   // consommable) : va dans le sac — le joueur gere son equipement par drag & drop
   if (item.slot !== 'consumable' && !equipment[item.slot]) {
     equipment[item.slot] = itemKey;
-    newTeams[currentTeam] = { ...team, money: team.money - price, equipment };
+    newTeams[idx] = { ...team, money: team.money - price, equipment };
     addLog(`🛒 ${team.emoji} ${team.name} équipe ${item.icon} ${item.name} ! (-${price} 💰)`);
   } else {
     const bag = bagWith(team.bag, itemKey);
     if (!bag) return; // sac plein
-    newTeams[currentTeam] = { ...team, money: team.money - price, bag };
+    newTeams[idx] = { ...team, money: team.money - price, bag };
     addLog(`🛒 ${team.emoji} ${team.name} achète ${item.icon} ${item.name} ! (-${price} 💰)`);
   }
 

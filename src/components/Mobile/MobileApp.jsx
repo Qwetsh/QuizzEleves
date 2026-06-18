@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent, createTrade, fetchTrades, setTradeStatus, deleteTrade, subscribeTrades } from '../../logic/sessionConfig';
 import { POWERS } from '../../data/powers';
-import { describePowerScale, specSlotForLevel, specOptionsFor } from '../../logic/powerEffects';
+import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { RECIPES } from '../../data/recipes';
 import { itemImg } from '../../logic/itemAssets';
@@ -249,6 +249,21 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
         )}
         <SetBonusInfo item={item} team={team} />
 
+        {/* Achat en boutique (téléphone propriétaire de l'équipe) */}
+        {loc?.kind === 'shop' && owned && (() => {
+          const broke = (team?.money ?? 0) < item.price;
+          return (
+            <div style={{ marginTop: 14 }}>
+              <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} disabled={locked || broke}
+                onClick={() => onAction('buy', { key: itemKey })}>
+                {'🛒'} Acheter — {item.price} {'\u{1FA99}'}
+              </button>
+              {broke && <div style={{ marginTop: 6, fontSize: 12, color: '#7a1320', textAlign: 'center' }}>Or insuffisant.</div>}
+              {locked && !broke && <div style={{ marginTop: 6, fontSize: 12, color: '#7a1320', textAlign: 'center' }}>🔒 Attends la fin de la résolution.</div>}
+            </div>
+          );
+        })()}
+
         {/* Parchemin (Enchantement) : choisir la pièce équipée à enchanter */}
         {canEdit && item.family === 'parchment' && loc.kind === 'bag' && (() => {
           const ek = (v) => (typeof v === 'string' ? v : v?.key);
@@ -302,19 +317,27 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
 }
 
 // Bloc d'embranchement (L5/L10) : les 3 voies, la voie choisie mise en avant.
-function BranchBlock({ powerKey, slot, chosen, reached }) {
+function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose }) {
   const options = specOptionsFor(powerKey, slot);
   if (!options.length) return null;
+  const canPick = reached && !chosen && owned && !locked;
   return (
     <div className="mob-tt-branch">
       <div className="mob-tt-branch-label">{reached ? (chosen ? 'Voie choisie' : 'Choisis ta voie') : 'Embranchement'}</div>
       {options.map((o) => {
         const picked = chosen === o.key;
         return (
-          <div key={o.key} className={'mob-tt-opt' + (picked ? ' is-picked' : '') + (reached && !chosen ? ' is-open' : '')}>
+          <div key={o.key} role={canPick ? 'button' : undefined}
+            onClick={canPick ? () => onChoose(o.key) : undefined}
+            style={canPick ? { cursor: 'pointer' } : undefined}
+            className={'mob-tt-opt' + (picked ? ' is-picked' : '') + (reached && !chosen ? ' is-open' : '')}>
             <span className="mob-tt-opt-ic">{o.icon}</span>
             <div className="mob-tt-opt-body">
-              <div className="mob-tt-opt-name">{o.name}{picked && <span className="mob-tt-tag mob-tt-tag--cur"> choisie</span>}</div>
+              <div className="mob-tt-opt-name">
+                {o.name}
+                {picked && <span className="mob-tt-tag mob-tt-tag--cur"> choisie</span>}
+                {canPick && <span className="mob-tt-tag mob-tt-tag--cur"> ✔ choisir</span>}
+              </div>
               <div className="mob-tt-opt-desc">{o.desc}</div>
             </div>
           </div>
@@ -327,13 +350,15 @@ function BranchBlock({ powerKey, slot, chosen, reached }) {
 // Une « branche » d'arbre de talent pour un pouvoir. Avec l'extension Maîtrise :
 // 10 niveaux + embranchements L5/L10. Sinon : 3 niveaux classiques. Lecture seule
 // (l'amélioration et le choix de voie se font au TBI).
-function TalentBranch({ powerKey, entry, active, masteryOn }) {
+function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, locked, onAction }) {
   const info = POWERS[powerKey];
   if (!info) return null;
   const level = entry?.level ?? 1;
   const useTree = masteryOn && info.tree;
   const count = useTree ? info.tree.scale.length : (info.levels?.length || 3);
   const costs = useTree ? info.tree.upgradeCosts : info.upgradeCosts;
+  const rechargePrice = info.price || 15;
+  const nextCost = level < count ? powerUpgradeCost(powerKey, level, masteryOn) : null;
   return (
     <div className="mob-tt-card" style={{ '--accent': info.color }}>
       <div className="mob-tt-head">
@@ -348,6 +373,24 @@ function TalentBranch({ powerKey, entry, active, masteryOn }) {
           </div>
         </div>
       </div>
+      {owned && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }}
+            disabled={locked || money < rechargePrice}
+            onClick={() => onAction('buyPowerCharge', { key: powerKey })}>
+            {'\u{1F50B}'} +1 · {rechargePrice} {'\u{1FA99}'}
+          </button>
+          {nextCost != null ? (
+            <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }}
+              disabled={locked || money < nextCost}
+              onClick={() => onAction('upgradePower', { key: powerKey })}>
+              {'⬆️'} Niv.{level + 1} · {nextCost} {'\u{1FA99}'}
+            </button>
+          ) : (
+            <span style={{ flex: 1, textAlign: 'center', alignSelf: 'center', fontSize: 12, opacity: 0.6 }}>Niveau max</span>
+          )}
+        </div>
+      )}
       <div className="mob-tt-track">
         {Array.from({ length: count }, (_, i) => {
           const n = i + 1;
@@ -369,7 +412,9 @@ function TalentBranch({ powerKey, entry, active, masteryOn }) {
                   {slot && <span className="mob-tt-tag mob-tt-tag--branch">🌟 voie</span>}
                 </div>
                 <div className="mob-tt-desc">{desc}</div>
-                {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n} />}
+                {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n}
+                  owned={owned} locked={locked}
+                  onChoose={(specKey) => onAction('chooseSpec', { key: powerKey, slot, specKey })} />}
               </div>
             </div>
           );
@@ -379,37 +424,73 @@ function TalentBranch({ powerKey, entry, active, masteryOn }) {
   );
 }
 
-// Onglet « Pouvoirs » : arbre de talent pour chaque pouvoir possédé par l'équipe.
-function PowersView({ session, teamIdx }) {
+// Onglet « Pouvoirs » : arbre de talent par pouvoir + achats (recharge, niveau,
+// voie, déblocage) pilotés par le téléphone propriétaire de l'équipe.
+function PowersView({ session, teamIdx, owned, code, token }) {
   const t = session.teams[teamIdx];
   const pKeys = powerKeysOf(t);
   const masteryOn = extOn(session.extensions, 'mastery');
   const activeKeys = new Set([t.powerDef, t.powerOff].filter(Boolean));
+  const locked = (session.currentTeam === teamIdx && !!session.locked) || session.status === 'finished';
+  const act = (type, payload) => { if (owned && code && token) sendIntent(code, token, type, payload).catch(() => {}); };
+  // Pouvoirs non encore possédés (déblocables en boutique).
+  const lockedPowers = Object.keys(POWERS).filter((k) => POWERS[k] && !t.powers?.[k]);
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{'⚡'} Arbre de talents</div>
       <div className="mob-tt-bank">
-        <span className="mob-tt-hint">Améliorations à acheter sur le tableau (boutique)</span>
+        <span className="mob-tt-hint">
+          {owned ? `${'\u{1FA99}'} ${t.money} — recharge, améliore et débloque tes pouvoirs ici` : 'Achats depuis le téléphone de l’équipe'}
+        </span>
       </div>
       {pKeys.length === 0 ? (
         <div className="mob-empty" style={{ margin: 14 }}>Aucun pouvoir pour l'instant…</div>
       ) : (
         <div className="mob-tt">
           {pKeys.map((k) => (
-            <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} masteryOn={masteryOn} />
+            <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} masteryOn={masteryOn}
+              owned={owned} money={t.money} locked={locked} onAction={act} />
           ))}
         </div>
+      )}
+      {owned && lockedPowers.length > 0 && (
+        <section className="mob-section" style={{ marginTop: 8 }}>
+          <h2 className="mob-section-title">Débloquer un pouvoir</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 14px' }}>
+            {lockedPowers.map((k) => {
+              const p = POWERS[k];
+              const broke = (t.money ?? 0) < p.price;
+              return (
+                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffefb', border: '1px solid rgba(122,94,58,0.25)', borderRadius: 12, padding: '8px 10px' }}>
+                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                    <div style={{ fontSize: 11.5, opacity: 0.7 }}>{p.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`}</div>
+                  </div>
+                  <button className="mob-btn mob-btn--gold" style={{ minWidth: 0 }} disabled={locked || broke}
+                    onClick={() => act('buyPower', { key: k })}>{p.price} {'\u{1FA99}'}</button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );
 }
 
-// Onglet « Boutique » : vitrine en lecture seule (achats sur le tableau).
-function ShopView({ session, teamIdx }) {
+// Onglet « Boutique » : vitrine + achat direct (téléphone propriétaire).
+function ShopView({ session, teamIdx, owned, code, token }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
   const itemsOn = extOn(session.extensions, 'equipment');
   const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
+  // Achat bloqué seulement si c'est mon tour ET qu'une résolution est en cours.
+  const locked = (session.currentTeam === teamIdx && !!session.locked) || session.status === 'finished';
+  const buy = (type, payload) => {
+    if (type === 'buy' && owned && code && token) sendIntent(code, token, 'buyItem', payload).catch(() => {});
+    setSheet(null);
+  };
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{'\u{1F6D2}'} Boutique</div>
@@ -431,10 +512,12 @@ function ShopView({ session, teamIdx }) {
               );
             })}
           </div>
-          <div className="mob-foot" style={{ marginTop: 10 }}>Achats sur le tableau (lecture seule ici).</div>
+          <div className="mob-foot" style={{ marginTop: 10 }}>
+            {owned ? 'Touche un objet pour voir ses effets et l’acheter.' : 'Lecture seule · achats depuis le téléphone de l’équipe.'}
+          </div>
         </section>
       )}
-      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={false} locked={false} onAction={() => {}} onClose={() => setSheet(null)} />}
+      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={locked} onAction={buy} onClose={() => setSheet(null)} />}
     </div>
   );
 }
@@ -1073,8 +1156,8 @@ export default function MobileApp() {
     // l'application du troc côté TBI revérifie or/objets, pas le jeton.
     const hasTrade = extOn(session.extensions, 'trade') && !!token;
     const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
-    const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} />
-      : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} />
+    const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
+      : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} />
