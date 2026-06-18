@@ -21,6 +21,7 @@ import LobbyPanel from './LobbyPanel';
 import EventsEditor from './EventsEditor';
 import RecipesEditor from './RecipesEditor';
 import { extOn } from '../../extensions/registry';
+import { OFFLINE } from '../../logic/offline';
 
 // Simulateur de combat — visible uniquement en dev (npm run dev), jamais en prod.
 // Lance un duel direct entre les deux premières équipes du setup, sans toucher
@@ -128,7 +129,9 @@ export default function Setup() {
   const extensions = useGameStore((s) => s.extensions);
   const itemsOn = extOn(extensions, 'equipment');
   const connectionMode = useGameStore((s) => s.connectionMode);
-  const phoneMode = connectionMode === 'phone';
+  // Hors ligne : le volet téléphone (lobby/QR/Realtime) est indisponible → on
+  // force la création d'équipes au tableau.
+  const phoneMode = !OFFLINE && connectionMode === 'phone';
   const [hasSave, setHasSave] = useState(false);
   // Accès aux outils d'édition hors dev : triple-clic sur le dé + code.
   const [toolsUnlocked, setToolsUnlocked] = useState(() => {
@@ -227,9 +230,11 @@ export default function Setup() {
           <div className="panel">
             <LevelSelect />
           </div>
-          <div className="panel">
-            <ConnectionMode />
-          </div>
+          {!OFFLINE && (
+            <div className="panel">
+              <ConnectionMode />
+            </div>
+          )}
           <div className="panel">
             {phoneMode ? (
               <LobbyPanel />
@@ -259,7 +264,7 @@ export default function Setup() {
               <StarterChestConfig />
             </div>
           )}
-          {showTools && <EditorTools />}
+          {showTools && !OFFLINE && <EditorTools />}
           {import.meta.env.DEV && <DevFightPanel />}
         </div>
 

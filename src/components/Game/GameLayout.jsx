@@ -10,6 +10,7 @@ import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
 import TradeConsumer from './TradeConsumer';
 import DevItemGiver from './DevItemGiver';
+import { OFFLINE } from '../../logic/offline';
 import { bagUnitCount } from '../../store/itemHandlers';
 import QuestionModal from '../Modals/QuestionModal';
 import EventModal from '../Modals/EventModal';
@@ -218,7 +219,7 @@ export default function GameLayout() {
           borderTop: '1px solid rgba(122, 94, 58, 0.18)',
           display: 'flex', gap: 8,
         }}>
-          <MobileSessionPanel />
+          {!OFFLINE && <MobileSessionPanel />}
           <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label="Plein ecran" style={{ flex: 1 }}>
             {isFs ? "\u2716 Quitter le plein \u00E9cran" : "\u26F6 Plein \u00E9cran"}
           </button>
@@ -228,9 +229,10 @@ export default function GameLayout() {
         </div>
       </div>
 
-      {/* Logique : applique les commandes d'équipement venues des téléphones */}
-      <IntentConsumer />
-      <TradeConsumer />
+      {/* Logique : applique les commandes d'équipement venues des téléphones.
+          Hors ligne : pas de Realtime → composants non montés. */}
+      {!OFFLINE && <IntentConsumer />}
+      {!OFFLINE && <TradeConsumer />}
 
       {/* Animations */}
       <FlyingCoins />

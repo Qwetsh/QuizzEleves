@@ -15,7 +15,18 @@ import { useGameStore } from './store/gameStore';
 // vue lecture seule, indépendante du moteur de jeu du TBI.
 const joinMode = new URLSearchParams(window.location.search).has('join');
 
-if (joinMode) {
+// Build hors ligne : aucun appel réseau, données figées dans le bundle. Le test
+// littéral (et non un import) garantit que cette branche — et donc l'instantané
+// JSON importé dynamiquement — est éliminée du bundle EN LIGNE (tree-shaking).
+if (import.meta.env.VITE_OFFLINE === '1') {
+  import('./logic/offlineSnapshot.js').then(({ applyOfflineSnapshot }) => {
+    applyOfflineSnapshot();
+    const st = useGameStore.getState();
+    st.syncEnabledItems();
+    st.syncEnabledEvents();
+    st.bumpQuestionsVersion();
+  });
+} else if (joinMode) {
   // Mobile : catalogue d'objets (noms/images) + recettes (grimoire d'alchimie).
   applyCachedItems();
   refreshItems().catch(() => {});
@@ -52,6 +63,6 @@ if (joinMode) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {joinMode ? <MobileApp /> : <App />}
+    {joinMode && import.meta.env.VITE_OFFLINE !== '1' ? <MobileApp /> : <App />}
   </React.StrictMode>
 );

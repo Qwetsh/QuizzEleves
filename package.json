@@ -7,6 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "snapshot:offline": "node scripts/snapshot-offline.mjs",
+    "build:offline": "node scripts/snapshot-offline.mjs && vite build --mode offline",
+    "preview:offline": "vite preview --outDir dist",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -19,6 +25,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
     "pngjs": "^7.0.0",
