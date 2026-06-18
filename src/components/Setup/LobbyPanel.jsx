@@ -108,6 +108,34 @@ export default function LobbyPanel() {
       <button className="btn btn--green btn--lg" style={{ width: '100%', marginTop: 12 }} onClick={start} disabled={!teamsLive.length}>
         🚀 Démarrer la partie ({teamsLive.length})
       </button>
+
+      {devOn() && (
+        <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 10, border: '1px dashed rgba(122,94,58,0.5)', background: 'rgba(255,254,251,0.92)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 6 }}>
+            🧪 Simuler des téléphones (test)
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n}
+                className="btn btn--ghost btn--sm"
+                onClick={() => window.open(`${joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
+              >
+                📱 Élève {n}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--ink-500)', marginTop: 5, lineHeight: 1.3 }}>
+            Chaque fenêtre = un élève distinct qui crée son équipe (nom, pouvoirs, LV2). Autoriser les pop-ups si bloqué.
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// Visible seulement en localhost OU quand les outils d'édition sont déverrouillés.
+function devOn() {
+  if (import.meta.env.DEV) return true;
+  try { return localStorage.getItem('quete_tools_unlock') === '1'; } catch { return false; }
 }
