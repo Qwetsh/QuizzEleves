@@ -558,6 +558,36 @@ function tradeSideText(spec, equipOf) {
   return parts.length ? parts.join(' + ') : 'rien';
 }
 
+// Ligne d'objet dans le compositeur de troc : bouton de sélection (icône + nom +
+// aperçu d'effet en ligne, pour voir d'un coup d'œil ce que fait l'objet) et un
+// bouton ⓘ qui ouvre la fiche complète (ItemSheet en lecture seule).
+function TradeItemRow({ itemKey, on, worn, onToggle, onInfo }) {
+  const item = ITEMS[itemKey];
+  if (!item) return null;
+  const preview = item.desc || itemEffectLines(item)[0] || '';
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', marginBottom: 6 }}>
+      <button type="button" className={'mob-trade-it' + (on ? ' on' : '')} onClick={onToggle}
+        style={{ flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>{item.icon}</span>
+          <span style={{ fontWeight: 700 }}>{item.name}</span>
+          {worn && <small style={{ opacity: 0.7 }}>(porté)</small>}
+        </span>
+        {preview && (
+          <span style={{ fontSize: 11.5, opacity: 0.78, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {preview}
+          </span>
+        )}
+      </button>
+      <button type="button" onClick={onInfo} aria-label="Détails de l'objet"
+        style={{ flexShrink: 0, width: 40, borderRadius: 10, border: '1px solid rgba(122,94,58,0.3)', background: '#fffefb', fontSize: 17, cursor: 'pointer' }}>
+        ⓘ
+      </button>
+    </div>
+  );
+}
+
 // Compositeur de troc : cible + « je donne » (mon inventaire) / « je veux » (le sien).
 function TradeComposer({ session, teamIdx, onClose, onSend }) {
   const me = session.teams[teamIdx];
@@ -565,6 +595,7 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
   const [toIdx, setToIdx] = useState(others[0]?.i ?? null);
   const [give, setGive] = useState({ gold: 0, bag: [], equip: [] });
   const [want, setWant] = useState({ gold: 0, bag: [], equip: [] });
+  const [info, setInfo] = useState(null); // { itemKey, team } : fiche d'objet ouverte
   const target = toIdx != null ? session.teams[toIdx] : null;
 
   const bagKeys = (t) => (t?.bag || []).map((c) => cellKey(c)).filter((k) => ITEMS[k]);
@@ -581,20 +612,19 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
       <label className="mob-trade-gold">🪙 <input type="number" min="0" max={team?.money ?? 0} value={spec.gold}
         onChange={(e) => set({ ...spec, gold: Math.max(0, Math.min(team?.money ?? 0, Number(e.target.value) || 0)) })} /> / {team?.money ?? 0}</label>
       {bagKeys(team).map((k, n) => (
-        <button key={`b${n}`} className={'mob-trade-it' + (spec.bag.includes(k) ? ' on' : '')} onClick={() => toggle(spec, set, 'bag', k)}>
-          {ITEMS[k].icon} {ITEMS[k].name}
-        </button>
+        <TradeItemRow key={`b${n}`} itemKey={k} on={spec.bag.includes(k)}
+          onToggle={() => toggle(spec, set, 'bag', k)} onInfo={() => setInfo({ itemKey: k, team })} />
       ))}
       {equipSlots(team).map((s) => (
-        <button key={`e${s}`} className={'mob-trade-it' + (spec.equip.includes(s) ? ' on' : '')} onClick={() => toggle(spec, set, 'equip', s)}>
-          {ITEMS[team.equipment[s]].icon} {ITEMS[team.equipment[s]].name} <small>(porté)</small>
-        </button>
+        <TradeItemRow key={`e${s}`} itemKey={team.equipment[s]} worn on={spec.equip.includes(s)}
+          onToggle={() => toggle(spec, set, 'equip', s)} onInfo={() => setInfo({ itemKey: team.equipment[s], team })} />
       ))}
     </div>
   );
 
   const empty = (s) => !s.gold && !s.bag.length && !s.equip.length;
   return (
+   <>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 20, padding: 16, border: '1px solid rgba(122,94,58,0.25)' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>🤝 Proposer un troc</div>
@@ -614,6 +644,11 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
         </div>
       </div>
     </div>
+    {info?.itemKey && (
+      <ItemSheet itemKey={info.itemKey} loc={null} team={info.team}
+        owned={false} locked={false} onAction={() => {}} onClose={() => setInfo(null)} />
+    )}
+   </>
   );
 }
 
