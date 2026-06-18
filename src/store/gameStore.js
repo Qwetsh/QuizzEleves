@@ -354,7 +354,7 @@ export const useGameStore = create((set, get) => ({
     const enabled = get().enabledItems || Object.keys(ITEMS);
     const pool = enabled.filter((k) => {
       const it = ITEMS[k];
-      if (!it || it.lootOnly) return false;
+      if (!it || it.lootOnly || it.family) return false; // pas d'ingrédient/potion/parchemin au coffre de départ
       if (cfg.category === 'consumable') return it.slot === 'consumable';
       if (cfg.category === 'equipment') return it.slot !== 'consumable';
       return true; // 'all'

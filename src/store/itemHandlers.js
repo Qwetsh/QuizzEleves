@@ -189,7 +189,9 @@ export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(I
 // Stock du Marché Noir : INCLUT les objets lootOnly/légendaires (introuvables en
 // boutique normale) avec un fort poids — l'attrait « louche » de l'event.
 export function generateBlackMarketStock(count = 5, enabledKeys = Object.keys(ITEMS)) {
-  return pickWeightedItems(count, enabledKeys, (item) =>
+  // Pas d'ingrédient/potion/parchemin au Marché Noir (familles alchimie/enchant).
+  const pool = enabledKeys.filter((k) => ITEMS[k] && !ITEMS[k].family);
+  return pickWeightedItems(count, pool, (item) =>
     item.rarity === 'legendaire' ? 4 : item.rarity === 'rare' ? 3 : 1
   );
 }

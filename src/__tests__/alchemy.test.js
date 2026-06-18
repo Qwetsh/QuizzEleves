@@ -1,7 +1,7 @@
 // Extension « Alchimie » : recettes (multiset), distillation, découverte.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
-import { craftPotion } from '../store/itemHandlers.js';
+import { craftPotion, generateShopStock, generateBlackMarketStock, pickLootItem } from '../store/itemHandlers.js';
 import { matchRecipe, RECIPES } from '../data/recipes.js';
 import { ITEMS } from '../data/items.js';
 
@@ -53,6 +53,30 @@ describe('craftPotion', () => {
     const r = craftPotion(set, get, 0, [0, 1, 2]);
     expect(r.ok).toBe(false);
     expect(S().teams[0].bag.filter(Boolean).length).toBe(3); // rien consommé
+  });
+});
+
+describe('extension OFF : aucune fuite des familles (ingrédient/potion/parchemin)', () => {
+  const allKeys = Object.keys(ITEMS);
+  const isFamily = (k) => !!ITEMS[k]?.family;
+  // Sanity : le catalogue contient bien des objets à famille (sinon le test ne prouve rien).
+  it('le catalogue contient des objets à famille', () => {
+    expect(allKeys.some(isFamily)).toBe(true);
+  });
+  it('boutique : aucune famille par défaut', () => {
+    for (let i = 0; i < 20; i++) expect(generateShopStock(allKeys).some(isFamily)).toBe(false);
+  });
+  it('boutique : ingrédients OK mais jamais potion/parchemin', () => {
+    for (let i = 0; i < 20; i++) {
+      const stock = generateShopStock(allKeys, ['ingredient']);
+      expect(stock.some((k) => ITEMS[k].family === 'potion' || ITEMS[k].family === 'parchment')).toBe(false);
+    }
+  });
+  it('loot aléatoire : aucune famille', () => {
+    for (let i = 0; i < 80; i++) { const k = pickLootItem(0.3, allKeys); if (k) expect(isFamily(k)).toBe(false); }
+  });
+  it('Marché Noir : aucune famille', () => {
+    expect(generateBlackMarketStock(30, allKeys).some(isFamily)).toBe(false);
   });
 });
 

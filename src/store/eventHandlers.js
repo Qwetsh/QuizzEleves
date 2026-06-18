@@ -14,7 +14,9 @@ import { runEffects } from './effectEngine.js';
 // ponderes par rarete (les legendaires sont rares mais possibles — contrairement
 // a la boutique)
 function generateMerchantStock(count = 3, enabledKeys = Object.keys(ITEMS)) {
-  return pickWeightedItems(count, enabledKeys, (item) =>
+  // Pas d'ingrédient/potion/parchemin (familles alchimie/enchant) chez le marchand.
+  const pool = enabledKeys.filter((k) => ITEMS[k] && !ITEMS[k].family);
+  return pickWeightedItems(count, pool, (item) =>
     item.rarity === 'commun' ? 3 : item.rarity === 'rare' ? 2 : 1
   );
 }
