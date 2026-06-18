@@ -133,7 +133,35 @@ const SCALE_METRICS = [
 ];
 const metricLabel = (per) => SCALE_METRICS.find((s) => s.key === per)?.label || per;
 
-export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAULT_DICE, scale = true }) {
+// Points d'exemple représentatifs par métrique : [libellé, valeur de la métrique].
+// (timeleft = ratio 0..1, affiché en %.)
+const SCALE_SAMPLES = {
+  streak:      [['série 0', 0], ['série 3', 3], ['série 5', 5]],
+  correct:     [['0 bonne', 0], ['5 bonnes', 5], ['10 bonnes', 10]],
+  wrong:       [['0 ratée', 0], ['5 ratées', 5], ['10 ratées', 10]],
+  precision:   [['50%', 50], ['80%', 80], ['100%', 100]],
+  imprecision: [['0%', 0], ['50%', 50], ['100%', 100]],
+  timeleft:    [['0% tps', 0], ['50% tps', 0.5], ['100% tps', 1]],
+};
+// Même formule que resolveAmount : base + factor × métrique (arrondi, ≥ 0).
+const resolveScale = (v, m) => Math.max(0, Math.round((Number(v.base) || 0) + (Number(v.factor) || 0) * m));
+
+// Aperçu chiffré « de combien ça varie » selon la métrique choisie. `unit` (ex.
+// '%', ' 🪙', ' case(s)') est ajouté à chaque valeur pour lever toute ambiguïté.
+function ScalePreview({ value, unit = '' }) {
+  const samples = SCALE_SAMPLES[value.per];
+  if (!samples) return null;
+  return (
+    <span style={{ flexBasis: '100%', fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.4, marginTop: 1 }}>
+      <span style={{ opacity: 0.7 }}>Ex. : </span>
+      {samples.map(([l, m], i) => (
+        <span key={l}>{i > 0 && '  ·  '}{l} → <b style={{ color: 'var(--ink-700)' }}>{resolveScale(value, m)}{unit}</b></span>
+      ))}
+    </span>
+  );
+}
+
+export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAULT_DICE, scale = true, unit = '' }) {
   const isDice = typeof value === 'string';
   const isScale = value != null && typeof value === 'object';
   const faces = isDice && !dice.includes(value) ? [value, ...dice] : dice;
@@ -158,6 +186,7 @@ export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAUL
           {numInput(value.base ?? 0, (v) => onChange({ ...value, base: v }), { min: 0, max })}
         </span>
       )}
+      {isScale && <ScalePreview value={value} unit={unit} />}
     </span>
   );
 }
@@ -248,7 +277,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           </select>
           <TargetSelect value={a.target} onChange={(v) => upd({ target: v })} opts={targetOpts} />
           <W>de</W>
-          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
+          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" case(s)" />
           <W>cases</W>
         </>
       )}
@@ -258,7 +287,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <select className="qed-select fx-blank" value={a.mode} onChange={(e) => upd({ mode: e.target.value })}>
             <option value="gain">donner</option><option value="lose">retirer</option><option value="steal">voler</option><option value="give">distribuer (je paie)</option>
           </select>
-          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} />
+          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit={a.unit === 'percent' ? ' %' : ' 🪙'} />
           <select className="qed-select fx-blank" value={a.unit} onChange={(e) => upd({ unit: e.target.value })}>
             <option value="flat">pièces</option><option value="percent">% d'or</option>
           </select>
@@ -301,9 +330,9 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         </>
       )}
 
-      {(a.action === 'hideWrong') && (<><W>élimine</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>mauvaise(s) réponse(s)</W></>)}
-      {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>recul(s)</W></>)}
-      {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} /><W>s à la prochaine question</W></>)}
+      {(a.action === 'hideWrong') && (<><W>élimine</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" rép." /><W>mauvaise(s) réponse(s)</W></>)}
+      {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" recul(s)" /><W>recul(s)</W></>)}
+      {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" s" /><W>s à la prochaine question</W></>)}
       {a.action === 'gainCharge' && <W>au choix du joueur</W>}
 
       {a.action === 'fumigene' && (

@@ -38,6 +38,14 @@ const EFFECT_LABELS = {
   gainCharge: 'Recharge un pouvoir', fumigene: 'Annule un pouvoir offensif',
   randomPath: 'Voie aléatoire aux carrefours',
 };
+// Unité affichée dans l'aperçu chiffré de l'éditeur (AmountInput) selon l'effet.
+const EFFECT_UNIT = {
+  timerBonus: ' s', extraTime: ' s', indiceBoost: ' rép.',
+  moneyPerCorrect: ' 🪙', fightStealBonus: ' 🪙', gainMoney: ' 🪙', gainMoneyAll: ' 🪙',
+  taxReduction: ' %', stealProtection: ' %', reculReductionPct: ' %', hardcoreChance: ' %',
+  lootBonusConsumable: ' %', lootBonusEquipment: ' %',
+  reculReduction: ' case(s)', moveForward: ' case(s)',
+};
 const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'moveDieSides', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'randomPath'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
@@ -155,7 +163,7 @@ function SetBonusEditor({ effects, onChange }) {
               {(EQUIP_EFFECTS.includes(fx.type) ? EQUIP_EFFECTS : [fx.type, ...EQUIP_EFFECTS]).map((t) => <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>)}
             </select>
             {!BINARY_EFFECTS.has(fx.type) && (DICEABLE_EFFECTS.has(fx.type)
-              ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} />
+              ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} unit={EFFECT_UNIT[fx.type] || ''} />
               : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />)}
             <button className="btn btn--ghost btn--sm" onClick={() => removeEffect(i)} title="Retirer">{'\u{1F5D1}'}</button>
           </div>
@@ -832,7 +840,7 @@ export default function BalanceEditor({ onClose }) {
                               ))}
                             </select>
                             {!BINARY_EFFECTS.has(fx.type) && (DICEABLE_EFFECTS.has(fx.type)
-                              ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} />
+                              ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} unit={EFFECT_UNIT[fx.type] || ''} />
                               : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />)}
                             <span className="bal-fx-chance" title="Probabilité que l'effet se déclenche (100 % = toujours)"
                               style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'var(--ink-500)' }}>
