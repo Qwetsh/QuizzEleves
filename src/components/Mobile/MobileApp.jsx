@@ -551,7 +551,7 @@ function ShopView({ session, teamIdx, owned, code, token }) {
   );
 }
 
-function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
+function TeamView({ session, teamIdx, owned, code, token }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
   const effects = getTeamEffects(t);
@@ -582,7 +582,6 @@ function TeamView({ session, teamIdx, onSwitch, owned, code, token }) {
               : `Tour de ${session.teams[session.currentTeam]?.name || '…'}`}
           </div>
         </div>
-        <button className="mob-switch" onClick={onSwitch} aria-label="Changer d'équipe">⇄</button>
       </header>
 
       <div className="mob-statbar">
@@ -1282,7 +1281,7 @@ export default function MobileApp() {
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'questions' ? <OldQuestionsView session={session} teamIdx={teamIdx} />
       : tab === 'history' ? <HistoryView session={session} />
-      : <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />;
+      : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
