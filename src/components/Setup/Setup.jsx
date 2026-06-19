@@ -20,7 +20,6 @@ import RulesConfig from './RulesConfig';
 import ConnectionMode from './ConnectionMode';
 import LobbyPanel from './LobbyPanel';
 import EventsEditor from './EventsEditor';
-import RecipesEditor from './RecipesEditor';
 import { extOn } from '../../extensions/registry';
 import { OFFLINE } from '../../logic/offline';
 
@@ -92,7 +91,6 @@ function EditorTools() {
   const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
   const [showEventsEditor, setShowEventsEditor] = useState(false);
-  const [showRecipesEditor, setShowRecipesEditor] = useState(false);
   return (
     <div className="panel" style={{ border: '2px dashed #2f6dc9', background: 'rgba(47,109,201,0.04)' }}>
       <div className="field-label" style={{ color: '#2f6dc9' }}>{'\u{1F6E0}️'} Outils d'édition</div>
@@ -109,14 +107,13 @@ function EditorTools() {
         <button onClick={() => setShowEventsEditor(true)} className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
           {"✨ Éditer les événements"}
         </button>
-        <button onClick={() => setShowRecipesEditor(true)} className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
-          {"⚗️ Éditer les recettes"}
-        </button>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 8 }}>
+        {"⚗️ L'alchimie (ingrédients, potions, recettes) se gère dans l'éditeur d'équilibrage → onglet « Alchimie »."}
       </div>
       {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
       {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}
       {showEventsEditor && <EventsEditor onClose={() => setShowEventsEditor(false)} />}
-      {showRecipesEditor && <RecipesEditor onClose={() => setShowRecipesEditor(false)} />}
     </div>
   );
 }

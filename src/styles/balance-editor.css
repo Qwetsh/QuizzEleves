@@ -67,6 +67,20 @@
   font-size: 15px;
   color: var(--ink-900, #3a2c14);
 }
+/* Valeur ÉDITABLE au clavier (saisie directe + flèches), bordée par le stepper. */
+.bal-stepper input.bal-val-input {
+  width: 58px;
+  display: inline-block;
+  text-align: center;
+  border: none;
+  outline: none;
+  background: #fff;
+  padding: 0 4px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.bal-stepper input.bal-val-input::-webkit-outer-spin-button,
+.bal-stepper input.bal-val-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
 .bal-row {
   display: flex;

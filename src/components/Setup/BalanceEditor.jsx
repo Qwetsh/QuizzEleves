@@ -4,7 +4,7 @@
 // garde-fou anti-perte de modifications. Onglets Pouvoirs/Loot : overrides.
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { RARITIES, SLOTS } from '../../data/items';
+import { ITEMS, RARITIES, SLOTS } from '../../data/items';
 import { POWERS } from '../../data/powers';
 import { SETS } from '../../data/sets';
 import ItemIcon from '../Modals/ItemIcon';
@@ -12,19 +12,27 @@ import { ITEM_ASSET_KEYS, assetUrl } from '../../logic/itemAssets';
 import {
   fetchItemRows, saveItemRow, deleteItemRow, uploadItemImage, refreshItems,
 } from '../../logic/itemsConfig';
+import { fetchRecipeRows, saveRecipeRow, deleteRecipeRow, refreshRecipes } from '../../logic/recipesConfig';
+import { BASE_RECIPES } from '../../data/recipes';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { useGameStore } from '../../store/gameStore';
 import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger } from './EffectBuilder';
+import AlchemyRecipeForm, { recipeLine } from './AlchemyRecipeForm';
 import { describeItemEffects, itemEffectLines } from '../../logic/effectText';
 import '../../styles/questions-editor.css';
 import '../../styles/balance-editor.css';
 
 const TABS = [
   { key: 'items', label: '\u{1F392} Objets' },
+  { key: 'alchemy', label: '⚗️ Alchimie' },
   { key: 'sets', label: '⚜️ Sets' },
   { key: 'powers', label: '⚡ Pouvoirs' },
   { key: 'loot', label: '\u{1F3B0} Loot' },
 ];
+
+// Modèle d'une recette en cours d'édition (onglet Alchimie).
+const recipeRowToDraft = (r) => ({ key: r.key, ingredients: [...(r.ingredients || []), '', '', ''].slice(0, 3), potion: r.potion || '', isNew: false });
+const rand4 = () => Math.random().toString(36).slice(2, 6);
 
 const EFFECT_LABELS = {
   timerBonus: 'Timer (+s)', indiceBoost: 'Indice (+rép. éliminées)', moneyPerCorrect: 'Pièces / bonne réponse',
@@ -90,11 +98,27 @@ const LOOT_FIELDS = [
   { k: 'shopWeightOther', label: 'Poids boutique — rare/légendaire', pct: false },
 ];
 
+// Champ numérique : on peut TAPER la valeur directement (éditeur utilisé au
+// clavier sur PC) OU ajuster avec − / +. La saisie est libre pendant la frappe
+// et bornée [min,max] à la validation (blur / Entrée).
 function Stepper({ value, onChange, min = 0, max = 999, step = 1 }) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => { setText(String(value)); }, [value]);
+  const commit = () => {
+    const n = Number(text);
+    if (text === '' || Number.isNaN(n)) { setText(String(value)); return; }
+    onChange(Math.max(min, Math.min(max, n)));
+  };
   return (
     <span className="bal-stepper">
       <button onClick={() => onChange(Math.max(min, value - step))} disabled={value <= min}>{'−'}</button>
-      <span className="bal-val">{value}</span>
+      <input
+        type="number" className="bal-val bal-val-input"
+        value={text} min={min} max={max} step={step}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') { commit(); e.currentTarget.blur(); } }}
+      />
       <button onClick={() => onChange(Math.min(max, value + step))} disabled={value >= max}>{'+'}</button>
     </span>
   );
@@ -104,13 +128,17 @@ const rowToDraft = (r) => ({
   key: r.key, name: r.name, desc: r.description ?? '', descExpert: r.desc_expert ?? '',
   icon: r.icon ?? '', img: r.img ?? '', set: r.set_key ?? '',
   slot: r.slot, rarity: r.rarity, price: r.price, lootOnly: !!r.loot_only,
+  // Famille (alchimie : ingredient/potion) + enchant (parchemin) : DOIVENT être
+  // recopiés, sinon l'édition d'un ingrédient/potion/parchemin les efface au save.
+  family: r.family || '', enchant: r.enchant || undefined,
   effects: Array.isArray(r.effects) ? r.effects : [], enabled: r.enabled !== false,
   ord: r.ord, _isNew: false,
 });
-const newDraft = (ord) => ({
+const newDraft = (ord, over = {}) => ({
   key: '', name: 'Nouvel objet', desc: '', descExpert: '', icon: '✨', img: '', set: '',
   slot: 'head', rarity: 'commun', price: 10, lootOnly: false, effects: [],
-  enabled: true, ord, _isNew: true,
+  family: '', enchant: undefined,
+  enabled: true, ord, _isNew: true, ...over,
 });
 const slugify = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(' ')
@@ -199,6 +227,9 @@ export default function BalanceEditor({ onClose }) {
   const [ovBaseline, setOvBaseline] = useState(() => readCache()); // référence pour « non sauvé » (pouvoirs/loot/sets)
   const [selPower, setSelPower] = useState('bouclier');
   const [selSet, setSelSet] = useState(Object.keys(SETS)[0]);
+  // Recettes d'alchimie (onglet Alchimie) : liste perso + brouillon en cours.
+  const [recipeRows, setRecipeRows] = useState(null);
+  const [recipeDraft, setRecipeDraft] = useState(null);
 
   // Modifications non enregistrées : objet courant (items) / overrides (pouvoirs+loot)
   const dirty = !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline);
@@ -212,8 +243,60 @@ export default function BalanceEditor({ onClose }) {
     if (!keepSubtab) setSubtab('infos');
   };
   const confirmIfDirty = (msg) => !dirty || window.confirm(msg);
-  const chooseRow = (r) => { if (confirmIfDirty('Modifications non enregistrées — changer d’objet et les perdre ?')) loadDraft(rowToDraft(r)); };
+  const chooseRow = (r) => { if (confirmIfDirty('Modifications non enregistrées — changer d’objet et les perdre ?')) { setRecipeDraft(null); loadDraft(rowToDraft(r)); } };
   const chooseNew = () => { if (confirmIfDirty('Modifications non enregistrées — créer un objet et les perdre ?')) loadDraft(newDraft(rows?.length || 0)); };
+  // Onglet Alchimie : création d'un objet pré-réglé en ingrédient / potion.
+  const chooseNewItem = (over) => { if (confirmIfDirty('Modifications non enregistrées — créer un objet et les perdre ?')) { setRecipeDraft(null); loadDraft(newDraft(rows?.length || 0, { slot: 'consumable', ...over })); } };
+
+  // --- Recettes d'alchimie ---
+  const ingKeys = Object.keys(ITEMS).filter((k) => ITEMS[k].family === 'ingredient');
+  const potKeys = Object.keys(ITEMS).filter((k) => ITEMS[k].family === 'potion');
+  const chooseRecipe = (r) => { if (confirmIfDirty('Modifications non enregistrées — changer et les perdre ?')) { loadDraft(null); setStatus(null); setRecipeDraft(recipeRowToDraft(r)); } };
+  const chooseNewRecipe = () => {
+    if (!confirmIfDirty('Modifications non enregistrées — créer et les perdre ?')) return;
+    loadDraft(null); setStatus(null);
+    setRecipeDraft({ key: '', ingredients: [ingKeys[0] || '', ingKeys[1] || '', ingKeys[2] || ''], potion: potKeys[0] || '', isNew: true });
+  };
+  // Recette INTÉGRÉE : on l'édite en créant (ou en rouvrant) une recette perso de
+  // MÊME id → elle remplace l'intégrée (setCustomRecipes fusionne par id). La
+  // supprimer restaure la recette d'origine. La saisie garde l'id intégré.
+  const chooseBaseRecipe = (base) => {
+    if (!confirmIfDirty('Modifications non enregistrées — changer et les perdre ?')) return;
+    loadDraft(null); setStatus(null);
+    const existing = (recipeRows || []).find((r) => r.key === base.id);
+    if (existing) { setRecipeDraft(recipeRowToDraft(existing)); return; }
+    setRecipeDraft({ key: base.id, ingredients: [...base.ingredients, '', '', ''].slice(0, 3), potion: base.potion, isNew: true, fromBase: true });
+  };
+  async function saveRecipe() {
+    if (busy || !recipeDraft) return;
+    const ings = recipeDraft.ingredients.filter(Boolean);
+    if (ings.length !== 3 || !recipeDraft.potion) return;
+    setBusy(true); setStatus(null);
+    try {
+      // Garde l'id existant (recette perso OU intégrée éditée) ; n'en génère un
+      // aléatoire que pour une recette vraiment nouvelle (sans id).
+      const key = (recipeDraft.key && String(recipeDraft.key).trim()) ? recipeDraft.key : `r-${rand4()}${rand4()}`;
+      await saveRecipeRow({ id: key, ingredients: ings, potion: recipeDraft.potion }, { isNew: recipeDraft.isNew });
+      await refreshRecipes();
+      await reloadRecipes();
+      setRecipeDraft(null);
+      setStatus('Enregistré ✓');
+    } catch (e) { setStatus('Erreur : ' + (e.message || 'Supabase injoignable')); }
+    setBusy(false);
+  }
+  async function deleteRecipe() {
+    if (busy || !recipeDraft || recipeDraft.isNew) return;
+    if (!window.confirm('Supprimer cette recette ?')) return;
+    setBusy(true); setStatus(null);
+    try {
+      await deleteRecipeRow(recipeDraft.key);
+      await refreshRecipes();
+      await reloadRecipes();
+      setRecipeDraft(null);
+      setStatus('Supprimé');
+    } catch (e) { setStatus('Erreur : ' + (e.message || 'Supabase injoignable')); }
+    setBusy(false);
+  }
   const handleClose = () => {
     // Prévient quel que soit l'onglet : un brouillon d'objet OU des overrides non sauvés.
     if (!(dirty || ovDirty) || window.confirm('Modifications non enregistrées — fermer et les perdre ?')) onClose();
@@ -297,6 +380,13 @@ export default function BalanceEditor({ onClose }) {
       if (!draft && r[0]) loadDraft(rowToDraft(r[0]));
     } catch (e) { setStatus('Erreur : ' + (e.message || 'Supabase injoignable')); setRows([]); }
   }
+  // Recettes d'alchimie : chargées à la première ouverture de l'onglet Alchimie.
+  useEffect(() => {
+    if (tab === 'alchemy' && recipeRows == null) {
+      fetchRecipeRows().then(setRecipeRows).catch(() => setRecipeRows([]));
+    }
+  }, [tab, recipeRows]);
+  const reloadRecipes = () => fetchRecipeRows().then(setRecipeRows).catch(() => {});
 
   const set = (patch) => { setStatus(null); setDraft((d) => ({ ...d, ...patch })); };
   const effectPool = draft?.slot === 'consumable' ? CONSUM_EFFECTS : EQUIP_EFFECTS;
@@ -415,6 +505,13 @@ export default function BalanceEditor({ onClose }) {
           </div>
           {tab === 'items' && (
             <button className="btn btn--green btn--sm" style={{ marginLeft: 'auto' }} onClick={chooseNew}>{'+'} Nouvel objet</button>
+          )}
+          {tab === 'alchemy' && (
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+              <button className="btn btn--green btn--sm" onClick={() => chooseNewItem({ family: 'ingredient', name: 'Nouvel ingrédient', icon: '🌿', price: 4 })}>{'+'} Ingrédient</button>
+              <button className="btn btn--green btn--sm" onClick={() => chooseNewItem({ family: 'potion', lootOnly: true, price: 0, name: 'Nouvelle potion', icon: '🧪' })}>{'+'} Potion</button>
+              <button className="btn btn--green btn--sm" onClick={chooseNewRecipe} disabled={ingKeys.length < 3 || potKeys.length === 0}>{'+'} Recette</button>
+            </div>
           )}
         </div>
 
@@ -625,44 +722,128 @@ export default function BalanceEditor({ onClose }) {
         ) : (
           <div className="qed-body">
             <div className="qed-list">
-              {/* Recherche + filtres de slot */}
-              <div className="bal-listtools">
-                <input className="qed-search" placeholder="🔎 Rechercher un objet…" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <div className="bal-chips">
-                  {SLOT_FILTERS.map((f) => (
-                    <button key={f.slot} className={`bal-chip ${slotFilter === f.slot ? 'is-active' : ''}`} onClick={() => setSlotFilter(f.slot)}>{f.label}</button>
-                  ))}
-                </div>
-              </div>
-              {rows == null && <div style={{ padding: 12, color: 'var(--ink-500)' }}>Chargement…</div>}
-              {rows != null && GROUPS.map((g) => {
-                if (slotFilter !== 'all' && slotFilter !== g.slot) return null;
-                const list = (rows || []).filter((r) => r.slot === g.slot && matches(r));
-                if (!list.length) return null;
-                return (
-                  <div key={g.slot}>
-                    <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{g.label} <span className="bal-default">({list.length})</span></div>
-                    {list.map((r) => {
-                      const active = draft && draft.key === r.key && !draft._isNew;
+              {tab === 'alchemy' ? (
+                /* Onglet Alchimie : ingrédients + potions + recettes au même endroit. */
+                <>
+                  {rows == null && <div style={{ padding: 12, color: 'var(--ink-500)' }}>Chargement…</div>}
+                  {rows != null && [
+                    { fam: 'ingredient', label: '⚗️ Ingrédients' },
+                    { fam: 'potion', label: '🧪 Potions' },
+                  ].map(({ fam, label }) => {
+                    const list = (rows || []).filter((r) => r.family === fam);
+                    return (
+                      <div key={fam}>
+                        <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{label} <span className="bal-default">({list.length})</span></div>
+                        {list.length === 0 && <div style={{ padding: '2px 8px', color: 'var(--ink-500)', fontSize: 12 }}>Aucun pour l'instant.</div>}
+                        {list.map((r) => {
+                          const active = draft && draft.key === r.key && !draft._isNew;
+                          return (
+                            <button key={r.key} className={`qed-item ${active ? 'is-active' : ''} ${r.enabled === false ? 'is-disabled' : ''}`} onClick={() => chooseRow(r)}>
+                              <ItemIcon item={{ name: r.name, img: r.img, icon: r.icon, rarity: r.rarity, slot: r.slot }} size={30} ring />
+                              <span style={{ flex: 1 }}>{r.name}</span>
+                              {active && dirty && <span className="bal-dirty-dot" title="Modifications non enregistrées" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  <div>
+                    <div className="qed-label" style={{ margin: '12px 6px 4px' }}>📜 Recettes <span className="bal-default">({recipeRows == null ? '…' : recipeRows.length})</span></div>
+                    {(recipeRows || []).map((r) => {
+                      const active = recipeDraft && recipeDraft.key === r.key && !recipeDraft.isNew;
+                      const isBaseOverride = BASE_RECIPES.some((b) => b.id === r.key);
                       return (
-                        <button key={r.key}
-                          className={`qed-item ${active ? 'is-active' : ''} ${r.enabled === false ? 'is-disabled' : ''}`}
-                          onClick={() => chooseRow(r)}>
-                          <ItemIcon item={{ name: r.name, img: r.img, icon: r.icon, rarity: r.rarity, slot: r.slot }} size={30} ring />
-                          <span style={{ flex: 1 }}>{r.name}</span>
-                          {active && dirty && <span className="bal-dirty-dot" title="Modifications non enregistrées" />}
+                        <button key={r.key} className={`qed-item ${active ? 'is-active' : ''}`} onClick={() => chooseRecipe(r)}>
+                          <span style={{ flex: 1 }}>{recipeLine(r.ingredients, r.potion)}</span>
+                          {isBaseOverride && <span className="bal-default" title="Recette intégrée modifiée (supprime pour restaurer l'originale)">✎ intégrée</span>}
                         </button>
                       );
                     })}
+                    {/* Recettes intégrées : cliquables pour les modifier (crée un override
+                        de même id). Celles déjà personnalisées sont masquées ici (elles
+                        apparaissent au-dessus, marquées « ✎ intégrée »). */}
+                    {(() => {
+                      const overridden = new Set((recipeRows || []).map((r) => r.key));
+                      const base = BASE_RECIPES.filter((r) => !overridden.has(r.id));
+                      if (!base.length) return null;
+                      return (
+                        <>
+                          <div className="bal-default" style={{ margin: '8px 6px 2px' }}>Intégrées (clique pour modifier)</div>
+                          {base.map((r) => {
+                            const active = recipeDraft && recipeDraft.key === r.id;
+                            return (
+                              <button key={r.id} className={`qed-item ${active ? 'is-active' : ''}`} onClick={() => chooseBaseRecipe(r)}>
+                                <span style={{ flex: 1 }}>{recipeLine(r.ingredients, r.potion)}</span>
+                              </button>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
                   </div>
-                );
-              })}
-              {rows != null && !rows.some(matches) && (
-                <div style={{ padding: 12, color: 'var(--ink-500)', fontSize: 13 }}>Aucun objet ne correspond.</div>
+                </>
+              ) : (
+                <>
+                  {/* Recherche + filtres de slot */}
+                  <div className="bal-listtools">
+                    <input className="qed-search" placeholder="🔎 Rechercher un objet…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <div className="bal-chips">
+                      {SLOT_FILTERS.map((f) => (
+                        <button key={f.slot} className={`bal-chip ${slotFilter === f.slot ? 'is-active' : ''}`} onClick={() => setSlotFilter(f.slot)}>{f.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {rows == null && <div style={{ padding: 12, color: 'var(--ink-500)' }}>Chargement…</div>}
+                  {rows != null && GROUPS.map((g) => {
+                    if (slotFilter !== 'all' && slotFilter !== g.slot) return null;
+                    const list = (rows || []).filter((r) => r.slot === g.slot && matches(r));
+                    if (!list.length) return null;
+                    return (
+                      <div key={g.slot}>
+                        <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{g.label} <span className="bal-default">({list.length})</span></div>
+                        {list.map((r) => {
+                          const active = draft && draft.key === r.key && !draft._isNew;
+                          return (
+                            <button key={r.key}
+                              className={`qed-item ${active ? 'is-active' : ''} ${r.enabled === false ? 'is-disabled' : ''}`}
+                              onClick={() => chooseRow(r)}>
+                              <ItemIcon item={{ name: r.name, img: r.img, icon: r.icon, rarity: r.rarity, slot: r.slot }} size={30} ring />
+                              <span style={{ flex: 1 }}>{r.name}</span>
+                              {active && dirty && <span className="bal-dirty-dot" title="Modifications non enregistrées" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  {rows != null && !rows.some(matches) && (
+                    <div style={{ padding: 12, color: 'var(--ink-500)', fontSize: 13 }}>Aucun objet ne correspond.</div>
+                  )}
+                </>
               )}
             </div>
 
-            {draft ? (
+            {tab === 'alchemy' && recipeDraft ? (
+              <div className="bal-detail">
+                <div className="bal-detail-top">
+                  <div className="bal-card bal-card--mini">
+                    <span style={{ fontSize: 44 }}>{ITEMS[recipeDraft.potion]?.icon || '⚗️'}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
+                      <span className="bal-pill" style={{ background: '#7a5ea8', alignSelf: 'flex-start' }}>Recette</span>
+                      <div className="bal-card-name" style={{ fontSize: 17 }}>{recipeDraft.fromBase ? 'Recette intégrée (à modifier)' : recipeDraft.isNew ? 'Nouvelle recette' : 'Recette'}</div>
+                      <div className="bal-card-desc" style={{ textAlign: 'left' }}>{recipeLine(recipeDraft.ingredients, recipeDraft.potion)}</div>
+                    </div>
+                  </div>
+                </div>
+                <AlchemyRecipeForm
+                  draft={recipeDraft} ingKeys={ingKeys} potKeys={potKeys}
+                  onChange={setRecipeDraft} onSave={saveRecipe} onDelete={deleteRecipe}
+                  onCancel={() => setRecipeDraft(null)} busy={busy}
+                />
+                {status && <div className="qed-err" style={{ padding: '0 12px 10px', color: statusColor }}>{status}</div>}
+              </div>
+            ) : draft ? (
               <div className="bal-detail">
                 {/* Aperçu carte vivante + sous-onglets (collés en haut) */}
                 <div className="bal-detail-top">
