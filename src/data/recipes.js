@@ -5,13 +5,10 @@
 //
 // Recettes INTÉGRÉES (code) — toujours présentes ; les recettes PERSONNALISÉES
 // (Supabase, éditeur) sont fusionnées par-dessus via setCustomRecipes().
-export const BASE_RECIPES = [
-  { id: 'or',      ingredients: ['herbeDoree', 'fleurLune', 'champignonBleu'],   potion: 'potionOr' },
-  { id: 'temps',   ingredients: ['champignonBleu', 'cendreDragon', 'larmeCristal'], potion: 'elixirTemps' },
-  { id: 'pierre',  ingredients: ['racinePierre', 'ecailleArgent', 'cendreDragon'],  potion: 'potionPierre' },
-  { id: 'hate',    ingredients: ['aileFee', 'larmeCristal', 'fleurLune'],           potion: 'potionRuee' },
-  { id: 'supreme', ingredients: ['herbeDoree', 'cendreDragon', 'ecailleArgent'],    potion: 'elixirSupreme' },
-];
+// Refonte alchimie 2026-06 : les recettes (20 ingrédients → 1140 potions, générées
+// par scripts/gen-alchemy.mjs) vivent désormais en base (table quete_recipes) et
+// sont fusionnées via setCustomRecipes. Plus de recettes « intégrées » en dur.
+export const BASE_RECIPES = [];
 
 // Liste VIVE des recettes (mutée EN PLACE pour préserver le binding des imports).
 export const RECIPES = [...BASE_RECIPES];

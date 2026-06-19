@@ -725,16 +725,22 @@ export default function BalanceEditor({ onClose }) {
               {tab === 'alchemy' ? (
                 /* Onglet Alchimie : ingrédients + potions + recettes au même endroit. */
                 <>
+                  {/* Recherche (indispensable : ~1140 potions) */}
+                  <div className="bal-listtools">
+                    <input className="qed-search" placeholder="🔎 Rechercher (nom)…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                  </div>
                   {rows == null && <div style={{ padding: 12, color: 'var(--ink-500)' }}>Chargement…</div>}
                   {rows != null && [
-                    { fam: 'ingredient', label: '⚗️ Ingrédients' },
-                    { fam: 'potion', label: '🧪 Potions' },
-                  ].map(({ fam, label }) => {
-                    const list = (rows || []).filter((r) => r.family === fam);
+                    { fam: 'ingredient', label: '⚗️ Ingrédients', cap: 999 },
+                    { fam: 'potion', label: '🧪 Potions', cap: 60 },
+                  ].map(({ fam, label, cap }) => {
+                    const q = search.trim().toLowerCase();
+                    const all = (rows || []).filter((r) => r.family === fam && (!q || r.name.toLowerCase().includes(q)));
+                    const list = all.slice(0, cap);
                     return (
                       <div key={fam}>
-                        <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{label} <span className="bal-default">({list.length})</span></div>
-                        {list.length === 0 && <div style={{ padding: '2px 8px', color: 'var(--ink-500)', fontSize: 12 }}>Aucun pour l'instant.</div>}
+                        <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{label} <span className="bal-default">({all.length})</span></div>
+                        {all.length === 0 && <div style={{ padding: '2px 8px', color: 'var(--ink-500)', fontSize: 12 }}>{q ? 'Aucun résultat.' : "Aucun pour l'instant."}</div>}
                         {list.map((r) => {
                           const active = draft && draft.key === r.key && !draft._isNew;
                           return (
@@ -745,21 +751,31 @@ export default function BalanceEditor({ onClose }) {
                             </button>
                           );
                         })}
+                        {all.length > list.length && <div style={{ padding: '4px 8px', color: 'var(--ink-500)', fontSize: 12 }}>+{all.length - list.length} autres — affine la recherche.</div>}
                       </div>
                     );
                   })}
                   <div>
                     <div className="qed-label" style={{ margin: '12px 6px 4px' }}>📜 Recettes <span className="bal-default">({recipeRows == null ? '…' : recipeRows.length})</span></div>
-                    {(recipeRows || []).map((r) => {
-                      const active = recipeDraft && recipeDraft.key === r.key && !recipeDraft.isNew;
-                      const isBaseOverride = BASE_RECIPES.some((b) => b.id === r.key);
-                      return (
-                        <button key={r.key} className={`qed-item ${active ? 'is-active' : ''}`} onClick={() => chooseRecipe(r)}>
-                          <span style={{ flex: 1 }}>{recipeLine(r.ingredients, r.potion)}</span>
-                          {isBaseOverride && <span className="bal-default" title="Recette intégrée modifiée (supprime pour restaurer l'originale)">✎ intégrée</span>}
-                        </button>
-                      );
-                    })}
+                    {(() => {
+                      const q = search.trim().toLowerCase();
+                      const matchRec = (r) => !q || (ITEMS[r.potion]?.name || '').toLowerCase().includes(q) || r.ingredients.some((k) => (ITEMS[k]?.name || '').toLowerCase().includes(q));
+                      const all = (recipeRows || []).filter(matchRec);
+                      const list = all.slice(0, 60);
+                      return (<>
+                        {list.map((r) => {
+                          const active = recipeDraft && recipeDraft.key === r.key && !recipeDraft.isNew;
+                          const isBaseOverride = BASE_RECIPES.some((b) => b.id === r.key);
+                          return (
+                            <button key={r.key} className={`qed-item ${active ? 'is-active' : ''}`} onClick={() => chooseRecipe(r)}>
+                              <span style={{ flex: 1 }}>{recipeLine(r.ingredients, r.potion)}</span>
+                              {isBaseOverride && <span className="bal-default" title="Recette intégrée modifiée (supprime pour restaurer l'originale)">✎ intégrée</span>}
+                            </button>
+                          );
+                        })}
+                        {all.length > list.length && <div style={{ padding: '4px 8px', color: 'var(--ink-500)', fontSize: 12 }}>+{all.length - list.length} autres — affine la recherche.</div>}
+                      </>);
+                    })()}
                     {/* Recettes intégrées : cliquables pour les modifier (crée un override
                         de même id). Celles déjà personnalisées sont masquées ici (elles
                         apparaissent au-dessus, marquées « ✎ intégrée »). */}

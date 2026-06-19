@@ -16,10 +16,15 @@ function setup(bag) {
   useGameStore.setState({ phase: 'game', devSandbox: true, finished: false, currentTeam: 0, log: [], teams: [team({ bag })] });
 }
 
+// Refonte 2026-06 : plus de recettes intégrées en dur (BASE_RECIPES = []). Les
+// recettes viennent de la base via setCustomRecipes. On en pose une de test.
+const TEST_RECIPE = { id: 'or', ingredients: ['herbeDoree', 'fleurLune', 'champignonBleu'], potion: 'potionOr' };
+
 describe('recettes (matchRecipe)', () => {
+  beforeEach(() => setCustomRecipes([TEST_RECIPE]));
+  afterEach(() => setCustomRecipes([]));
   it('reconnaît une recette quel que soit l’ordre', () => {
-    const r = RECIPES[0]; // or : herbeDoree + fleurLune + champignonBleu
-    expect(matchRecipe([...r.ingredients].reverse())?.id).toBe(r.id);
+    expect(matchRecipe([...TEST_RECIPE.ingredients].reverse())?.id).toBe('or');
   });
   it('renvoie null sans recette', () => {
     expect(matchRecipe(['herbeDoree', 'herbeDoree', 'herbeDoree'])).toBeNull();
@@ -28,7 +33,7 @@ describe('recettes (matchRecipe)', () => {
 });
 
 describe('recettes personnalisées (éditeur)', () => {
-  afterEach(() => setCustomRecipes([])); // restaure les recettes intégrées
+  afterEach(() => setCustomRecipes([]));
 
   it('une recette custom est ajoutée et matchée (ordre indifférent)', () => {
     setCustomRecipes([{ id: 'custom1', ingredients: ['aileFee', 'racinePierre', 'larmeCristal'], potion: 'potionOr' }]);
@@ -36,14 +41,19 @@ describe('recettes personnalisées (éditeur)', () => {
     expect(matchRecipe(['larmeCristal', 'aileFee', 'racinePierre'])?.potion).toBe('potionOr');
   });
 
-  it('les recettes intégrées restent présentes', () => {
-    setCustomRecipes([{ id: 'custom1', ingredients: ['aileFee', 'racinePierre', 'larmeCristal'], potion: 'potionOr' }]);
+  it('plusieurs recettes custom coexistent', () => {
+    setCustomRecipes([
+      { id: 'a', ingredients: ['aileFee', 'racinePierre', 'larmeCristal'], potion: 'potionOr' },
+      TEST_RECIPE,
+    ]);
     expect(matchRecipe(['herbeDoree', 'fleurLune', 'champignonBleu'])?.id).toBe('or');
+    expect(matchRecipe(['racinePierre', 'aileFee', 'larmeCristal'])?.id).toBe('a');
   });
 });
 
 describe('craftPotion', () => {
-  beforeEach(() => setup(['herbeDoree', 'fleurLune', 'champignonBleu']));
+  beforeEach(() => { setCustomRecipes([TEST_RECIPE]); setup(['herbeDoree', 'fleurLune', 'champignonBleu']); });
+  afterEach(() => setCustomRecipes([]));
 
   it('distille la bonne potion, consomme les ingrédients et découvre la recette', () => {
     const r = craftPotion(set, get, 0, [0, 1, 2]);

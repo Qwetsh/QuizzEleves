@@ -44,10 +44,22 @@ export function applyCachedRecipes() {
   } catch { /* cache illisible */ }
 }
 
+// Récupère TOUTES les recettes par pages de 1000 (plafond Supabase ; ~1140 recettes).
+async function fetchAllRecipeRows() {
+  const PAGE = 1000;
+  const all = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase.from('quete_recipes').select('*').order('ord', { ascending: true }).range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+  }
+  return all;
+}
+
 // Récupère les recettes custom activées, les fusionne et met à jour le cache.
 export async function refreshRecipes() {
-  const { data, error } = await supabase.from('quete_recipes').select('*').order('ord', { ascending: true });
-  if (error) throw error;
+  const data = await fetchAllRecipeRows();
   const list = rowsToCustom(data);
   setCustomRecipes(list);
   writeCache(list);
@@ -57,9 +69,7 @@ export async function refreshRecipes() {
 // --- CRUD pour l'éditeur (lignes brutes, même désactivées) ---
 
 export async function fetchRecipeRows() {
-  const { data, error } = await supabase.from('quete_recipes').select('*').order('ord', { ascending: true });
-  if (error) throw error;
-  return data || [];
+  return fetchAllRecipeRows();
 }
 
 export async function saveRecipeRow(rec, { isNew = false } = {}) {

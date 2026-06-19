@@ -107,6 +107,11 @@ function EditorTools() {
         <button onClick={() => setShowEventsEditor(true)} className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
           {"✨ Éditer les événements"}
         </button>
+        <button
+          onClick={() => window.open(`${window.location.origin}${import.meta.env.BASE_URL || '/'}?analyse`, '_blank', 'noopener')}
+          className="btn btn--blue btn--sm" style={{ justifyContent: 'center' }}>
+          {"📊 Analyse des parties"}
+        </button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 8 }}>
         {"⚗️ L'alchimie (ingrédients, potions, recettes) se gère dans l'éditeur d'équilibrage → onglet « Alchimie »."}

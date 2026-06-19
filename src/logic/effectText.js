@@ -177,7 +177,14 @@ export function describeItemEffects(item) {
 // Lignes affichées sous « Détail de l'effet » : si l'objet porte une description
 // experte saisie à la main (descExpert), elle PRIME (découpée par lignes) ;
 // sinon on retombe sur la traduction auto-générée. Source unique pour le jeu.
-export function itemEffectLines(item) {
+export function itemEffectLines(item, opts = {}) {
+  // Vue joueur : l'effet d'un ingrédient d'alchimie reste CACHÉ tant que l'équipe
+  // ne l'a pas utilisé au moins une fois (révélation par `knownIngredients`).
+  // L'éditeur (prof) n'envoie pas d'opts → effet toujours visible.
+  if (item?.family === 'ingredient' && opts.key && Array.isArray(opts.knownIngredients)
+      && !opts.knownIngredients.includes(opts.key)) {
+    return ['❓ Effet inconnu — utilise-le une fois pour le révéler'];
+  }
   const expert = typeof item?.descExpert === 'string' ? item.descExpert.trim() : '';
   if (expert) return expert.split('\n').map((l) => l.trim()).filter(Boolean);
   return describeItemEffects(item);

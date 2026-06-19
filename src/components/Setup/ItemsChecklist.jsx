@@ -16,15 +16,18 @@ export default function ItemsChecklist() {
   const setAllItems = useGameStore((s) => s.setAllItems);
   const [open, setOpen] = useState(false);
 
-  const allKeys = Object.keys(ITEMS);
-  const allChecked = enabledItems.length === allKeys.length;
+  // Les items d'alchimie (ingrédients/potions) et parchemins se gèrent dans
+  // l'éditeur (onglet Alchimie) : on les exclut de cette checklist (sinon 1100+
+  // potions la noieraient). On ne liste ici que l'équipement + consommables purs.
+  const allKeys = Object.keys(ITEMS).filter((k) => !ITEMS[k].family);
+  const allChecked = allKeys.every((k) => enabledItems.includes(k));
 
   return (
     <div>
       <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
         <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'▶'}</span>
-          {`Objets (${enabledItems.length}/${allKeys.length})`}
+          {`Objets (${enabledItems.filter((k) => allKeys.includes(k)).length}/${allKeys.length})`}
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); setAllItems(!allChecked); }}

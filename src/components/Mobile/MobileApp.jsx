@@ -240,7 +240,8 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
   const canEdit = owned && !locked && loc && loc.kind !== 'shop';
   const isConsumable = item.slot === 'consumable';
   const color = RARITIES[item.rarity]?.color || '#888';
-  const fx = itemEffectLines(item);
+  // Effet d'un ingrédient caché tant que l'équipe ne l'a pas goûté.
+  const fx = itemEffectLines(item, { key: itemKey, knownIngredients: team?.knownIngredients });
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 22, padding: '18px 18px 20px', boxShadow: '0 16px 44px rgba(0,0,0,0.45)', border: '1px solid rgba(122,94,58,0.25)' }}>
@@ -915,7 +916,9 @@ function AlchemyView({ session, teamIdx, code, token }) {
               <button key={i} className={'mob-alch-ing' + (slots.includes(i) ? ' picked' : '')} onClick={() => toggle(i)}>
                 <span style={{ fontSize: 20 }}>{ITEMS[key].icon}</span>
                 <span className="mob-alch-ing-name">{ITEMS[key].name}{cellN(t.bag[i]) > 1 ? ` ×${cellN(t.bag[i])}` : ''}</span>
-                {known.has(key) && <small>{ITEMS[key].desc?.replace(/^Ingr[ée]dient\.\s*/i, '')}</small>}
+                <small style={known.has(key) ? undefined : { opacity: 0.6, fontStyle: 'italic' }}>
+                  {itemEffectLines(ITEMS[key], { key, knownIngredients: t.knownIngredients }).join(' · ')}
+                </small>
               </button>
             ))}
         </div>
@@ -923,22 +926,15 @@ function AlchemyView({ session, teamIdx, code, token }) {
 
       <section className="mob-section">
         <h2 className="mob-section-title">{'📖'} Grimoire <span className="mob-count">{knownRec.size}/{RECIPES.length}</span></h2>
-        {RECIPES.map((r) => {
-          const found = knownRec.has(r.id);
-          return (
-            <div key={r.id} className={'mob-alch-recipe' + (found ? ' found' : '')}>
-              {found ? (
-                <>
-                  <span>{r.ingredients.map((k) => ITEMS[k]?.icon || '?').join(' + ')}</span>
-                  <span className="mob-alch-arrow">→</span>
-                  <span>{ITEMS[r.potion]?.icon} <b>{ITEMS[r.potion]?.name}</b></span>
-                </>
-              ) : (
-                <span className="mob-alch-unknown">? + ? + ? &nbsp;→&nbsp; ?</span>
-              )}
-            </div>
-          );
-        })}
+        {/* Avec ~1140 recettes, on n'affiche QUE celles déjà découvertes. */}
+        {knownRec.size === 0 && <div className="mob-empty">Aucune recette découverte. Distille 3 ingrédients pour en trouver !</div>}
+        {RECIPES.filter((r) => knownRec.has(r.id)).map((r) => (
+          <div key={r.id} className="mob-alch-recipe found">
+            <span>{r.ingredients.map((k) => ITEMS[k]?.icon || '?').join(' + ')}</span>
+            <span className="mob-alch-arrow">→</span>
+            <span>{ITEMS[r.potion]?.icon} <b>{ITEMS[r.potion]?.name}</b></span>
+          </div>
+        ))}
       </section>
 
       <div className="mob-foot">Goûte un ingrédient (carte active en jeu) pour révéler son effet. Combine 3 ingrédients pour découvrir une potion !</div>

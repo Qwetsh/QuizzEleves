@@ -78,11 +78,24 @@ export function applyCachedItems() {
   } catch { /* cache illisible */ }
 }
 
+// Récupère TOUTES les lignes par pages de 1000 (PostgREST/Supabase plafonne à
+// 1000 lignes par requête — indispensable avec ~1300 objets dont 1140 potions).
+async function fetchAllItemRows() {
+  const PAGE = 1000;
+  const all = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase.from('quete_items').select('*').order('ord', { ascending: true }).range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+  }
+  return all;
+}
+
 // Récupère les objets activés, remplace le catalogue et met à jour le cache.
 export async function refreshItems() {
-  const { data, error } = await supabase.from('quete_items').select('*').order('ord', { ascending: true });
-  if (error) throw error;
-  if (!data?.length) return 0;        // base vide : on garde le fallback
+  const data = await fetchAllItemRows();
+  if (!data.length) return 0;        // base vide : on garde le fallback
   const items = rowsToItems(data);
   if (!Object.keys(items).length) return 0;
   setItemsData(items);
@@ -93,9 +106,7 @@ export async function refreshItems() {
 // --- CRUD pour l'éditeur (lignes brutes, tous les objets même désactivés) ---
 
 export async function fetchItemRows() {
-  const { data, error } = await supabase.from('quete_items').select('*').order('ord', { ascending: true });
-  if (error) throw error;
-  return data;
+  return fetchAllItemRows();
 }
 
 // isNew=true → INSERT (la contrainte de clé primaire rejette une collision,
