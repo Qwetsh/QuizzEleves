@@ -95,6 +95,7 @@ export default function QuestionModal() {
   const [selected, setSelected] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
+  const [showTrans, setShowTrans] = useState(false); // afficher la traduction (autre langue)
 
   const question = showQuestion?.question;
   // Affichage anglais (repli FR par champ si la traduction manque). `c` (index
@@ -103,9 +104,15 @@ export default function QuestionModal() {
   const qText = en && question.q_en ? question.q_en : question?.q;
   const ansText = (idx) => (en && question?.a_en?.[idx]) ? question.a_en[idx] : question?.a?.[idx];
   const eText = en && question?.e_en ? question.e_en : question?.e;
+  // « Voir la traduction » : l'AUTRE langue que celle affichée (FR si on montre
+  // l'EN, EN si on montre le FR). Disponible seulement si cette autre version existe.
+  const otherQ = englishMode ? question?.q : question?.q_en;
+  const otherA = (idx) => englishMode ? question?.a?.[idx] : question?.a_en?.[idx];
+  const otherE = englishMode ? question?.e : question?.e_en;
+  const hasTranslation = !!otherQ;
   const L = englishMode
-    ? { explanation: 'Explanation:', correct: 'Correct!', wrong: 'Wrong answer', timeout: "Time's up!", choose: 'Choose your answer', continue: 'Continue' }
-    : { explanation: 'Explication :', correct: 'Bonne réponse !', wrong: 'Mauvaise réponse', timeout: 'Temps écoulé !', choose: 'Choisis ta réponse', continue: 'Continuer' };
+    ? { explanation: 'Explanation:', correct: 'Correct!', wrong: 'Wrong answer', timeout: "Time's up!", choose: 'Choose your answer', continue: 'Continue', showTrans: '🇫🇷 Voir en français', hideTrans: '🇫🇷 Masquer le français' }
+    : { explanation: 'Explication :', correct: 'Bonne réponse !', wrong: 'Mauvaise réponse', timeout: 'Temps écoulé !', choose: 'Choisis ta réponse', continue: 'Continuer', showTrans: '🇬🇧 Voir en anglais', hideTrans: '🇬🇧 Masquer l’anglais' };
   const subject = showQuestion?.subject;
   const timerHalved = showQuestion?.timerHalved;
   // Sablier niv.2/3 divise par 3/4 — meme base que le calcul d'argent du store
@@ -136,6 +143,7 @@ export default function QuestionModal() {
     if (question) {
       setSelected(null);
       setRevealed(false);
+      setShowTrans(false);
       setTimeLeft(sharedStart != null ? sharedStart : Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime);
       bonusApplied.current = false;
     }
@@ -285,6 +293,16 @@ export default function QuestionModal() {
               {qText}
             </div>
             {blurStmt && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>🌀 Confusion… l'énoncé se précise.</div>}
+            {/* Traduction de la question (autre langue) — bouton + ligne révélée */}
+            {hasTranslation && !blurStmt && (
+              <button type="button" onClick={() => setShowTrans((v) => !v)}
+                style={{ marginTop: 8, padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                {showTrans ? L.hideTrans : L.showTrans}
+              </button>
+            )}
+            {showTrans && otherQ && (
+              <div style={{ fontSize: 18, fontStyle: 'italic', opacity: 0.92, marginTop: 8, lineHeight: 1.3 }}>{otherQ}</div>
+            )}
 
             {/* Timer bar */}
             <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'visible', marginTop: 18 }}>
@@ -355,7 +373,10 @@ export default function QuestionModal() {
                   <span className="tm-choice-letter" style={letterStyle || undefined}>
                     {letter}
                   </span>
-                  <span>{shown}</span>
+                  <span style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span>{shown}</span>
+                    {showTrans && otherA(idx) && <span style={{ fontSize: 12.5, fontStyle: 'italic', opacity: 0.72 }}>{otherA(idx)}</span>}
+                  </span>
                 </button>
               );
             })}
@@ -421,6 +442,7 @@ export default function QuestionModal() {
                 fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)',
               }}>
                 <strong>{L.explanation}</strong> {eText}
+                {showTrans && otherE && <div style={{ fontSize: 14, fontStyle: 'italic', opacity: 0.78, marginTop: 4 }}>{otherE}</div>}
               </div>
             </div>
           )}
