@@ -12,10 +12,25 @@ const PAGE = 1000;
 // Reconstruit le format interne du jeu { q, a, c, e, t } à partir d'une ligne
 // DB (4 colonnes de réponses → tableau sans les cases vides ; correcte 1-4 → c).
 function rowToQuestion(r) {
-  const a = [r.rep_a, r.rep_b, r.rep_c, r.rep_d].filter((x) => x != null);
+  // a[] (FR) ET a_en[] (EN) construits dans la MÊME boucle → alignés par position
+  // (on ne garde que les positions où la réponse FR existe ; a_en[i] = null si
+  // pas encore traduit, repli FR géré à l'affichage).
+  const a = [];
+  const a_en = [];
+  for (const col of ['a', 'b', 'c', 'd']) {
+    const fr = r[`rep_${col}`];
+    if (fr == null || fr === '') continue;
+    a.push(fr);
+    a_en.push(r[`rep_${col}_en`] ?? null);
+  }
+  const hasEn = !!(r.q_en || a_en.some(Boolean) || r.e_en);
   // `level` est conservé pour un filtrage par niveau fiable (cohérent avec
   // l'éditeur), indépendant du préfixe du thème.
-  return { q: r.q, a, c: (r.correcte || 1) - 1, e: r.e ?? '', t: r.t ?? '', level: r.level ?? null };
+  return {
+    q: r.q, a, c: (r.correcte || 1) - 1, e: r.e ?? '', t: r.t ?? '', level: r.level ?? null,
+    // Version anglaise (null si absente → repli FR à l'affichage). a_en aligné sur a.
+    q_en: r.q_en ?? null, a_en: hasEn ? a_en : null, e_en: r.e_en ?? null,
+  };
 }
 
 // Regroupe les lignes en { cycle4: { subject: [...] }, brevet: { subject: [...] } }
@@ -58,7 +73,7 @@ export async function refreshQuestions() {
       .from('quete_questions')
       // `level` est INDISPENSABLE : sans lui, rowToQuestion met level=null et le
       // filtrage par niveau retombe sur le préfixe de `t` (qui ne couvre pas le 6e).
-      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord')
+      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en')
       .order('id', { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) throw error;
@@ -74,7 +89,7 @@ export async function refreshQuestions() {
 
 // --- CRUD pour l'éditeur in-game (lignes brutes, avec id) ---
 
-const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord';
+const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en';
 
 // Toutes les lignes (paginé) avec leur id, pour l'édition.
 export async function fetchQuestionRows() {
@@ -110,6 +125,13 @@ function toPayload(row) {
     t: blank(row.t),
     enabled: row.enabled !== false,
     ord: row.ord ?? null,
+    // Version anglaise (toutes nullables ; repli FR à l'affichage).
+    q_en: blank(row.q_en),
+    rep_a_en: blank(row.rep_a_en),
+    rep_b_en: blank(row.rep_b_en),
+    rep_c_en: blank(row.rep_c_en),
+    rep_d_en: blank(row.rep_d_en),
+    e_en: blank(row.e_en),
   };
 }
 

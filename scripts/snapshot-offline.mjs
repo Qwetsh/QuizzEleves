@@ -35,8 +35,20 @@ async function fetchAll(table, order = 'id') {
 // --- Transforms : lignes DB -> format interne (miroir des logic/*Config.js) ---
 
 function rowToQuestion(r) {
-  const a = [r.rep_a, r.rep_b, r.rep_c, r.rep_d].filter((x) => x != null);
-  return { q: r.q, a, c: (r.correcte || 1) - 1, e: r.e ?? '', t: r.t ?? '', level: r.level ?? null };
+  // a[]/a_en[] alignés (même boucle) — version anglaise pour le mode hors ligne.
+  const a = [];
+  const a_en = [];
+  for (const col of ['a', 'b', 'c', 'd']) {
+    const fr = r[`rep_${col}`];
+    if (fr == null || fr === '') continue;
+    a.push(fr);
+    a_en.push(r[`rep_${col}_en`] ?? null);
+  }
+  const hasEn = !!(r.q_en || a_en.some(Boolean) || r.e_en);
+  return {
+    q: r.q, a, c: (r.correcte || 1) - 1, e: r.e ?? '', t: r.t ?? '', level: r.level ?? null,
+    q_en: r.q_en ?? null, a_en: hasEn ? a_en : null, e_en: r.e_en ?? null,
+  };
 }
 function groupQuestions(rows) {
   const data = { cycle4: {}, brevet: {} };

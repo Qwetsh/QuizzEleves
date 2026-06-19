@@ -12,11 +12,14 @@ import '../../styles/questions-editor.css';
 
 const POOLS = [{ key: 'cycle4', label: 'Cycle 4' }, { key: 'brevet', label: 'Brevet' }];
 const REP_KEYS = ['rep_a', 'rep_b', 'rep_c', 'rep_d'];
+const REP_EN_KEYS = ['rep_a_en', 'rep_b_en', 'rep_c_en', 'rep_d_en'];
 
 const emptyDraft = (pool, subject) => ({
   id: null, pool, subject, level: pool === 'brevet' ? '' : '5e',
   q: '', rep_a: '', rep_b: '', rep_c: '', rep_d: '', correcte: 1,
   e: '', t: '', enabled: true, ord: null,
+  // Version anglaise (optionnelle ; repli FR en jeu si vide).
+  q_en: '', rep_a_en: '', rep_b_en: '', rep_c_en: '', rep_d_en: '', e_en: '',
 });
 
 // Validation : énoncé + 2 réponses mini, et la bonne réponse non vide.
@@ -35,6 +38,7 @@ export default function QuestionsEditor({ onClose }) {
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState(null);   // question éditée (ou null)
   const [busy, setBusy] = useState(false);
+  const [showEn, setShowEn] = useState(false); // section « version anglaise » dépliée
 
   useEffect(() => { load(); }, []);
   async function load() {
@@ -128,7 +132,7 @@ export default function QuestionsEditor({ onClose }) {
             {filtered.map((r) => (
               <button key={r.id}
                 className={`qed-item ${draft?.id === r.id ? 'is-active' : ''} ${r.enabled === false ? 'is-disabled' : ''}`}
-                onClick={() => setDraft({ ...r, rep_c: r.rep_c ?? '', rep_d: r.rep_d ?? '', e: r.e ?? '', t: r.t ?? '', level: r.level ?? '' })}>
+                onClick={() => setDraft({ ...r, rep_c: r.rep_c ?? '', rep_d: r.rep_d ?? '', e: r.e ?? '', t: r.t ?? '', level: r.level ?? '', q_en: r.q_en ?? '', rep_a_en: r.rep_a_en ?? '', rep_b_en: r.rep_b_en ?? '', rep_c_en: r.rep_c_en ?? '', rep_d_en: r.rep_d_en ?? '', e_en: r.e_en ?? '' })}>
                 <span className="qed-item-tag">{r.level || (r.pool === 'brevet' ? 'DNB' : '·')}</span>
                 <span>{r.q}</span>
               </button>
@@ -192,6 +196,38 @@ export default function QuestionsEditor({ onClose }) {
                 <label className="qed-label">Explication</label>
                 <textarea className="qed-textarea" value={draft.e}
                   onChange={(e) => set({ e: e.target.value })} />
+              </div>
+
+              {/* Version anglaise (repliable) — alignée sur les réponses FR. */}
+              <div className="qed-field" style={{ border: '1px solid rgba(122,94,58,0.2)', borderRadius: 10, padding: 10 }}>
+                <button type="button" className="qed-label" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}
+                  onClick={() => setShowEn((v) => !v)}>
+                  <span>{showEn ? '▾' : '▸'}</span>
+                  {'🇬🇧 Version anglaise'}
+                  <span style={{ fontWeight: 400, color: 'var(--ink-500)', fontSize: 12 }}>
+                    ({[draft.q_en, draft.rep_a_en, draft.rep_b_en, draft.e_en].filter((x) => (x || '').trim()).length ? 'partielle/remplie' : 'vide — repli français'})
+                  </span>
+                </button>
+                {showEn && (
+                  <div style={{ marginTop: 8 }}>
+                    <label className="qed-label">Énoncé (EN)</label>
+                    <textarea className="qed-textarea" value={draft.q_en} placeholder="English statement…"
+                      onChange={(e) => set({ q_en: e.target.value })} />
+                    <label className="qed-label" style={{ marginTop: 6 }}>Réponses (EN — même ordre que ci-dessus)</label>
+                    {REP_EN_KEYS.map((k, i) => (
+                      (draft[REP_KEYS[i]] || '').trim() ? (
+                        <div key={k} className={`qed-answer ${draft.correcte === i + 1 ? 'is-correct' : ''}`}>
+                          <span style={{ width: 18, textAlign: 'center', fontWeight: 700 }}>{String.fromCharCode(65 + i)}</span>
+                          <input className="qed-input" value={draft[k]} placeholder={`EN — ${draft[REP_KEYS[i]]}`}
+                            onChange={(e) => set({ [k]: e.target.value })} />
+                        </div>
+                      ) : null
+                    ))}
+                    <label className="qed-label" style={{ marginTop: 6 }}>Explication (EN)</label>
+                    <textarea className="qed-textarea" value={draft.e_en} placeholder="English explanation…"
+                      onChange={(e) => set({ e_en: e.target.value })} />
+                  </div>
+                )}
               </div>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>

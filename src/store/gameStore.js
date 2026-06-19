@@ -182,6 +182,11 @@ export const useGameStore = create((set, get) => ({
   lv2Mode: false,
   setLv2Mode: (v) => set({ lv2Mode: !!v }),
 
+  // Mode anglais : affiche les questions (énoncé/choix/explication) en anglais
+  // quand une traduction existe (repli FR sinon). Flag global choisi au Setup.
+  englishMode: false,
+  setEnglishMode: (v) => set({ englishMode: !!v }),
+
   // Matières réellement posées sur le plateau (set au démarrage) : sert à
   // `randomBoardSubject` pour que les cases « multi »/jonctions ne tirent que
   // parmi la sélection effective (et 'lv2' si le mode est actif).

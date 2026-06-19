@@ -44,6 +44,8 @@ export function shuffleAnswers(question) {
   return {
     ...question,
     a: order.map((i) => question.a[i]),
+    // Version anglaise mélangée avec la MÊME permutation → reste alignée sur `c`.
+    a_en: Array.isArray(question.a_en) ? order.map((i) => question.a_en[i]) : null,
     c: order.indexOf(question.c),
   };
 }

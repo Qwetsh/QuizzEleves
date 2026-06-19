@@ -134,6 +134,8 @@ export default function Setup() {
   const connectionMode = useGameStore((s) => s.connectionMode);
   const classLabel = useGameStore((s) => s.classLabel);
   const setClassLabel = useGameStore((s) => s.setClassLabel);
+  const englishMode = useGameStore((s) => s.englishMode);
+  const setEnglishMode = useGameStore((s) => s.setEnglishMode);
   // Hors ligne : le volet téléphone (lobby/QR/Realtime) est indisponible → on
   // force la création d'équipes au tableau.
   const phoneMode = !OFFLINE && connectionMode === 'phone';
@@ -250,6 +252,28 @@ export default function Setup() {
                 border: '1.5px solid var(--gold-600)', background: '#fffdf8', color: 'var(--ink-900)',
               }}
             />
+            {/* Toggle « Questions en anglais » : affiche énoncés/choix/explications
+                en anglais (repli français si une question n'est pas traduite). */}
+            <button
+              type="button"
+              onClick={() => setEnglishMode(!englishMode)}
+              style={{
+                marginTop: 12, width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                border: `1.5px solid ${englishMode ? 'var(--gold-600)' : 'rgba(122,94,58,0.3)'}`,
+                background: englishMode ? 'rgba(232,169,88,0.16)' : '#fffdf8',
+              }}
+            >
+              <span style={{
+                width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: 'grid', placeItems: 'center',
+                background: englishMode ? 'var(--gold-600)' : '#fff', color: '#fff', fontSize: 15,
+                border: `2px solid ${englishMode ? 'var(--gold-700)' : 'var(--ink-400)'}`,
+              }}>{englishMode ? '✓' : ''}</span>
+              <span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-800)' }}>{'🇬🇧 Questions en anglais'}</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>Énoncés, choix et explications affichés en anglais (repli français si non traduit).</span>
+              </span>
+            </button>
           </div>
           <div className="panel">
             <LevelSelect />

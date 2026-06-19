@@ -90,12 +90,22 @@ export default function QuestionModal() {
   const indiceHidden = useGameStore((s) => s.indiceHidden);
   const rerollUsedState = useGameStore((s) => s.rerollUsed);
   const useQuestionReroll = useGameStore((s) => s.useQuestionReroll);
+  const englishMode = useGameStore((s) => s.englishMode);
 
   const [selected, setSelected] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
 
   const question = showQuestion?.question;
+  // Affichage anglais (repli FR par champ si la traduction manque). `c` (index
+  // bonne réponse) reste identique → la bonne réponse reste alignée.
+  const en = englishMode && !!question;
+  const qText = en && question.q_en ? question.q_en : question?.q;
+  const ansText = (idx) => (en && question?.a_en?.[idx]) ? question.a_en[idx] : question?.a?.[idx];
+  const eText = en && question?.e_en ? question.e_en : question?.e;
+  const L = englishMode
+    ? { explanation: 'Explanation:', correct: 'Correct!', wrong: 'Wrong answer', timeout: "Time's up!", choose: 'Choose your answer', continue: 'Continue' }
+    : { explanation: 'Explication :', correct: 'Bonne réponse !', wrong: 'Mauvaise réponse', timeout: 'Temps écoulé !', choose: 'Choisis ta réponse', continue: 'Continuer' };
   const subject = showQuestion?.subject;
   const timerHalved = showQuestion?.timerHalved;
   // Sablier niv.2/3 divise par 3/4 — meme base que le calcul d'argent du store
@@ -272,7 +282,7 @@ export default function QuestionModal() {
             </div>
 
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.25, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)', filter: blurStmt ? 'blur(8px)' : 'none', transition: 'filter 0.4s ease', userSelect: blurStmt ? 'none' : 'auto' }}>
-              {question.q}
+              {qText}
             </div>
             {blurStmt && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>🌀 Confusion… l'énoncé se précise.</div>}
 
@@ -312,8 +322,9 @@ export default function QuestionModal() {
           {/* Choices - 2x2 grid */}
           <div className="grid gap-3 p-5 grid-cols-1 sm:grid-cols-2">
             {question.a.map((answer, idx) => {
+              const shown = ansText(idx); // texte affiché (EN si dispo, sinon FR)
               if (indiceHidden.includes(idx)) {
-                return <EliminatedAnswer key={idx} idx={idx} answer={answer} />;
+                return <EliminatedAnswer key={idx} idx={idx} answer={shown} />;
               }
 
               // Base = .tm-choice (parchemin + liseré pierre) ; surcharge à la révélation
@@ -338,13 +349,13 @@ export default function QuestionModal() {
                   className="tm-choice"
                   onClick={() => handleAnswer(idx)}
                   disabled={revealed}
-                  aria-label={`Option ${letter}: ${answer}`}
+                  aria-label={`Option ${letter}: ${shown}`}
                   style={choiceStyle || undefined}
                 >
                   <span className="tm-choice-letter" style={letterStyle || undefined}>
                     {letter}
                   </span>
-                  <span>{answer}</span>
+                  <span>{shown}</span>
                 </button>
               );
             })}
@@ -383,25 +394,25 @@ export default function QuestionModal() {
               ))}
               <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
                 {revealed && selected != null && selected === question.c ? (
-                  <strong style={{ color: '#2f9d5a' }}>{"Bonne r\u00e9ponse !"}</strong>
+                  <strong style={{ color: '#2f9d5a' }}>{L.correct}</strong>
                 ) : revealed && selected != null ? (
-                  <strong style={{ color: '#c9472f' }}>{"Mauvaise r\u00e9ponse"}</strong>
+                  <strong style={{ color: '#c9472f' }}>{L.wrong}</strong>
                 ) : revealed ? (
-                  <strong style={{ color: '#c9472f' }}>{"Temps \u00e9coul\u00e9 !"}</strong>
+                  <strong style={{ color: '#c9472f' }}>{L.timeout}</strong>
                 ) : (
-                  <span>{"Choisis ta r\u00e9ponse"}</span>
+                  <span>{L.choose}</span>
                 )}
               </div>
             </div>
             {revealed && (
               <button className="tm-btn-gold" onClick={handleContinue}>
-                Continuer
+                {L.continue}
               </button>
             )}
           </div>
 
           {/* Explanation */}
-          {revealed && question.e && (
+          {revealed && eText && (
             <div style={{ padding: '0 22px 22px' }}>
               <div style={{
                 padding: 14, borderRadius: 14,
@@ -409,7 +420,7 @@ export default function QuestionModal() {
                 border: '1px solid rgba(122,94,58,0.16)',
                 fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)',
               }}>
-                <strong>Explication :</strong> {question.e}
+                <strong>{L.explanation}</strong> {eText}
               </div>
             </div>
           )}
