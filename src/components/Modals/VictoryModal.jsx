@@ -3,6 +3,9 @@ import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { soundVictory } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
+import { OFFLINE } from '../../logic/offline';
+
+const analyseUrl = () => `${window.location.origin}${import.meta.env.BASE_URL || '/'}?analyse`;
 
 const CONFETTI_COLORS = ['#f3c969', '#e85d6b', '#2f9d5a', '#2f6fd8', '#8745d4', '#129fb0'];
 
@@ -131,13 +134,21 @@ export default function VictoryModal() {
               })}
             </div>
 
-            <div className="flex gap-3 justify-center">
+            <div className="flex gap-3 justify-center flex-wrap">
               <button
                 onClick={() => setDismissed(true)}
                 className="btn btn--ghost"
               >
                 Revoir le plateau
               </button>
+              {!OFFLINE && (
+                <button
+                  onClick={() => window.open(analyseUrl(), '_blank', 'noopener')}
+                  className="btn btn--ghost"
+                >
+                  {"\u{1F4CA} Voir l'analyse"}
+                </button>
+              )}
               <button
                 onClick={reset}
                 className="btn btn--lg"

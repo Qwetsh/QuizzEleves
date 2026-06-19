@@ -197,8 +197,17 @@ export default function QuestionModal() {
     }
   }, [revealed, selected, timeLeft, answerQuestion, timeoutQuestion]);
 
-  const timerRatio = Math.min(1, timeLeft / duration);
+  // Temps total réellement disponible (base 30 s + bonus d'équipement déjà inclus
+  // dans `duration`, + bonus d'Indice ajouté à timeLeft). Sert d'échelle stable
+  // pour la barre afin de matérialiser la zone « bonus » au-delà des 30 s.
+  const barMax = Math.max(duration + bonusTime, TIMER_DURATION);
+  const timerRatio = Math.min(1, timeLeft / barMax);
   const timerColor = timerRatio > 0.5 ? '#fff' : timerRatio > 0.2 ? '#f3c969' : '#e85d6b';
+  // Zone bonus : portion de la barre située au-delà des 30 s de base.
+  const hasBonus = barMax > TIMER_DURATION + 0.5;
+  const baseFrac = TIMER_DURATION / barMax;       // position du repère 30 s (0..1)
+  const bonusSeconds = Math.round(barMax - TIMER_DURATION);
+  const inBonus = timeLeft > TIMER_DURATION;      // le chrono est encore dans le bonus
   const isOpen = !!(showQuestion && question);
   const bgColor = subjectInfo.color || '#888';
 
@@ -268,18 +277,25 @@ export default function QuestionModal() {
             {blurStmt && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>🌀 Confusion… l'énoncé se précise.</div>}
 
             {/* Timer bar */}
-            <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, overflow: 'hidden', marginTop: 18 }}>
+            <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'visible', marginTop: 18 }}>
               <div
+                className={inBonus ? 'qz-fill-bonus' : undefined}
                 style={{
                   height: '100%',
                   background: `linear-gradient(90deg, #fff, ${timerColor})`,
-                  borderRadius: 3,
+                  borderRadius: 4,
                   width: `${timerRatio * 100}%`,
                   transition: 'width 1s linear',
                 }}
               />
+              {/* Zone « bonus » dorée au-delà des 30 s + repère */}
+              {hasBonus && <div className="qz-bonus-zone" style={{ left: `${baseFrac * 100}%` }} />}
+              {hasBonus && <div className="qz-bonus-tick" style={{ left: `${baseFrac * 100}%` }} />}
             </div>
-            <div aria-live="polite" style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{timeLeft}s</div>
+            <div aria-live="polite" style={{ fontSize: 12, marginTop: 8, opacity: 0.85 }}>
+              {timeLeft}s
+              {hasBonus && <span className="qz-bonus-label">{`⭐ +${bonusSeconds}s bonus`}</span>}
+            </div>
 
             {timerHalved && (
               <div style={{ fontSize: 12, marginTop: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>

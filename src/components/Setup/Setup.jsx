@@ -130,6 +130,8 @@ export default function Setup() {
   const extensions = useGameStore((s) => s.extensions);
   const itemsOn = extOn(extensions, 'equipment');
   const connectionMode = useGameStore((s) => s.connectionMode);
+  const classLabel = useGameStore((s) => s.classLabel);
+  const setClassLabel = useGameStore((s) => s.setClassLabel);
   // Hors ligne : le volet téléphone (lobby/QR/Realtime) est indisponible → on
   // force la création d'équipes au tableau.
   const phoneMode = !OFFLINE && connectionMode === 'phone';
@@ -228,6 +230,25 @@ export default function Setup() {
 
         {/* Left column */}
         <div className="flex flex-col gap-4">
+          <div className="panel">
+            <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--ink-800)', marginBottom: 8 }}>
+              {"\u{1F4DA} Classe / séance"}
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 400, color: 'var(--ink-500)', marginLeft: 8 }}>
+                {"(optionnel — pour le suivi dans l'analyse)"}
+              </span>
+            </label>
+            <input
+              type="text"
+              value={classLabel}
+              onChange={(e) => setClassLabel(e.target.value)}
+              placeholder="ex. 6eB, Groupe 2…"
+              maxLength={40}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 15,
+                border: '1.5px solid var(--gold-600)', background: '#fffdf8', color: 'var(--ink-900)',
+              }}
+            />
+          </div>
           <div className="panel">
             <LevelSelect />
           </div>

@@ -9,6 +9,7 @@ import BottomBar from './BottomBar';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
 import TradeConsumer from './TradeConsumer';
+import StatsArchiver from './StatsArchiver';
 import TestLinksPanel from './TestLinksPanel';
 import DevItemGiver from './DevItemGiver';
 import { OFFLINE } from '../../logic/offline';
@@ -234,6 +235,7 @@ export default function GameLayout() {
           Hors ligne : pas de Realtime → composants non montés. */}
       {!OFFLINE && <IntentConsumer />}
       {!OFFLINE && <TradeConsumer />}
+      {!OFFLINE && <StatsArchiver />}
       {!OFFLINE && <TestLinksPanel />}
 
       {/* Animations */}

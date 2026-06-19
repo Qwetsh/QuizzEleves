@@ -113,6 +113,7 @@ export function useIndice(set, get) {
 
   addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideMore} r\u00e9ponse${hideMore > 1 ? 's' : ''} \u00e9limin\u00e9e${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}.`);
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
+  get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey: 'indice', targetIdx: null });
   announce(set, get, '💡', `Indice — ${hideMore} réponse${hideMore > 1 ? 's' : ''} éliminée${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}`, POWERS.indice?.color || '#e8b117');
 
   // Bonus de temps (palier + Sérénité + Maître du temps) et Antisèche (or si bonne réponse).
@@ -137,6 +138,7 @@ export function useRelance(set, get) {
   newTeams[currentTeam] = { ...result.updatedTeam, pos: preRollPos || team.pos, ...(rEff0.choosePathAfter ? { pilotNext: true } : {}) };
 
   addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !`);
+  get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey: 'relance', targetIdx: null });
   soundDice();
   announce(set, get, '🎲', `${team.emoji} ${team.name} relance le dé !`, POWERS.relance?.color || '#e8b117');
   // Nettoie aussi un éventuel choix de jonction en cours (on relance depuis le départ du lancer).
@@ -208,6 +210,8 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   const result = consumePowerCharge(team, powerKey);
   if (!result) return;
   newTeams[currentTeam] = result.updatedTeam;
+  // Analytics : usage de pouvoir offensif (charge consommée, quelle que soit l'issue).
+  get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey, targetIdx: targetTeamIndex });
 
   // Consommable Bombe fumigene : la cible annule le pouvoir offensif
   // (la charge de l'attaquant est quand meme consommee — le coup est esquive)

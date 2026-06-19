@@ -214,6 +214,11 @@ export const useGameStore = create((set, get) => ({
   setSessionCode: (c) => set({ sessionCode: c }),
   setLobbyTeams: (rows) => set({ lobbyTeams: Array.isArray(rows) ? rows : [] }),
 
+  // Étiquette « classe / séance » (ex. « 6eB ») saisie au Setup : sert de clé de
+  // regroupement pour le suivi multi-séances dans le dashboard d'analyse.
+  classLabel: '',
+  setClassLabel: (v) => { if (get().phase === 'setup') set({ classLabel: String(v || '').slice(0, 40) }); },
+
   nbTeams: 3,
   setNbTeams: (n) => set({ nbTeams: n, setupTeams: createDefaultTeams(n) }),
 
@@ -306,6 +311,13 @@ export const useGameStore = create((set, get) => ({
   questions: {},
   log: [],
 
+  // --- Analytics : journal STRUCTURÉ pour le dashboard d'analyse (≠ log texte) ---
+  // Réinitialisé à chaque startGame. `answers` = 1 entrée par question répondue
+  // OU expirée ; `itemUses`/`powerUses` = usages d'objets/pouvoirs. Archivé une
+  // seule fois en fin de partie (cf. StatsArchiver + archiveGameStats).
+  gameStats: { startedAt: null, classLabel: '', subjects: [], level: [], answers: [], itemUses: [], powerUses: [] },
+  statsArchived: false,
+
   // --- UI state ---
   rolling: false,
   diceValue: null,
@@ -362,6 +374,16 @@ export const useGameStore = create((set, get) => ({
   // --- Log ---
   // msg : chaîne OU objet { text, detail:[{label, amount?, note?}] } (cf. logFormat).
   addLog: (msg) => set({ log: [...get().log, msg] }),
+
+  // --- Analytics : enregistre un événement structuré dans gameStats ---
+  // category ∈ { 'answers', 'itemUses', 'powerUses' }. Chaque entrée reçoit un
+  // `seq` (ordre) et un horodatage `at`. No-op si la catégorie est inconnue.
+  recordStat: (category, payload) => set((s) => {
+    const gs = s.gameStats;
+    const arr = Array.isArray(gs?.[category]) ? gs[category] : null;
+    if (!arr) return {};
+    return { gameStats: { ...gs, [category]: [...arr, { seq: arr.length, at: new Date().toISOString(), ...payload }] } };
+  }),
 
   // --- Coffre de départ : config (Setup uniquement, verrouillé en partie) ---
   setStarterChestConfig: (patch) => {
@@ -500,6 +522,14 @@ export const useGameStore = create((set, get) => ({
       boardSubjects: subjects,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
+      // Journal analytique neuf pour cette partie (cf. recordStat / dashboard).
+      gameStats: {
+        startedAt: new Date().toISOString(),
+        classLabel: get().classLabel || '',
+        subjects, level: get().level || [],
+        answers: [], itemUses: [], powerUses: [],
+      },
+      statsArchived: false,
       shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
       shopStockTurns: 0,
       ...TURN_RESET, movePath: null,
@@ -1008,6 +1038,18 @@ export const useGameStore = create((set, get) => ({
     const answerTimeRatio = Math.round(Math.max(0, Math.min(1, maxTime > 0 ? timeLeft / maxTime : 0)) * 100);
     const tTeam = { ...team, answerTimeRatio };
 
+    // Analytics : trace structurée de la réponse (juste OU fausse). `question`
+    // est déjà mélangé (shuffleAnswers) → answers/correctIndex/chosenIndex sont
+    // cohérents et rejouables tels quels côté mobile.
+    get().recordStat('answers', {
+      teamIdx: currentTeam, teamName: team.name,
+      subject: showQuestion.subject, level: question.level || null, theme: question.t || null,
+      qId: question.id ?? `${showQuestion.subject}:${showQuestion.index}`,
+      qText: question.q, answers: question.a, correctIndex: question.c,
+      chosenIndex, correct, timedOut: false, timeLeftRatio: answerTimeRatio,
+      explanation: question.e || null,
+    });
+
     if (correct) {
       // Double/triple: money only on last question (or never if doubleNoBonus)
       const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleExtra || 0) > 0);
@@ -1054,6 +1096,8 @@ export const useGameStore = create((set, get) => ({
       addLog({ text: logMessage, detail });
       if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
       if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
+      if ((team.powers?.bouclier?.charges ?? 0) > (updatedTeam.powers?.bouclier?.charges ?? 0))
+        get().recordStat('powerUses', { teamIdx: currentTeam, powerKey: 'bouclier', targetIdx: null });
 
       // Contre (Bouclier L5) : recul absorbé → relance gratuitement la question (2e chance).
       const bEff = resolvePowerEffect(team, 'bouclier', extOn(get().extensions, 'mastery'));
@@ -1185,8 +1229,21 @@ export const useGameStore = create((set, get) => ({
   timeoutQuestion: () => {
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
-    const timedSubject = get().showQuestion?.subject; // thème (pour les déclencheurs conditionnés)
+    const sq = get().showQuestion;
+    const timedSubject = sq?.subject; // thème (pour les déclencheurs conditionnés)
     const newTeams = [...teams];
+
+    // Analytics : trace de la question expirée (réponse non donnée).
+    if (sq?.question) {
+      get().recordStat('answers', {
+        teamIdx: currentTeam, teamName: team.name,
+        subject: sq.subject, level: sq.question.level || null, theme: sq.question.t || null,
+        qId: sq.question.id ?? `${sq.subject}:${sq.index}`,
+        qText: sq.question.q, answers: sq.question.a, correctIndex: sq.question.c,
+        chosenIndex: null, correct: false, timedOut: true, timeLeftRatio: 0,
+        explanation: sq.question.e || null,
+      });
+    }
 
     // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
     const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2, extOn(get().extensions, 'mastery'));
@@ -1201,6 +1258,8 @@ export const useGameStore = create((set, get) => ({
     }
     if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
     if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
+    if ((team.powers?.bouclier?.charges ?? 0) > (updatedTeam.powers?.bouclier?.charges ?? 0))
+      get().recordStat('powerUses', { teamIdx: currentTeam, powerKey: 'bouclier', targetIdx: null });
 
     if (team.doubleActive) {
       newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };

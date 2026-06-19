@@ -7,6 +7,7 @@ import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, rando
 import { POWERS } from '../../data/powers';
 import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { SUBJECTS } from '../../data/subjects';
 import { RECIPES } from '../../data/recipes';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
@@ -925,6 +926,75 @@ function HistoryView({ session }) {
   );
 }
 
+// Onglet « Questions » : les questions passées de MON équipe (publiées par le
+// TBI dans session.questionLog), avec ma réponse, la bonne réponse et l'explication.
+function OldQuestionsView({ session, teamIdx }) {
+  const all = (session.questionLog && session.questionLog[teamIdx]) || [];
+  const list = all.slice().reverse(); // plus récente d'abord
+  return (
+    <div className="mob-root" style={{ paddingBottom: 76 }}>
+      <div className="mob-pick-head">{'\u{1F4DA}'} Mes anciennes questions</div>
+      {list.length === 0 ? (
+        <div className="mob-empty" style={{ margin: 14 }}>Aucune question pour l'instant…</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 14px' }}>
+          {list.map((q, i) => {
+            const subj = SUBJECTS[q.subject] || {};
+            const result = q.timedOut ? { txt: '⏱️ Temps écoulé', col: '#8a6418' }
+              : q.correct ? { txt: '✅ Juste', col: '#4f8f3a' }
+                : { txt: '❌ Faux', col: '#b5341f' };
+            return (
+              <div key={i} style={{
+                borderRadius: 14, overflow: 'hidden',
+                border: '1px solid rgba(122,94,58,0.2)', background: '#fffefb',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                  background: (subj.colorSoft || 'rgba(122,94,58,0.1)'),
+                  fontWeight: 700, fontSize: 13.5, color: 'var(--ink-800,#4a3a1e)',
+                }}>
+                  <span>{subj.icon || '•'}</span>
+                  <span>{subj.name || q.subject}</span>
+                  <span style={{ marginLeft: 'auto', color: result.col, fontSize: 13 }}>{result.txt}</span>
+                </div>
+                <div style={{ padding: '10px 12px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.35, marginBottom: 8 }}>{q.qText}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {(q.answers || []).map((a, idx) => {
+                      const isCorrect = idx === q.correctIndex;
+                      const isMine = idx === q.chosenIndex;
+                      const wrongMine = isMine && !isCorrect;
+                      return (
+                        <div key={idx} style={{
+                          fontSize: 14, padding: '6px 10px', borderRadius: 8,
+                          background: isCorrect ? 'rgba(79,143,58,0.16)' : wrongMine ? 'rgba(181,52,31,0.12)' : 'transparent',
+                          border: isMine ? '1.5px solid rgba(122,94,58,0.4)' : '1px solid transparent',
+                          color: isCorrect ? '#33691e' : wrongMine ? '#922' : 'var(--ink-700,#4a3618)',
+                          fontWeight: isCorrect ? 700 : 500,
+                        }}>
+                          {isCorrect ? '✓ ' : wrongMine ? '✗ ' : '• '}{a}
+                          {isMine && <span style={{ fontSize: 11, opacity: 0.7 }}> {'(ta réponse)'}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {q.explanation && (
+                    <div style={{
+                      marginTop: 8, fontSize: 13.5, lineHeight: 1.45, padding: '8px 10px',
+                      background: 'rgba(199,145,32,0.1)', borderRadius: 8, color: 'var(--ink-700,#4a3618)',
+                    }}><b>Explication :</b> {q.explanation}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Sélecteur d'objet (admin) : recherche + grille de tout le catalogue.
 function AdminItemPicker({ onPick, onClose }) {
   const [q, setQ] = useState('');
@@ -1067,6 +1137,7 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0 }) 
       {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label="Boutique" />}
       {hasTrade && <Tab id="trade" icon={'🤝'} label="Troc" badge={tradeAlert} />}
       {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label="Alchi" />}
+      <Tab id="questions" icon={'\u{1F4DA}'} label="Questions" />
       <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
     </nav>
   );
@@ -1172,10 +1243,11 @@ export default function MobileApp() {
   }, [session, teamIdx, token, code]);
 
   // Suivi des trocs : alimente le badge de l'onglet Troc ET la vue Troc
-  // (abonnement unique partagé). Dès qu'une équipe est sélectionnée (créée au
-  // lobby OU choisie à la main), le téléphone peut troquer pour elle — l'appli
-  // côté TBI (applyTrade) ne valide que from_idx/to_idx, jamais le jeton.
-  const canTrade = !!(session && session.status !== 'lobby' && teamIdx != null && token && extOn(session.extensions, 'trade'));
+  // (abonnement unique partagé). RÉSERVÉ au propriétaire de l'équipe (`owned`) :
+  // accepter/refuser/proposer un troc engage les objets de l'équipe, c'est une
+  // action de jeu — un téléphone qui a juste « sélectionné » une autre équipe
+  // (mode tableau, owned=false) ne doit pas pouvoir valider à sa place.
+  const canTrade = !!(session && session.status !== 'lobby' && teamIdx != null && owned && token && extOn(session.extensions, 'trade'));
   useEffect(() => {
     if (!canTrade || !code) { setTrades([]); return; }
     let alive = true;
@@ -1198,15 +1270,17 @@ export default function MobileApp() {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
     const hasShop = extOn(session.extensions, 'equipment');
-    // Troc : pour toute équipe sélectionnée (possédée au lobby ou choisie à la
-    // main), tant que l'extension est active. Ne dépend plus de `owned` —
-    // l'application du troc côté TBI revérifie or/objets, pas le jeton.
-    const hasTrade = extOn(session.extensions, 'trade') && !!token;
+    // Troc : RÉSERVÉ au propriétaire de l'équipe (comme les achats). Valider ou
+    // proposer un troc engage l'inventaire de l'équipe ; un téléphone qui a
+    // seulement « sélectionné » une autre équipe (owned=false) ne peut pas
+    // troquer à sa place (sinon il validerait le troc d'un autre groupe).
+    const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
     const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
+      : tab === 'questions' ? <OldQuestionsView session={session} teamIdx={teamIdx} />
       : tab === 'history' ? <HistoryView session={session} />
       : <TeamView session={session} teamIdx={teamIdx} onSwitch={() => setTeamIdx(null)} owned={owned} code={code} token={token} />;
     content = (

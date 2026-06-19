@@ -6,6 +6,7 @@ const SAVE_FIELDS = [
   'extensions', 'enabledEvents', 'knownEventKeys', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'forcedDuels', 'connectionMode', 'sessionCode', 'boardParams',
   'shopStock', 'shopStockTurns',
   'starterChestConfig', 'starterGold',
+  'gameStats', 'statsArchived', 'classLabel',
 ];
 
 /**

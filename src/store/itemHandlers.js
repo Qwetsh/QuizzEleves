@@ -428,6 +428,7 @@ export function useConsumable(set, get, bagIndex) {
   newTeams[currentTeam] = { ...team, ...teamPatch };
   set({ teams: newTeams, showInventory: false });
   addLog(`${item.icon} ${team.emoji} ${team.name} utilise ${item.name} !`);
+  get().recordStat?.('itemUses', { teamIdx: currentTeam, key: itemKey });
 
   // Tout (legacy {type,value} + composable {kind:'trigger'}) passe par le moteur.
   const actions = consumableActions(item);

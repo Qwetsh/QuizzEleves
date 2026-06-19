@@ -9,6 +9,7 @@ const TABLE = 'quete_game_sessions';
 const LOBBY_TABLE = 'quete_lobby_teams';
 const INTENTS_TABLE = 'quete_intents';
 const TRADES_TABLE = 'quete_trades';
+const STATS_TABLE = 'quete_game_stats';
 
 // Jeton secret d'une équipe créée depuis un téléphone : stocké dans le
 // localStorage du tel, il lui permet de « posséder » son équipe (reconnexion,
@@ -34,8 +35,22 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false, lv2Mode = false }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false, lv2Mode = false, gameStats = null }) {
+  // Historique de questions par équipe (onglet mobile « anciennes questions ») :
+  // dérivé du journal analytique, compacté aux derniers ~20 par équipe et aux
+  // seuls champs utiles à la revue. Le mobile filtre ensuite sur SON équipe.
+  const questionLog = {};
+  for (const a of (gameStats?.answers || [])) {
+    const arr = (questionLog[a.teamIdx] ||= []);
+    arr.push({
+      subject: a.subject, qText: a.qText, answers: a.answers,
+      correctIndex: a.correctIndex, chosenIndex: a.chosenIndex,
+      correct: a.correct, timedOut: a.timedOut, explanation: a.explanation,
+    });
+  }
+  for (const k of Object.keys(questionLog)) questionLog[k] = questionLog[k].slice(-20);
   return {
+    questionLog,
     status,
     currentTeam,
     // Édition d'équipement bloquée côté mobile pendant une résolution (question,
@@ -232,4 +247,36 @@ export function subscribeTrades(code, onChange) {
       (payload) => onChange(payload))
     .subscribe();
   return () => { supabase.removeChannel(channel); };
+}
+
+// --- Analyse : archivage des statistiques de partie (dashboard `?analyse`) ---
+// Une ligne par partie terminée. `data` = le journal analytique complet
+// (answers/itemUses/powerUses + méta). Écrit une seule fois (cf. StatsArchiver).
+
+export async function archiveGameStats({ code = null, classLabel = '', startedAt = null, subjects = [], data }) {
+  const { error } = await supabase.from(STATS_TABLE).insert({
+    code,
+    class_label: classLabel || null,
+    started_at: startedAt,
+    subjects: subjects || [],
+    data: data || {},
+  });
+  if (error) throw error;
+}
+
+// Toutes les parties archivées (récentes d'abord), filtrables par étiquette de classe.
+export async function fetchGameStats({ classLabel = null } = {}) {
+  let q = supabase.from(STATS_TABLE).select('*').order('ended_at', { ascending: false });
+  if (classLabel) q = q.eq('class_label', classLabel);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
+
+// Liste distincte des étiquettes de classe rencontrées (pour le filtre du dashboard).
+export async function fetchClassLabels() {
+  const { data, error } = await supabase.from(STATS_TABLE)
+    .select('class_label').not('class_label', 'is', null);
+  if (error) throw error;
+  return [...new Set((data || []).map((r) => r.class_label).filter(Boolean))];
 }
