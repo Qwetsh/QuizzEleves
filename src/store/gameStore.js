@@ -22,7 +22,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides } from '../logic/itemEffects.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -1182,6 +1182,26 @@ export const useGameStore = create((set, get) => ({
       if (Math.random() < equipRate) {
         const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
         if (k) drops.push(k);
+      }
+      // Canal INGRÉDIENTS (extension Alchimie) : taux séparé + affinité de matière
+      // de la case (showQuestion.subject) + bonus d'équipement « loot matière »,
+      // puis drops multiples (mêmes ou différents, empilés).
+      if (extOn(get().extensions, 'alchemy')) {
+        const subj = showQuestion.subject;
+        const ingRate = (LOOT.answerIngredientRate || 0) * timeRatio + getSubjectLootBonus(lootTeam, subj) / 100;
+        if (Math.random() < ingRate) {
+          const k = itemH.pickLootIngredient(enabledForLoot, subj);
+          if (k) {
+            drops.push(k);
+            const md = LOOT.ingredientMultiDrop || {};
+            let extra = 0;
+            while (extra < (md.max || 0) && Math.random() < (md.chance || 0)) {
+              const k2 = itemH.pickLootIngredient(enabledForLoot, subj);
+              if (k2) drops.push(k2);
+              extra++;
+            }
+          }
+        }
       }
       const revealQueue = [];
       if (drops.length) {

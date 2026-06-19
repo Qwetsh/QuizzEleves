@@ -159,6 +159,20 @@ export function hasEffect(team, type) {
   return getEffectValue(team, type) > 0;
 }
 
+/**
+ * Bonus de loot conditionné par la MATIÈRE de la case (effet `lootBonusSubject`
+ * portant un `subject`). Somme les effets dont `subject` correspond, sur
+ * l'équipement porté + bonus de set. Renvoie un % (à diviser par 100 au loot).
+ */
+export function getSubjectLootBonus(team, subject) {
+  if (!subject) return 0;
+  let total = 0;
+  const acc = (fx) => { if (fx.type === 'lootBonusSubject' && fx.subject === subject && passesChance(fx.chance)) total += resolveAmount(fx.value, team); };
+  for (const item of equippedItems(team)) for (const fx of item.effects) acc(fx);
+  for (const fx of activeSetEffects(team)) acc(fx);
+  return total;
+}
+
 // Nombre de faces du dé de MOUVEMENT pour cette équipe (D4/D6/D10 ; 6 par défaut).
 // Règle de priorité (décision produit) :
 //   - les effets ACTIFS (buffs temporisés : consommables/pouvoirs) PRIMENT sur

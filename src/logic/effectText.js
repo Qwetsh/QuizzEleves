@@ -109,6 +109,7 @@ function describeLegacy(fx) {
     case 'fightStealBonus': txt = `+${v} pièce${fx.value === 1 ? '' : 's'} volée${fx.value === 1 ? '' : 's'} en duel`; break;
     case 'lootBonusConsumable': txt = `+${v}% de chance de looter un consommable`; break;
     case 'lootBonusEquipment': txt = `+${v}% de chance de looter un équipement`; break;
+    case 'lootBonusSubject': txt = `+${v}% de loot d'ingrédient sur les cases ${SUBJECTS[fx.subject]?.name || fx.subject || '—'}`; break;
     case 'gainMoney': txt = `gagne ${v} pièces`; break;
     case 'gainMoneyAll': txt = `${v} pièces pour toutes les équipes`; break;
     case 'moveForward': txt = `avance de ${v} case${fx.value === 1 ? '' : 's'}`; break;

@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ITEMS, RARITIES, SLOTS } from '../../data/items';
+import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { POWERS } from '../../data/powers';
 import { SETS } from '../../data/sets';
 import ItemIcon from '../Modals/ItemIcon';
@@ -41,6 +42,7 @@ const EFFECT_LABELS = {
   duelImmune: 'Immunité aux duels', moveDieSides: 'Dé de mouvement (4 / 6 / 10)',
   hardcoreChance: 'Question Hardcore (%)',
   lootBonusConsumable: 'Chance loot consommable (+%)', lootBonusEquipment: 'Chance loot équipement (+%)',
+  lootBonusSubject: 'Loot +% sur une matière',
   gainMoney: 'Gagne des pièces', gainMoneyAll: 'Pièces à toutes les équipes', moveForward: 'Avance (cases)',
   extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule le prochain recul',
   gainCharge: 'Recharge un pouvoir', fumigene: 'Annule un pouvoir offensif',
@@ -51,16 +53,16 @@ const EFFECT_UNIT = {
   timerBonus: ' s', extraTime: ' s', indiceBoost: ' rép.',
   moneyPerCorrect: ' 🪙', fightStealBonus: ' 🪙', gainMoney: ' 🪙', gainMoneyAll: ' 🪙',
   taxReduction: ' %', stealProtection: ' %', reculReductionPct: ' %', hardcoreChance: ' %',
-  lootBonusConsumable: ' %', lootBonusEquipment: ' %',
+  lootBonusConsumable: ' %', lootBonusEquipment: ' %', lootBonusSubject: ' %',
   reculReduction: ' case(s)', moveForward: ' case(s)',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'moveDieSides', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'randomPath'];
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'moveDieSides', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([
   'gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext',
   'timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'fightStealBonus',
-  'lootBonusConsumable', 'lootBonusEquipment',
+  'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject',
 ]);
 // Effets binaires (immunités / déclencheurs simples) : pas de quantité.
 const BINARY_EFFECTS = new Set(['tempeteImmune', 'oubliProtect', 'duelImmune', 'gainCharge', 'fumigene', 'randomPath']);
@@ -94,6 +96,7 @@ const LOOT_FIELDS = [
   { k: 'answerLegendaryChance', label: 'Chance légendaire — bonne réponse (équipement)', pct: true },
   { k: 'answerLootRate', label: 'Taux de loot ÉQUIPEMENT — bonne réponse (max)', pct: true },
   { k: 'answerConsumableRate', label: 'Taux de loot CONSOMMABLE — bonne réponse (max)', pct: true },
+  { k: 'answerIngredientRate', label: 'Taux de loot INGRÉDIENT — bonne réponse (max)', pct: true },
   { k: 'shopWeightCommon', label: 'Poids boutique — commun', pct: false },
   { k: 'shopWeightOther', label: 'Poids boutique — rare/légendaire', pct: false },
 ];
@@ -710,6 +713,45 @@ export default function BalanceEditor({ onClose }) {
                   )}
                 </div>
               ))}
+
+              {/* Loot d'ingrédients : drops multiples */}
+              <div className="qed-label" style={{ margin: '16px 0 8px' }}>⚗️ Loot d'ingrédients — drops multiples</div>
+              {(() => {
+                const md = { ...DEFAULTS.loot.ingredientMultiDrop, ...(ov.loot?.ingredientMultiDrop || {}) };
+                const setMd = (patch) => { setStatus(null); setOv((prev) => ({ ...prev, loot: { ...(prev.loot || {}), ingredientMultiDrop: { ...DEFAULTS.loot.ingredientMultiDrop, ...(prev.loot?.ingredientMultiDrop || {}), ...patch } } })); };
+                return (
+                  <>
+                    <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>Chance d'un ingrédient supplémentaire</span>
+                      <input type="number" className="qed-input" style={{ width: 92 }} step="0.05" min="0" max="1" value={md.chance} onChange={(e) => setMd({ chance: Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)) })} />
+                      <span className="bal-default">= {Math.round(md.chance * 100)}% (répété, jusqu'au max)</span></div>
+                    <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>Maximum d'ingrédients EN PLUS</span>
+                      <Stepper value={md.max} onChange={(v) => setMd({ max: v })} min={0} max={5} /></div>
+                  </>
+                );
+              })()}
+
+              {/* Loot d'ingrédients : poids + matière favorite par ingrédient */}
+              <div className="qed-label" style={{ margin: '16px 0 8px' }}>⚗️ Poids & matière favorite par ingrédient</div>
+              {(() => {
+                const base = DEFAULTS.loot.ingredients || {};
+                const curAll = { ...base, ...(ov.loot?.ingredients || {}) };
+                const setIng = (key, patch) => { setStatus(null); setOv((prev) => { const merged = { ...base, ...(prev.loot?.ingredients || {}) }; merged[key] = { ...merged[key], ...patch }; return { ...prev, loot: { ...(prev.loot || {}), ingredients: merged } }; }); };
+                return Object.keys(base).map((key) => {
+                  const c = curAll[key] || {};
+                  return (
+                    <div className="bal-row" key={key} style={{ gap: 8, flexWrap: 'wrap' }}>
+                      <span className="bal-label" style={{ width: 170 }}>{ITEMS[key]?.icon} {ITEMS[key]?.name || key}</span>
+                      <span className="bal-default">poids</span><Stepper value={c.weight ?? 1} onChange={(v) => setIng(key, { weight: v })} min={0} max={50} />
+                      <span className="bal-default">favorite</span>
+                      <select className="qed-select" style={{ width: 150 }} value={c.favSubject || ''} onChange={(e) => setIng(key, { favSubject: e.target.value || null })}>
+                        <option value="">—</option>
+                        {SUBJECT_KEYS.map((s) => <option key={s} value={s}>{SUBJECTS[s]?.icon} {SUBJECTS[s]?.name || s}</option>)}
+                      </select>
+                      <span className="bal-default">×</span><input type="number" className="qed-input" style={{ width: 60 }} step="0.5" min="1" max="9" value={c.favMult ?? 1} onChange={(e) => setIng(key, { favMult: Math.max(1, parseFloat(e.target.value) || 1) })} />
+                    </div>
+                  );
+                });
+              })()}
               </div>
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
@@ -1030,12 +1072,18 @@ export default function BalanceEditor({ onClose }) {
                               const type = ev.target.value;
                               const patch = { type };
                               if (isDynamicVal(fx.value) && (!DICEABLE_EFFECTS.has(type) || (typeof fx.value === 'string' && !diceFor(type).includes(fx.value)))) patch.value = 1;
+                              if (type === 'lootBonusSubject' && !fx.subject) patch.subject = 'svt';
                               updateEffect(i, patch);
                             }}>
                               {(effectPool.includes(fx.type) ? effectPool : [fx.type, ...effectPool]).map((t) => (
                                 <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>
                               ))}
                             </select>
+                            {fx.type === 'lootBonusSubject' && (
+                              <select className="qed-select" value={fx.subject || 'svt'} onChange={(ev) => updateEffect(i, { subject: ev.target.value })} title="Matière de la case ciblée">
+                                {SUBJECT_KEYS.map((s) => <option key={s} value={s}>{SUBJECTS[s]?.icon} {SUBJECTS[s]?.name || s}</option>)}
+                              </select>
+                            )}
                             {!BINARY_EFFECTS.has(fx.type) && (DICEABLE_EFFECTS.has(fx.type)
                               ? <AmountInput value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} min={1} dice={diceFor(fx.type)} unit={EFFECT_UNIT[fx.type] || ''} />
                               : <Stepper value={fx.value ?? 0} onChange={(v) => updateEffect(i, { value: v })} max={999} />)}

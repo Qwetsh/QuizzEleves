@@ -14,6 +14,7 @@
 // tout le jeu lit donc les valeurs équilibrées sans changement ailleurs.
 import { POWERS } from '../data/powers.js';
 import { SETS } from '../data/sets.js';
+import { INGREDIENT_LOOT } from '../data/ingredientLoot.js';
 import { supabase, BALANCE_TABLE, BALANCE_ROW_ID } from './supabaseClient.js';
 
 // Snapshot des valeurs par défaut, capturé À L'IMPORT (donc avant toute
@@ -37,6 +38,11 @@ const DEFAULT_LOOT = {
   shopWeightCommon: 3,         // poids d'un objet commun dans le stock boutique
   shopWeightOther: 2,          // poids d'un objet rare/légendaire (hors lootOnly)
   shopPromptDelay: 3,          // tours sans voir la boutique avant de proposer « Visiter la boutique ? »
+  // --- Alchimie : loot d'INGRÉDIENTS (canal séparé, plus généreux) ---
+  answerIngredientRate: 0.18,  // proba max d'un drop d'ingrédient (× temps restant)
+  ingredientMultiDrop: { chance: 0.35, max: 2 }, // après un drop : chance d'en avoir d'autres (jusqu'à max EN PLUS)
+  // Poids + matière favorite par ingrédient (défauts générés ; éditables).
+  ingredients: { ...INGREDIENT_LOOT },
 };
 
 export const LOOT = { ...DEFAULT_LOOT };
@@ -72,6 +78,10 @@ function resetToDefaults() {
     if (d.tree) p.tree = clone(d.tree); // arbre Maîtrise (scale 1-10 + branches + coûts)
   }
   Object.assign(LOOT, DEFAULT_LOOT);
+  // Sous-objets : cloner (sinon LOOT partagerait la référence des defaults et un
+  // override mutant les casserait).
+  LOOT.ingredients = clone(DEFAULT_LOOT.ingredients);
+  LOOT.ingredientMultiDrop = { ...DEFAULT_LOOT.ingredientMultiDrop };
   // Sets : restaure name/bonus2/bonus3 d'origine (clone profond).
   for (const [k, d] of Object.entries(DEFAULT_SETS)) {
     if (!SETS[k]) continue;

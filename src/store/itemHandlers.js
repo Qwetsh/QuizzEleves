@@ -184,6 +184,27 @@ export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(I
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Tirage PONDÉRÉ d'un ingrédient d'alchimie (canal de loot séparé). Le poids de
+// base et l'affinité de matière viennent de LOOT.ingredients[key] ; sur la case
+// de sa matière favorite, le poids est multiplié (favMult). `subject` = matière
+// de la case courante. Retourne null si aucun ingrédient activé.
+export function pickLootIngredient(enabledKeys = Object.keys(ITEMS), subject = null) {
+  const cfg = LOOT.ingredients || {};
+  const pool = enabledKeys.filter((k) => ITEMS[k]?.family === 'ingredient');
+  if (!pool.length) return null;
+  const weighted = pool.map((k) => {
+    const c = cfg[k] || {};
+    const base = c.weight ?? 1;
+    const mult = (subject && c.favSubject === subject) ? (c.favMult ?? 1) : 1;
+    return { k, w: Math.max(0, base * mult) };
+  });
+  const total = weighted.reduce((s, x) => s + x.w, 0);
+  if (total <= 0) return pool[Math.floor(Math.random() * pool.length)];
+  let r = Math.random() * total;
+  for (const x of weighted) { r -= x.w; if (r < 0) return x.k; }
+  return weighted[weighted.length - 1].k;
+}
+
 // --- Achat / revente ---
 
 // Stock du Marché Noir : INCLUT les objets lootOnly/légendaires (introuvables en

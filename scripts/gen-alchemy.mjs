@@ -205,6 +205,17 @@ lines.push('');
 const outPath = join(__dirname, '..', 'src', 'data', 'alchemyGen.js');
 writeFileSync(outPath, lines.join('\n'), 'utf8');
 
+// Petit fichier SÉPARÉ pour les défauts de loot par ingrédient (importé au
+// runtime par balanceConfig — évite d'embarquer les 1140 potions dans le bundle).
+const lootLines = [
+  '// FICHIER GÉNÉRÉ par scripts/gen-alchemy.mjs — défauts de loot par ingrédient.',
+  '// poids de base + matière favorite (favSubject) + multiplicateur sur sa matière.',
+  'export const INGREDIENT_LOOT = ' + JSON.stringify(INGREDIENT_LOOT, null, 0) + ';',
+  '',
+];
+const lootPath = join(__dirname, '..', 'src', 'data', 'ingredientLoot.js');
+writeFileSync(lootPath, lootLines.join('\n'), 'utf8');
+
 // --- Récap console -----------------------------------------------------------
 const byRarity = built.reduce((m, b) => ((m[b.rarity] = (m[b.rarity] || 0) + 1), m), {});
 console.log(`✅ ${Object.keys(ingredientsOut).length} ingrédients, ${Object.keys(potionsOut).length} potions, ${recipes.length} recettes`);
