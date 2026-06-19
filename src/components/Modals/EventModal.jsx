@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { getMinigame } from '../Fight/minigames';
 import { POWERS } from '../../data/powers';
@@ -24,6 +25,7 @@ const STONE_PANEL = { background: 'transparent', border: 'none', boxShadow: 'non
 const DICE_FACES = [null, '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
 
 export default function EventModal() {
+  const T = useT();
   const showEvent = useGameStore((s) => s.showEvent);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
@@ -80,7 +82,7 @@ export default function EventModal() {
               <div className="tm-medallion is-event">{event?.icon}</div>
             )}
             <div className="tm-banner" style={{ marginBottom: 12 }}>
-              {"\u00c9v\u00e9nement sp\u00e9cial"}
+              {T('modal.event.special')}
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--ink-900)' }}>{event?.name}</h2>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, margin: '10px 0 4px', color: 'var(--ink-600)' }}>
@@ -132,6 +134,7 @@ export default function EventModal() {
 // Roulette de révélation : l'icône défile vite puis ralentit (ease-out) et
 // s'arrête sur l'événement tiré. Ajoute de la tension avant de dévoiler.
 function RoulettePhase({ event, eventKey, team, onDone }) {
+  const T = useT();
   // Roulette en images si dispo, sinon emojis. Chaque « frame » = url image ou emoji.
   const useImg = EVENT_IMG_LIST.length > 0;
   const finalFrame = (useImg && EVENT_IMG[eventKey]) || event.icon;
@@ -172,7 +175,7 @@ function RoulettePhase({ event, eventKey, team, onDone }) {
         fontSize: 11, fontFamily: 'var(--font-display)', letterSpacing: '0.08em',
         textTransform: 'uppercase', borderRadius: 999,
       }}>
-        {team?.emoji} {team?.name} — Un événement se prépare…
+        {team?.emoji} {team?.name} — {T('modal.event.brewing')}
       </div>
 
       <motion.div
@@ -201,13 +204,14 @@ function RoulettePhase({ event, eventKey, team, onDone }) {
         marginTop: 22, fontFamily: 'var(--font-display)', fontSize: 18,
         color: 'var(--ink-600)', letterSpacing: '0.04em',
       }}>
-        {stopped ? '✨ Révélation !' : '🎰 La roue tourne…'}
+        {stopped ? T('modal.event.reveal') : T('modal.event.spinning')}
       </div>
     </div>
   );
 }
 
 const IntroPhase = React.memo(function IntroPhase({ event, onAccept, onDecline }) {
+  const T = useT();
   return (
     <>
       <p style={{ fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)', margin: '12px 0 22px' }}>
@@ -216,11 +220,11 @@ const IntroPhase = React.memo(function IntroPhase({ event, onAccept, onDecline }
       <div className="flex gap-3 justify-center">
         {event.optional ? (
           <>
-            <button className="btn btn--green" onClick={onAccept}>Accepter</button>
-            <button className="btn btn--ghost" onClick={onDecline}>Refuser</button>
+            <button className="btn btn--green" onClick={onAccept}>{T('modal.event.accept')}</button>
+            <button className="btn btn--ghost" onClick={onDecline}>{T('modal.event.decline')}</button>
           </>
         ) : (
-          <button className="btn btn--purple btn--lg" onClick={onAccept}>OK</button>
+          <button className="btn btn--purple btn--lg" onClick={onAccept}>{T('modal.ok')}</button>
         )}
       </div>
     </>
@@ -228,18 +232,19 @@ const IntroPhase = React.memo(function IntroPhase({ event, onAccept, onDecline }
 });
 
 const TargetPhase = React.memo(function TargetPhase({ teams, currentTeam, eventKey, onSelect }) {
+  const T = useT();
   const labels = {
-    decharge: 'Qui re\u00e7oit la d\u00e9charge ? (recul = lancer de d\u00e9)',
-    sacrifice: 'Qui recule de 4 cases ?',
-    duel: 'Qui doit r\u00e9pondre ?',
-    don: 'Qui avance de 3 cases ?',
-    vol: '\u00c0 qui voler une charge ?',
-    echange: '\u00c9changer ta position avec qui ?',
-    pillage: '\u00c0 qui voler un objet ?',
+    decharge: T('modal.event.target.decharge'),
+    sacrifice: T('modal.event.target.sacrifice'),
+    duel: T('modal.event.target.duel'),
+    don: T('modal.event.target.don'),
+    vol: T('modal.event.target.vol'),
+    echange: T('modal.event.target.echange'),
+    pillage: T('modal.event.target.pillage'),
   };
   return (
     <>
-      <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{labels[eventKey] || 'Choisir une cible :'}</p>
+      <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{labels[eventKey] || T('modal.event.chooseTarget')}</p>
       <div className="space-y-2">
         {teams.map((t, i) => {
           if (i === currentTeam) return null;
@@ -259,6 +264,7 @@ const TargetPhase = React.memo(function TargetPhase({ teams, currentTeam, eventK
 });
 
 const DicePhase = React.memo(function DicePhase({ data }) {
+  const T = useT();
   const dv = data?.diceValue;
   const rolling = data?.diceRolling;
   return (
@@ -268,7 +274,7 @@ const DicePhase = React.memo(function DicePhase({ data }) {
       </div>
       {!rolling && dv && (
         <p style={{ fontSize: 18, fontFamily: 'var(--font-display)', marginTop: 12 }}>
-          {"R\u00e9sultat : "}{dv} !
+          {T('modal.event.diceResult', { n: dv })}
         </p>
       )}
     </div>
@@ -276,12 +282,13 @@ const DicePhase = React.memo(function DicePhase({ data }) {
 });
 
 const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
+  const T = useT();
   const question = data?.eventQuestion;
   const subject = data?.eventSubject;
   const revealed = data?.questionRevealed;
   const selected = data?.questionSelected;
 
-  if (!question) return <p>Chargement...</p>;
+  if (!question) return <p>{T('modal.loading')}</p>;
   const subjectInfo = SUBJECTS[subject] || {};
 
   return (
@@ -322,7 +329,7 @@ const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
       </div>
       {revealed && question.e && (
         <div style={{ marginTop: 12, padding: 12, background: 'var(--parch-50)', borderRadius: 12, border: '1px solid rgba(122,94,58,0.16)', fontSize: 13 }}>
-          <strong>Explication :</strong> {question.e}
+          <strong>{T('modal.explanation')}</strong> {question.e}
         </div>
       )}
     </div>
@@ -331,6 +338,7 @@ const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
 
 // Bouton generique de choix de pouvoir (recharge, vol)
 function PowerChoiceButton({ powerKey, charges, onClick, disabled }) {
+  const T = useT();
   const power = POWERS[powerKey];
   if (!power) return null;
   return (
@@ -353,7 +361,7 @@ function PowerChoiceButton({ powerKey, charges, onClick, disabled }) {
         {power.name}
         {charges != null && (
           <span style={{ fontSize: 11, color: 'var(--ink-500)', marginLeft: 8 }}>
-            {charges} charge{charges > 1 ? 's' : ''}
+            {charges} {T.plural('modal.event.charges', charges)}
           </span>
         )}
       </span>
@@ -363,6 +371,7 @@ function PowerChoiceButton({ powerKey, charges, onClick, disabled }) {
 
 // Carte d'objet cliquable (marchand ambulant, pillage)
 function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
+  const T = useT();
   const item = ITEMS[itemKey];
   if (!item) return null;
   const rarityColor = RARITIES[item.rarity]?.color || '#888';
@@ -387,7 +396,7 @@ function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
         <span style={{ fontFamily: 'var(--font-display)', display: 'block' }}>
           {item.name}
           <span style={{ fontSize: 11, color: rarityColor, marginLeft: 8 }}>
-            {RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name}
+            {RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? T('modal.event.consumable') : SLOTS[item.slot]?.name}
           </span>
         </span>
         <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{item.desc}</span>
@@ -402,6 +411,7 @@ function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
 }
 
 function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, onVolApply, onMerchantBuy, onChooseGift, onTrade, onPillageApply, onStartBoss, onSkip }) {
+  const T = useT();
   // Vol en 2 etapes : pouvoir vole chez la cible, puis pouvoir recharge chez soi
   const [stealKey, setStealKey] = useState(null);
 
@@ -409,7 +419,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          {'\u{1F468}‍\u{1F3EB}'} Choisis ton arme pour affronter le Prof :
+          {T('modal.event.boss.chooseWeapon')}
         </p>
         <div className="space-y-2">
           {SUBJECT_KEYS.map((s) => (
@@ -433,7 +443,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          Quel pouvoir veux-tu recharger ?
+          {T('modal.event.recharge.which')}
         </p>
         <div className="space-y-2">
           {owned.map(([key, entry]) => (
@@ -458,7 +468,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
       return (
         <>
           <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-            {`Quel pouvoir voler \u00E0 ${target.emoji} ${target.name} ?`}
+            {T('modal.event.vol.whichSteal', { team: `${target.emoji} ${target.name}` })}
           </p>
           <div className="space-y-2">
             {stealable.map(([key, entry]) => (
@@ -478,7 +488,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          {`Tu voles 1 charge de ${POWERS[stealKey]?.name}. Quel pouvoir recharger ?`}
+          {T('modal.event.vol.whichRecharge', { power: POWERS[stealKey]?.name })}
         </p>
         <div className="space-y-2">
           {mine.map(([key, entry]) => (
@@ -499,7 +509,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
             fontFamily: 'var(--font-ui)', padding: 6,
           }}
         >
-          \u2190 Changer de pouvoir \u00E0 voler
+          {T('modal.event.vol.changeTarget')}
         </button>
       </>
     );
@@ -511,7 +521,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 19, fontWeight: 700, marginBottom: 4, textAlign: 'center', color: 'var(--ink-800)' }}>
-          {"1 charge \u00E0 moiti\u00E9 prix \u2014 tu as "}{money} <span className="coin" />
+          {T('modal.event.marcheNoir.title', { n: money })}<span className="coin" />
         </p>
         <div className="space-y-2" style={{ marginTop: 12 }}>
           {owned.map(([key, entry]) => {
@@ -538,7 +548,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
                 <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--ink-900)', flex: 1, textAlign: 'left' }}>
                   {power.name}
                   <span style={{ fontSize: 13, color: 'var(--ink-600)', marginLeft: 8 }}>
-                    {entry?.charges ?? 0} charge{(entry?.charges ?? 0) > 1 ? 's' : ''}
+                    {entry?.charges ?? 0} {T.plural('modal.event.charges', entry?.charges ?? 0)}
                   </span>
                 </span>
                 <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--ink-900)' }}>
@@ -558,7 +568,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
             fontFamily: 'var(--font-ui)', padding: 8,
           }}
         >
-          Non merci, je passe mon chemin
+          {T('modal.event.passMyWay')}
         </button>
       </>
     );
@@ -570,7 +580,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>
-          {"Objets à -30% — tu as "}{money} <span className="coin" />
+          {T('modal.event.merchant.title', { n: money })}<span className="coin" />
         </p>
         <div className="space-y-2" style={{ marginTop: 12 }}>
           {merchandise.map((key) => {
@@ -591,7 +601,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
                   <>
                     {noRoom && (
                       <span style={{ color: '#c9472f', fontStyle: 'italic', marginRight: 8, fontSize: 12 }}>
-                        Sac plein !
+                        {T('modal.event.bagFull')}
                       </span>
                     )}
                     <s style={{ color: 'var(--ink-400)', marginRight: 6 }}>{item.price}</s>
@@ -611,7 +621,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
             fontFamily: 'var(--font-ui)', padding: 8,
           }}
         >
-          Non merci, je passe mon chemin
+          {T('modal.event.passMyWay')}
         </button>
       </>
     );
@@ -622,7 +632,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          Choisis UN coffre — ton choix est définitif !
+          {T('modal.event.chests.title')}
         </p>
         <div className="space-y-2">
           {gifts.map((key) => (
@@ -643,7 +653,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          Quel objet sacrifies-tu au troc ? (tu en reçois un au hasard)
+          {T('modal.event.trade.which')}
         </p>
         <div className="space-y-2">
           {equipmentEntries.map(([slot, key]) => (
@@ -659,7 +669,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
           onClick={onSkip}
           style={{ marginTop: 14, width: '100%', fontSize: 14, color: 'var(--ink-500)', cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'var(--font-ui)', padding: 8 }}
         >
-          Annuler le troc
+          {T('modal.event.trade.cancel')}
         </button>
       </>
     );
@@ -673,7 +683,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          {`Quel objet voler à ${target.emoji} ${target.name} ?`}
+          {T('modal.event.pillage.which', { team: `${target.emoji} ${target.name}` })}
         </p>
         <div className="space-y-2">
           {equipmentEntries.map(([slot, key]) => (
@@ -701,6 +711,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
 // Va-tout : après une bonne réponse, choisir de continuer (mise croissante) ou
 // d'encaisser la mise accumulée.
 function VaToutChoicePhase({ data, onContinue, onCashOut }) {
+  const T = useT();
   const pot = data?.vaToutPot || 0;
   const streak = data?.vaToutStreak || 0;
   const lastGain = data?.lastGain || 0;
@@ -708,30 +719,30 @@ function VaToutChoicePhase({ data, onContinue, onCashOut }) {
   return (
     <>
       <p style={{ fontSize: 16, marginBottom: 6 }}>
-        {'✅'} Bonne réponse ! <strong>+{lastGain}</strong> {'\u{1FA99}'}
+        {T('modal.event.vatout.goodAnswer')}<strong>+{lastGain}</strong> {'\u{1FA99}'}
       </p>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: '#b8862c', margin: '4px 0 10px' }}>
-        Mise : {pot} {'\u{1FA99}'}
+        {T('modal.event.vatout.pot', { n: pot })}{'\u{1FA99}'}
       </div>
       <p style={{ fontSize: 13, color: 'var(--ink-500)', marginBottom: 18 }}>
-        Continuer rapporterait <strong>+{nextGain}</strong> {'\u{1FA99}'} de plus… mais une mauvaise réponse fait
-        TOUT perdre et reculer d'1D10 !
+        {T('modal.event.vatout.warn', { n: nextGain })}
       </p>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <button className="btn btn--green btn--lg" onClick={onContinue}>{'\u{1F3B2}'} Continuer (+{nextGain})</button>
-        <button className="btn btn--purple btn--lg" onClick={onCashOut}>{'\u{1F4B0}'} Encaisser {pot}</button>
+        <button className="btn btn--green btn--lg" onClick={onContinue}>{T('modal.event.vatout.continue', { n: nextGain })}</button>
+        <button className="btn btn--purple btn--lg" onClick={onCashOut}>{T('modal.event.vatout.cashOut', { n: pot })}</button>
       </div>
     </>
   );
 }
 
 function ResultPhase({ data, onClose }) {
+  const T = useT();
   // Le loot conservé (coffre) passe désormais par la révélation « visuel C »
   // (LootReveal) ; ici on n'affiche que le message textuel des autres effets.
   return (
     <>
       <p style={{ fontSize: 18, fontFamily: 'var(--font-display)', marginBottom: 22 }}>{data?.message}</p>
-      <button className="btn btn--purple btn--lg" onClick={onClose}>OK</button>
+      <button className="btn btn--purple btn--lg" onClick={onClose}>{T('modal.ok')}</button>
     </>
   );
 }

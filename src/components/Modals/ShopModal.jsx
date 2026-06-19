@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { POWERS } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
@@ -63,12 +64,13 @@ function Price({ value }) {
 
 /* ---------- Étal : objets (liste de clés fournie) ---------- */
 function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
+  const T = useT();
   if (!items || items.length === 0) return null;
   const bag = team.bag || [];
   const equipment = team.equipment || {};
 
   return (
-    <Stall banner={banner || '\u{1F4E6} Objets'} note={note}>
+    <Stall banner={banner || T('modal.shop.items')} note={note}>
       {items.map((key, idx) => {
         const item = ITEMS[key];
         if (!item) return null;
@@ -89,7 +91,7 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
                 <div className="shop-card-titles">
                   <div className="shop-card-name">{item.name}</div>
                   <div className="shop-card-sub" style={{ color: rarityColor }}>
-                    {RARITIES[item.rarity]?.name} · {isConsumable ? 'Consommable' : SLOTS[item.slot]?.name}
+                    {RARITIES[item.rarity]?.name} · {isConsumable ? T('modal.shop.consumable') : SLOTS[item.slot]?.name}
                   </div>
                 </div>
               </div>
@@ -98,17 +100,17 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
                 <EffectDetails item={item} compact />
                 {slotTaken && !bagFull && (
                   <div className="shop-card-warn">
-                    {SLOTS[item.slot]?.name} occupée {'→'} ira dans le sac
+                    {T('modal.shop.slotTaken', { slot: SLOTS[item.slot]?.name })}
                   </div>
                 )}
-                {bagFull && <div className="shop-card-warn is-danger">Sac plein !</div>}
+                {bagFull && <div className="shop-card-warn is-danger">{T('modal.shop.bagFull')}</div>}
               </div>
               <button
                 className="shop-buy"
                 disabled={!canBuy}
                 onClick={() => { soundClick(); onBuyItem(key); }}
               >
-                {isConsumable || slotTaken ? 'Acheter' : 'Équiper'}{' '}
+                {isConsumable || slotTaken ? T('common.buy') : T('common.equip')}{' '}
                 {discount < 1 && <s style={{ opacity: 0.6, marginRight: 4 }}>{item.price}</s>}
                 <Price value={price} />
               </button>
@@ -122,9 +124,10 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
 
 /* ---------- Étal : recharger ---------- */
 function RechargeStall({ ownedPowers, money, onBuyCharge }) {
+  const T = useT();
   if (ownedPowers.length === 0) return null;
   return (
-    <Stall banner={'⚡ Recharger'}>
+    <Stall banner={T('modal.shop.recharge')}>
       {ownedPowers.map(([key, teamPower]) => {
         const power = POWERS[key];
         const charges = teamPower?.charges || 0;
@@ -144,7 +147,7 @@ function RechargeStall({ ownedPowers, money, onBuyCharge }) {
                 disabled={!canBuy}
                 onClick={() => { soundClick(); onBuyCharge(key); }}
               >
-                +1 Charge <Price value={power.price} />
+                {T('modal.shop.addCharge')} <Price value={power.price} />
               </button>
             </div>
           </div>
@@ -156,11 +159,12 @@ function RechargeStall({ ownedPowers, money, onBuyCharge }) {
 
 /* ---------- Étal : améliorer ---------- */
 function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
+  const T = useT();
   const upgradeable = ownedPowers.filter(([key, tp]) => (tp?.level || 1) < maxPowerLevel(key, masteryOn));
   if (upgradeable.length === 0) return null;
 
   return (
-    <Stall banner={'⬆️ Améliorer'}>
+    <Stall banner={T('modal.shop.upgrade')}>
       {upgradeable.map(([key, teamPower]) => {
         const power = POWERS[key];
         const level = teamPower?.level || 1;
@@ -180,20 +184,20 @@ function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
                   <div className="shop-card-name">{power.name}</div>
                 </div>
                 <span className="shop-lvl" style={{ color: power.color }}>
-                  Niv. {level} {'→'} {level + 1}
+                  {T('modal.shop.level', { a: level, b: level + 1 })}
                 </span>
               </div>
               <div className="shop-card-desc">
-                <div>Actuel : {currentDesc}</div>
-                <div className="shop-card-next">Suivant : {nextDesc}</div>
-                {branchNext && <div className="shop-card-next" style={{ color: power.color, fontWeight: 700 }}>🌟 Choix de voie au niveau {level + 1} !</div>}
+                <div>{T('modal.shop.current', { desc: currentDesc })}</div>
+                <div className="shop-card-next">{T('modal.shop.next', { desc: nextDesc })}</div>
+                {branchNext && <div className="shop-card-next" style={{ color: power.color, fontWeight: 700 }}>{T('modal.shop.branchAt', { n: level + 1 })}</div>}
               </div>
               <button
                 className="shop-buy shop-buy--purple"
                 disabled={!canUpgrade}
                 onClick={() => { soundClick(); onUpgrade(key); }}
               >
-                Améliorer <Price value={cost} />
+                {T('modal.shop.upgradeBtn')} <Price value={cost} />
               </button>
             </div>
           </div>
@@ -205,9 +209,10 @@ function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
 
 /* ---------- Étal : débloquer ---------- */
 function UnlockStall({ unownedPowers, money, onBuyNew }) {
+  const T = useT();
   if (unownedPowers.length === 0) return null;
   return (
-    <Stall banner={'\u{1F513} Débloquer'}>
+    <Stall banner={T('modal.shop.unlock')}>
       {unownedPowers.map(([key, power]) => {
         const canAfford = money >= power.price;
         return (
@@ -218,7 +223,7 @@ function UnlockStall({ unownedPowers, money, onBuyNew }) {
                 <div className="shop-card-titles">
                   <div className="shop-card-name">{power.name}</div>
                   <div className="shop-card-sub" style={{ color: power.color }}>
-                    {power.category === 'def' ? 'Défensif' : 'Offensif'}
+                    {power.category === 'def' ? T('modal.shop.defensive') : T('modal.shop.offensive')}
                   </div>
                 </div>
               </div>
@@ -229,7 +234,7 @@ function UnlockStall({ unownedPowers, money, onBuyNew }) {
                 style={canAfford ? { background: `linear-gradient(180deg, ${power.color}cc, ${power.color})` } : undefined}
                 onClick={() => { soundClick(); onBuyNew(key); }}
               >
-                Débloquer <Price value={power.price} />
+                {T('modal.shop.unlockBtn')} <Price value={power.price} />
               </button>
             </div>
           </div>
@@ -241,6 +246,7 @@ function UnlockStall({ unownedPowers, money, onBuyNew }) {
 
 /* ---------- Modale ---------- */
 export default function ShopModal() {
+  const T = useT();
   const showShop = useGameStore((s) => s.showShop);
   const closeShop = useGameStore((s) => s.closeShop);
   const buyPowerCharge = useGameStore((s) => s.buyPowerCharge);
@@ -274,7 +280,7 @@ export default function ShopModal() {
     <AnimatePresence>
       {showShop && team && (
         marcheNoir ? (
-          <TemplePanel title="MARCHÉ NOIR" team={team} onClose={closeShop} medallion={<span style={{ fontSize: 22 }}>🕯️</span>} className="shop shop--marche-noir">
+          <TemplePanel title={T('modal.shop.marcheNoir.title')} team={team} onClose={closeShop} medallion={<span style={{ fontSize: 22 }}>🕯️</span>} className="shop shop--marche-noir">
             <div className="inv-wood">
               <div className="shop-scroll">
                 <ItemStall
@@ -282,14 +288,14 @@ export default function ShopModal() {
                   items={showShop.stock}
                   onBuyItem={buyItem}
                   discount={showShop.discount ?? 1}
-                  banner={'🕯️ Étals clandestins'}
-                  note={`Marchandise « tombée du camion » — ${Math.round((1 - (showShop.discount ?? 1)) * 100)}% sur tout. Pars quand tu veux.`}
+                  banner={T('modal.shop.marcheNoir.banner')}
+                  note={T('modal.shop.marcheNoir.note', { pct: Math.round((1 - (showShop.discount ?? 1)) * 100) })}
                 />
               </div>
             </div>
           </TemplePanel>
         ) : (
-          <TemplePanel title="BOUTIQUE" team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
+          <TemplePanel title={T('modal.shop.title')} team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
             <div className="inv-wood">
               <div className="shop-scroll">
                 <div className="shop-tabs" role="tablist">
@@ -300,7 +306,7 @@ export default function ShopModal() {
                     className={'shop-tab' + (tab === 'objets' ? ' is-active' : '')}
                     onClick={() => { soundClick(); setTab('objets'); }}
                   >
-                    {'\u{1F9F3}'} Objets
+                    {T('modal.shop.tab.items')}
                   </button>
                   <button
                     type="button"
@@ -309,16 +315,16 @@ export default function ShopModal() {
                     className={'shop-tab' + (tab === 'pouvoirs' ? ' is-active' : '')}
                     onClick={() => { soundClick(); setTab('pouvoirs'); }}
                   >
-                    {'⚡'} Pouvoirs
+                    {T('modal.shop.tab.powers')}
                   </button>
                 </div>
 
                 {tab === 'objets' ? (
                   <>
-                    <ItemStall team={team} items={consoStock} onBuyItem={buyItem} banner={'🧪 Consommables'} />
-                    <ItemStall team={team} items={equipStock} onBuyItem={buyItem} banner={'🛡️ Équipements'} />
+                    <ItemStall team={team} items={consoStock} onBuyItem={buyItem} banner={T('modal.shop.consumables')} />
+                    <ItemStall team={team} items={equipStock} onBuyItem={buyItem} banner={T('modal.shop.equipment')} />
                     {consoStock.length === 0 && equipStock.length === 0 && (
-                      <div className="shop-empty">La boutique n'a plus rien à vendre pour le moment.</div>
+                      <div className="shop-empty">{T('modal.shop.empty')}</div>
                     )}
                   </>
                 ) : (

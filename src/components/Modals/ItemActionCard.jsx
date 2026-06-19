@@ -6,6 +6,7 @@
 // effets TOUJOURS visibles, bonus de set, actions. Overlay centré dismissable.
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { sellPrice } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -15,6 +16,7 @@ import SetBonusInfo from './SetBonusInfo';
 
 // pop : { cellKey: 'bag:N' | 'equip:slot', itemKey }
 export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
+  const T = useT();
   const team = useGameStore((s) => s.teams[s.currentTeam]);
   const item = ITEMS[pop.itemKey];
   if (!item) return null;
@@ -22,7 +24,7 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
   const img = itemImg(item);
   const fx = itemEffectLines(item);
   const canUse = pop.cellKey.startsWith('bag:') && item.slot === 'consumable';
-  const slotName = item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name;
+  const slotName = item.slot === 'consumable' ? T('modal.item.consumable') : SLOTS[item.slot]?.name;
   return createPortal(
     <div className="inv-card-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="inv-card" style={{ '--rar': rar?.color || '#969182' }} onPointerDown={(e) => e.stopPropagation()}>
@@ -39,7 +41,7 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
           {item.desc && <div className="inv-card-desc">{item.desc}</div>}
           {fx.length > 0 && (
             <>
-              <div className="inv-card-fxlabel">⚡ Effets</div>
+              <div className="inv-card-fxlabel">{T('modal.item.effects')}</div>
               {fx.map((l, i) => (
                 <div key={i} className="inv-card-fxrow"><span className="ic">✦</span><span>{l}</span></div>
               ))}
@@ -49,12 +51,12 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
           <div className="inv-card-actions">
             {canUse && onUse && (
               <button className="inv-card-btn inv-card-btn--use" onClick={() => { soundClick(); onUse(pop); }}>
-                Utiliser
+                {T('modal.item.use')}
               </button>
             )}
             {onSell && (
               <button className="inv-card-btn inv-card-btn--sell" onClick={() => { soundClick(); onSell(pop); }}>
-                ♻️ Revendre +{sellPrice(item)}
+                {T('modal.item.sell', { n: sellPrice(item) })}
               </button>
             )}
             <button className="inv-card-btn inv-card-btn--sell inv-card-btn--x" onClick={onClose}>✕</button>

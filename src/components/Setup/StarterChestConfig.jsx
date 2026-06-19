@@ -2,11 +2,12 @@
 // le coffre et règle l'or (fixe ou aléatoire min–max), le nombre d'objets proposés
 // et gardés, et la catégorie (consommables / équipements / les deux).
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 
 const CATEGORIES = [
-  { id: 'consumable', label: 'Consommables' },
-  { id: 'equipment', label: 'Équipements' },
-  { id: 'all', label: 'Les deux' },
+  { id: 'consumable', labelKey: 'setup.chestCatConsumable' },
+  { id: 'equipment', labelKey: 'setup.chestCatEquipment' },
+  { id: 'all', labelKey: 'setup.chestCatBoth' },
 ];
 
 // Petit groupe de boutons-segments (choix exclusif).
@@ -59,11 +60,13 @@ function NumberField({ label, value, min, max, onChange, suffix }) {
 }
 
 export default function StarterChestConfig() {
+  const T = useT();
   const cfg = useGameStore((s) => s.starterChestConfig);
   const setCfg = useGameStore((s) => s.setStarterChestConfig);
   if (!cfg) return null;
 
   const enabled = cfg.enabled !== false;
+  const categoryOptions = CATEGORIES.map((c) => ({ id: c.id, label: T(c.labelKey) }));
 
   return (
     <div>
@@ -86,10 +89,10 @@ export default function StarterChestConfig() {
         </div>
         <div className="min-w-0">
           <div style={{ fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>🧰</span> Coffre de départ
+            <span>🧰</span> {T('setup.chestTitle')}
           </div>
           <div style={{ fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.35, marginTop: 2 }}>
-            Au 1er tour, chaque équipe ouvre un coffre (or + objets au choix).
+            {T('setup.chestDesc')}
           </div>
         </div>
       </div>
@@ -98,38 +101,38 @@ export default function StarterChestConfig() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingLeft: 30 }}>
           {/* Or */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <div className="field-label" style={{ margin: 0 }}>Or offert</div>
+            <div className="field-label" style={{ margin: 0 }}>{T('setup.chestGoldLabel')}</div>
             <Segmented
               value={cfg.goldMode === 'random' ? 'random' : 'fixed'}
-              options={[{ id: 'fixed', label: 'Fixe' }, { id: 'random', label: 'Aléatoire' }]}
+              options={[{ id: 'fixed', label: T('setup.chestModeFixed') }, { id: 'random', label: T('setup.chestModeRandom') }]}
               onChange={(id) => setCfg({ goldMode: id })}
             />
             {cfg.goldMode === 'random' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <NumberField label="Min" value={cfg.goldMin ?? 10} min={0} max={cfg.goldMax ?? 30} onChange={(v) => setCfg({ goldMin: v })} suffix="🪙" />
-                <NumberField label="Max" value={cfg.goldMax ?? 30} min={cfg.goldMin ?? 0} max={500} onChange={(v) => setCfg({ goldMax: v })} suffix="🪙" />
+                <NumberField label={T('setup.chestMin')} value={cfg.goldMin ?? 10} min={0} max={cfg.goldMax ?? 30} onChange={(v) => setCfg({ goldMin: v })} suffix="🪙" />
+                <NumberField label={T('setup.chestMax')} value={cfg.goldMax ?? 30} min={cfg.goldMin ?? 0} max={500} onChange={(v) => setCfg({ goldMax: v })} suffix="🪙" />
               </div>
             ) : (
-              <NumberField label="Montant" value={cfg.gold ?? 20} min={0} max={500} onChange={(v) => setCfg({ gold: v })} suffix="🪙" />
+              <NumberField label={T('setup.chestAmount')} value={cfg.gold ?? 20} min={0} max={500} onChange={(v) => setCfg({ gold: v })} suffix="🪙" />
             )}
             {cfg.goldMode === 'random' && (
-              <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>Un seul tirage, le même pour toutes les équipes.</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>{T('setup.chestSameRoll')}</div>
             )}
           </div>
 
           {/* Objets */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <div className="field-label" style={{ margin: 0 }}>Objets du coffre</div>
-            <Segmented value={cfg.category || 'consumable'} options={CATEGORIES} onChange={(id) => setCfg({ category: id })} />
+            <div className="field-label" style={{ margin: 0 }}>{T('setup.chestItemsLabel')}</div>
+            <Segmented value={cfg.category || 'consumable'} options={categoryOptions} onChange={(id) => setCfg({ category: id })} />
             <NumberField
-              label="Proposés"
+              label={T('setup.chestProposed')}
               value={cfg.propose ?? 3}
               min={0}
               max={6}
               onChange={(v) => setCfg({ propose: v, keep: Math.min(cfg.keep ?? 1, Math.max(1, v)) })}
             />
             <NumberField
-              label="À garder"
+              label={T('setup.chestKeep')}
               value={cfg.keep ?? 1}
               min={1}
               max={Math.max(1, cfg.propose ?? 3)}
@@ -137,8 +140,8 @@ export default function StarterChestConfig() {
             />
             <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>
               {(cfg.propose ?? 3) === 0
-                ? 'Aucun objet : le coffre ne donne que de l’or.'
-                : `L'équipe choisit ${Math.min(cfg.keep ?? 1, cfg.propose ?? 3)} objet(s) parmi ${cfg.propose ?? 3}.`}
+                ? T('setup.chestGoldOnly')
+                : T('setup.chestPickInfo', { keep: Math.min(cfg.keep ?? 1, cfg.propose ?? 3), propose: cfg.propose ?? 3 })}
             </div>
           </div>
         </div>

@@ -8,9 +8,11 @@ import { useGameStore } from '../../../store/gameStore';
 import { ITEMS, RARITIES } from '../../../data/items';
 import { cellKey, cellN } from '../../../store/itemHandlers';
 import { itemImg } from '../../../logic/itemAssets';
+import { useT } from '../../../i18n';
 import ItemActionCard from '../../Modals/ItemActionCard';
 
 export default function ConsumableBar() {
+  const T = useT();
   const team = useGameStore((s) => s.teams[s.currentTeam]);
   const useConsumable = useGameStore((s) => s.useConsumable);
   const sellBagItem = useGameStore((s) => s.sellBagItem);
@@ -29,7 +31,7 @@ export default function ConsumableBar() {
 
   return (
     <div className="hud-conso">
-      <div className="hud-conso-label">{'\u{1F9EA}'} Objets à utiliser</div>
+      <div className="hud-conso-label">{'\u{1F9EA}'} {T('game.itemsToUse')}</div>
       <div className="hud-conso-grid">
         {consumables.map(({ i, key, item, n }) => {
           const color = RARITIES[item.rarity]?.color || '#888';
@@ -40,7 +42,7 @@ export default function ConsumableBar() {
               type="button"
               className="hud-conso-btn"
               style={{ '--rar': color }}
-              title={`${item.name} — appuie pour voir l'effet et l'utiliser`}
+              title={T('game.tapToUse', { name: item.name })}
               onClick={() => setPop({ cellKey: 'bag:' + i, itemKey: key })}
             >
               <span className="hud-conso-ico">

@@ -16,6 +16,7 @@ export default function MobileSessionPanel() {
   const lv2Mode = useGameStore((s) => s.lv2Mode);
   // Journal analytique : alimente l'onglet mobile « anciennes questions ».
   const gameStats = useGameStore((s) => s.gameStats);
+  const englishMode = useGameStore((s) => s.englishMode);
   // Code de session partagé (créé ici en mode tableau, ou par le lobby en mode
   // téléphone) — source unique dans le store.
   const code = useGameStore((s) => s.sessionCode);
@@ -32,16 +33,16 @@ export default function MobileSessionPanel() {
   // (débounce léger pour grouper les rafales de mise à jour).
   useEffect(() => {
     if (!code) return;
-    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode, gameStats });
+    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
     const id = setTimeout(() => { publishSession(code, payload).catch(() => {}); }, 250);
     return () => clearTimeout(id);
-  }, [code, teams, currentTeam, finished, shopStock, log, extensions, locked, gameStats]);
+  }, [code, teams, currentTeam, finished, shopStock, log, extensions, locked, englishMode, gameStats]);
 
   async function activate() {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode, gameStats });
+      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
       setSessionCode(await createSession(payload));
       setOpen(true);
     } catch (e) { setError(e.message || 'Connexion impossible'); }

@@ -1,3 +1,5 @@
+import { useT } from '../../i18n';
+
 const DICE_FACE_ROT = {
   1: { x: 0,    y: 0 },
   2: { x: 0,    y: -90 },
@@ -56,6 +58,7 @@ function DiceFace({ pips, side, size, number }) {
 }
 
 export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false }) {
+  const T = useT();
   // Au-delà d'un D6 (ex. D10 → 7..10), le cube à pips ne peut pas représenter la
   // face : on présente la face avant (rotation 0) avec le NOMBRE écrit.
   const numeric = value > 6;
@@ -70,7 +73,7 @@ export default function Dice3D({ value = 1, rolling = false, size = 96, onClick,
       style={{ width: size, height: size }}
       onClick={!disabled && !rolling ? onClick : undefined}
       role="button"
-      aria-label={'D\u00e9, valeur ' + value}
+      aria-label={T('game.dieValue', { value })}
     >
       <div className="dice3d-shadow" style={{ width: size * 0.85 }} />
       <div

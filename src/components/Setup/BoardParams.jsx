@@ -1,16 +1,18 @@
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 
 export default function BoardParams() {
+  const T = useT();
   const params = useGameStore((s) => s.boardParams);
   const setBoardParam = useGameStore((s) => s.setBoardParam);
 
   return (
     <div>
-      <div className="field-label">Plateau</div>
+      <div className="field-label">{T('setup.boardTitle')}</div>
 
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
-          {"Cases par voie : "}<strong>{params.casesParVoie}</strong>
+          {T('setup.boardSpacesPerLane')}<strong>{params.casesParVoie}</strong>
         </div>
         <input
           type="range" min={3} max={12} value={params.casesParVoie}
@@ -20,33 +22,33 @@ export default function BoardParams() {
       </div>
 
       <ChipGroup
-        label={"Voies parall\u00e8les"}
+        label={T('setup.boardParallelLanes')}
         value={params.nbVoies}
-        options={[{ value: 2, label: '2 voies' }, { value: 3, label: '3 voies' }]}
+        options={[{ value: 2, label: T('setup.boardLanes', { n: 2 }) }, { value: 3, label: T('setup.boardLanes', { n: 3 }) }]}
         onChange={(v) => setBoardParam('nbVoies', v)}
       />
 
       <ChipGroup
-        label="Sections"
+        label={T('setup.boardSections')}
         value={params.nbSections}
         options={[{ value: 2, label: '2' }, { value: 3, label: '3' }, { value: 4, label: '4' }]}
         onChange={(v) => setBoardParam('nbSections', v)}
       />
 
       <ChipGroup
-        label="Voie finale"
+        label={T('setup.boardFinalLane')}
         value={params.voieFinale}
         options={[
-          { value: 'court-long', label: 'Court / Long' },
-          { value: 'unique', label: 'Unique' },
-          { value: 'aucune', label: 'Aucune' },
+          { value: 'court-long', label: T('setup.boardFinalShortLong') },
+          { value: 'unique', label: T('setup.boardFinalUnique') },
+          { value: 'aucune', label: T('setup.boardFinalNone') },
         ]}
         onChange={(v) => setBoardParam('voieFinale', v)}
       />
 
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
-          {"Couloirs mix : "}<strong>{params.couloirsMix}</strong>
+          {T('setup.boardMixCorridors')}<strong>{params.couloirsMix}</strong>
         </div>
         <input
           type="range" min={0} max={8} value={params.couloirsMix}
@@ -57,11 +59,11 @@ export default function BoardParams() {
 
       <div>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
-          {"\u00c9v\u00e9nements : "}
+          {T('setup.boardEvents')}
           <strong>
             {params.eventEveryX < 1
-              ? 'Aucun'
-              : `1 toutes les ${params.eventEveryX} cases`}
+              ? T('setup.boardEventsNone')
+              : T('setup.boardEventsEvery', { n: params.eventEveryX })}
           </strong>
         </div>
         <input

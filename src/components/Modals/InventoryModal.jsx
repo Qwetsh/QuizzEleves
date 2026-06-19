@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { ITEMS, RARITIES } from '../../data/items';
 import { isValidMove, normalizeBag, cellKey, cellN } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -82,6 +83,7 @@ const FOCUSABLE =
 
 /* ---------- Modale ---------- */
 export default function InventoryModal() {
+  const T = useT();
   const showInventory = useGameStore((s) => s.showInventory);
   const closeInventory = useGameStore((s) => s.closeInventory);
   const moveInventoryItem = useGameStore((s) => s.moveInventoryItem);
@@ -233,7 +235,7 @@ export default function InventoryModal() {
           exit={{ opacity: 0 }}
           role="dialog"
           aria-modal="true"
-          aria-label="Inventaire"
+          aria-label={T('modal.inv.title')}
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
             if (e.target === e.currentTarget) closeInventory();
@@ -293,7 +295,7 @@ export default function InventoryModal() {
                 className="invimg-close"
                 style={{ backgroundImage: `url(${closeImg})` }}
                 onClick={() => { soundClick(); closeInventory(); }}
-                aria-label="Fermer"
+                aria-label={T('common.close')}
               />
 
               {/* Étiquette équipe + pièces */}

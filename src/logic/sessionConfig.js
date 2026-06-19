@@ -35,7 +35,7 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false, lv2Mode = false, gameStats = null }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, log, extensions, locked = false, lv2Mode = false, englishMode = false, gameStats = null }) {
   // Historique de questions par équipe (onglet mobile « anciennes questions ») :
   // dérivé du journal analytique, compacté aux derniers ~20 par équipe et aux
   // seuls champs utiles à la revue. Le mobile filtre ensuite sur SON équipe.
@@ -58,6 +58,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
     locked: !!locked,
     extensions: extensions || null, // extensions actives (gate l'UI objets côté mobile)
     lv2Mode: !!lv2Mode, // mode « LV2 au choix » : le mobile montre le choix de langue au lobby
+    englishMode: !!englishMode, // localisation anglaise (le mobile traduit son UI)
     shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
     // Historique : on n'envoie que les dernières entrées (l'onglet mobile les
     // affiche du plus récent au plus ancien). Les entrées structurées

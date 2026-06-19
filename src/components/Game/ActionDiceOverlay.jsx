@@ -1,8 +1,10 @@
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import Dice3D from './Dice3D';
 
 // Petit overlay : lancer de d6 « d'objet » (table de résultats d'un consommable).
 export default function ActionDiceOverlay() {
+  const T = useT();
   const showActionDice = useGameStore((s) => s.showActionDice);
   if (!showActionDice) return null;
 
@@ -16,7 +18,7 @@ export default function ActionDiceOverlay() {
         fontFamily: 'var(--font-display)', fontSize: 18, color: '#f3c969',
         marginBottom: 18, letterSpacing: '0.06em', textShadow: '0 2px 8px rgba(0,0,0,0.6)',
       }}>
-        {showActionDice.rolling ? "L'objet lance le dé…" : "Résultat !"}
+        {showActionDice.rolling ? T('game.itemRollsDie') : T('game.result')}
       </div>
       <div style={{ filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.6))' }}>
         <Dice3D value={showActionDice.value || 1} rolling={!!showActionDice.rolling} size={150} />

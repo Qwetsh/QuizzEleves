@@ -5,6 +5,7 @@ import { SUBJECTS } from '../../data/subjects';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import { soundClick, soundEvent } from '../../logic/sounds';
+import { useT } from '../../i18n';
 
 function resolveMinigame(fight) {
   return fight.forceDefault ? getDefaultMinigame() : getMinigame(fight.subject);
@@ -135,11 +136,12 @@ function DemoTimeline() {
 
 // 4) Le compte est bon (maths)
 function DemoCompute() {
+  const T = useT();
   const tiles = ['6', '×', '7', '−', '2'];
   return (
     <>
       <div style={{ position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--font-ui)', color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>Cible</span>
+        <span style={{ fontFamily: 'var(--font-ui)', color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{T('fight.compte.target')}</span>
         <motion.span
           style={{ fontFamily: 'var(--font-display)', fontSize: 30, padding: '2px 14px', borderRadius: 10, background: '#2b1c10', color: '#f3c969', border: '2px solid #f3c969' }}
           animate={{ boxShadow: ['0 0 0 rgba(243,201,105,0)', '0 0 0 rgba(243,201,105,0)', '0 0 18px rgba(123,214,106,0.9)'], color: ['#f3c969', '#f3c969', '#9be67f'] }}
@@ -227,6 +229,7 @@ const DEMOS = {
 };
 
 function DemoScreen({ type }) {
+  const T = useT();
   const Demo = DEMOS[type];
   return (
     <div
@@ -240,7 +243,7 @@ function DemoScreen({ type }) {
     >
       {/* étiquette « démo » */}
       <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(243,201,105,0.9)', color: '#3a2a14', fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.08em' }}>
-        DÉMO
+        {T('fight.briefing.demo')}
       </div>
       {Demo ? <Demo /> : null}
     </div>
@@ -251,7 +254,7 @@ function DemoScreen({ type }) {
 //  Bouton « Je suis prêt » par équipe
 // ============================================================
 
-function ReadyButton({ team, ready, onReady, side }) {
+function ReadyButton({ team, ready, onReady, side, T }) {
   return (
     <motion.button
       onClick={ready ? undefined : onReady}
@@ -275,7 +278,7 @@ function ReadyButton({ team, ready, onReady, side }) {
       <span style={{ fontSize: 30 }}>{team.emoji}</span>
       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1 }}>
         <span style={{ fontSize: 13, opacity: 0.85, fontFamily: 'var(--font-ui)' }}>{team.name}</span>
-        <span>{ready ? '✓ Prêt !' : '\u{1F44D} Je suis prêt'}</span>
+        <span>{ready ? T('fight.briefing.readyDone') : T('fight.briefing.ready')}</span>
       </span>
     </motion.button>
   );
@@ -286,6 +289,7 @@ function ReadyButton({ team, ready, onReady, side }) {
 // ============================================================
 
 export default function FightBriefing({ fight, attacker, defender }) {
+  const T = useT();
   const fightStart = useGameStore((s) => s.fightStart);
   const minigame = resolveMinigame(fight);
   const subjectInfo = SUBJECTS[fight.subject] || {};
@@ -317,13 +321,13 @@ export default function FightBriefing({ fight, attacker, defender }) {
       {/* En-tête */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'rgba(255,243,212,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Comment jouer
+          {T('fight.briefing.howToPlay')}
         </div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-          {subjectInfo.icon} {minigame.name}
+          {subjectInfo.icon} {T(minigame.name)}
         </div>
         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: '#f3c969', marginTop: 2 }}>
-          {howto.goal}
+          {T(howto.goal)}
         </div>
       </div>
 
@@ -341,22 +345,22 @@ export default function FightBriefing({ fight, attacker, defender }) {
               style={{ display: 'flex', alignItems: 'center', gap: 12 }}
             >
               <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(180deg, var(--gold-400), var(--gold-600))', color: '#3a2a14', fontFamily: 'var(--font-display)', fontSize: 16, display: 'grid', placeItems: 'center', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>{i + 1}</span>
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 15, color: '#fff' }}>{step}</span>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 15, color: '#fff' }}>{T(step)}</span>
             </motion.div>
           ))}
           <div style={{ marginTop: 4, fontFamily: 'var(--font-ui)', fontSize: 12, color: 'rgba(255,243,212,0.65)' }}>
-            {minigame.winLabel || `Premier à ${FIGHT_ROUNDS_TO_WIN} manches gagnées`}
+            {minigame.winLabel ? T(minigame.winLabel) : T('fight.briefing.firstToWin', { n: FIGHT_ROUNDS_TO_WIN })}
           </div>
         </div>
       </div>
 
       {/* Boutons « prêt » + GO */}
       <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, flexWrap: 'wrap', position: 'relative' }}>
-        <ReadyButton team={attacker} side="attacker" ready={ready.attacker} onReady={() => markReady('attacker')} />
+        <ReadyButton team={attacker} side="attacker" ready={ready.attacker} onReady={() => markReady('attacker')} T={T} />
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'rgba(255,243,212,0.6)' }}>
-          {both ? '' : 'Les deux équipes doivent être prêtes'}
+          {both ? '' : T('fight.briefing.bothMustBeReady')}
         </div>
-        <ReadyButton team={defender} side="defender" ready={ready.defender} onReady={() => markReady('defender')} />
+        <ReadyButton team={defender} side="defender" ready={ready.defender} onReady={() => markReady('defender')} T={T} />
       </div>
 
       <AnimatePresence>
@@ -373,7 +377,7 @@ export default function FightBriefing({ fight, attacker, defender }) {
               transition={{ type: 'spring', damping: 10, stiffness: 200 }}
               style={{ fontFamily: 'var(--font-display)', fontSize: 64, color: '#f3c969', textShadow: '0 4px 0 rgba(110,78,16,0.8), 0 0 40px rgba(243,201,105,0.8)' }}
             >
-              C'EST PARTI !
+              {T('fight.briefing.go')}
             </motion.div>
           </motion.div>
         )}

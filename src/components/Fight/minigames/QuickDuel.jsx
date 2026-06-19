@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import { useT } from '../../../i18n';
 
 /**
  * Duel de rapidité (toutes matières) — écran scindé tactile.
@@ -11,6 +12,7 @@ import { soundCorrect, soundWrong } from '../../../logic/sounds';
  * nouvelle question.
  */
 export default function QuickDuel({ attacker, defender, subject, round, onRoundWin }) {
+  const T = useT();
   const fightPickQuestion = useGameStore((s) => s.fightPickQuestion);
 
   const [question, setQuestion] = useState(null);
@@ -36,9 +38,9 @@ export default function QuickDuel({ attacker, defender, subject, round, onRoundW
   if (!question) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#fff', fontFamily: 'var(--font-display)' }}>
-        Plus de question disponible dans cette matière…
+        {T('fight.quick.noQuestion')}
         <button className="btn btn--ghost" style={{ marginTop: 14 }} onClick={() => onRoundWin('defender')}>
-          Manche au défenseur
+          {T('fight.quick.roundToDefender')}
         </button>
       </div>
     );
@@ -86,7 +88,7 @@ export default function QuickDuel({ attacker, defender, subject, round, onRoundW
             fontFamily: 'var(--font-display)', fontSize: 22, color: '#c9472f',
             background: 'rgba(255,255,255,0.55)', borderRadius: 16, zIndex: 2,
           }}>
-            🔒 Verrouillé !
+            {T('fight.quick.locked')}
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, justifyContent: 'center' }}>
@@ -131,7 +133,7 @@ export default function QuickDuel({ attacker, defender, subject, round, onRoundW
         {renderSide('defender', defender)}
       </div>
       <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-ui)' }}>
-        Premier à toucher la bonne réponse ! Une erreur = côté verrouillé.
+        {T('fight.quick.hint')}
       </div>
     </div>
   );

@@ -2,19 +2,21 @@
 //  - 'board'  : à l'ancienne, le prof crée les équipes au tableau.
 //  - 'phone'  : les élèves créent leur équipe depuis leur téléphone (lobby + QR).
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 
 const OPTS = [
-  { id: 'board', icon: '🖥️', label: 'Au tableau', desc: 'Tu crées les équipes ici.' },
-  { id: 'phone', icon: '📱', label: 'Par téléphone', desc: 'Les élèves créent leur équipe via QR.' },
+  { id: 'board', icon: '🖥️', labelKey: 'setup.connBoardLabel', descKey: 'setup.connBoardDesc' },
+  { id: 'phone', icon: '📱', labelKey: 'setup.connPhoneLabel', descKey: 'setup.connPhoneDesc' },
 ];
 
 export default function ConnectionMode() {
+  const T = useT();
   const mode = useGameStore((s) => s.connectionMode);
   const setMode = useGameStore((s) => s.setConnectionMode);
 
   return (
     <div>
-      <div className="field-label" style={{ marginBottom: 8 }}>🔗 Connexion des équipes</div>
+      <div className="field-label" style={{ marginBottom: 8 }}>{T('setup.connectionTitle')}</div>
       <div style={{ display: 'flex', gap: 8 }}>
         {OPTS.map((o) => {
           const on = mode === o.id;
@@ -30,9 +32,9 @@ export default function ConnectionMode() {
               }}
             >
               <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span>{o.icon}</span>{o.label}
+                <span>{o.icon}</span>{T(o.labelKey)}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 2, lineHeight: 1.3 }}>{o.desc}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-500)', marginTop: 2, lineHeight: 1.3 }}>{T(o.descKey)}</div>
             </button>
           );
         })}

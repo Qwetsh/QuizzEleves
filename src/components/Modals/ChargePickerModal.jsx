@@ -1,9 +1,11 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { POWERS } from '../../data/powers';
 import ModalOverlay from './ModalOverlay';
 
 export default function ChargePickerModal() {
+  const T = useT();
   const showChargePicker = useGameStore((s) => s.showChargePicker);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
@@ -34,10 +36,10 @@ export default function ChargePickerModal() {
               {fromItem ? "\u{1F48E}" : "\u2728"}
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>
-              {fromItem ? "Recharge !" : "D\u00e9 de 1 !"}
+              {fromItem ? T('modal.charge.recharge') : T('modal.charge.dieOne')}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>
-              {fromItem ? "Choisis un pouvoir \u00e0 recharger :" : "Choisis un pouvoir \u00e0 recharger gratuitement :"}
+              {fromItem ? T('modal.charge.chooseRecharge') : T('modal.charge.chooseRechargeFree')}
             </p>
           </div>
 
@@ -87,7 +89,7 @@ export default function ChargePickerModal() {
                         </span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>
-                        {!fromItem && power.category === 'off' ? 'Offensif — utilisable imm\u00e9diatement' : power.desc}
+                        {!fromItem && power.category === 'off' ? T('modal.charge.offNow') : power.desc}
                       </div>
                     </div>
                     <span style={{ fontSize: 18, color: 'var(--gold-600)' }}>{"+1"}</span>
@@ -105,7 +107,7 @@ export default function ChargePickerModal() {
                 padding: 8,
               }}
             >
-              Passer
+              {T('modal.skip')}
             </button>
           </div>
         </ModalOverlay>

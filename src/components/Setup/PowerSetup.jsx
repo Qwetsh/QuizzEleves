@@ -1,8 +1,10 @@
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
 import { lighten } from '../../utils/colors';
+import { useT } from '../../i18n';
 
 export default function PowerSetup() {
+  const T = useT();
   const teams = useGameStore((s) => s.teams);
   const powerSetupIndex = useGameStore((s) => s.powerSetupIndex);
   const powerSetupCategory = useGameStore((s) => s.powerSetupCategory);
@@ -44,8 +46,8 @@ export default function PowerSetup() {
               : 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.2), 0 4px 0 rgba(110,30,18,0.4)',
           }}
         >
-          {isDef ? '\u{1F6E1} Pouvoir d\u00e9fensif' : '\u2694\uFE0F Pouvoir offensif'}
-          {` \u00b7 \u00e9tape ${stepNum} / ${stepTotal}`}
+          {isDef ? T('setup.powerDef') : T('setup.powerOff')}
+          {T('setup.powerStep', { n: stepNum, total: stepTotal })}
         </div>
 
         {/* Team banner */}
@@ -70,7 +72,7 @@ export default function PowerSetup() {
               onClick={() => handleSelect(key)}
               role="button"
               tabIndex={0}
-              aria-label={`Choisir le pouvoir ${p.name}`}
+              aria-label={T('setup.powerChooseAria', { name: p.name })}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(key); } }}
               className="cursor-pointer"
               style={{
@@ -121,7 +123,7 @@ export default function PowerSetup() {
             <div
               key={`dot-${t.name}-${i}`}
               title={t.name}
-              aria-label={`\u00c9quipe ${t.name}${i === powerSetupIndex ? ' (en cours)' : ''}`}
+              aria-label={i === powerSetupIndex ? T('setup.powerTeamAriaCurrent', { name: t.name }) : T('setup.powerTeamAria', { name: t.name })}
               style={{
                 width: 16, height: 16, borderRadius: '50%',
                 background: t.color,

@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { POWERS } from '../../data/powers';
 import { specOptionsFor } from '../../logic/powerEffects';
 import ModalOverlay from './ModalOverlay';
@@ -7,6 +8,7 @@ import ModalOverlay from './ModalOverlay';
 // Choix de voie au passage L5/L10 (extension « Maîtrise »). NON refusable :
 // l'équipe DOIT choisir une des 3 spécialisations (le choix est définitif).
 export default function SpecPickerModal() {
+  const T = useT();
   const picker = useGameStore((s) => s.showSpecPicker);
   const chooseSpec = useGameStore((s) => s.chooseSpec);
 
@@ -31,10 +33,10 @@ export default function SpecPickerModal() {
               {power.icon}
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 23, color: 'var(--ink-900)' }}>
-              {power.name} — Niveau {tier} !
+              {T('modal.spec.title', { name: power.name, tier })}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>
-              Choisis ta voie (définitif) :
+              {T('modal.spec.choose')}
             </p>
           </div>
 

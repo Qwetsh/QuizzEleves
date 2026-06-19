@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import { useT } from '../../../i18n';
 
 const ROUND_MS = 30000;
 const LIFE_MS = 2600;          // duree de vie d'une bulle
@@ -59,6 +60,7 @@ function makeSchedule(challenge) {
  *           pickChallenge() -> { id, prompt, good[], bad[] } }
  */
 export default function BubbleHunt({ attacker, defender, round, onRoundWin, pickChallenge }) {
+  const T = useT();
   const [challenge, setChallenge] = useState(null);
   const [schedule, setSchedule] = useState(null);
   const [now, setNow] = useState(0);
@@ -211,9 +213,9 @@ export default function BubbleHunt({ attacker, defender, round, onRoundWin, pick
           boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
         }}
       >
-        {tie ? '⚖️ Égalité ! Nouvelle salve…' : finished ? 'Temps écoulé !' : challenge.prompt}
+        {tie ? T('fight.bubble.tie') : finished ? T('fight.bubble.timeUp') : challenge.prompt}
         <div style={{ fontSize: 11, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)', marginTop: 2 }}>
-          Touche les bulles avant qu'elles éclatent ! +1 par bonne réponse, -1 par intrus
+          {T('fight.bubble.hint')}
         </div>
         <div style={{ height: 6, background: 'rgba(0,0,0,0.1)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
           <div

@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { canUsePowerInContext } from '../../logic/powerActivator';
+import { useT } from '../../i18n';
 import Dice3D from './Dice3D';
 
 export default function Dice() {
+  const T = useT();
   const rollDice = useGameStore((s) => s.rollDice);
   const rolling = useGameStore((s) => s.rolling);
   const diceValue = useGameStore((s) => s.diceValue);
@@ -41,7 +43,7 @@ export default function Dice() {
       />
 
       <div style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: pendingLanding ? 'var(--gold-600)' : 'var(--ink-500)' }}>
-        {rolling ? 'Le d\u00e9 tourne\u2026' : pendingLanding ? (canRelance ? 'Relance possible !' : 'En route\u2026') : (disabled ? '' : 'Cliquer pour lancer')}
+        {rolling ? T('game.diceSpinning') : pendingLanding ? (canRelance ? T('game.rerollPossible') : T('game.onTheWay')) : (disabled ? '' : T('game.clickToRoll'))}
       </div>
 
       <button
@@ -50,7 +52,7 @@ export default function Dice() {
         className="btn"
         style={{ width: '100%', ...(disabled ? { opacity: 0.5, cursor: 'not-allowed', filter: 'saturate(0.6)' } : {}) }}
       >
-        {"\u{1F3B2} Lancer le d\u00e9"}
+        {'\u{1F3B2}'} {T('game.rollDie')}
       </button>
 
       <AnimatePresence>
@@ -74,7 +76,7 @@ export default function Dice() {
               transition: 'transform 100ms ease',
             }}
           >
-            {"\u{1F3B2} Relance !"} <span style={{ opacity: 0.6 }}>(x{team.powers.relance.charges})</span>
+            {'\u{1F3B2}'} {T('game.reroll')} <span style={{ opacity: 0.6 }}>(x{team.powers.relance.charges})</span>
           </motion.button>
         )}
       </AnimatePresence>

@@ -5,6 +5,7 @@ import { SUBJECTS } from '../../data/subjects';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
+import { useT } from '../../i18n';
 
 // Le simulateur dev peut forcer le duel generique via fight.forceDefault
 function resolveMinigame(fight) {
@@ -62,6 +63,7 @@ export default function FightModal() {
 // --- Écran de présentation façon versus fighting ---
 
 function VersusScreen({ fight, attacker, defender }) {
+  const T = useT();
   const fightBegin = useGameStore((s) => s.fightBegin);
   const subjectInfo = SUBJECTS[fight.subject] || {};
   const minigame = resolveMinigame(fight);
@@ -151,13 +153,13 @@ function VersusScreen({ fight, attacker, defender }) {
         }}
       >
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--ink-900)' }}>
-          {subjectInfo.icon} Duel de {subjectInfo.name || fight.subject} — {minigame.name}
+          {subjectInfo.icon} {T('fight.versus.duelOf', { subject: subjectInfo.name || fight.subject })} — {T(minigame.name)}
         </span>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginTop: 4, fontFamily: 'var(--font-ui)' }}>
-          {minigame.rules}
+          {T(minigame.rules)}
         </div>
         <div style={{ fontSize: 11, color: 'var(--ink-400)', marginTop: 6, fontFamily: 'var(--font-ui)' }}>
-          {minigame.winLabel || `Premier à ${FIGHT_ROUNDS_TO_WIN} manches`} — touche l'écran pour voir les règles
+          {minigame.winLabel ? T(minigame.winLabel) : T('fight.versus.firstToRounds', { n: FIGHT_ROUNDS_TO_WIN })} — {T('fight.versus.touchForRules')}
         </div>
       </motion.div>
     </div>
@@ -183,6 +185,7 @@ function WinStars({ count }) {
 }
 
 function MinigameStage({ fight, attacker, defender }) {
+  const T = useT();
   const fightRoundWin = useGameStore((s) => s.fightRoundWin);
   const minigame = resolveMinigame(fight);
   const { Component, persistent } = minigame;
@@ -210,7 +213,7 @@ function MinigameStage({ fight, attacker, defender }) {
               padding: '4px 14px', borderRadius: 999, border: '1px solid rgba(243,201,105,0.5)',
             }}
           >
-            Manche {fight.round}
+            {T('fight.round', { n: fight.round })}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <WinStars count={fight.wins.defender} />
@@ -238,6 +241,7 @@ function MinigameStage({ fight, attacker, defender }) {
 // --- Récompense du vainqueur + résultat ---
 
 function RewardScreen({ fight, attacker, defender }) {
+  const T = useT();
   const fightChooseReward = useGameStore((s) => s.fightChooseReward);
   const closeFight = useGameStore((s) => s.closeFight);
   // Extension objets coupée : pas de butin d'objet en duel.
@@ -275,7 +279,7 @@ function RewardScreen({ fight, attacker, defender }) {
             {"\u{1F3C6}"}
           </motion.div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: winner.color, marginTop: 4 }}>
-            {winner.emoji} {winner.name} remporte le duel !
+            {T('fight.reward.winsDuel', { emoji: winner.emoji, name: winner.name })}
           </div>
         </div>
 
@@ -283,25 +287,25 @@ function RewardScreen({ fight, attacker, defender }) {
           {fight.phase === 'reward' && !reward && (
             <>
               <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14, fontFamily: 'var(--font-ui)', color: 'var(--ink-700)' }}>
-                Choisis ta récompense :
+                {T('fight.reward.choose')}
               </p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button className="btn btn--green btn--lg" onClick={() => fightChooseReward('steal')}>
-                  {"\u{1F4B0} Piller — 2 dés de pièces"}
+                  {T('fight.reward.steal')}
                 </button>
                 <button className="btn btn--purple btn--lg" onClick={() => fightChooseReward('knockback')}>
-                  {"⬅️ Repousser — 1 dé de cases"}
+                  {T('fight.reward.knockback')}
                 </button>
                 {itemsOn && (
                   <button className="btn btn--lg" onClick={() => fightChooseReward('loot')}>
-                    {"\u{1F392} Butin — vole un objet"}
+                    {T('fight.reward.loot')}
                   </button>
                 )}
               </div>
               <p style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 12, fontFamily: 'var(--font-ui)' }}>
-                Piller : vole à {loser.emoji} {loser.name} autant de pièces que la somme des 2 dés.<br />
-                Repousser : {loser.emoji} {loser.name} recule du résultat du dé.
-                {itemsOn && <><br />Butin : vole un objet au hasard à {loser.emoji} {loser.name} (équipement ou consommable).</>}
+                {T('fight.reward.stealDesc', { emoji: loser.emoji, name: loser.name })}<br />
+                {T('fight.reward.knockbackDesc', { emoji: loser.emoji, name: loser.name })}
+                {itemsOn && <><br />{T('fight.reward.lootDesc', { emoji: loser.emoji, name: loser.name })}</>}
               </p>
             </>
           )}
@@ -331,7 +335,7 @@ function RewardScreen({ fight, attacker, defender }) {
                 {fight.resultMessage}
               </p>
               <button className="btn btn--lg" onClick={closeFight} style={{ minWidth: 220 }}>
-                Retour au plateau
+                {T('fight.reward.backToBoard')}
               </button>
             </>
           )}

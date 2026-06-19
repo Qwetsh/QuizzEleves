@@ -6,6 +6,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { soundClick } from '../../logic/sounds';
@@ -22,10 +23,11 @@ function raysGradient(hex) {
 
 /* Carte présentationnelle réutilisable (modale globale + autres contextes) */
 export function LootCard({ item, subtitle, compact = false }) {
+  const T = useT();
   if (!item) return null;
   const r = RARITIES[item.rarity] || { color: '#888', soft: '#ddd', name: '' };
   const img = itemImg(item);
-  const slotLabel = item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name;
+  const slotLabel = item.slot === 'consumable' ? T('modal.loot.consumable') : SLOTS[item.slot]?.name;
 
   return (
     <div className={'loot-card' + (compact ? ' is-compact' : '')}>
@@ -70,6 +72,7 @@ export function LootCard({ item, subtitle, compact = false }) {
 
 /* Modale globale pilotée par le store */
 export default function LootReveal() {
+  const T = useT();
   const lootReveal = useGameStore((s) => s.lootReveal);
   const dismissLoot = useGameStore((s) => s.dismissLoot);
   const item = lootReveal ? ITEMS[lootReveal.itemKey] : null;
@@ -91,10 +94,10 @@ export default function LootReveal() {
             transition={{ type: 'spring', damping: 18, stiffness: 240 }}
           >
             <div className="loot-modal">
-              <div className="loot-banner">{lootReveal.title || 'Objet obtenu !'}</div>
+              <div className="loot-banner">{lootReveal.title || T('modal.loot.title')}</div>
               <LootCard item={item} subtitle={lootReveal.subtitle} />
               <button className="loot-btn" onClick={() => { soundClick(); dismissLoot(); }}>
-                Super&nbsp;!
+                {T('modal.nice')}
               </button>
             </div>
           </motion.div>

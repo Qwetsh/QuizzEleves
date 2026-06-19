@@ -4,8 +4,10 @@
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { getQuestions } from '../../data/questions/index.js';
+import { useT } from '../../i18n';
 
 export default function SubjectSelect() {
+  const T = useT();
   const level = useGameStore((s) => s.level);
   const useBrevet = useGameStore((s) => s.useBrevet);
   const selected = useGameStore((s) => s.selectedSubjects);
@@ -24,7 +26,7 @@ export default function SubjectSelect() {
   return (
     <div>
       <div className="field-label">
-        Matières <span style={{ fontWeight: 400, color: 'var(--ink-400)', fontSize: 12 }}>(au moins une)</span>
+        {T('setup.subjectsLabel')} <span style={{ fontWeight: 400, color: 'var(--ink-400)', fontSize: 12 }}>{T('setup.subjectsHint')}</span>
       </div>
       <div className="flex gap-2.5 flex-wrap items-stretch">
         {SUBJECT_KEYS.map((key) => {
@@ -44,14 +46,14 @@ export default function SubjectSelect() {
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 borderColor: on ? s.color : undefined,
               }}
-              title={empty ? 'Aucune question pour ce niveau' : `${count} questions`}
+              title={empty ? T('setup.subjectEmpty') : T('setup.questionsCount', { n: count })}
             >
               <span className="flex flex-col items-center">
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: on ? s.colorDeep : 'var(--ink-700)' }}>
                   {s.icon} {s.name}
                 </strong>
                 <small style={{ fontSize: 12, color: 'var(--ink-500)', fontWeight: 400 }}>
-                  {empty ? 'bientôt' : `${count} questions`}
+                  {empty ? T('setup.subjectSoon') : T('setup.questionsCount', { n: count })}
                 </small>
               </span>
             </button>
@@ -74,10 +76,10 @@ export default function SubjectSelect() {
           <span style={{ fontSize: 22 }}>🗣️</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: 'block', fontWeight: 700, fontSize: 14, color: 'var(--ink-800)' }}>
-              {lv2Mode ? '✓ ' : ''}LV2 au choix (Allemand + Espagnol fusionnés)
+              {lv2Mode ? '✓ ' : ''}{T('setup.lv2Title')}
             </span>
             <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-500)', lineHeight: 1.3 }}>
-              Une seule case « LV2 » sur le plateau ; chaque équipe choisit sa langue à la création et répond dedans.
+              {T('setup.lv2Desc')}
             </span>
           </span>
         </button>

@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { countQuestions } from '../../data/questions/index.js';
+import { useT } from '../../i18n';
 
 const LEVELS = [
   { key: '6e', label: '6\u1d49', sub: null },
@@ -10,6 +11,7 @@ const LEVELS = [
 ];
 
 export default function LevelSelect() {
+  const T = useT();
   const level = useGameStore((s) => s.level);
   const toggleLevel = useGameStore((s) => s.toggleLevel);
   const useBrevet = useGameStore((s) => s.useBrevet);
@@ -26,7 +28,7 @@ export default function LevelSelect() {
 
   return (
     <div>
-      <div className="field-label">Niveau <span style={{ fontWeight: 400, color: 'var(--ink-400)', fontSize: 12 }}>(plusieurs possibles)</span></div>
+      <div className="field-label">{T('setup.levelLabel')} <span style={{ fontWeight: 400, color: 'var(--ink-400)', fontSize: 12 }}>{T('setup.levelHint')}</span></div>
       <div className="flex gap-2.5 flex-wrap items-stretch">
         {LEVELS.map((l) => {
           const count = countQuestions(l.key);
@@ -39,7 +41,7 @@ export default function LevelSelect() {
               <span className="flex flex-col items-center">
                 <strong style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{l.label}</strong>
                 <small style={{ fontSize: 12, color: 'var(--ink-500)', fontWeight: 400 }}>
-                  {l.sub || `${count} questions`}
+                  {l.sub || T('setup.questionsCount', { n: count })}
                 </small>
               </span>
             </button>
@@ -52,14 +54,14 @@ export default function LevelSelect() {
           onClick={() => setUseBrevet(!useBrevet)}
           className={`chip ${useBrevet ? 'is-active' : ''}`}
           aria-pressed={useBrevet}
-          title="Ajoute les questions \u00ab sp\u00e9cial Brevet \u00bb (DNB) au niveau choisi"
+          title={T('setup.brevetTooltip')}
         >
           <span className="flex flex-col items-center">
             <strong style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>
-              {useBrevet ? '\u2713 ' : '+ '}Brevet
+              {useBrevet ? '\u2713 ' : '+ '}{T('setup.brevet')}
             </strong>
             <small style={{ fontSize: 12, color: 'var(--ink-500)', fontWeight: 400 }}>
-              +{BREVET_COUNT} questions DNB
+              {T('setup.brevetCount', { n: BREVET_COUNT })}
             </small>
           </span>
         </button>

@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { describeAction } from '../../logic/effectText';
 import ModalOverlay from './ModalOverlay';
 
@@ -7,6 +8,7 @@ import ModalOverlay from './ModalOverlay';
 // pouvant cumuler plusieurs effets, on liste chaque action en clair via
 // describeAction (même source que les descriptions d'objets).
 export default function TrapInspectModal() {
+  const T = useT();
   const inspectTrap = useGameStore((s) => s.inspectTrap);
   const close = useGameStore((s) => s.closeInspectTrap);
 
@@ -19,10 +21,10 @@ export default function TrapInspectModal() {
           <div style={{ padding: '22px 22px 8px', textAlign: 'center' }}>
             <div style={{ fontSize: 38 }}>{inspectTrap.icon || '\u{1FAA4}'}</div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 21, marginTop: 4 }}>
-              {inspectTrap.label || 'Piège'}
+              {inspectTrap.label || T('modal.trap.title')}
             </h2>
             <p style={{ fontSize: 12.5, color: 'var(--ink-600)', marginTop: 4 }}>
-              Déclenché par la première équipe qui marche dessus.
+              {T('modal.trap.sub')}
             </p>
           </div>
           <div style={{ padding: '6px 20px 18px' }}>
@@ -41,11 +43,11 @@ export default function TrapInspectModal() {
                 ))}
               </ul>
             ) : (
-              <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-600)' }}>Effet inconnu.</p>
+              <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-600)' }}>{T('modal.trap.unknown')}</p>
             )}
           </div>
           <div style={{ padding: '0 20px 20px' }}>
-            <button className="btn btn--primary" style={{ width: '100%' }} onClick={close}>Fermer</button>
+            <button className="btn btn--primary" style={{ width: '100%' }} onClick={close}>{T('common.close')}</button>
           </div>
         </ModalOverlay>
       )}

@@ -1,9 +1,11 @@
 import { useRef, useEffect, useState } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { logText, logDetail, signed } from '../../../logic/logFormat';
+import { useT } from '../../../i18n';
 
 // Une entrée : texte + éventuel détail dépliable (facteurs d'un gain/recul).
 function LogEntry({ entry }) {
+  const T = useT();
   const text = logText(entry);
   const detail = logDetail(entry);
   const [open, setOpen] = useState(false);
@@ -21,7 +23,7 @@ function LogEntry({ entry }) {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          title={open ? 'Masquer le détail' : 'Voir le détail du calcul'}
+          title={open ? T('game.hideDetail') : T('game.showDetail')}
           style={{
             display: 'flex', alignItems: 'flex-start', gap: 5, width: '100%',
             background: 'none', border: 'none', padding: 0, margin: 0,
@@ -68,6 +70,7 @@ function LogEntry({ entry }) {
 }
 
 export default function GameLog() {
+  const T = useT();
   const log = useGameStore((s) => s.log);
   const endRef = useRef(null);
 
@@ -84,7 +87,7 @@ export default function GameLog() {
         paddingRight: 4,
       }}
     >
-      {log.length === 0 && <div style={{ color: 'var(--ink-400)' }}>{"La partie démarre…"}</div>}
+      {log.length === 0 && <div style={{ color: 'var(--ink-400)' }}>{T('game.gameStarting')}</div>}
       {log.map((entry, i) => (
         <LogEntry key={`log-${i}-${logText(entry).slice(0, 20)}`} entry={entry} />
       ))}

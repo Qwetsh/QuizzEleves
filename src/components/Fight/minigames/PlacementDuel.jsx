@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { soundCorrect, soundClick } from '../../../logic/sounds';
+import { useT } from '../../../i18n';
 
 /**
  * Moteur de placement commit-reveal — partagé par L'Anatomiste (SVT)
@@ -30,6 +31,7 @@ export default function PlacementDuel({
   pickTarget, renderScene, aspect = 1, formatDistance, metric,
   scoreFn, onRoundEnd,
 }) {
+  const T = useT();
   const usedIds = useRef([]);
   const reported = useRef(false);
   const [target, setTarget] = useState(null);
@@ -80,7 +82,7 @@ export default function PlacementDuel({
   if (!target) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#fff', fontFamily: 'var(--font-display)' }}>
-        Plus de cible disponible…
+        {T('fight.placement.noTarget')}
       </div>
     );
   }
@@ -159,9 +161,9 @@ export default function PlacementDuel({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', alignItems: 'center' }}>
         <div style={banner()}>
           {'\u{1F3AF}'} {target.label} — {winnerTeam ? (
-            <><strong style={{ color: winnerTeam.color }}>{winnerTeam.emoji} {winnerTeam.name}</strong> est au plus près !</>
+            <><strong style={{ color: winnerTeam.color }}>{winnerTeam.emoji} {winnerTeam.name}</strong> {T('fight.placement.winnerNote')}</>
           ) : (
-            <strong>égalité parfaite !</strong>
+            <strong>{T('fight.placement.perfectTie')}</strong>
           )}
         </div>
         <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -208,14 +210,14 @@ export default function PlacementDuel({
         <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff', flexWrap: 'wrap', justifyContent: 'center' }}>
           <span>
             {attacker.emoji} {attacker.name} : <strong>{formatDistance(marks.attacker, target)}</strong>
-            {reveal.pA != null && <strong style={{ color: '#f3c969' }}>{` +${reveal.pA.toLocaleString('fr-FR')} pts`}</strong>}
+            {reveal.pA != null && <strong style={{ color: '#f3c969' }}>{' +' + T('fight.geo.points', { n: reveal.pA.toLocaleString(T.lang === 'en' ? 'en-US' : 'fr-FR') })}</strong>}
           </span>
           <span>
             {defender.emoji} {defender.name} : <strong>{formatDistance(marks.defender, target)}</strong>
-            {reveal.pB != null && <strong style={{ color: '#f3c969' }}>{` +${reveal.pB.toLocaleString('fr-FR')} pts`}</strong>}
+            {reveal.pB != null && <strong style={{ color: '#f3c969' }}>{' +' + T('fight.geo.points', { n: reveal.pB.toLocaleString(T.lang === 'en' ? 'en-US' : 'fr-FR') })}</strong>}
           </span>
           <button className="btn btn--green" onPointerDown={nextRound} style={{ padding: '8px 22px' }}>
-            Suivant ▶
+            {T('fight.placement.next')}
           </button>
         </div>
       </div>
@@ -225,7 +227,7 @@ export default function PlacementDuel({
   if (reveal?.tie) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 22 }}>
-        {'⚖️'} Égalité parfaite ! Nouvelle cible…
+        {T('fight.placement.tieNewTarget')}
       </div>
     );
   }
@@ -268,7 +270,7 @@ export default function PlacementDuel({
                 background: 'rgba(255,254,251,0.72)',
                 fontFamily: 'var(--font-display)', fontSize: 20, color: '#2f5a18',
               }}>
-                {'✔'} Validé !
+                {T('fight.placement.validated')}
               </div>
             )}
           </div>
@@ -279,7 +281,7 @@ export default function PlacementDuel({
           className="btn btn--green"
           style={{ opacity: !marks[key] || done ? 0.45 : 1, padding: '8px 14px' }}
         >
-          {done ? 'En attente de l’adversaire…' : 'Valider mon placement'}
+          {done ? T('fight.placement.waitingOpponent') : T('fight.placement.validatePlacement')}
         </button>
       </div>
     );
@@ -293,7 +295,7 @@ export default function PlacementDuel({
             {/* Mode devinette : la photo SANS le nom du lieu */}
             <img
               src={target.photo}
-              alt="Lieu mystère"
+              alt={T('fight.placement.mysteryAlt')}
               draggable={false}
               style={{
                 height: 130, maxWidth: '90%', borderRadius: 10, objectFit: 'cover',
@@ -302,14 +304,14 @@ export default function PlacementDuel({
               }}
             />
             <strong style={{ fontSize: 19 }}>
-              {target.showName ? <>Place : {target.label}</> : 'Où se trouve ce lieu ?'}
+              {target.showName ? T('fight.placement.place', { label: target.label }) : T('fight.placement.whereIsThis')}
             </strong>
           </>
         ) : (
-          <>Place : <strong style={{ fontSize: 21 }}>{target.label}</strong></>
+          <>{T('fight.placement.placePrefix')} <strong style={{ fontSize: 21 }}>{target.label}</strong></>
         )}
         <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2, fontFamily: 'var(--font-ui)' }}>
-          Touche ta scène pour poser ton repère (ajustable), puis valide. Révélation quand les deux équipes ont validé !
+          {T('fight.placement.hint')}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>

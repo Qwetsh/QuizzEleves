@@ -2,9 +2,10 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TIMELINE_EVENTS, shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import { useT } from '../../../i18n';
 
-function formatYear(y) {
-  return y < 0 ? `${-y} av. J.-C.` : `${y}`;
+function formatYear(y, T) {
+  return y < 0 ? T('fight.timeline.bce', { n: -y }) : `${y}`;
 }
 
 const CARD_W = 150;
@@ -18,6 +19,7 @@ const CARD_W = 150;
  * La frise persiste sur tout le combat (composant persistant).
  */
 export default function TimelineGame({ attacker, defender, onRoundWin }) {
+  const T = useT();
   // Etat initialise une seule fois pour tout le combat (initialiseur pur)
   const [init] = useState(() => {
     const deck = shuffle(TIMELINE_EVENTS);
@@ -116,7 +118,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin }) {
   if (!current) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#fff', fontFamily: 'var(--font-display)' }}>
-        Plus de cartes ! Égalité décidée au prochain duel de rapidité…
+        {T('fight.timeline.noMoreCards')}
       </div>
     );
   }
@@ -142,7 +144,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin }) {
         }}
       >
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: '#6e4e10' }}>
-          {formatYear(card.year)}
+          {formatYear(card.year, T)}
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--ink-700)', fontFamily: 'var(--font-ui)', lineHeight: 1.3, marginTop: 5 }}>
           {card.name}
@@ -188,7 +190,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin }) {
           boxShadow: '0 3px 10px rgba(0,0,0,0.25)',
         }}
       >
-        {team.emoji} <strong style={{ color: team.color }}>{team.name}</strong> — glisse la carte sur la frise, entre les bonnes dates !
+        {team.emoji} <strong style={{ color: team.color }}>{team.name}</strong> — {T('fight.timeline.consigneTail')}
       </div>
 
       {/* Carte courante a glisser (cachee pendant le feedback) */}
@@ -219,7 +221,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin }) {
               {current.name}
             </div>
             <div style={{ fontSize: 11, color: 'var(--ink-400)', fontFamily: 'var(--font-ui)', marginTop: 6 }}>
-              {'✋'} attrape-moi !
+              {T('fight.timeline.grabMe', { hand: '✋' })}
             </div>
           </div>
         ) : (
@@ -230,7 +232,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin }) {
               textShadow: '0 2px 8px rgba(0,0,0,0.5)',
             }}
           >
-            {feedback.ok ? `✔ Bien joué ! ${formatYear(feedback.year)}` : `✘ Raté ! C'était en ${formatYear(feedback.year)}`}
+            {feedback.ok ? T('fight.timeline.correct', { year: formatYear(feedback.year, T) }) : T('fight.timeline.wrong', { year: formatYear(feedback.year, T) })}
           </div>
         )}
       </div>
@@ -258,7 +260,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin }) {
       </div>
 
       <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-ui)' }}>
-        Relâche la carte dans l'espace qui s'ouvre. Une erreur = manche perdue !
+        {T('fight.timeline.hint')}
       </div>
     </div>
   );

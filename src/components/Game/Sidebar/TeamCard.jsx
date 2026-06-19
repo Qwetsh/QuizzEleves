@@ -1,8 +1,10 @@
 import { SUBJECTS } from '../../../data/subjects';
 import { POWERS } from '../../../data/powers';
 import { useGameStore } from '../../../store/gameStore';
+import { useT } from '../../../i18n';
 
 export default function TeamCard({ team, index }) {
+  const T = useT();
   const currentTeam = useGameStore((s) => s.currentTeam);
   const finished = useGameStore((s) => s.finished);
   const isCurrent = index === currentTeam && !finished;
@@ -32,21 +34,23 @@ export default function TeamCard({ team, index }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--ink-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {team.name}
-          {isCurrent && <span style={{ fontSize: 11, color: 'var(--gold-700)' }}>{"\u25C0 tour"}</span>}
+          {isCurrent && <span style={{ fontSize: 11, color: 'var(--gold-700)' }}>{'\u25C0'} {T('game.turnMarker')}</span>}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-500)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 1 }}>
           {powerEntries.map(({ key, info, charges }) => (
             <span key={key} title={info.name}>{info.icon} {charges}</span>
           ))}
-          {(team.sablierActif || (team.doubleActive && team.doubleTimerDivisor)) && <span title="Timer /2">{"\u23F1\uFE0F"}</span>}
-          {team.doubleActive && <span title="Double question">{"\u2753"}</span>}
+          {(team.sablierActif || (team.doubleActive && team.doubleTimerDivisor)) && <span title={T('game.timerHalf')}>{"\u23F1\uFE0F"}</span>}
+          {team.doubleActive && <span title={T('game.doubleQuestion')}>{"\u2753"}</span>}
           {team.itemShield > 0 && (
-            <span title={`Bouclier : annule ${team.itemShield} recul${team.itemShield > 1 ? 's' : ''}`}>
+            <span title={T('game.shieldBlocks', { n: team.itemShield })}>
               {"\u{1F6E1}\uFE0F"}{team.itemShield > 1 ? team.itemShield : ''}
             </span>
           )}
           {team.itemFumigene && (
-            <span title={`Fumig\u00E8ne : prochain pouvoir offensif annul\u00E9${team.itemFumigeneTurns ? ` (${team.itemFumigeneTurns} tour${team.itemFumigeneTurns > 1 ? 's' : ''})` : ''}`}>
+            <span title={team.itemFumigeneTurns
+              ? T('game.smokeNextOffTurns', { turns: team.itemFumigeneTurns })
+              : T('game.smokeNextOff')}>
               {"\u{1F4A8}"}{team.itemFumigeneTurns ? team.itemFumigeneTurns : ''}
             </span>
           )}

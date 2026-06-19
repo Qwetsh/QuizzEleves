@@ -5,6 +5,7 @@
 // Les libellés des bonus réutilisent describeEffect (source unique effectText).
 import { SETS } from '../../data/sets';
 import { ITEMS } from '../../data/items';
+import { useT } from '../../i18n';
 import { equippedSetCounts } from '../../logic/itemEffects';
 import { describeEffect } from '../../logic/effectText';
 import { setPieceImgs } from '../../logic/itemAssets';
@@ -14,15 +15,16 @@ import '../../styles/set-info.css';
 const SLOT_OF_PIECE = { coiffe: 'head', armure: 'body', amulette: 'feet' };
 
 function Tier({ n, count, lines }) {
+  const T = useT();
   if (!lines.length) return null;
   const active = count >= n;
   const need = n - count;
   return (
     <div className={'setinfo-tier' + (active ? ' is-active' : '')}>
       <div className="setinfo-tier-head">
-        <span className="setinfo-tier-badge">{n} pièces</span>
+        <span className="setinfo-tier-badge">{T('modal.set.pieces', { n })}</span>
         <span className="setinfo-tier-state">
-          {active ? '✓ actif' : `encore ${need} pièce${need > 1 ? 's' : ''}`}
+          {active ? T('modal.set.active') : T('modal.set.need', { n: need })}
         </span>
       </div>
       <ul className="setinfo-tier-lines">
@@ -33,6 +35,7 @@ function Tier({ n, count, lines }) {
 }
 
 export default function SetBonusInfo({ item, team }) {
+  const T = useT();
   const setKey = item?.set;
   const set = setKey ? SETS[setKey] : null;
   if (!set) return null; // l'objet n'appartient à aucun set : rien à afficher
@@ -69,7 +72,7 @@ export default function SetBonusInfo({ item, team }) {
         <span className="setinfo-name">{set.name}</span>
         <span className="setinfo-count">{count}<span className="setinfo-count-max">/3</span></span>
       </div>
-      <div className="setinfo-pips" aria-label={`${count} pièces sur 3 équipées`}>
+      <div className="setinfo-pips" aria-label={T('modal.set.piecesEquipped', { n: count })}>
         {[0, 1, 2].map((i) => (
           <span key={i} className={'setinfo-pip' + (i < count ? ' on' : '')} />
         ))}

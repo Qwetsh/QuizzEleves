@@ -4,11 +4,13 @@
 // Oui → ouvre la boutique ; Plus tard → snooze (reset du compteur).
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
 import btnBoutique from '../../assets/inventory/btn-boutique.png';
 
 export default function ShopPromptModal() {
+  const T = useT();
   const show = useGameStore((s) => s.showShopPrompt);
   const team = useGameStore((s) => s.teams[s.currentTeam]);
   const accept = useGameStore((s) => s.acceptShopPrompt);
@@ -32,10 +34,10 @@ export default function ShopPromptModal() {
               fontFamily: 'var(--font-display)', fontSize: 26, lineHeight: 1.05,
               color: 'var(--ink-900)', margin: '4px 0 6px',
             }}>
-              La boutique t'attend, {team.emoji} {team.name} !
+              {T('modal.shopPrompt.title', { emoji: team.emoji, name: team.name })}
             </h2>
             <p style={{ fontSize: 15, color: 'var(--ink-600)', margin: '0 0 4px' }}>
-              Tu as de quoi t'équiper avant de continuer.
+              {T('modal.shopPrompt.sub')}
             </p>
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -53,14 +55,14 @@ export default function ShopPromptModal() {
                 style={{ fontSize: 17, padding: '12px 22px' }}
                 onClick={() => { soundClick(); accept(); }}
               >
-                {'\u{1F6D2}'} Oui, j'y vais !
+                {T('modal.shopPrompt.go')}
               </button>
               <button
                 className="btn btn--ghost"
                 style={{ fontSize: 16, padding: '12px 18px' }}
                 onClick={() => { soundClick(); dismiss(); }}
               >
-                Plus tard
+                {T('common.later')}
               </button>
             </div>
           </div>

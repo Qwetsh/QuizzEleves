@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
 import { soundDice } from '../../logic/sounds';
 import '../../styles/dice-roll-modal.css';
@@ -77,6 +78,7 @@ function BurstParticles({ count = 42 }) {
 }
 
 export default function DiceRollModal() {
+  const T = useT();
   const showDiceModal = useGameStore((s) => s.showDiceModal);
   const diceValue = useGameStore((s) => s.diceValue);
   const teams = useGameStore((s) => s.teams);
@@ -123,7 +125,7 @@ export default function DiceRollModal() {
             {team.emoji}
           </div>
           <div className="dice-modal-team-info">
-            <div className="dice-modal-team-kicker">Tour de</div>
+            <div className="dice-modal-team-kicker">{T('modal.dice.turnOf')}</div>
             <div className="dice-modal-team-name" style={{ color: accent }}>{team.name}</div>
           </div>
         </div>
@@ -154,19 +156,18 @@ export default function DiceRollModal() {
         </div>
 
         <div className="dice-modal-caption">
-          {phase === 'intro' && <span className="dim">{`Pr\u00e9paration\u2026`}</span>}
+          {phase === 'intro' && <span className="dim">{T('modal.dice.preparing')}</span>}
           {phase === 'rolling' && (
             <span className="dice-modal-caption-roll">
-              <span>L</span><span>e</span><span> </span>
-              <span>d</span><span>{'\u00e9'}</span><span> </span>
-              <span>t</span><span>o</span><span>u</span><span>r</span><span>n</span><span>o</span><span>i</span><span>e</span>
-              <span>{'\u2026'}</span>
+              {Array.from(T('modal.dice.rolling')).map((ch, i) => (
+                <span key={i}>{ch}</span>
+              ))}
             </span>
           )}
           {(phase === 'reveal' || phase === 'outro') && (
             <div className="dice-modal-caption-reveal">
-              <span className="dice-modal-caption-big">{diceValue === 1 ? '1 case' : `${diceValue} cases`}</span>
-              <span className="dice-modal-caption-sub">{'\u00e0'} parcourir !</span>
+              <span className="dice-modal-caption-big">{diceValue === 1 ? T('modal.dice.oneSquare') : T('modal.dice.nSquares', { n: diceValue })}</span>
+              <span className="dice-modal-caption-sub">{T('modal.dice.toTravel')}</span>
             </div>
           )}
         </div>

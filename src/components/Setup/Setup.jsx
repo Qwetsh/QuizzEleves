@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { loadGame } from '../../store/persistence';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { getMinigame, getDefaultMinigame } from '../Fight/minigames';
@@ -127,6 +128,7 @@ const TOOLS_UNLOCK_KEY = 'quete_tools_unlock';
 const TOOLS_CODE = '54150';
 
 export default function Setup() {
+  const T = useT();
   const startGame = useGameStore((s) => s.startGame);
   const resumeGame = useGameStore((s) => s.resumeGame);
   const extensions = useGameStore((s) => s.extensions);
@@ -160,13 +162,13 @@ export default function Setup() {
     if (c.n < 3) return;
     c.n = 0;
     if (toolsUnlocked) return;
-    const code = window.prompt("Code d'accès aux outils d'édition :");
+    const code = window.prompt(T('setup.toolsPrompt'));
     if (code == null) return;
     if (code.trim() === TOOLS_CODE) {
       try { localStorage.setItem(TOOLS_UNLOCK_KEY, '1'); } catch { /* quota */ }
       setToolsUnlocked(true);
     } else {
-      window.alert('Code incorrect.');
+      window.alert(T('setup.toolsBadCode'));
     }
   };
   const showTools = import.meta.env.DEV || toolsUnlocked;
@@ -186,7 +188,7 @@ export default function Setup() {
               transform: 'rotate(-6deg)',
               cursor: 'default', userSelect: 'none',
             }}
-            title={toolsUnlocked ? 'Outils déverrouillés' : undefined}
+            title={toolsUnlocked ? T('setup.toolsUnlocked') : undefined}
           >
             {"\u{1F3B2}"}
           </div>
@@ -203,10 +205,10 @@ export default function Setup() {
                 textShadow: 'none',
               }}
             >
-              {"Qu\u00eate des Mati\u00e8res"}
+              {T('setup.appTitle')}
             </div>
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 16, fontWeight: 500, color: 'var(--ink-500)', marginTop: 4 }}>
-              {"Jeu de plateau p\u00e9dagogique \u00b7 Cycle 4"}
+              {T('setup.appTagline')}
             </div>
           </div>
           {!phoneMode && (
@@ -215,7 +217,7 @@ export default function Setup() {
               className="btn btn--green btn--lg"
               style={{ marginLeft: 'auto', padding: '16px 36px' }}
             >
-              {"\u{1F680} Lancer la partie"}
+              {T('setup.launch')}
             </button>
           )}
         </div>
@@ -227,7 +229,7 @@ export default function Setup() {
               className="btn btn--blue btn--lg"
               style={{ width: '100%' }}
             >
-              {"\u25B6\uFE0F Reprendre la partie"}
+              {T('setup.resume')}
             </button>
           </div>
         )}
@@ -236,16 +238,16 @@ export default function Setup() {
         <div className="flex flex-col gap-4">
           <div className="panel">
             <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--ink-800)', marginBottom: 8 }}>
-              {"\u{1F4DA} Classe / séance"}
+              {T('setup.classLabel')}
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 400, color: 'var(--ink-500)', marginLeft: 8 }}>
-                {"(optionnel — pour le suivi dans l'analyse)"}
+                {T('setup.classHint')}
               </span>
             </label>
             <input
               type="text"
               value={classLabel}
               onChange={(e) => setClassLabel(e.target.value)}
-              placeholder="ex. 6eB, Groupe 2…"
+              placeholder={T('setup.classPlaceholder')}
               maxLength={40}
               style={{
                 width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 15,
@@ -270,8 +272,8 @@ export default function Setup() {
                 border: `2px solid ${englishMode ? 'var(--gold-700)' : 'var(--ink-400)'}`,
               }}>{englishMode ? '✓' : ''}</span>
               <span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-800)' }}>{'🇬🇧 Questions en anglais'}</span>
-                <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>Énoncés, choix et explications affichés en anglais (repli français si non traduit).</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-800)' }}>{T('setup.englishToggle')}</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>{T('setup.englishToggleDesc')}</span>
               </span>
             </button>
           </div>
@@ -325,7 +327,7 @@ export default function Setup() {
             <BoardParams />
           </div>
           <div className="panel panel--parchment">
-            <div className="field-label" style={{ color: 'var(--ink-700)' }}>Les 6 royaumes</div>
+            <div className="field-label" style={{ color: 'var(--ink-700)' }}>{T('setup.kingdomsTitle')}</div>
             <div className="grid grid-cols-2 gap-2.5">
               {SUBJECT_KEYS.map((key) => {
                 const s = SUBJECTS[key];

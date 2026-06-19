@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { EMOJI_OPTIONS } from '../../data/teamPresets';
+import { useT } from '../../i18n';
 
 export default function TeamCustomization() {
+  const T = useT();
   const setupTeams = useGameStore((s) => s.setupTeams);
   const updateSetupTeam = useGameStore((s) => s.updateSetupTeam);
   const lv2Mode = useGameStore((s) => s.lv2Mode);
@@ -26,7 +28,7 @@ export default function TeamCustomization() {
           >
             <div className="flex items-center gap-3">
               <div
-                aria-label={`Couleur de l'équipe ${team.name}: ${team.color}`}
+                aria-label={T('setup.teamColorAria', { name: team.name, color: team.color })}
                 role="img"
                 style={{
                   width: 18, height: 38, borderRadius: 5,
@@ -37,7 +39,7 @@ export default function TeamCustomization() {
               <button
                 type="button"
                 onClick={() => setPickerOpen(isOpen ? null : i)}
-                aria-label={`Changer l'avatar de l'équipe ${i + 1}`}
+                aria-label={T('setup.teamAvatarAria', { n: i + 1 })}
                 aria-expanded={isOpen}
                 className="text-2xl"
                 style={{
@@ -58,7 +60,7 @@ export default function TeamCustomization() {
                 value={team.name}
                 onChange={(e) => updateSetupTeam(i, { name: e.target.value })}
                 maxLength={20}
-                aria-label={`Nom de l'équipe ${i + 1}`}
+                aria-label={T('setup.teamNameAria', { n: i + 1 })}
                 style={{
                   flex: 1,
                   background: 'transparent',
@@ -74,7 +76,7 @@ export default function TeamCustomization() {
 
             {lv2Mode && (
               <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-600)', flexShrink: 0 }}>🗣️ LV2 :</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-600)', flexShrink: 0 }}>{T('setup.lv2Inline')}</span>
                 {[['allemand', '🦅 Allemand'], ['espagnol', '☀️ Espagnol']].map(([key, label]) => {
                   const cur = (team.lv2 || 'espagnol') === key;
                   return (
@@ -115,7 +117,7 @@ export default function TeamCustomization() {
                       key={`emoji-${ei}`}
                       type="button"
                       onClick={() => { updateSetupTeam(i, { emoji }); setPickerOpen(null); }}
-                      aria-label={`Avatar ${emoji}`}
+                      aria-label={T('setup.avatarAria', { emoji })}
                       className="text-xl"
                       style={{
                         height: 40, borderRadius: 8,

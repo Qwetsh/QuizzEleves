@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import BoardSVG from './BoardSVG';
 import Dice from './Dice';
 import PowerButtons from './Sidebar/PowerButtons';
@@ -59,6 +60,7 @@ export default function GameLayout() {
   const devAddMoney = useGameStore((s) => s.devAddMoney);
   const itemsOn = useGameStore((s) => s.itemsEnabled());
   const [isFs, toggleFs] = useFullscreen();
+  const T = useT();
 
   const team = teams[currentTeam];
 
@@ -86,7 +88,7 @@ export default function GameLayout() {
                 {team.name}
               </div>
               <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: -2 }}>
-                C'est ton tour !
+                {T('game.yourTurn')}
               </div>
             </div>
           </div>
@@ -105,7 +107,7 @@ export default function GameLayout() {
             }}
           >
             {itemsOn && (
-              <button onClick={openShop} aria-label="Ouvrir la boutique" className="hud-imgbtn">
+              <button onClick={openShop} aria-label={T('game.openShop')} className="hud-imgbtn">
                 <img src={btnBoutique} alt="Boutique" draggable={false} />
                 <span className="hud-imgbtn-badge">
                   {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
@@ -114,7 +116,7 @@ export default function GameLayout() {
             )}
 
             {itemsOn && (
-              <button onClick={openInventory} aria-label="Ouvrir l'inventaire" className="hud-imgbtn">
+              <button onClick={openInventory} aria-label={T('game.openInventory')} className="hud-imgbtn">
                 <img src={btnInventaire} alt="Inventaire" draggable={false} />
                 {bagUnitCount(team.bag) > 0 && (
                   <span className="hud-imgbtn-badge">{bagUnitCount(team.bag)}</span>
@@ -184,10 +186,10 @@ export default function GameLayout() {
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-900)', lineHeight: 1.05 }}>
-              {"Qu\u00eate des Mati\u00e8res"}
+              {T('game.title')}
             </div>
             <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>
-              Jeu de plateau
+              {T('game.boardGame')}
             </div>
           </div>
         </div>
@@ -210,7 +212,7 @@ export default function GameLayout() {
             letterSpacing: '0.08em', textTransform: 'uppercase',
             color: 'var(--ink-500)', marginBottom: 8,
           }}>
-            Journal
+            {T('game.journal')}
           </h4>
           <GameLog />
         </div>
@@ -222,10 +224,10 @@ export default function GameLayout() {
           display: 'flex', gap: 8,
         }}>
           {!OFFLINE && <MobileSessionPanel />}
-          <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label="Plein ecran" style={{ flex: 1 }}>
-            {isFs ? "\u2716 Quitter le plein \u00E9cran" : "\u26F6 Plein \u00E9cran"}
+          <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label={T('game.fullscreen')} style={{ flex: 1 }}>
+            {isFs ? `\u2716 ${T('game.exitFullscreen')}` : `\u26F6 ${T('game.fullscreen')}`}
           </button>
-          <button className="btn btn--ghost btn--sm" onClick={reset} aria-label="Quitter">
+          <button className="btn btn--ghost btn--sm" onClick={reset} aria-label={T('game.quit')}>
             {"\u2715"}
           </button>
         </div>

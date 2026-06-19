@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FRENCH_WORDS } from '../../../data/frenchWords';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import { useT } from '../../../i18n';
 
 const ROUND_SECONDS = 45;
 const RACK_SIZE = 9;
@@ -100,6 +101,7 @@ function TileFace({ letter, size = TILE }) {
  * score Scrabble. Le plus haut score gagne la manche. Égalité = nouveau tirage.
  */
 export default function MotLePlusLong({ attacker, defender, subject, round, onRoundWin }) {
+  const T = useT();
   const [letters, setLetters] = useState(null);                 // tirage commun (9 lettres)
   // boards[side][slotIdx] = index de tuile du chevalet (0-8) ou null
   const [boards, setBoards] = useState({ attacker: [], defender: [] });
@@ -289,10 +291,10 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
           >
             <div style={{ fontSize: 40 }}>🔒</div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--ink-900)' }}>
-              Mot validé — {placedCount} lettres ✔
+              {T('fight.mot.wordValidated', { n: placedCount })}
             </div>
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-500)' }}>
-              Révélation à la fin du temps…
+              {T('fight.mot.revealAtEnd')}
             </div>
           </div>
         ) : (
@@ -318,7 +320,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
             </div>
 
             <div style={{ textAlign: 'center', fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-500)' }}>
-              ⬆ ton mot — ⬇ ton chevalet
+              {T('fight.mot.yourWordYourRack')}
             </div>
 
             {/* Chevalet : tuiles glissables ou touchables */}
@@ -379,7 +381,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
                 touchAction: 'manipulation',
               }}
             >
-              VALIDER
+              {T('fight.mot.validate')}
             </button>
           </>
         )}
@@ -414,7 +416,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
           </div>
         ) : (
           <div style={{ fontFamily: 'var(--font-ui)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-500)' }}>
-            Aucun mot…
+            {T('fight.mot.noWord')}
           </div>
         )}
 
@@ -426,7 +428,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
               fontFamily: 'var(--font-display)', fontSize: 18, color: '#33591e',
             }}
           >
-            ✔ {res.score} points
+            {T('fight.mot.points', { n: res.score })}
           </div>
         ) : (
           <div
@@ -436,7 +438,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
               fontFamily: 'var(--font-display)', fontSize: 15, color: '#7c2417',
             }}
           >
-            ✘ {res.word.length < 2 ? 'pas de mot valide' : 'pas dans le dictionnaire'} — 0 point
+            {T('fight.mot.zeroPoint', { reason: res.word.length < 2 ? T('fight.mot.noValidWord') : T('fight.mot.notInDict') })}
           </div>
         )}
 
@@ -447,7 +449,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
             transition={{ type: 'spring', damping: 10, stiffness: 200, delay: 0.4 }}
             style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: team.color }}
           >
-            🏆 Manche gagnée !
+            {T('fight.mot.roundWon')}
           </motion.div>
         )}
       </div>
@@ -459,15 +461,15 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
 
   let bannerText;
   if (phase === 'reveal') {
-    if (winner === 'tie') bannerText = '⚖️ Égalité ! Nouveau tirage…';
+    if (winner === 'tie') bannerText = T('fight.mot.tie');
     else {
       const team = winner === 'attacker' ? attacker : defender;
       bannerText = tieBreak
-        ? `⚡ Égalité — ${team.emoji} ${team.name} a validé en premier !`
-        : `${team.emoji} ${team.name} gagne la manche !`;
+        ? T('fight.mot.tieBreak', { emoji: team.emoji, name: team.name })
+        : T('fight.mot.winsRound', { emoji: team.emoji, name: team.name });
     }
   } else {
-    bannerText = 'Compose le mot le plus long avec ces lettres !';
+    bannerText = T('fight.mot.goal');
   }
 
   return (
@@ -497,7 +499,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
               />
             </div>
             <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2 }}>
-              {bothLocked ? 'Les deux mots sont validés !' : `${Math.max(0, timeLeft)}s`}
+              {bothLocked ? T('fight.mot.bothValidated') : `${Math.max(0, timeLeft)}s`}
             </div>
           </>
         )}
@@ -520,7 +522,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
 
       {phase === 'play' && (
         <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-ui)' }}>
-          Glisse ou touche tes lettres pour composer un mot, puis VALIDE avant la fin du temps !
+          {T('fight.mot.hint')}
         </div>
       )}
     </div>

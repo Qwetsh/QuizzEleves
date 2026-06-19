@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { ITEMS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
@@ -64,6 +65,7 @@ function ChoiceCard({ itemKey, index, onPick, selected }) {
 }
 
 function ChestInner({ team }) {
+  const T = useT();
   const reward = useGameStore((s) => s.lastStarterReward);
   const close = useGameStore((s) => s.closeStarterChest);
   const [opened, setOpened] = useState(false);
@@ -102,7 +104,7 @@ function ChestInner({ team }) {
         transition={{ type: 'spring', damping: 18, stiffness: 240 }}
       >
         <div className="loot-modal" style={{ width: modalWidth, maxWidth: '92vw' }}>
-          <div className="loot-banner">{opened ? `${team?.emoji || ''} Trésor de départ !` : '🧰 Un coffre de départ !'}</div>
+          <div className="loot-banner">{opened ? T('modal.chest.treasure', { emoji: team?.emoji || '' }) : T('modal.chest.aChest')}</div>
 
           {/* Scène du coffre */}
           <div style={{ position: 'relative', width: 300, height: 240, display: 'grid', placeItems: 'center', margin: '0 auto' }}>
@@ -113,7 +115,7 @@ function ChestInner({ team }) {
               transition={{ rotate: { repeat: Infinity, ease: 'linear', duration: 14 }, opacity: { duration: 0.4 } }}
             />
             <motion.img
-              src={EVENT_IMG.coffre} alt="Coffre de départ"
+              src={EVENT_IMG.coffre} alt={T('modal.chest.aChest')}
               style={{ width: opened ? 224 : 190, height: 'auto', position: 'relative', filter: 'drop-shadow(0 0 26px #f5d36aaa) drop-shadow(0 8px 10px rgba(0,0,0,.5))' }}
               animate={opened ? { scale: [1, 1.18, 1], rotate: [0, -3, 3, 0] } : { y: [0, -8, 0] }}
               transition={opened ? { duration: 0.6 } : { y: { repeat: Infinity, duration: 2.4, ease: 'easeInOut' } }}
@@ -122,8 +124,8 @@ function ChestInner({ team }) {
 
           {!opened ? (
             <>
-              <p className="loot-desc" style={{ textAlign: 'center' }}>Ouvre-le pour bien démarrer l'aventure !</p>
-              <button className="loot-btn" onClick={open}>{'\u{1F5DD}️'} Ouvrir le coffre</button>
+              <p className="loot-desc" style={{ textAlign: 'center' }}>{T('modal.chest.openPrompt')}</p>
+              <button className="loot-btn" onClick={open}>{T('modal.chest.openBtn')}</button>
             </>
           ) : (
             <motion.div
@@ -141,8 +143,8 @@ function ChestInner({ team }) {
                 <>
                   <p className="loot-desc" style={{ textAlign: 'center', margin: 0 }}>
                     {single
-                      ? 'Choisis UN objet pour démarrer :'
-                      : `Choisis ${target} objets (${picked.length}/${target}) :`}
+                      ? T('modal.chest.chooseOne')
+                      : T('modal.chest.chooseN', { n: target, picked: picked.length })}
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10, width: '100%', padding: '0 16px', alignItems: 'stretch' }}>
                     {choices.map((key, i) => (
@@ -151,13 +153,13 @@ function ChestInner({ team }) {
                   </div>
                   {!single && (
                     <button className="loot-btn" onClick={validate} disabled={picked.length !== target} style={picked.length !== target ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}>
-                      Valider mon choix
+                      {T('modal.chest.validate')}
                     </button>
                   )}
-                  <p style={{ fontSize: 11, color: 'var(--ink-500)' }}>Ton choix est définitif.</p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-500)' }}>{T('modal.chest.final')}</p>
                 </>
               ) : (
-                <button className="loot-btn" onClick={done}>Super&nbsp;!</button>
+                <button className="loot-btn" onClick={done}>{T('modal.nice')}</button>
               )}
             </motion.div>
           )}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { soundVictory } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
 import { OFFLINE } from '../../logic/offline';
@@ -10,6 +11,7 @@ const analyseUrl = () => `${window.location.origin}${import.meta.env.BASE_URL ||
 const CONFETTI_COLORS = ['#f3c969', '#e85d6b', '#2f9d5a', '#2f6fd8', '#8745d4', '#129fb0'];
 
 export default function VictoryModal() {
+  const T = useT();
   const finished = useGameStore((s) => s.finished);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
@@ -82,10 +84,10 @@ export default function VictoryModal() {
                 lineHeight: 1,
               }}
             >
-              VICTOIRE !
+              {T('modal.victory.title')}
             </div>
             <div style={{ fontSize: 22, color: 'var(--ink-700)', marginBottom: 32 }}>
-              <strong style={{ color: winner.color }}>{winner.name}</strong> remportent la qu\u00eate
+              <strong style={{ color: winner.color }}>{winner.name}</strong> {T('modal.victory.wins')}
             </div>
 
             {/* Rankings */}
@@ -101,7 +103,7 @@ export default function VictoryModal() {
                 fontFamily: 'var(--font-display)', letterSpacing: 1, color: 'var(--ink-500)',
                 fontSize: 12, marginBottom: 10, textTransform: 'uppercase', textAlign: 'center',
               }}>
-                Classement final
+                {T('modal.victory.ranking')}
               </div>
               {sorted.map((t, i) => {
                 const total = t.correct + t.wrong;
@@ -139,21 +141,21 @@ export default function VictoryModal() {
                 onClick={() => setDismissed(true)}
                 className="btn btn--ghost"
               >
-                Revoir le plateau
+                {T('modal.victory.reviewBoard')}
               </button>
               {!OFFLINE && (
                 <button
                   onClick={() => window.open(analyseUrl(), '_blank', 'noopener')}
                   className="btn btn--ghost"
                 >
-                  {"\u{1F4CA} Voir l'analyse"}
+                  {T('modal.victory.analysis')}
                 </button>
               )}
               <button
                 onClick={reset}
                 className="btn btn--lg"
               >
-                {"\u{1F501} Nouvelle partie"}
+                {T('modal.victory.newGame')}
               </button>
             </div>
           </div>

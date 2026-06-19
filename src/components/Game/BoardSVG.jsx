@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { NODE_RADIUS, TILE_SCALE, islandCircles as buildIslandCircles, bezierPoint } from '../../logic/boardGeometry';
 import { getPendingMalus } from '../../logic/teamStatus';
+import { useT } from '../../i18n';
 
 // Assets du plateau (refonte pierre & jungle) — voir scripts/name-assets.mjs
 const BOARD_ASSET_URLS = import.meta.glob('../../assets/board/*.{png,jpg}', { eager: true, query: '?url', import: 'default' });
@@ -270,7 +271,7 @@ const DecorImage = ({ d, i }) => {
   );
 };
 
-const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon, inspectTrapAt }) {
+const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon, inspectTrapAt, trapTitle }) {
   return [
     ...(boardDecor || []).flatMap((d, i) => {
       if (!bimg(d.img)) return [];
@@ -356,7 +357,7 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
 
           {node.trap && (
             <g style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); inspectTrapAt?.(id); }}>
-              <title>Voir l'effet du piège</title>
+              <title>{trapTitle}</title>
               <circle cx={node.x} cy={node.y - r * 0.9} r={r * 0.42} fill="#2b1c10" stroke="#c9472f" strokeWidth={2} opacity={0.92} />
               <text x={node.x} y={node.y - r * 0.9 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.5} style={{ pointerEvents: 'none' }}>
                 {node.trap.icon || '\u{1FAA4}'}
@@ -373,6 +374,7 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
 const CAMERA_SPRING = { damping: 25, stiffness: 80, mass: 1 };
 
 export default function BoardSVG() {
+  const T = useT();
   const board = useGameStore((s) => s.board);
   const boardDecor = useGameStore((s) => s.boardDecor);
   const viewBox = useGameStore((s) => s.viewBox);
@@ -477,10 +479,12 @@ export default function BoardSVG() {
           fontFamily: 'var(--font-display)', fontSize: 16,
           boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
         }}>
-          {'\u{1FAA4}'} Choisis une case pour poser ton piège{showTilePicker.label ? ` « ${showTilePicker.label} »` : ''}
+          {'\u{1FAA4}'} {showTilePicker.label
+            ? T('game.placeTrapPromptNamed', { label: showTilePicker.label })
+            : T('game.placeTrapPrompt')}
           <button onClick={() => useGameStore.getState().cancelTilePicker()}
             style={{ marginLeft: 14, background: 'none', border: 'none', color: '#7a2218', cursor: 'pointer', fontWeight: 700 }}>
-            Annuler
+            {T('common.cancel')}
           </button>
         </div>
       )}
@@ -492,7 +496,7 @@ export default function BoardSVG() {
       >
         <Terrain board={board} islandCircles={islandCircles} viewBox={viewBox} />
 
-        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} inspectTrapAt={inspectTrapAt} />
+        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} inspectTrapAt={inspectTrapAt} trapTitle={T('game.seeTrapEffect')} />
 
         {/* Animated Pawns */}
         {teams.map((team, idx) => {

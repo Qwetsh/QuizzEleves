@@ -10,8 +10,10 @@ import {
   createSession, buildSessionPayload, joinUrl,
   fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
 } from '../../logic/sessionConfig';
+import { useT } from '../../i18n';
 
 export default function LobbyPanel() {
+  const T = useT();
   const sessionCode = useGameStore((s) => s.sessionCode);
   const setSessionCode = useGameStore((s) => s.setSessionCode);
   const lobbyTeams = useGameStore((s) => s.lobbyTeams);
@@ -38,7 +40,7 @@ export default function LobbyPanel() {
     try {
       const payload = buildSessionPayload({ teams: [], currentTeam: 0, status: 'lobby', shopStock: [], log: [], extensions, lv2Mode });
       setSessionCode(await createSession(payload));
-    } catch (e) { setErr(e.message || 'Connexion impossible'); }
+    } catch (e) { setErr(e.message || T('setup.lobbyConnFailed')); }
     setBusy(false);
   };
 
@@ -57,11 +59,11 @@ export default function LobbyPanel() {
   if (!sessionCode) {
     return (
       <div>
-        <div className="field-label" style={{ marginBottom: 8 }}>📱 Lobby téléphone</div>
+        <div className="field-label" style={{ marginBottom: 8 }}>{T('setup.lobbyTitle')}</div>
         <p style={{ fontSize: 12, color: 'var(--ink-500)', margin: '0 0 10px', lineHeight: 1.4 }}>
-          Ouvre un lobby : les élèves scannent le QR et créent leur équipe (nom + logo + pouvoir).
+          {T('setup.lobbyIntro')}
         </p>
-        <button className="btn btn--green" onClick={openLobby} disabled={busy}>{busy ? '…' : 'Ouvrir le lobby'}</button>
+        <button className="btn btn--green" onClick={openLobby} disabled={busy}>{busy ? '…' : T('setup.lobbyOpen')}</button>
         {err && <div style={{ fontSize: 11, color: '#b5341f', marginTop: 6 }}>{err}</div>}
       </div>
     );
@@ -71,7 +73,7 @@ export default function LobbyPanel() {
   return (
     <div>
       <div className="field-label" style={{ marginBottom: 8 }}>
-        📱 Lobby téléphone — {teamsLive.length} équipe{teamsLive.length > 1 ? 's' : ''}
+        {T('setup.lobbyTitleCount', { n: teamsLive.length, teams: T.plural('setup.teamCount', teamsLive.length) })}
       </div>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ textAlign: 'center' }}>
@@ -83,7 +85,7 @@ export default function LobbyPanel() {
         </div>
         <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 6 }}>
           {teamsLive.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--ink-500)', fontStyle: 'italic' }}>En attente des équipes…</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-500)', fontStyle: 'italic' }}>{T('setup.lobbyWaiting')}</div>
           ) : teamsLive.map((r) => {
             const dup = nameCounts[(r.name || '').trim().toLowerCase()] > 1;
             return (
@@ -91,28 +93,28 @@ export default function LobbyPanel() {
                 <span style={{ fontSize: 20 }}>{r.emoji || '🦁'}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 14, color: r.color || 'var(--ink-800)' }}>
-                    {r.name || '(sans nom)'} {dup && <span title="Nom en double (sera suffixé au départ)" style={{ color: '#c9472f' }}>⚠</span>}
+                    {r.name || T('setup.lobbyNoName')} {dup && <span title={T('setup.lobbyDupName')} style={{ color: '#c9472f' }}>⚠</span>}
                   </span>
                   <span style={{ display: 'block', fontSize: 10, color: 'var(--ink-500)' }}>
-                    {r.ready ? '✅ prêt' : '… en cours'}
+                    {r.ready ? T('setup.lobbyReady') : T('setup.lobbyInProgress')}
                     {r.power_def ? ` · 🛡️ ${POWERS[r.power_def]?.name || r.power_def}` : ''}
                     {r.power_off ? ` · ⚔️ ${POWERS[r.power_off]?.name || r.power_off}` : ''}
                   </span>
                 </span>
-                <button className="btn btn--ghost btn--sm" onClick={() => removeLobbyTeam(r.id)} title="Retirer cette équipe">✕</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => removeLobbyTeam(r.id)} title={T('setup.lobbyRemoveTeam')}>✕</button>
               </div>
             );
           })}
         </div>
       </div>
       <button className="btn btn--green btn--lg" style={{ width: '100%', marginTop: 12 }} onClick={start} disabled={!teamsLive.length}>
-        🚀 Démarrer la partie ({teamsLive.length})
+        {T('setup.lobbyStart', { n: teamsLive.length })}
       </button>
 
       {devOn() && (
         <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 10, border: '1px dashed rgba(122,94,58,0.5)', background: 'rgba(255,254,251,0.92)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 6 }}>
-            🧪 Simuler des téléphones (test)
+            {T('setup.lobbySimTitle')}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -121,12 +123,12 @@ export default function LobbyPanel() {
                 className="btn btn--ghost btn--sm"
                 onClick={() => window.open(`${joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
               >
-                📱 Élève {n}
+                {T('setup.lobbySimStudent', { n })}
               </button>
             ))}
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--ink-500)', marginTop: 5, lineHeight: 1.3 }}>
-            Chaque fenêtre = un élève distinct qui crée son équipe (nom, pouvoirs, LV2). Autoriser les pop-ups si bloqué.
+            {T('setup.lobbySimDesc')}
           </div>
         </div>
       )}

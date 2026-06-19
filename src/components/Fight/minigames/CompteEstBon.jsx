@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import { useT } from '../../../i18n';
 
 const ROUND_SECONDS = 60;
 const BIG_PLATES = [25, 50, 75, 100];
@@ -81,6 +82,7 @@ function makeSideState(draw) {
  * petit écart gagne. Égalité parfaite = nouveau tirage.
  */
 export default function CompteEstBon({ attacker, defender, round, onRoundWin }) {
+  const T = useT();
   const [draw, setDraw] = useState(null);
   const [sides, setSides] = useState(null);   // { attacker, defender }
   const [invalid, setInvalid] = useState({ attacker: false, defender: false });
@@ -232,7 +234,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
             background: 'rgba(209,240,184,0.85)', borderRadius: 16, zIndex: 2,
             textAlign: 'center',
           }}>
-            🎯 Le compte est bon !
+            {T('fight.compte.bingo')}
           </div>
         )}
 
@@ -248,7 +250,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
               color: s.bestDiff === 0 ? '#5b8c3a' : 'var(--ink-900)',
             }}
           >
-            {s.bestDiff === 0 ? '🎯 0' : `Écart : ${s.bestDiff}`}
+            {s.bestDiff === 0 ? '🎯 0' : T('fight.compte.gap', { n: s.bestDiff })}
           </span>
         </div>
 
@@ -311,7 +313,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
           fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, color: '#c9472f',
           opacity: invalid[side] ? 1 : 0, transition: 'opacity 150ms ease',
         }}>
-          ✋ Opération impossible !
+          {T('fight.compte.impossibleOp')}
         </div>
 
         {/* Annuler / Recommencer */}
@@ -328,7 +330,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
               touchAction: 'manipulation',
             }}
           >
-            ↩️ Annuler
+            {T('fight.compte.undo')}
           </button>
           <button
             onPointerDown={() => handleRestart(side)}
@@ -342,7 +344,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
               touchAction: 'manipulation',
             }}
           >
-            🔄 Recommencer
+            {T('fight.compte.restart')}
           </button>
         </div>
 
@@ -360,12 +362,12 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
 
   const timerRatio = timeLeft / ROUND_SECONDS;
   const statusText = tie
-    ? '⚖️ Égalité ! Nouveau tirage…'
+    ? T('fight.compte.tie')
     : winner
-      ? '🎯 Le compte est bon !'
+      ? T('fight.compte.bingo')
       : finished
-        ? `Temps écoulé ! Écarts : ${sides.attacker.bestDiff} contre ${sides.defender.bestDiff}`
-        : 'Atteins la CIBLE en combinant tes plaques !';
+        ? T('fight.compte.timeUp', { a: sides.attacker.bestDiff, b: sides.defender.bestDiff })
+        : T('fight.compte.goal');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
@@ -380,7 +382,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, color: 'var(--ink-500)' }}>
-              CIBLE
+              {T('fight.compte.target')}
             </span>
             <span style={{
               fontFamily: 'var(--font-display)', fontSize: 44, lineHeight: 1,
@@ -426,7 +428,7 @@ export default function CompteEstBon({ attacker, defender, round, onRoundWin }) 
       </div>
 
       <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-ui)' }}>
-        Touche une plaque, un opérateur, puis une autre plaque. Cible exacte = victoire immédiate !
+        {T('fight.compte.hint')}
       </div>
     </div>
   );

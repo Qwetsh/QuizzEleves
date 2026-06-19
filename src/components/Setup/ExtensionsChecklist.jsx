@@ -1,15 +1,17 @@
 import { useGameStore } from '../../store/gameStore';
 import { EXTENSIONS, extOn } from '../../extensions/registry';
+import { useT } from '../../i18n';
 
 // Sélecteur des EXTENSIONS de la partie (modules activables). Choisi au Setup,
 // puis verrouillé en cours de jeu (toggleExtension ignore hors phase 'setup').
 export default function ExtensionsChecklist() {
+  const T = useT();
   const extensions = useGameStore((s) => s.extensions);
   const toggleExtension = useGameStore((s) => s.toggleExtension);
 
   return (
     <div>
-      <div className="field-label" style={{ marginBottom: 8 }}>🧩 Extensions de jeu</div>
+      <div className="field-label" style={{ marginBottom: 8 }}>{T('setup.extensionsTitle')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {EXTENSIONS.map((ext) => {
           const on = extOn(extensions, ext.id);

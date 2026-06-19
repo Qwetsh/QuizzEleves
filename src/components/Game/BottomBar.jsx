@@ -6,13 +6,15 @@ import { cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { itemImg } from '../../logic/itemAssets';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import '../../styles/team-strip-hud.css';
 
+// Type → icône + clé i18n du libellé de case (résolu via T au rendu).
 const TILE_TYPES = {
-  depart:   { icon: '\u{1F3F0}', label: 'Départ' },
-  arrivee:  { icon: '\u{1F3C6}', label: 'Arrivée' },
-  jonction: { icon: '\u{1F3B2}', label: 'Carrefour' },
-  event:    { icon: '✨',    label: 'Événement' },
+  depart:   { icon: '\u{1F3F0}', labelKey: 'game.tile.depart' },
+  arrivee:  { icon: '\u{1F3C6}', labelKey: 'game.tile.arrivee' },
+  jonction: { icon: '\u{1F3B2}', labelKey: 'game.tile.jonction' },
+  event:    { icon: '✨',    labelKey: 'game.tile.event' },
 };
 
 function biomeKey(subjectId) {
@@ -32,13 +34,15 @@ function powerKeysOf(team) {
 
 // Badge détaillé (carte active + popover)
 function PowerBadge({ powerKey, charges, level, kindLabel }) {
+  const T = useT();
   const info = POWERS[powerKey];
   if (!info) return null;
+  const chargesLabel = `${charges} ${T.plural('game.charge', charges)}`;
   return (
     <div
       className={'power-badge ' + (charges <= 0 ? 'is-empty' : '')}
       style={{ '--power-color': info.color }}
-      title={`${info.name} — Niv.${level} — ${charges} charge${charges > 1 ? 's' : ''}\n${info.desc}`}
+      title={T('game.powerTitleDesc', { name: info.name, level, charges: chargesLabel, desc: info.desc })}
     >
       <div className="power-badge-disc">
         <span className="power-badge-icon">{info.icon}</span>
@@ -55,13 +59,15 @@ function PowerBadge({ powerKey, charges, level, kindLabel }) {
 
 // Disque seul (cartes inactives compactes)
 function PowerDisc({ powerKey, charges, level }) {
+  const T = useT();
   const info = POWERS[powerKey];
   if (!info) return null;
+  const chargesLabel = `${charges} ${T.plural('game.charge', charges)}`;
   return (
     <div
       className={'power-disc ' + (charges <= 0 ? 'is-empty' : '')}
       style={{ '--power-color': info.color }}
-      title={`${info.name} — Niv.${level} — ${charges} charge${charges > 1 ? 's' : ''}`}
+      title={T('game.powerTitleLong', { name: info.name, level, charges: chargesLabel })}
     >
       <span className="power-disc-icon">{info.icon}</span>
       <span className="power-disc-count">{charges}</span>
@@ -71,6 +77,7 @@ function PowerDisc({ powerKey, charges, level }) {
 
 // Mini-icônes d'équipement (3 slots) + compteur de sac
 function EquipmentStrip({ team, className }) {
+  const T = useT();
   const equipment = team.equipment || {};
   const bag = (team.bag || []).filter(Boolean);
   if (!Object.values(equipment).some(Boolean) && bag.length === 0) return null;
@@ -85,7 +92,9 @@ function EquipmentStrip({ team, className }) {
           <span
             key={slot}
             className="ts-eq-slot"
-            title={item ? `${SLOTS[slot].name} : ${item.name}${ench ? ` (✦ enchanté ×${ench})` : ''}\n${item.desc}` : `${SLOTS[slot].name} : vide`}
+            title={item
+              ? `${T('game.slotItem', { slot: SLOTS[slot].name, item: item.name })}${ench ? ` ${T('game.enchanted', { n: ench })}` : ''}\n${item.desc}`
+              : T('game.slotEmpty', { slot: SLOTS[slot].name })}
             style={{
               position: 'relative',
               background: item ? `linear-gradient(180deg, ${color}cc, ${color})` : 'rgba(122,94,58,0.1)',
@@ -103,7 +112,7 @@ function EquipmentStrip({ team, className }) {
         );
       })}
       {bag.length > 0 && (
-        <span className="ts-eq-bag" title={`Sac : ${bag.map((c) => { const it = ITEMS[cellKey(c)]; return it ? it.name + (cellN(c) > 1 ? ` ×${cellN(c)}` : '') : null; }).filter(Boolean).join(', ')}`}>
+        <span className="ts-eq-bag" title={`${T('game.bagLabel')} : ${bag.map((c) => { const it = ITEMS[cellKey(c)]; return it ? it.name + (cellN(c) > 1 ? ` ×${cellN(c)}` : '') : null; }).filter(Boolean).join(', ')}`}>
           {'\u{1F9F3}'} {bag.reduce((s, c) => s + cellN(c), 0)}
         </span>
       )}
@@ -113,21 +122,22 @@ function EquipmentStrip({ team, className }) {
 
 // Pastilles de stats (or, bonnes/mauvaises réponses, taux)
 function StatChips({ team, withRate = true }) {
+  const T = useT();
   const totalQ = (team.correct ?? 0) + (team.wrong ?? 0);
   const winRate = totalQ > 0 ? Math.round((team.correct / totalQ) * 100) : null;
   return (
     <div className="ts-card-stats">
-      <div className="ts-stat ts-stat--coin" title="Pièces d'or">
+      <div className="ts-stat ts-stat--coin" title={T('game.stat.coins')}>
         <span className="coin ts-stat-coin" /><span className="ts-stat-num">{team.money ?? 0}</span>
       </div>
-      <div className="ts-stat ts-stat--good" title="Bonnes réponses">
+      <div className="ts-stat ts-stat--good" title={T('game.stat.correct')}>
         <span className="ts-stat-ico">{'✓'}</span><span className="ts-stat-num">{team.correct ?? 0}</span>
       </div>
-      <div className="ts-stat ts-stat--bad" title="Erreurs">
+      <div className="ts-stat ts-stat--bad" title={T('game.stat.wrong')}>
         <span className="ts-stat-ico">{'✗'}</span><span className="ts-stat-num">{team.wrong ?? 0}</span>
       </div>
       {withRate && winRate !== null && (
-        <div className="ts-stat ts-stat--rate" title="Taux de réussite">
+        <div className="ts-stat ts-stat--rate" title={T('game.stat.winRate')}>
           <span className="ts-stat-ico">{'◎'}</span><span className="ts-stat-num">{winRate}<small>%</small></span>
         </div>
       )}
@@ -160,6 +170,7 @@ function TeamBuffs({ team }) {
 // en a beaucoup. Le détail (libellés) s'affiche dans un popover AU CLIC.
 // Source : getTeamEffects (tone 'malus').
 function TeamMalus({ team }) {
+  const T = useT();
   const malus = getTeamEffects(team).filter((e) => e.tone === 'malus');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -201,7 +212,7 @@ function TeamMalus({ team }) {
           }}
         >
           <div style={{ fontSize: 10.5, fontWeight: 800, color: '#7a1320', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Malus actifs ({malus.length})
+            {T('game.activeMalus', { n: malus.length })}
           </div>
           {malus.map((m) => (
             <div key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.3 }}>
@@ -216,6 +227,7 @@ function TeamMalus({ team }) {
 }
 
 function TeamLocation({ team }) {
+  const T = useT();
   const board = useGameStore((s) => s.board);
   const node = board?.[team.pos];
   const subject = node?.subject && node.subject !== 'multi' ? SUBJECTS[node.subject] : null;
@@ -233,10 +245,10 @@ function TeamLocation({ team }) {
       ) : tileType ? (
         <>
           <span className="ts-card-location-ico ts-card-location-ico--neutral">{tileType.icon}</span>
-          <span className="ts-card-location-text">{tileType.label}</span>
+          <span className="ts-card-location-text">{T(tileType.labelKey)}</span>
         </>
       ) : (
-        <span className="ts-card-location-text" style={{ opacity: 0.5 }}>En attente…</span>
+        <span className="ts-card-location-text" style={{ opacity: 0.5 }}>{T('game.location.waiting')}</span>
       )}
     </div>
   );
@@ -255,12 +267,13 @@ function Blazon({ team, size }) {
 
 // Détail complet (popover au tap d'une équipe inactive) — réutilisé en Phase 2 (mobile)
 function TeamDetailPopover({ team, rank, total, onClose }) {
+  const T = useT();
   const equipment = team.equipment || {};
   const bag = (team.bag || []).filter(Boolean);
   const pKeys = powerKeysOf(team);
   return (
     <div className="ts-pop" onClick={(e) => e.stopPropagation()}>
-      <button className="ts-pop-close" onClick={onClose} aria-label="Fermer">{'✕'}</button>
+      <button className="ts-pop-close" onClick={onClose} aria-label={T('common.close')}>{'✕'}</button>
       <div className="ts-pop-head">
         <span className="ts-pop-emoji" style={{ background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)` }}>{team.emoji}</span>
         <div className="ts-pop-name" style={{ color: team.color }}>{team.name}</div>
@@ -270,7 +283,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
       <TeamBuffs team={team} />
       <TeamMalus team={team} />
       <div className="ts-pop-section">
-        <div className="ts-pop-label">Équipement</div>
+        <div className="ts-pop-label">{T('game.section.equipment')}</div>
         {Object.keys(SLOTS).map((slot) => {
           const item = ITEMS[cellKey(equipment[slot])];
           const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
@@ -283,22 +296,22 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
               }}>
                 {item ? (itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} /> : item.icon) : SLOTS[slot].icon}
               </span>
-              <span className="ts-pop-eq-name">{item ? item.name : <em style={{ opacity: 0.5 }}>{SLOTS[slot].name} : vide</em>}</span>
+              <span className="ts-pop-eq-name">{item ? item.name : <em style={{ opacity: 0.5 }}>{T('game.slotEmpty', { slot: SLOTS[slot].name })}</em>}</span>
             </div>
           );
         })}
         {bag.length > 0 && (
-          <div className="ts-pop-bag">{'\u{1F9F3}'} Sac : {bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}</div>
+          <div className="ts-pop-bag">{'\u{1F9F3}'} {T('game.bagLabel')} : {bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}</div>
         )}
       </div>
       <div className="ts-pop-section">
-        <div className="ts-pop-label">Pouvoirs</div>
+        <div className="ts-pop-label">{T('game.section.powers')}</div>
         <div className="ts-pop-powers">
           {pKeys.length ? pKeys.map((key) => (
             <PowerBadge key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0}
               level={team.powers[key]?.level ?? 1}
-              kindLabel={POWERS[key]?.category === 'off' ? 'Attaque' : 'Défense'} />
-          )) : <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Aucun pouvoir.</span>}
+              kindLabel={POWERS[key]?.category === 'off' ? T('game.kind.attack') : T('game.kind.defense')} />
+          )) : <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{T('game.noPower')}</span>}
         </div>
       </div>
     </div>
@@ -307,10 +320,11 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
 
 // Carte de l'équipe ACTIVE — détaillée
 function ActiveCard({ team, rank, total }) {
+  const T = useT();
   const pKeys = powerKeysOf(team);
   return (
     <div className="ts-card ts-card--active is-active" style={{ '--team-accent': team.color }}>
-      <div className="ts-card-tab"><span className="ts-card-tab-arrow">{'▶'}</span> {'À'} TOI DE JOUER</div>
+      <div className="ts-card-tab"><span className="ts-card-tab-arrow">{'▶'}</span> {T('game.yourMove')}</div>
       <div className="ts-card-stripe" aria-hidden="true" />
       <Blazon team={team} size={52} />
       <div className="ts-card-rank ts-card-rank--active">{rank}<span>/{total}</span></div>
@@ -328,7 +342,7 @@ function ActiveCard({ team, rank, total }) {
         {pKeys.map((key) => (
           <PowerBadge key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0}
             level={team.powers[key]?.level ?? 1}
-            kindLabel={POWERS[key]?.category === 'off' ? 'Attaque' : 'Défense'} />
+            kindLabel={POWERS[key]?.category === 'off' ? T('game.kind.attack') : T('game.kind.defense')} />
         ))}
       </div>
     </div>
@@ -338,6 +352,7 @@ function ActiveCard({ team, rank, total }) {
 // Carte d'une équipe INACTIVE — compacte, densité adaptative (container queries),
 // détail complet au tap (popover).
 function CompactCard({ team, rank, total, open, onToggle }) {
+  const T = useT();
   const pKeys = powerKeysOf(team);
   return (
     <div
@@ -350,7 +365,7 @@ function CompactCard({ team, rank, total, open, onToggle }) {
       <div className="ts-card-rank">{rank}<span>/{total}</span></div>
       <div className="ts-mini-main">
         <div className="ts-card-name" style={{ color: team.color }}>{team.name}</div>
-        <div className="ts-stat ts-stat--coin ts-mini-coin" title="Pièces d'or">
+        <div className="ts-stat ts-stat--coin ts-mini-coin" title={T('game.stat.coins')}>
           <span className="coin ts-stat-coin" /><span className="ts-stat-num">{team.money ?? 0}</span>
         </div>
         <EquipmentStrip team={team} className="ts-mini-eq" />

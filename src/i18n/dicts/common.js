@@ -1,0 +1,20 @@
+// Clés communes (boutons/labels réutilisés partout). { fr, en }.
+export default {
+  'common.close': { fr: 'Fermer', en: 'Close' },
+  'common.cancel': { fr: 'Annuler', en: 'Cancel' },
+  'common.confirm': { fr: 'Valider', en: 'Confirm' },
+  'common.continue': { fr: 'Continuer', en: 'Continue' },
+  'common.yes': { fr: 'Oui', en: 'Yes' },
+  'common.no': { fr: 'Non', en: 'No' },
+  'common.back': { fr: 'Retour', en: 'Back' },
+  'common.later': { fr: 'Plus tard', en: 'Later' },
+  'common.save': { fr: 'Enregistrer', en: 'Save' },
+  'common.delete': { fr: 'Supprimer', en: 'Delete' },
+  'common.remove': { fr: 'Retirer', en: 'Remove' },
+  'common.buy': { fr: 'Acheter', en: 'Buy' },
+  'common.sell': { fr: 'Vendre', en: 'Sell' },
+  'common.equip': { fr: 'Équiper', en: 'Equip' },
+  'common.start': { fr: 'Commencer', en: 'Start' },
+  'common.gold': { fr: 'or', en: 'gold' },
+  'common.coins': { fr: ['pièce', 'pièces'], en: ['coin', 'coins'] },
+};

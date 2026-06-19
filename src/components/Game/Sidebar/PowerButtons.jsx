@@ -1,8 +1,10 @@
 import { useGameStore } from '../../../store/gameStore';
 import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
+import { useT } from '../../../i18n';
 import '../../../styles/power-cast.css';
 
 export default function PowerButtons() {
+  const T = useT();
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const usePower = useGameStore((s) => s.usePower);
@@ -42,7 +44,7 @@ export default function PowerButtons() {
               onClick={() => usePower(key)}
               className="power-cast-btn"
               style={{ '--cast-color': color }}
-              title={`${name} (${charges} charge${charges > 1 ? 's' : ''})`}
+              title={T('game.powerCharges', { name, charges: `${charges} ${T.plural('game.charge', charges)}` })}
             >
               <span className="power-cast-disc">
                 <span className="power-cast-icon">{icon}</span>
@@ -72,7 +74,7 @@ export default function PowerButtons() {
             transition: 'all 100ms ease',
           }}
         >
-          Continuer
+          {T('common.continue')}
         </button>
       )}
     </div>

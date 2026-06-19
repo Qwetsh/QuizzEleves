@@ -4,6 +4,7 @@ import PlacementDuel from './PlacementDuel.jsx';
 import { GEO_PLACES, GEO_CAPITALS, lonLatToXY, haversineKm } from './placementData.jsx';
 import { shuffle } from '../../../data/fightData';
 import worldMap from '../../../assets/world-equirect.jpg';
+import { useT } from '../../../i18n';
 
 // Photos des lieux (Wikimedia Commons, credits dans src/data/placePhotoCredits.json),
 // chargees a la demande par le navigateur — pas d'impact sur le bundle JS.
@@ -30,16 +31,20 @@ function metric(a, b) {
   return haversineKm(a, b);
 }
 
-function formatDistance(a, b) {
-  const km = haversineKm(a, b);
-  return km < 1 ? 'pile dessus !' : `${km.toLocaleString('fr-FR')} km`;
+// Fabrique un formateur de distance localisé (la locale numérique suit la langue).
+function makeFormatDistance(T) {
+  const numLocale = T.lang === 'en' ? 'en-US' : 'fr-FR';
+  return (a, b) => {
+    const km = haversineKm(a, b);
+    return km < 1 ? T('fight.geo.pileDessus') : T('fight.geo.km', { n: km.toLocaleString(numLocale) });
+  };
 }
 
-function renderScene() {
-  return (
+function makeRenderScene(T) {
+  return () => (
     <img
       src={worldMap}
-      alt="Carte du monde"
+      alt={T('fight.geo.worldMapAlt')}
       draggable={false}
       style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', userSelect: 'none' }}
     />
@@ -47,6 +52,8 @@ function renderScene() {
 }
 
 function ScoreBar({ team, score, align }) {
+  const T = useT();
+  const numLocale = T.lang === 'en' ? 'en-US' : 'fr-FR';
   const ratio = Math.min(1, score / GEO_TARGET_SCORE);
   return (
     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -56,7 +63,7 @@ function ScoreBar({ team, score, align }) {
       }}>
         <span style={{ fontSize: 18 }}>{team.emoji}</span>
         <span style={{ fontSize: 13, color: '#fff' }}>{team.name}</span>
-        <span style={{ fontSize: 16, color: '#f3c969' }}>{score.toLocaleString('fr-FR')} pts</span>
+        <span style={{ fontSize: 16, color: '#f3c969' }}>{T('fight.geo.points', { n: score.toLocaleString(numLocale) })}</span>
       </div>
       <div style={{ height: 7, background: 'rgba(255,255,255,0.15)', borderRadius: 4, overflow: 'hidden', transform: align === 'right' ? 'scaleX(-1)' : 'none' }}>
         <div style={{
@@ -76,9 +83,13 @@ function ScoreBar({ team, score, align }) {
  * PREMIER À 10 000 POINTS = victoire directe du combat.
  */
 export default function GeoDuel({ attacker, defender, onRoundWin }) {
+  const T = useT();
   const fightMatchWin = useGameStore((s) => s.fightMatchWin);
   const [scores, setScores] = useState({ attacker: 0, defender: 0 });
   const [geoRound, setGeoRound] = useState(1);
+  const numLocale = T.lang === 'en' ? 'en-US' : 'fr-FR';
+  const formatDistance = makeFormatDistance(T);
+  const renderScene = makeRenderScene(T);
 
   // Alterne : manche impaire = PHOTO d'un lieu, manche paire = NOM d'une capitale
   // à placer (pas de photo → PlacementDuel affiche « Place : <capitale> »).
@@ -117,7 +128,7 @@ export default function GeoDuel({ attacker, defender, onRoundWin }) {
       }}>
         <ScoreBar team={attacker} score={scores.attacker} align="left" />
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'rgba(255,255,255,0.75)', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          {'\u{1F3C1}'} {GEO_TARGET_SCORE.toLocaleString('fr-FR')} pts
+          {'\u{1F3C1}'} {T('fight.geo.points', { n: GEO_TARGET_SCORE.toLocaleString(numLocale) })}
         </div>
         <ScoreBar team={defender} score={scores.defender} align="right" />
       </div>

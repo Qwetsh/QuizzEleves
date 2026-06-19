@@ -13,6 +13,7 @@ import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { extOn } from '../../extensions/registry';
+import { tFor } from '../../i18n';
 import SetBonusInfo from '../Modals/SetBonusInfo';
 import '../../styles/mobile.css';
 
@@ -47,25 +48,25 @@ function Centered({ children }) {
   return <div className="mob-root mob-center">{children}</div>;
 }
 
-function CodeScreen({ code, setCode, error, connecting }) {
+function CodeScreen({ code, setCode, error, connecting, T = tFor(false) }) {
   const [val, setVal] = useState(code || '');
   return (
     <div className="mob-root mob-center">
       <div className="mob-logo">{'\u{1F3B2}'}</div>
-      <h1 className="mob-title">Quête des Matières</h1>
-      <p className="mob-sub">Entre le code affiché sur le tableau</p>
+      <h1 className="mob-title">{T('mobile.appTitle')}</h1>
+      <p className="mob-sub">{T('mobile.enterCode')}</p>
       <input
         className="mob-code-input"
         value={val}
         onChange={(e) => setVal(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))}
-        placeholder="ABCD"
+        placeholder={T('mobile.codePlaceholder')}
         autoCapitalize="characters"
         inputMode="text"
         maxLength={4}
       />
       <button className="mob-btn mob-btn--gold" disabled={val.length < 4 || connecting}
         onClick={() => setCode(val)}>
-        {connecting ? 'Connexion…' : 'Rejoindre'}
+        {connecting ? T('mobile.connecting') : T('mobile.join')}
       </button>
       {error && <p className="mob-error">{error}</p>}
     </div>
@@ -78,7 +79,8 @@ const EMOJI_CHOICES = ['🦁', '🐯', '🦅', '🐺', '🦊', '🐻', '🐉', '
 // Écran « crée ton équipe » (mode téléphone, statut lobby). L'élève saisit un
 // nom + un logo, et peut choisir ses 2 pouvoirs. À l'envoi, sa fiche est
 // poussée dans le lobby (upsert par token) ; il attend que le prof démarre.
-function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
+function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = false }) {
+  const T = tFor(englishMode);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
   const [powerDef, setPowerDef] = useState(null);
@@ -99,7 +101,7 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
       await upsertLobbyTeam(code, token, { name: name.trim(), emoji, power_def: powerDef, power_off: powerOff, lv2: lv2Mode ? lv2 : null, ready: true });
       setSubmitted(true);
       onSubmitted?.();
-    } catch (e) { setErr(e.message || 'Envoi impossible'); }
+    } catch (e) { setErr(e.message || T('mobile.sendFailed')); }
     setBusy(false);
   };
 
@@ -108,9 +110,9 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
       <div className="mob-root mob-center">
         <div className="mob-pick-emoji" style={{ width: 84, height: 84, fontSize: 44, background: 'linear-gradient(135deg,#e8a958,#b8862c)' }}>{emoji}</div>
         <h1 className="mob-title" style={{ marginTop: 12 }}>{name}</h1>
-        <p className="mob-sub">En attente du prof pour lancer la partie…</p>
+        <p className="mob-sub">{T('mobile.waitingForTeacher')}</p>
         <div className="mob-spinner" style={{ margin: '8px 0 16px' }} />
-        <button className="mob-btn mob-btn--ghost" onClick={() => setSubmitted(false)}>Modifier mon équipe</button>
+        <button className="mob-btn mob-btn--ghost" onClick={() => setSubmitted(false)}>{T('mobile.editMyTeam')}</button>
       </div>
     );
   }
@@ -136,14 +138,14 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
 
   return (
     <div className="mob-root" style={{ padding: '18px 16px 30px' }}>
-      <h1 className="mob-title" style={{ textAlign: 'center' }}>Crée ton équipe</h1>
-      <p className="mob-sub" style={{ textAlign: 'center', marginBottom: 14 }}>Partie {code}</p>
+      <h1 className="mob-title" style={{ textAlign: 'center' }}>{T('mobile.createTeam')}</h1>
+      <p className="mob-sub" style={{ textAlign: 'center', marginBottom: 14 }}>{T('mobile.gameCode', { code })}</p>
 
-      <label className="mob-field-label">Nom de l'équipe</label>
+      <label className="mob-field-label">{T('mobile.teamName')}</label>
       <input className="mob-text-input" value={name} maxLength={24}
-        onChange={(e) => setName(e.target.value)} placeholder="Les Lions…" />
+        onChange={(e) => setName(e.target.value)} placeholder={T('mobile.teamNamePlaceholder')} />
 
-      <label className="mob-field-label" style={{ marginTop: 14 }}>Logo</label>
+      <label className="mob-field-label" style={{ marginTop: 14 }}>{T('mobile.logo')}</label>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
         {EMOJI_CHOICES.map((e) => (
           <button key={e} type="button" onClick={() => setEmoji(e)}
@@ -155,16 +157,16 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
         ))}
       </div>
 
-      <label className="mob-field-label" style={{ marginTop: 16 }}>🛡️ Pouvoir de défense</label>
+      <label className="mob-field-label" style={{ marginTop: 16 }}>{T('mobile.defensePower')}</label>
       <PowerGrid list={defPowers} value={powerDef} onPick={setPowerDef} />
-      <label className="mob-field-label" style={{ marginTop: 12 }}>⚔️ Pouvoir d'attaque</label>
+      <label className="mob-field-label" style={{ marginTop: 12 }}>{T('mobile.attackPower')}</label>
       <PowerGrid list={offPowers} value={powerOff} onPick={setPowerOff} />
 
       {lv2Mode && (
         <>
-          <label className="mob-field-label" style={{ marginTop: 16 }}>🗣️ Ta LV2</label>
+          <label className="mob-field-label" style={{ marginTop: 16 }}>{T('mobile.yourLv2')}</label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {[['allemand', '🦅 Allemand'], ['espagnol', '☀️ Espagnol']].map(([key, label]) => {
+            {[['allemand', T('mobile.german')], ['espagnol', T('mobile.spanish')]].map(([key, label]) => {
               const on = lv2 === key;
               return (
                 <button key={key} type="button" onClick={() => setLv2(key)}
@@ -180,11 +182,11 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
       )}
 
       <button className="mob-btn mob-btn--gold" style={{ marginTop: 20 }} disabled={busy || incomplete} onClick={submit}>
-        {busy ? 'Envoi…' : 'Rejoindre la partie'}
+        {busy ? T('mobile.sending') : T('mobile.joinGame')}
       </button>
       {incomplete && !busy && (
         <p className="mob-sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 12.5 }}>
-          {name.trim().length < 1 ? 'Choisis un nom' : !powerDef ? 'Choisis ton pouvoir de défense 🛡️' : 'Choisis ton pouvoir d\'attaque ⚔️'}
+          {name.trim().length < 1 ? T('mobile.pickName') : !powerDef ? T('mobile.pickDefense') : T('mobile.pickAttack')}
         </p>
       )}
       {err && <p className="mob-error">{err}</p>}
@@ -193,9 +195,10 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode }) {
 }
 
 function TeamPicker({ session, onPick }) {
+  const T = tFor(session?.englishMode);
   return (
     <div className="mob-root">
-      <div className="mob-pick-head">Quelle équipe es-tu ?</div>
+      <div className="mob-pick-head">{T('mobile.whichTeam')}</div>
       <div className="mob-pick-list">
         {session.teams.map((t) => (
           <button key={t.idx} className="mob-pick-card" style={{ '--accent': t.color }} onClick={() => onPick(t.idx)}>
@@ -209,7 +212,7 @@ function TeamPicker({ session, onPick }) {
   );
 }
 
-function EquipSlot({ itemKey, slot, onTap, enchanted = 0 }) {
+function EquipSlot({ itemKey, slot, onTap, enchanted = 0, T = tFor(false) }) {
   const item = ITEMS[itemKey];
   const color = item ? (RARITIES[item.rarity]?.color || '#888') : null;
   return (
@@ -220,12 +223,12 @@ function EquipSlot({ itemKey, slot, onTap, enchanted = 0 }) {
         border: item ? `1.5px solid ${color}` : '1.5px dashed rgba(122,94,58,0.3)',
       }}>
         {item ? (itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>) : <span className="mob-eq-emoji" style={{ opacity: 0.4 }}>{SLOTS[slot].icon}</span>}
-        {item && enchanted > 0 && <span className="mob-ench-badge" title="Enchanté">✦{enchanted > 1 ? enchanted : ''}</span>}
+        {item && enchanted > 0 && <span className="mob-ench-badge" title={T('mobile.enchantedTitle')}>✦{enchanted > 1 ? enchanted : ''}</span>}
       </span>
       <div className="mob-eq-text">
         <div className="mob-eq-slot">{SLOTS[slot].name}</div>
-        <div className="mob-eq-name">{item ? item.name : <em>vide</em>}{item && enchanted > 0 && <span style={{ color: '#9b59d0', marginLeft: 6, fontSize: 12 }}>✦ enchanté</span>}</div>
-        {item && <div className="mob-eq-desc">{item.desc}{itemEffectLines(item).length > 0 ? ' · toucher pour les effets' : ''}</div>}
+        <div className="mob-eq-name">{item ? item.name : <em>{T('mobile.empty')}</em>}{item && enchanted > 0 && <span style={{ color: '#9b59d0', marginLeft: 6, fontSize: 12 }}>{T('mobile.enchantedBadge')}</span>}</div>
+        {item && <div className="mob-eq-desc">{item.desc}{itemEffectLines(item).length > 0 ? T('mobile.tapForEffects') : ''}</div>}
       </div>
     </div>
   );
@@ -234,7 +237,7 @@ function EquipSlot({ itemKey, slot, onTap, enchanted = 0 }) {
 // Panneau de détail (bottom sheet) au tap d'un objet : desc + EFFETS lisibles,
 // + actions d'édition (mode téléphone, sur SA propre équipe, hors verrou).
 //   loc : { kind:'equip', slot } | { kind:'bag', key } | { kind:'shop' }
-function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
+function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = tFor(false) }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const canEdit = owned && !locked && loc && loc.kind !== 'shop';
@@ -251,7 +254,7 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--ink-900)' }}>{item.name}</div>
-            <div style={{ fontSize: 12, color }}>{RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? 'Consommable' : SLOTS[item.slot]?.name}</div>
+            <div style={{ fontSize: 12, color }}>{RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? T('mobile.consumable') : SLOTS[item.slot]?.name}</div>
           </div>
         </div>
         {item.desc && (
@@ -266,7 +269,7 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
             borderRadius: 12, padding: '10px 12px', marginTop: 2,
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color, marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {'⚙️'} Effets
+              {'⚙️'} {T('mobile.effects')}
             </div>
             <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {fx.map((l, i) => (
@@ -286,10 +289,10 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
             <div style={{ marginTop: 14 }}>
               <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} disabled={locked || broke}
                 onClick={() => onAction('buy', { key: itemKey })}>
-                {'🛒'} Acheter — {item.price} {'\u{1FA99}'}
+                {'🛒'} {T('mobile.buyFor', { price: item.price })}
               </button>
-              {broke && <div style={{ marginTop: 6, fontSize: 12, color: '#7a1320', textAlign: 'center' }}>Or insuffisant.</div>}
-              {locked && !broke && <div style={{ marginTop: 6, fontSize: 12, color: '#7a1320', textAlign: 'center' }}>🔒 Attends la fin de la résolution.</div>}
+              {broke && <div style={{ marginTop: 6, fontSize: 12, color: '#7a1320', textAlign: 'center' }}>{T('mobile.notEnoughGold')}</div>}
+              {locked && !broke && <div style={{ marginTop: 6, fontSize: 12, color: '#7a1320', textAlign: 'center' }}>{T('mobile.waitResolution')}</div>}
             </div>
           );
         })()}
@@ -300,9 +303,9 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
           const slots = ['head', 'body', 'feet'].filter((s) => ITEMS[ek(team.equipment?.[s])]);
           return (
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 6 }}>{'📜'} Enchanter une pièce :</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 6 }}>{T('mobile.enchantAPiece')}</div>
               {slots.length === 0 ? (
-                <div className="mob-empty">Aucune pièce équipée à enchanter.</div>
+                <div className="mob-empty">{T('mobile.noPieceToEnchant')}</div>
               ) : (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {slots.map((s) => {
@@ -323,37 +326,37 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose }) {
         {canEdit && (
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             {loc.kind === 'bag' && !isConsumable && (
-              <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('equip', { key: itemKey })}>🛡️ Équiper</button>
+              <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('equip', { key: itemKey })}>{T('mobile.equipAction')}</button>
             )}
             {loc.kind === 'equip' && (
-              <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('unequip', { slot: loc.slot })}>🎒 Mettre au sac</button>
+              <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, flex: 1 }} onClick={() => onAction('unequip', { slot: loc.slot })}>{T('mobile.stowInBag')}</button>
             )}
             <button className="mob-btn mob-btn--ghost" style={{ minWidth: 0, flex: 1 }}
               onClick={() => (loc.kind === 'equip' ? onAction('sellEquip', { slot: loc.slot }) : onAction('sellBag', { key: itemKey }))}>
-              ♻️ Vendre
+              {T('mobile.sellAction')}
             </button>
           </div>
         )}
         {owned && locked && loc && loc.kind !== 'shop' && (
           <div style={{ marginTop: 12, fontSize: 12.5, color: '#7a1320', textAlign: 'center' }}>
-            🔒 Édition impossible pendant ton tour de jeu.
+            {T('mobile.editLockedTurn')}
           </div>
         )}
 
-        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>Fermer</button>
+        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>{T('common.close')}</button>
       </div>
     </div>
   );
 }
 
 // Bloc d'embranchement (L5/L10) : les 3 voies, la voie choisie mise en avant.
-function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose }) {
+function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose, T = tFor(false) }) {
   const options = specOptionsFor(powerKey, slot);
   if (!options.length) return null;
   const canPick = reached && !chosen && owned && !locked;
   return (
     <div className="mob-tt-branch">
-      <div className="mob-tt-branch-label">{reached ? (chosen ? 'Voie choisie' : 'Choisis ta voie') : 'Embranchement'}</div>
+      <div className="mob-tt-branch-label">{reached ? (chosen ? T('mobile.pathChosen') : T('mobile.choosePath')) : T('mobile.branching')}</div>
       {options.map((o) => {
         const picked = chosen === o.key;
         return (
@@ -365,8 +368,8 @@ function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose 
             <div className="mob-tt-opt-body">
               <div className="mob-tt-opt-name">
                 {o.name}
-                {picked && <span className="mob-tt-tag mob-tt-tag--cur"> choisie</span>}
-                {canPick && <span className="mob-tt-tag mob-tt-tag--cur"> ✔ choisir</span>}
+                {picked && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.chosenTag')}</span>}
+                {canPick && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.chooseTag')}</span>}
               </div>
               <div className="mob-tt-opt-desc">{o.desc}</div>
             </div>
@@ -380,7 +383,7 @@ function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose 
 // Une « branche » d'arbre de talent pour un pouvoir. Avec l'extension Maîtrise :
 // 10 niveaux + embranchements L5/L10. Sinon : 3 niveaux classiques. Lecture seule
 // (l'amélioration et le choix de voie se font au TBI).
-function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, locked, onAction }) {
+function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, locked, onAction, T = tFor(false) }) {
   const info = POWERS[powerKey];
   if (!info) return null;
   const level = entry?.level ?? 1;
@@ -396,10 +399,10 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
         <div className="mob-tt-headtxt">
           <div className="mob-tt-name">
             {info.name}
-            {active && <span className="mob-tt-active">{'✦'} actif</span>}
+            {active && <span className="mob-tt-active">{T('mobile.activeTag')}</span>}
           </div>
           <div className="mob-tt-cat">
-            {info.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`} · Niv. {level}/{count}
+            {info.category === 'off' ? T('mobile.attack') : T('mobile.defense')} · {T('mobile.levelShort', { level, count })}
           </div>
         </div>
       </div>
@@ -408,16 +411,16 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
           <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }}
             disabled={locked || money < rechargePrice}
             onClick={() => onAction('buyPowerCharge', { key: powerKey })}>
-            {'\u{1F50B}'} +1 · {rechargePrice} {'\u{1FA99}'}
+            {T('mobile.rechargeBtn', { price: rechargePrice })}
           </button>
           {nextCost != null ? (
             <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }}
               disabled={locked || money < nextCost}
               onClick={() => onAction('upgradePower', { key: powerKey })}>
-              {'⬆️'} Niv.{level + 1} · {nextCost} {'\u{1FA99}'}
+              {T('mobile.upgradeBtn', { level: level + 1, cost: nextCost })}
             </button>
           ) : (
-            <span style={{ flex: 1, textAlign: 'center', alignSelf: 'center', fontSize: 12, opacity: 0.6 }}>Niveau max</span>
+            <span style={{ flex: 1, textAlign: 'center', alignSelf: 'center', fontSize: 12, opacity: 0.6 }}>{T('mobile.maxLevel')}</span>
           )}
         </div>
       )}
@@ -433,17 +436,17 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
               <div className="mob-tt-bullet">{state === 'done' ? '✓' : n}</div>
               <div className="mob-tt-node-body">
                 <div className="mob-tt-node-top">
-                  <span className="mob-tt-lvl">Niv. {n}</span>
-                  {state === 'current' && <span className="mob-tt-tag mob-tt-tag--cur">niveau actuel</span>}
-                  {state === 'done' && <span className="mob-tt-tag mob-tt-tag--done">{'✓'} acquis</span>}
+                  <span className="mob-tt-lvl">{T('mobile.levelN', { n })}</span>
+                  {state === 'current' && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.currentLevel')}</span>}
+                  {state === 'done' && <span className="mob-tt-tag mob-tt-tag--done">{T('mobile.acquired')}</span>}
                   {(state === 'next' || state === 'locked') && cost != null && (
                     <span className="mob-tt-tag mob-tt-tag--cost">{'\u{1FA99}'} {cost}</span>
                   )}
-                  {slot && <span className="mob-tt-tag mob-tt-tag--branch">🌟 voie</span>}
+                  {slot && <span className="mob-tt-tag mob-tt-tag--branch">{T('mobile.pathTag')}</span>}
                 </div>
                 <div className="mob-tt-desc">{desc}</div>
                 {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n}
-                  owned={owned} locked={locked}
+                  owned={owned} locked={locked} T={T}
                   onChoose={(specKey) => onAction('chooseSpec', { key: powerKey, slot, specKey })} />}
               </div>
             </div>
@@ -457,6 +460,7 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
 // Onglet « Pouvoirs » : arbre de talent par pouvoir + achats (recharge, niveau,
 // voie, déblocage) pilotés par le téléphone propriétaire de l'équipe.
 function PowersView({ session, teamIdx, owned, code, token }) {
+  const T = tFor(session?.englishMode);
   const t = session.teams[teamIdx];
   const pKeys = powerKeysOf(t);
   const masteryOn = extOn(session.extensions, 'mastery');
@@ -467,25 +471,25 @@ function PowersView({ session, teamIdx, owned, code, token }) {
   const lockedPowers = Object.keys(POWERS).filter((k) => POWERS[k] && !t.powers?.[k]);
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
-      <div className="mob-pick-head">{'⚡'} Arbre de talents</div>
+      <div className="mob-pick-head">{T('mobile.talentTree')}</div>
       <div className="mob-tt-bank">
         <span className="mob-tt-hint">
-          {owned ? `${'\u{1FA99}'} ${t.money} — recharge, améliore et débloque tes pouvoirs ici` : 'Achats depuis le téléphone de l’équipe'}
+          {owned ? T('mobile.powersHint', { money: t.money }) : T('mobile.powersReadonly')}
         </span>
       </div>
       {pKeys.length === 0 ? (
-        <div className="mob-empty" style={{ margin: 14 }}>Aucun pouvoir pour l'instant…</div>
+        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.noPowerYet')}</div>
       ) : (
         <div className="mob-tt">
           {pKeys.map((k) => (
             <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} masteryOn={masteryOn}
-              owned={owned} money={t.money} locked={locked} onAction={act} />
+              owned={owned} money={t.money} locked={locked} onAction={act} T={T} />
           ))}
         </div>
       )}
       {owned && lockedPowers.length > 0 && (
         <section className="mob-section" style={{ marginTop: 8 }}>
-          <h2 className="mob-section-title">Débloquer un pouvoir</h2>
+          <h2 className="mob-section-title">{T('mobile.unlockPower')}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 14px' }}>
             {lockedPowers.map((k) => {
               const p = POWERS[k];
@@ -495,7 +499,7 @@ function PowersView({ session, teamIdx, owned, code, token }) {
                   <span style={{ fontSize: 22 }}>{p.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                    <div style={{ fontSize: 11.5, opacity: 0.7 }}>{p.category === 'off' ? `${'⚔️'} Attaque` : `${'\u{1F6E1}️'} Défense`}</div>
+                    <div style={{ fontSize: 11.5, opacity: 0.7 }}>{p.category === 'off' ? T('mobile.attack') : T('mobile.defense')}</div>
                   </div>
                   <button className="mob-btn mob-btn--gold" style={{ minWidth: 0 }} disabled={locked || broke}
                     onClick={() => act('buyPower', { key: k })}>{p.price} {'\u{1FA99}'}</button>
@@ -511,6 +515,7 @@ function PowersView({ session, teamIdx, owned, code, token }) {
 
 // Onglet « Boutique » : vitrine + achat direct (téléphone propriétaire).
 function ShopView({ session, teamIdx, owned, code, token }) {
+  const T = tFor(session?.englishMode);
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
   const itemsOn = extOn(session.extensions, 'equipment');
@@ -523,11 +528,11 @@ function ShopView({ session, teamIdx, owned, code, token }) {
   };
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
-      <div className="mob-pick-head">{'\u{1F6D2}'} Boutique</div>
+      <div className="mob-pick-head">{T('mobile.shop')}</div>
       {!itemsOn ? (
-        <div className="mob-empty" style={{ margin: 14 }}>Objets désactivés pour cette partie.</div>
+        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.itemsDisabled')}</div>
       ) : shopKeys.length === 0 ? (
-        <div className="mob-empty" style={{ margin: 14 }}>Étal vide pour l'instant…</div>
+        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.emptyStall')}</div>
       ) : (
         <section className="mob-section">
           <div className="mob-bag">
@@ -543,16 +548,17 @@ function ShopView({ session, teamIdx, owned, code, token }) {
             })}
           </div>
           <div className="mob-foot" style={{ marginTop: 10 }}>
-            {owned ? 'Touche un objet pour voir ses effets et l’acheter.' : 'Lecture seule · achats depuis le téléphone de l’équipe.'}
+            {owned ? T('mobile.shopHintOwned') : T('mobile.shopHintReadonly')}
           </div>
         </section>
       )}
-      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={locked} onAction={buy} onClose={() => setSheet(null)} />}
+      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={locked} onAction={buy} onClose={() => setSheet(null)} T={T} />}
     </div>
   );
 }
 
 function TeamView({ session, teamIdx, owned, code, token }) {
+  const T = tFor(session?.englishMode);
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
   const effects = getTeamEffects(t);
@@ -578,9 +584,9 @@ function TeamView({ session, teamIdx, owned, code, token }) {
         <div className="mob-header-info">
           <div className="mob-header-name">{t.name}</div>
           <div className={'mob-turn ' + (myTurn ? 'is-mine' : '')}>
-            {session.status === 'finished' ? '🏁 Partie terminée'
-              : myTurn ? "▶ C'est ton tour !"
-              : `Tour de ${session.teams[session.currentTeam]?.name || '…'}`}
+            {session.status === 'finished' ? T('mobile.gameOver')
+              : myTurn ? T('mobile.yourTurn')
+              : T('mobile.turnOf', { name: session.teams[session.currentTeam]?.name || '…' })}
           </div>
         </div>
       </header>
@@ -598,7 +604,7 @@ function TeamView({ session, teamIdx, owned, code, token }) {
             const info = POWERS[k];
             const ch = t.powers[k]?.charges ?? 0;
             return (
-              <span key={k} className={'mob-charge' + (ch <= 0 ? ' is-empty' : '')} style={{ '--accent': info.color }} title={`${info.name} · ${ch} charge${ch > 1 ? 's' : ''}`}>
+              <span key={k} className={'mob-charge' + (ch <= 0 ? ' is-empty' : '')} style={{ '--accent': info.color }} title={`${info.name} · ${T.plural('mobile.charges', ch)}`}>
                 <span className="mob-charge-disc">{info.icon}</span><b>{ch}</b>
               </span>
             );
@@ -628,16 +634,16 @@ function TeamView({ session, teamIdx, owned, code, token }) {
 
       {itemsOn && (
       <section className="mob-section">
-        <h2 className="mob-section-title">Équipement</h2>
-        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} enchanted={t.enchants?.[slot] || 0} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} />)}
+        <h2 className="mob-section-title">{T('mobile.equipment')}</h2>
+        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} enchanted={t.enchants?.[slot] || 0} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} T={T} />)}
       </section>
       )}
 
       {itemsOn && (
       <section className="mob-section">
-        <h2 className="mob-section-title">Sac {bagUnits > 0 && <span className="mob-count">{bagUnits}</span>}</h2>
+        <h2 className="mob-section-title">{T('mobile.bag')} {bagUnits > 0 && <span className="mob-count">{bagUnits}</span>}</h2>
         {bagCells.length === 0 ? (
-          <div className="mob-empty">Sac vide</div>
+          <div className="mob-empty">{T('mobile.bagEmpty')}</div>
         ) : (
           <div className="mob-bag">
             {bagCells.map((c, i) => {
@@ -654,35 +660,35 @@ function TeamView({ session, teamIdx, owned, code, token }) {
       </section>
       )}
 
-      <div className="mob-foot">{owned ? "Touche un objet pour l'équiper, le ranger ou le vendre" : "Lecture seule · l'écran se met à jour en direct"}</div>
+      <div className="mob-foot">{owned ? T('mobile.teamFootOwned') : T('mobile.teamFootReadonly')}</div>
 
-      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={editLocked} onAction={sendAction} onClose={() => setSheet(null)} />}
+      {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={editLocked} onAction={sendAction} onClose={() => setSheet(null)} T={T} />}
     </div>
   );
 }
 
 // Résumé lisible d'un côté de troc (or + objets) — `equipOf(slot)` résout l'item porté.
-function tradeSideText(spec, equipOf) {
+function tradeSideText(spec, equipOf, T = tFor(false)) {
   const parts = [];
   if (spec?.gold) parts.push(`${spec.gold} 🪙`);
   for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
   for (const s of (spec?.equip || [])) { const k = equipOf?.(s); if (k && ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`); }
-  return parts.length ? parts.join(' + ') : 'rien';
+  return parts.length ? parts.join(' + ') : T('mobile.nothing');
 }
 
 // Résumé post-échange (l'équipement a déjà changé de main → on ne peut plus
 // résoudre l'item porté ; on compte juste les pièces d'équipement).
-function tradeDoneText(spec) {
+function tradeDoneText(spec, T = tFor(false)) {
   const parts = [];
   if (spec?.gold) parts.push(`${spec.gold} 🪙`);
   for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
   const eq = (spec?.equip || []).length;
-  if (eq) parts.push(`${eq} équipement${eq > 1 ? 's' : ''}`);
-  return parts.length ? parts.join(' + ') : 'rien';
+  if (eq) parts.push(T.plural('mobile.equipmentCount', eq));
+  return parts.length ? parts.join(' + ') : T('mobile.nothing');
 }
 
 // Bandeau de confirmation « échange conclu », du point de vue de mon équipe.
-function DealToast({ trade, teamIdx, teams, onClose }) {
+function DealToast({ trade, teamIdx, teams, onClose, T = tFor(false) }) {
   const isTo = trade.to_idx === teamIdx;
   const received = isTo ? trade.give : trade.want;
   const gave = isTo ? trade.want : trade.give;
@@ -691,13 +697,13 @@ function DealToast({ trade, teamIdx, teams, onClose }) {
     <div className="mob-deal-wrap" onClick={onClose}>
       <div className="mob-deal" onClick={(e) => e.stopPropagation()}>
         <div className="mob-deal-emoji">🤝</div>
-        <div className="mob-deal-title">Échange conclu !</div>
-        <div className="mob-deal-with">avec {other ? `${other.emoji} ${other.name}` : 'une autre équipe'}</div>
+        <div className="mob-deal-title">{T('mobile.dealDone')}</div>
+        <div className="mob-deal-with">{T('mobile.dealWith', { who: other ? `${other.emoji} ${other.name}` : T('mobile.anotherTeam') })}</div>
         <div className="mob-deal-lines">
-          <div><span className="mob-deal-plus">＋ Tu reçois :</span> {tradeDoneText(received)}</div>
-          <div><span className="mob-deal-minus">－ Tu donnes :</span> {tradeDoneText(gave)}</div>
+          <div><span className="mob-deal-plus">{T('mobile.youReceive')}</span> {tradeDoneText(received, T)}</div>
+          <div><span className="mob-deal-minus">{T('mobile.youGive')}</span> {tradeDoneText(gave, T)}</div>
         </div>
-        <button className="mob-btn mob-btn--gold" style={{ marginTop: 12 }} onClick={onClose}>Super !</button>
+        <button className="mob-btn mob-btn--gold" style={{ marginTop: 12 }} onClick={onClose}>{T('mobile.great')}</button>
       </div>
     </div>
   );
@@ -706,7 +712,7 @@ function DealToast({ trade, teamIdx, teams, onClose }) {
 // Ligne d'objet dans le compositeur de troc : bouton de sélection (icône + nom +
 // aperçu d'effet en ligne, pour voir d'un coup d'œil ce que fait l'objet) et un
 // bouton ⓘ qui ouvre la fiche complète (ItemSheet en lecture seule).
-function TradeItemRow({ itemKey, on, worn, onToggle, onInfo }) {
+function TradeItemRow({ itemKey, on, worn, onToggle, onInfo, T = tFor(false) }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const preview = item.desc || itemEffectLines(item)[0] || '';
@@ -717,7 +723,7 @@ function TradeItemRow({ itemKey, on, worn, onToggle, onInfo }) {
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{item.icon}</span>
           <span style={{ fontWeight: 700 }}>{item.name}</span>
-          {worn && <small style={{ opacity: 0.7 }}>(porté)</small>}
+          {worn && <small style={{ opacity: 0.7 }}>{T('mobile.worn')}</small>}
         </span>
         {preview && (
           <span style={{ fontSize: 11.5, opacity: 0.78, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -725,7 +731,7 @@ function TradeItemRow({ itemKey, on, worn, onToggle, onInfo }) {
           </span>
         )}
       </button>
-      <button type="button" onClick={onInfo} aria-label="Détails de l'objet"
+      <button type="button" onClick={onInfo} aria-label={T('mobile.itemDetails')}
         style={{ flexShrink: 0, width: 40, borderRadius: 10, border: '1px solid rgba(122,94,58,0.3)', background: '#fffefb', fontSize: 17, cursor: 'pointer' }}>
         ⓘ
       </button>
@@ -734,7 +740,10 @@ function TradeItemRow({ itemKey, on, worn, onToggle, onInfo }) {
 }
 
 // Compositeur de troc : cible + « je donne » (mon inventaire) / « je veux » (le sien).
-function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, title = '🤝 Proposer un troc', sendLabel = 'Envoyer' }) {
+function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, title, sendLabel }) {
+  const T = tFor(session?.englishMode);
+  const titleText = title ?? T('mobile.proposeTrade');
+  const sendText = sendLabel ?? T('mobile.send');
   const me = session.teams[teamIdx];
   const others = session.teams.map((t, i) => ({ t, i })).filter((x) => x.i !== teamIdx);
   const norm = (s) => ({ gold: s?.gold || 0, bag: [...(s?.bag || [])], equip: [...(s?.equip || [])] });
@@ -758,11 +767,11 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
       <label className="mob-trade-gold">🪙 <input type="number" min="0" max={team?.money ?? 0} value={spec.gold}
         onChange={(e) => set({ ...spec, gold: Math.max(0, Math.min(team?.money ?? 0, Number(e.target.value) || 0)) })} /> / {team?.money ?? 0}</label>
       {bagKeys(team).map((k, n) => (
-        <TradeItemRow key={`b${n}`} itemKey={k} on={spec.bag.includes(k)}
+        <TradeItemRow key={`b${n}`} itemKey={k} on={spec.bag.includes(k)} T={T}
           onToggle={() => toggle(spec, set, 'bag', k)} onInfo={() => setInfo({ itemKey: k, team })} />
       ))}
       {equipSlots(team).map((s) => (
-        <TradeItemRow key={`e${s}`} itemKey={team.equipment[s]} worn on={spec.equip.includes(s)}
+        <TradeItemRow key={`e${s}`} itemKey={team.equipment[s]} worn on={spec.equip.includes(s)} T={T}
           onToggle={() => toggle(spec, set, 'equip', s)} onInfo={() => setInfo({ itemKey: team.equipment[s], team })} />
       ))}
     </div>
@@ -773,7 +782,7 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
    <>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 20, padding: 16, border: '1px solid rgba(122,94,58,0.25)' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>{title}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>{titleText}</div>
         <div className="mob-trade-targets">
           {others.map(({ t, i }) => (
             <button key={i} className={'mob-trade-target' + (toIdx === i ? ' on' : '')} onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
@@ -781,18 +790,18 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
             </button>
           ))}
         </div>
-        {target && <Panel title="Je donne" team={me} spec={give} set={setGive} />}
-        {target && <Panel title={`Je veux (de ${target.emoji})`} team={target} spec={want} set={setWant} />}
+        {target && <Panel title={T('mobile.iGive')} team={me} spec={give} set={setGive} />}
+        {target && <Panel title={T('mobile.iWantFrom', { who: target.emoji })} team={target} spec={want} set={setWant} />}
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} disabled={toIdx == null || (empty(give) && empty(want))}
-            onClick={() => onSend(toIdx, give, want)}>{sendLabel}</button>
-          <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={onClose}>Annuler</button>
+            onClick={() => onSend(toIdx, give, want)}>{sendText}</button>
+          <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={onClose}>{T('common.cancel')}</button>
         </div>
       </div>
     </div>
     {info?.itemKey && (
       <ItemSheet itemKey={info.itemKey} loc={null} team={info.team}
-        owned={false} locked={false} onAction={() => {}} onClose={() => setInfo(null)} />
+        owned={false} locked={false} onAction={() => {}} onClose={() => setInfo(null)} T={T} />
     )}
    </>
   );
@@ -801,6 +810,7 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
 // Onglet « Troc » : offres reçues / envoyées + compositeur (mode téléphone).
 // `trades` est alimenté par l'abonnement partagé de MobileApp (badge + vue).
 function TradeView({ session, teamIdx, code, token, trades = [] }) {
+  const T = tFor(session?.englishMode);
   const [compose, setCompose] = useState(false);
   const [counter, setCounter] = useState(null); // offre reçue qu'on contre (ou null)
   const me = session.teams[teamIdx];
@@ -812,45 +822,45 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
 
   return (
     <div className="mob-root" style={{ '--accent': me.color, paddingBottom: 76 }}>
-      <div className="mob-pick-head">{'🤝'} Troc</div>
+      <div className="mob-pick-head">{T('mobile.trade')}</div>
 
       <section className="mob-section">
-        <h2 className="mob-section-title">Offres reçues {incoming.length > 0 && <span className="mob-count">{incoming.length}</span>}</h2>
-        {incoming.length === 0 ? <div className="mob-empty">Aucune offre.</div> : incoming.map((tr) => (
+        <h2 className="mob-section-title">{T('mobile.offersReceived')} {incoming.length > 0 && <span className="mob-count">{incoming.length}</span>}</h2>
+        {incoming.length === 0 ? <div className="mob-empty">{T('mobile.noOffer')}</div> : incoming.map((tr) => (
           <div key={tr.id} className="mob-trade-card">
-            <div className="mob-trade-from">De {nameOf(tr.from_idx)}</div>
-            <div className="mob-trade-line"><b>Tu reçois :</b> {tradeSideText(tr.give, equipOfTeam(tr.from_idx))}</div>
-            <div className="mob-trade-line"><b>Tu donnes :</b> {tradeSideText(tr.want, equipOfTeam(teamIdx))}</div>
+            <div className="mob-trade-from">{T('mobile.from', { who: nameOf(tr.from_idx) })}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youReceiveLine')}</b> {tradeSideText(tr.give, equipOfTeam(tr.from_idx), T)}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {tradeSideText(tr.want, equipOfTeam(teamIdx), T)}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'accepted').catch(() => {})}>Accepter</button>
-              <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'declined').catch(() => {})}>Refuser</button>
+              <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'accepted').catch(() => {})}>{T('mobile.accept')}</button>
+              <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'declined').catch(() => {})}>{T('mobile.decline')}</button>
             </div>
-            <button className="mob-btn mob-btn--ghost" style={{ width: '100%', marginTop: 6 }} onClick={() => { setCounter(tr); setCompose(true); }}>↔ Contre-proposition</button>
+            <button className="mob-btn mob-btn--ghost" style={{ width: '100%', marginTop: 6 }} onClick={() => { setCounter(tr); setCompose(true); }}>{T('mobile.counterOffer')}</button>
           </div>
         ))}
       </section>
 
       <section className="mob-section">
-        <h2 className="mob-section-title">Offres envoyées {outgoing.length > 0 && <span className="mob-count">{outgoing.length}</span>}</h2>
-        {outgoing.length === 0 ? <div className="mob-empty">Aucune.</div> : outgoing.map((tr) => (
+        <h2 className="mob-section-title">{T('mobile.offersSent')} {outgoing.length > 0 && <span className="mob-count">{outgoing.length}</span>}</h2>
+        {outgoing.length === 0 ? <div className="mob-empty">{T('mobile.none')}</div> : outgoing.map((tr) => (
           <div key={tr.id} className="mob-trade-card">
-            <div className="mob-trade-from">À {nameOf(tr.to_idx)} · en attente…</div>
-            <div className="mob-trade-line"><b>Tu donnes :</b> {tradeSideText(tr.give, equipOfTeam(teamIdx))}</div>
-            <div className="mob-trade-line"><b>Tu veux :</b> {tradeSideText(tr.want, equipOfTeam(tr.to_idx))}</div>
-            <button className="mob-btn mob-btn--ghost" style={{ marginTop: 8 }} onClick={() => deleteTrade(tr.id).catch(() => {})}>Annuler</button>
+            <div className="mob-trade-from">{T('mobile.toWaiting', { who: nameOf(tr.to_idx) })}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {tradeSideText(tr.give, equipOfTeam(teamIdx), T)}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youWantLine')}</b> {tradeSideText(tr.want, equipOfTeam(tr.to_idx), T)}</div>
+            <button className="mob-btn mob-btn--ghost" style={{ marginTop: 8 }} onClick={() => deleteTrade(tr.id).catch(() => {})}>{T('common.cancel')}</button>
           </div>
         ))}
       </section>
 
       <div style={{ padding: '4px 14px 0' }}>
-        <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={() => setCompose(true)}>+ Proposer un troc</button>
+        <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={() => setCompose(true)}>{T('mobile.proposeTradeBtn')}</button>
       </div>
-      <div className="mob-foot">Le troc s'applique automatiquement dès que l'autre équipe accepte.</div>
+      <div className="mob-foot">{T('mobile.tradeFoot')}</div>
 
       {compose && (
         <TradeComposer session={session} teamIdx={teamIdx}
-          title={counter ? '↔ Contre-proposition' : '🤝 Proposer un troc'}
-          sendLabel={counter ? 'Envoyer la contre-proposition' : 'Envoyer'}
+          title={counter ? T('mobile.counterOffer') : T('mobile.proposeTrade')}
+          sendLabel={counter ? T('mobile.sendCounterOffer') : T('mobile.send')}
           initial={counter ? { toIdx: counter.from_idx, give: counter.want, want: counter.give } : null}
           onClose={() => { setCompose(false); setCounter(null); }}
           onSend={(toIdx, give, want) => {
@@ -866,6 +876,7 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
 
 // Onglet « Alchimie » : atelier (3 emplacements + distiller) + grimoire (recettes).
 function AlchemyView({ session, teamIdx, code, token }) {
+  const T = tFor(session?.englishMode);
   const t = session.teams[teamIdx];
   const [slots, setSlots] = useState([null, null, null]); // positions du sac
   const [busy, setBusy] = useState(false);
@@ -891,10 +902,10 @@ function AlchemyView({ session, teamIdx, code, token }) {
 
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
-      <div className="mob-pick-head">{'⚗️'} Alchimie</div>
+      <div className="mob-pick-head">{T('mobile.alchemy')}</div>
 
       <section className="mob-section">
-        <h2 className="mob-section-title">Atelier</h2>
+        <h2 className="mob-section-title">{T('mobile.workshop')}</h2>
         <div className={'mob-alch-slots' + (busy ? ' is-busy' : '')}>
           {slots.map((bagIdx, n) => {
             const key = bagIdx != null ? cellKey(t.bag[bagIdx]) : null;
@@ -906,12 +917,12 @@ function AlchemyView({ session, teamIdx, code, token }) {
           })}
         </div>
         <button className="mob-btn mob-btn--gold" style={{ width: '100%', marginTop: 10 }} disabled={filled !== 3 || busy} onClick={distill}>
-          {busy ? '✨ Distillation…' : 'Distiller'}
+          {busy ? T('mobile.distilling') : T('mobile.distill')}
         </button>
 
         <div className="mob-alch-bag">
           {bagIngredients.length === 0
-            ? <div className="mob-empty">Aucun ingrédient dans ton sac.</div>
+            ? <div className="mob-empty">{T('mobile.noIngredient')}</div>
             : bagIngredients.map(({ i, key }) => (
               <button key={i} className={'mob-alch-ing' + (slots.includes(i) ? ' picked' : '')} onClick={() => toggle(i)}>
                 <span style={{ fontSize: 20 }}>{ITEMS[key].icon}</span>
@@ -925,9 +936,9 @@ function AlchemyView({ session, teamIdx, code, token }) {
       </section>
 
       <section className="mob-section">
-        <h2 className="mob-section-title">{'📖'} Grimoire <span className="mob-count">{knownRec.size}/{RECIPES.length}</span></h2>
+        <h2 className="mob-section-title">{T('mobile.grimoire')} <span className="mob-count">{knownRec.size}/{RECIPES.length}</span></h2>
         {/* Avec ~1140 recettes, on n'affiche QUE celles déjà découvertes. */}
-        {knownRec.size === 0 && <div className="mob-empty">Aucune recette découverte. Distille 3 ingrédients pour en trouver !</div>}
+        {knownRec.size === 0 && <div className="mob-empty">{T('mobile.noRecipe')}</div>}
         {RECIPES.filter((r) => knownRec.has(r.id)).map((r) => (
           <div key={r.id} className="mob-alch-recipe found">
             <span>{r.ingredients.map((k) => ITEMS[k]?.icon || '?').join(' + ')}</span>
@@ -937,19 +948,20 @@ function AlchemyView({ session, teamIdx, code, token }) {
         ))}
       </section>
 
-      <div className="mob-foot">Goûte un ingrédient (carte active en jeu) pour révéler son effet. Combine 3 ingrédients pour découvrir une potion !</div>
+      <div className="mob-foot">{T('mobile.alchemyFoot')}</div>
     </div>
   );
 }
 
 // Onglet Historique : le journal publié par le TBI, du plus récent au plus ancien.
 function HistoryView({ session }) {
+  const T = tFor(session?.englishMode);
   const log = session.log || [];
   return (
     <div className="mob-root" style={{ paddingBottom: 76 }}>
-      <div className="mob-pick-head">{'\u{1F4DC}'} Historique</div>
+      <div className="mob-pick-head">{T('mobile.history')}</div>
       {log.length === 0 ? (
-        <div className="mob-empty" style={{ margin: 14 }}>Rien pour l'instant…</div>
+        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.nothingYet')}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px' }}>
           {log.slice().reverse().map((line, i) => (
@@ -968,20 +980,21 @@ function HistoryView({ session }) {
 // Onglet « Questions » : les questions passées de MON équipe (publiées par le
 // TBI dans session.questionLog), avec ma réponse, la bonne réponse et l'explication.
 function OldQuestionsView({ session, teamIdx }) {
+  const T = tFor(session?.englishMode);
   const all = (session.questionLog && session.questionLog[teamIdx]) || [];
   const list = all.slice().reverse(); // plus récente d'abord
   return (
     <div className="mob-root" style={{ paddingBottom: 76 }}>
-      <div className="mob-pick-head">{'\u{1F4DA}'} Mes anciennes questions</div>
+      <div className="mob-pick-head">{T('mobile.myOldQuestions')}</div>
       {list.length === 0 ? (
-        <div className="mob-empty" style={{ margin: 14 }}>Aucune question pour l'instant…</div>
+        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.noQuestionYet')}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 14px' }}>
           {list.map((q, i) => {
             const subj = SUBJECTS[q.subject] || {};
-            const result = q.timedOut ? { txt: '⏱️ Temps écoulé', col: '#8a6418' }
-              : q.correct ? { txt: '✅ Juste', col: '#4f8f3a' }
-                : { txt: '❌ Faux', col: '#b5341f' };
+            const result = q.timedOut ? { txt: T('mobile.timedOut'), col: '#8a6418' }
+              : q.correct ? { txt: T('mobile.right'), col: '#4f8f3a' }
+                : { txt: T('mobile.wrong'), col: '#b5341f' };
             return (
               <div key={i} style={{
                 borderRadius: 14, overflow: 'hidden',
@@ -1013,7 +1026,7 @@ function OldQuestionsView({ session, teamIdx }) {
                           fontWeight: isCorrect ? 700 : 500,
                         }}>
                           {isCorrect ? '✓ ' : wrongMine ? '✗ ' : '• '}{a}
-                          {isMine && <span style={{ fontSize: 11, opacity: 0.7 }}> {'(ta réponse)'}</span>}
+                          {isMine && <span style={{ fontSize: 11, opacity: 0.7 }}> {T('mobile.yourAnswer')}</span>}
                         </div>
                       );
                     })}
@@ -1022,7 +1035,7 @@ function OldQuestionsView({ session, teamIdx }) {
                     <div style={{
                       marginTop: 8, fontSize: 13.5, lineHeight: 1.45, padding: '8px 10px',
                       background: 'rgba(199,145,32,0.1)', borderRadius: 8, color: 'var(--ink-700,#4a3618)',
-                    }}><b>Explication :</b> {q.explanation}</div>
+                    }}><b>{T('mobile.explanation')}</b> {q.explanation}</div>
                   )}
                 </div>
               </div>
@@ -1035,14 +1048,14 @@ function OldQuestionsView({ session, teamIdx }) {
 }
 
 // Sélecteur d'objet (admin) : recherche + grille de tout le catalogue.
-function AdminItemPicker({ onPick, onClose }) {
+function AdminItemPicker({ onPick, onClose, T = tFor(false) }) {
   const [q, setQ] = useState('');
   const keys = Object.keys(ITEMS).filter((k) => !q || ITEMS[k].name.toLowerCase().includes(q.toLowerCase()));
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'flex-end' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: '80vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: '14px 16px 24px' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: '#8a6418', marginBottom: 8 }}>Donner un objet</div>
-        <input className="mob-text-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher…" style={{ marginBottom: 10 }} />
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: '#8a6418', marginBottom: 8 }}>{T('mobile.giveItem')}</div>
+        <input className="mob-text-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={T('mobile.searchPlaceholder')} style={{ marginBottom: 10 }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {keys.map((k) => {
             const item = ITEMS[k];
@@ -1055,7 +1068,7 @@ function AdminItemPicker({ onPick, onClose }) {
             );
           })}
         </div>
-        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>Annuler</button>
+        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>{T('common.cancel')}</button>
       </div>
     </div>
   );
@@ -1064,6 +1077,7 @@ function AdminItemPicker({ onPick, onClose }) {
 // Interface ADMINISTRATEUR (prof) : contrôle total sur chaque équipe (or,
 // équipement, sac). Envoie des intents 'admin*' que le TBI applique sans verrou.
 function AdminPanel({ code, session, onClose }) {
+  const T = tFor(session?.englishMode);
   const [picker, setPicker] = useState(null); // index d'équipe pour le choix d'objet
   const send = (type, payload) => sendIntent(code, 'admin', type, payload).catch(() => {});
   const teams = session.teams || [];
@@ -1078,11 +1092,11 @@ function AdminPanel({ code, session, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'linear-gradient(180deg,#fff7e6,#f0e2c4)', overflowY: 'auto', padding: '14px 14px 30px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#8a1f2e' }}>🛠️ Admin — {code}</div>
-        <button className="mob-btn mob-btn--ghost" style={{ minWidth: 0, padding: '8px 16px' }} onClick={onClose}>Fermer</button>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#8a1f2e' }}>{T('mobile.adminTitle', { code })}</div>
+        <button className="mob-btn mob-btn--ghost" style={{ minWidth: 0, padding: '8px 16px' }} onClick={onClose}>{T('common.close')}</button>
       </div>
 
-      {teams.length === 0 && <div className="mob-empty">Aucune équipe pour l'instant.</div>}
+      {teams.length === 0 && <div className="mob-empty">{T('mobile.noTeamYet')}</div>}
 
       {teams.map((t) => {
         const equipped = Object.keys(SLOTS).filter((s) => t.equipment?.[s]);
@@ -1098,13 +1112,13 @@ function AdminPanel({ code, session, onClose }) {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
               <MoneyBtn idx={t.idx} delta={-10} /><MoneyBtn idx={t.idx} delta={-5} />
               <MoneyBtn idx={t.idx} delta={5} /><MoneyBtn idx={t.idx} delta={10} />
-              <button onClick={() => { const v = window.prompt("Modifier l'or (ex. 25 ou -15) :"); const d = parseInt(v, 10); if (!Number.isNaN(d)) send('adminMoney', { teamIdx: t.idx, delta: d }); }}
+              <button onClick={() => { const v = window.prompt(T('mobile.editGoldPrompt')); const d = parseInt(v, 10); if (!Number.isNaN(d)) send('adminMoney', { teamIdx: t.idx, delta: d }); }}
                 style={{ padding: '6px 10px', borderRadius: 9, border: '1.5px solid rgba(122,94,58,0.3)', background: '#fffdf7', cursor: 'pointer', fontFamily: 'var(--font-display)' }}>💰…</button>
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>ÉQUIPEMENT</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>{T('mobile.equipmentCaps')}</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {equipped.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>rien</span>
+              {equipped.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>{T('mobile.nothing')}</span>
                 : equipped.map((s) => {
                   const it = ITEMS[t.equipment[s]];
                   return (
@@ -1116,9 +1130,9 @@ function AdminPanel({ code, session, onClose }) {
                 })}
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>SAC</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', marginBottom: 4 }}>{T('mobile.bagCaps')}</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-              {bagCells.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>vide</span>
+              {bagCells.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>{T('mobile.empty')}</span>
                 : bagCells.map((c, i) => (
                   <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 999, background: 'rgba(122,94,58,0.08)', border: '1px solid rgba(122,94,58,0.25)', fontSize: 12 }}>
                     {ITEMS[c.key].icon} {ITEMS[c.key].name}{c.n > 1 ? ` ×${c.n}` : ''}
@@ -1127,20 +1141,20 @@ function AdminPanel({ code, session, onClose }) {
                 ))}
             </div>
 
-            <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, padding: '8px 16px', fontSize: 14 }} onClick={() => setPicker(t.idx)}>🎁 Donner un objet</button>
+            <button className="mob-btn mob-btn--gold" style={{ minWidth: 0, padding: '8px 16px', fontSize: 14 }} onClick={() => setPicker(t.idx)}>{T('mobile.giveItemBtn')}</button>
           </div>
         );
       })}
 
       {picker != null && (
-        <AdminItemPicker onPick={(key) => { send('adminGiveItem', { teamIdx: picker, key }); setPicker(null); }} onClose={() => setPicker(null)} />
+        <AdminItemPicker onPick={(key) => { send('adminGiveItem', { teamIdx: picker, key }); setPicker(null); }} onClose={() => setPicker(null)} T={T} />
       )}
     </div>
   );
 }
 
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
-function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0 }) {
+function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T = tFor(false) }) {
   const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
       onClick={() => setTab(id)}
@@ -1171,13 +1185,13 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0 }) 
       background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTop: '1px solid rgba(122,94,58,0.2)',
       boxShadow: '0 -4px 16px rgba(0,0,0,0.12)',
     }}>
-      <Tab id="team" icon={'\u{1F6E1}️'} label="Équipe" />
-      <Tab id="powers" icon={'⚡'} label="Pouvoirs" />
-      {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label="Boutique" />}
-      {hasTrade && <Tab id="trade" icon={'🤝'} label="Troc" badge={tradeAlert} />}
-      {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label="Alchi" />}
-      <Tab id="questions" icon={'\u{1F4DA}'} label="Questions" />
-      <Tab id="history" icon={'\u{1F4DC}'} label="Historique" />
+      <Tab id="team" icon={'\u{1F6E1}️'} label={T('mobile.tabTeam')} />
+      <Tab id="powers" icon={'⚡'} label={T('mobile.tabPowers')} />
+      {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label={T('mobile.tabShop')} />}
+      {hasTrade && <Tab id="trade" icon={'🤝'} label={T('mobile.tabTrade')} badge={tradeAlert} />}
+      {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label={T('mobile.tabAlchemy')} />}
+      <Tab id="questions" icon={'\u{1F4DA}'} label={T('mobile.tabQuestions')} />
+      <Tab id="history" icon={'\u{1F4DC}'} label={T('mobile.tabHistory')} />
     </nav>
   );
 }
@@ -1206,7 +1220,7 @@ export default function MobileApp() {
     c.t = now; c.n += 1;
     if (c.n < 3) return;
     c.n = 0;
-    if (window.prompt('Code administrateur :') === '54150') setAdmin(true);
+    if (window.prompt(tFor(session?.englishMode)('mobile.adminCodePrompt')) === '54150') setAdmin(true);
   };
 
   // Jeton local par code : permet de retrouver SON équipe (reconnexion / lobby).
@@ -1230,11 +1244,11 @@ export default function MobileApp() {
     fetchSession(code)
       .then((data) => {
         if (!alive) return;
-        if (!data) setError('Aucune partie pour ce code.');
+        if (!data) setError(tFor(false)('mobile.noGameForCode'));
         else setSession(data);
         setConnecting(false);
       })
-      .catch((e) => { if (alive) { setError(e.message || 'Connexion impossible.'); setConnecting(false); } });
+      .catch((e) => { if (alive) { setError(e.message || tFor(false)('mobile.connectFailed')); setConnecting(false); } });
     const unsub = subscribeSession(code, (data) => { if (alive && data) { setSession(data); setError(null); } });
     return () => { alive = false; unsub(); };
   }, [code]);
@@ -1317,14 +1331,15 @@ export default function MobileApp() {
     return () => clearTimeout(id);
   }, [dealToast]);
 
+  const T = tFor(session?.englishMode);
   let content;
   if (!code || code.length < 4 || (error && !session)) {
-    content = <CodeScreen code={code} setCode={setCode} error={error} connecting={connecting} />;
+    content = <CodeScreen code={code} setCode={setCode} error={error} connecting={connecting} T={T} />;
   } else if (!session) {
-    content = <Centered>Connexion à la partie {code}…</Centered>;
+    content = <Centered>{T('mobile.connectingTo', { code })}</Centered>;
   } else if (session.status === 'lobby') {
     // Lobby (mode téléphone) : l'élève crée son équipe et attend le démarrage.
-    content = token ? <LobbyCreateScreen code={code} token={token} lv2Mode={!!session?.lv2Mode} /> : <Centered>Connexion à la partie {code}…</Centered>;
+    content = token ? <LobbyCreateScreen code={code} token={token} lv2Mode={!!session?.lv2Mode} englishMode={!!session?.englishMode} /> : <Centered>{T('mobile.connectingTo', { code })}</Centered>;
   } else if (teamIdx == null || !session.teams?.[teamIdx]) {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
@@ -1345,7 +1360,7 @@ export default function MobileApp() {
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} hasAlchemy={hasAlchemy} tradeAlert={tradeAlert} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} hasAlchemy={hasAlchemy} tradeAlert={tradeAlert} T={T} />
       </>
     );
   }
@@ -1355,12 +1370,12 @@ export default function MobileApp() {
       {content}
       {/* Zone discrète (coin haut-gauche) : triple-tap + code 54150 → admin. */}
       {code && code.length >= 4 && !admin && (
-        <button onClick={onAdminTap} aria-label="Accès administrateur"
+        <button onClick={onAdminTap} aria-label={T('mobile.adminAccess')}
           style={{ position: 'fixed', top: 0, left: 0, width: 84, height: 46, opacity: 0, zIndex: 70, border: 'none', background: 'transparent' }} />
       )}
       {admin && session && <AdminPanel code={code} session={session} onClose={() => setAdmin(false)} />}
       {dealToast && session?.teams && teamIdx != null && (
-        <DealToast trade={dealToast} teamIdx={teamIdx} teams={session.teams} onClose={() => setDealToast(null)} />
+        <DealToast trade={dealToast} teamIdx={teamIdx} teams={session.teams} onClose={() => setDealToast(null)} T={T} />
       )}
     </>
   );

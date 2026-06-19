@@ -3,14 +3,16 @@
 //    (et qui) ou de jouer la case normalement.
 //  - ON : duel automatique avec l'adversaire présent (comportement historique).
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 
 export default function RulesConfig() {
+  const T = useT();
   const forcedDuels = useGameStore((s) => s.forcedDuels);
   const setForcedDuels = useGameStore((s) => s.setForcedDuels);
 
   return (
     <div>
-      <div className="field-label" style={{ marginBottom: 8 }}>⚔️ Règles de duel</div>
+      <div className="field-label" style={{ marginBottom: 8 }}>{T('setup.duelRules')}</div>
       <div
         onClick={() => setForcedDuels(!forcedDuels)}
         className="flex items-start gap-2.5 cursor-pointer select-none"
@@ -28,11 +30,11 @@ export default function RulesConfig() {
           {forcedDuels ? '✓' : ''}
         </div>
         <div className="min-w-0">
-          <div style={{ fontSize: 13.5, fontWeight: 700 }}>Duels forcés</div>
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{T('setup.forcedDuels')}</div>
           <div style={{ fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.35, marginTop: 2 }}>
             {forcedDuels
-              ? 'Activé : duel automatique dès qu’une équipe en rejoint une autre.'
-              : 'Désactivé : l’équipe qui arrive choisit de défier (et qui) ou de jouer la case.'}
+              ? T('setup.forcedDuelsOn')
+              : T('setup.forcedDuelsOff')}
           </div>
         </div>
       </div>

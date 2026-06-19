@@ -4,11 +4,13 @@
 // (handleLanding → showDuelChoice, chooseDuel/declineDuel).
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { useT } from '../../i18n';
 import { SUBJECTS } from '../../data/subjects';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
 
 export default function DuelChoiceModal() {
+  const T = useT();
   const dc = useGameStore((s) => s.showDuelChoice);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
@@ -25,10 +27,10 @@ export default function DuelChoiceModal() {
           <div style={{ padding: '24px 24px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 34, lineHeight: 1, marginBottom: 6 }}>⚔️</div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--ink-900)', margin: '0 0 4px' }}>
-              {arriver.emoji} {arriver.name}, un duel ?
+              {T('modal.duel.title', { emoji: arriver.emoji, name: arriver.name })}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--ink-600)', margin: '0 0 16px' }}>
-              Tu arrives sur une case occupée.{subj ? <> Duel en <strong style={{ color: subj.color }}>{subj.icon} {subj.name}</strong>.</> : ''} Qui veux-tu défier ?
+              {T('modal.duel.land')}{subj ? <> {T('modal.duel.subjectIn')} <strong style={{ color: subj.color }}>{subj.icon} {subj.name}</strong>.</> : ''} {T('modal.duel.whoChallenge')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
@@ -73,7 +75,7 @@ export default function DuelChoiceModal() {
                 return (
                   <div
                     key={`b-${i}`}
-                    title={`${t.name} est immunisé(e) aux duels`}
+                    title={T('modal.duel.immuneTitle', { name: t.name })}
                     aria-disabled="true"
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12,
@@ -90,7 +92,7 @@ export default function DuelChoiceModal() {
                     }}>{t.emoji}</span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--ink-700)' }}>{t.name}</span>
-                      <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>🛡️ Immunisé — impossible à défier</span>
+                      <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>{T('modal.duel.immuneLine')}</span>
                     </span>
                     <span style={{ fontSize: 20 }}>🛡️</span>
                   </div>
@@ -103,7 +105,7 @@ export default function DuelChoiceModal() {
               style={{ width: '100%' }}
               onClick={() => { soundClick(); declineDuel(); }}
             >
-              🤝 Non, je joue la case
+              {T('modal.duel.playSquare')}
             </button>
           </div>
         </ModalOverlay>

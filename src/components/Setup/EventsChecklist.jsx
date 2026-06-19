@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { EVENTS } from '../../data/events';
 import { EVENT_IMG } from '../../data/eventAssets';
+import { useT } from '../../i18n';
 
 export default function EventsChecklist() {
+  const T = useT();
   const enabledEvents = useGameStore((s) => s.enabledEvents);
   const toggleEvent = useGameStore((s) => s.toggleEvent);
   const setAllEvents = useGameStore((s) => s.setAllEvents);
@@ -17,13 +19,13 @@ export default function EventsChecklist() {
       <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
         <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'\u25b6'}</span>
-          {`\u00c9v\u00e9nements (${enabledEvents.length}/${allKeys.length})`}
+          {T('setup.eventsTitle', { n: enabledEvents.length, total: allKeys.length })}
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); setAllEvents(!allChecked); }}
           style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
         >
-          {allChecked ? 'Tout d\u00e9cocher' : 'Tout cocher'}
+          {allChecked ? T('setup.eventsUncheckAll') : T('setup.eventsCheckAll')}
         </button>
       </div>
       {open && (
