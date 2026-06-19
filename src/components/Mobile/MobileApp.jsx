@@ -13,7 +13,8 @@ import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { extOn } from '../../extensions/registry';
-import { tFor } from '../../i18n';
+import { tFor, setLang } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import SetBonusInfo from '../Modals/SetBonusInfo';
 import '../../styles/mobile.css';
 
@@ -128,8 +129,8 @@ function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = fa
               border: `2px solid ${on ? p.color : 'rgba(122,94,58,0.25)'}`,
               background: on ? `${p.color}1f` : '#fffefb',
             }}>
-            <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', gap: 5, alignItems: 'center' }}><span style={{ fontSize: 17 }}>{p.icon}</span>{p.name}</div>
-            <div style={{ fontSize: 10.5, color: 'var(--ink-500)', lineHeight: 1.25, marginTop: 2 }}>{p.desc}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', gap: 5, alignItems: 'center' }}><span style={{ fontSize: 17 }}>{p.icon}</span>{locName(p)}</div>
+            <div style={{ fontSize: 10.5, color: 'var(--ink-500)', lineHeight: 1.25, marginTop: 2 }}>{locDesc(p)}</div>
           </button>
         );
       })}
@@ -367,11 +368,11 @@ function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose,
             <span className="mob-tt-opt-ic">{o.icon}</span>
             <div className="mob-tt-opt-body">
               <div className="mob-tt-opt-name">
-                {o.name}
+                {locName(o)}
                 {picked && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.chosenTag')}</span>}
                 {canPick && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.chooseTag')}</span>}
               </div>
-              <div className="mob-tt-opt-desc">{o.desc}</div>
+              <div className="mob-tt-opt-desc">{locDesc(o)}</div>
             </div>
           </div>
         );
@@ -398,7 +399,7 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
         <span className="mob-tt-disc">{info.icon}</span>
         <div className="mob-tt-headtxt">
           <div className="mob-tt-name">
-            {info.name}
+            {locName(info)}
             {active && <span className="mob-tt-active">{T('mobile.activeTag')}</span>}
           </div>
           <div className="mob-tt-cat">
@@ -429,7 +430,7 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
           const n = i + 1;
           const state = n < level ? 'done' : n === level ? 'current' : n === level + 1 ? 'next' : 'locked';
           const cost = n >= 2 ? (costs?.[n - 2] ?? null) : null;
-          const desc = useTree ? describePowerScale(powerKey, n, true) : info.levels[i]?.desc;
+          const desc = useTree ? describePowerScale(powerKey, n, true) : locDesc(info.levels[i]);
           const slot = useTree ? specSlotForLevel(n) : null;
           return (
             <div key={n} className={'mob-tt-node is-' + state}>
@@ -498,7 +499,7 @@ function PowersView({ session, teamIdx, owned, code, token }) {
                 <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffefb', border: '1px solid rgba(122,94,58,0.25)', borderRadius: 12, padding: '8px 10px' }}>
                   <span style={{ fontSize: 22 }}>{p.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{locName(p)}</div>
                     <div style={{ fontSize: 11.5, opacity: 0.7 }}>{p.category === 'off' ? T('mobile.attack') : T('mobile.defense')}</div>
                   </div>
                   <button className="mob-btn mob-btn--gold" style={{ minWidth: 0 }} disabled={locked || broke}
@@ -604,7 +605,7 @@ function TeamView({ session, teamIdx, owned, code, token }) {
             const info = POWERS[k];
             const ch = t.powers[k]?.charges ?? 0;
             return (
-              <span key={k} className={'mob-charge' + (ch <= 0 ? ' is-empty' : '')} style={{ '--accent': info.color }} title={`${info.name} · ${T.plural('mobile.charges', ch)}`}>
+              <span key={k} className={'mob-charge' + (ch <= 0 ? ' is-empty' : '')} style={{ '--accent': info.color }} title={`${locName(info)} · ${T.plural('mobile.charges', ch)}`}>
                 <span className="mob-charge-disc">{info.icon}</span><b>{ch}</b>
               </span>
             );
@@ -1007,7 +1008,7 @@ function OldQuestionsView({ session, teamIdx }) {
                   fontWeight: 700, fontSize: 13.5, color: 'var(--ink-800,#4a3a1e)',
                 }}>
                   <span>{subj.icon || '•'}</span>
-                  <span>{subj.name || q.subject}</span>
+                  <span>{locName(subj) || q.subject}</span>
                   <span style={{ marginLeft: 'auto', color: result.col, fontSize: 13 }}>{result.txt}</span>
                 </div>
                 <div style={{ padding: '10px 12px' }}>
@@ -1199,6 +1200,9 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T 
 export default function MobileApp() {
   const [code, setCode] = useState(readInitialCode());
   const [session, setSession] = useState(null);
+  // Langue globale (getLang) synchronisée avec le mode anglais de la session,
+  // pour que les helpers de contenu (effectText, noms) s'affichent en anglais.
+  useEffect(() => { setLang(session?.englishMode ? 'en' : 'fr'); }, [session?.englishMode]);
   const [error, setError] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [teamIdx, setTeamIdx] = useState(null);

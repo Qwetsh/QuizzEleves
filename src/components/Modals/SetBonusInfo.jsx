@@ -6,6 +6,7 @@
 import { SETS } from '../../data/sets';
 import { ITEMS } from '../../data/items';
 import { useT } from '../../i18n';
+import { locName } from '../../i18n/content';
 import { equippedSetCounts } from '../../logic/itemEffects';
 import { describeEffect } from '../../logic/effectText';
 import { setPieceImgs } from '../../logic/itemAssets';
@@ -69,7 +70,7 @@ export default function SetBonusInfo({ item, team }) {
       )}
       <div className="setinfo-head">
         <span className="setinfo-icon">{set.icon}</span>
-        <span className="setinfo-name">{set.name}</span>
+        <span className="setinfo-name">{locName(set)}</span>
         <span className="setinfo-count">{count}<span className="setinfo-count-max">/3</span></span>
       </div>
       <div className="setinfo-pips" aria-label={T('modal.set.piecesEquipped', { n: count })}>

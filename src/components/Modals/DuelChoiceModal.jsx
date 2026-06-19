@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { SUBJECTS } from '../../data/subjects';
+import { locName } from '../../i18n/content';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
 
@@ -30,7 +31,7 @@ export default function DuelChoiceModal() {
               {T('modal.duel.title', { emoji: arriver.emoji, name: arriver.name })}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--ink-600)', margin: '0 0 16px' }}>
-              {T('modal.duel.land')}{subj ? <> {T('modal.duel.subjectIn')} <strong style={{ color: subj.color }}>{subj.icon} {subj.name}</strong>.</> : ''} {T('modal.duel.whoChallenge')}
+              {T('modal.duel.land')}{subj ? <> {T('modal.duel.subjectIn')} <strong style={{ color: subj.color }}>{subj.icon} {locName(subj)}</strong>.</> : ''} {T('modal.duel.whoChallenge')}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>

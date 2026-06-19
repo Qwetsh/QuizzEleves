@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { EVENTS } from '../../data/events';
 import { EVENT_IMG } from '../../data/eventAssets';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 
 export default function EventsChecklist() {
   const T = useT();
@@ -62,10 +63,10 @@ export default function EventsChecklist() {
                   {EVENT_IMG[key]
                     ? <img src={EVENT_IMG[key]} alt="" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
                     : <span>{ev.icon}</span>}
-                  <span>{ev.name}</span>
+                  <span>{locName(ev)}</span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.35, marginTop: 1 }}>
-                  {ev.desc}
+                  {locDesc(ev)}
                 </div>
               </div>
             </div>

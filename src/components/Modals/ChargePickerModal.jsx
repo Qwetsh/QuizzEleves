@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { POWERS } from '../../data/powers';
 import ModalOverlay from './ModalOverlay';
 
@@ -83,13 +84,13 @@ export default function ChargePickerModal() {
                     </span>
                     <div style={{ textAlign: 'left', flex: 1 }}>
                       <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--ink-800)' }}>
-                        {power.name}
+                        {locName(power)}
                         <span style={{ fontSize: 12, color: 'var(--ink-500)', marginLeft: 6 }}>
                           x{charges}
                         </span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>
-                        {!fromItem && power.category === 'off' ? T('modal.charge.offNow') : power.desc}
+                        {!fromItem && power.category === 'off' ? T('modal.charge.offNow') : locDesc(power)}
                       </div>
                     </div>
                     <span style={{ fontSize: 18, color: 'var(--gold-600)' }}>{"+1"}</span>

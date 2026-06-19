@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
+import { locName, loc } from '../../i18n/content';
 import { questionRerollOptions } from '../../store/effectEngine';
 import { soundCorrect, soundWrong, soundTimer, soundKatana } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
@@ -286,7 +287,7 @@ export default function QuestionModal() {
               }}
             >
               <span>{subjectInfo.icon}</span>
-              <span>{subjectInfo.name} {subjectInfo.biome ? `\u00b7 ${subjectInfo.biome}` : ''}</span>
+              <span>{locName(subjectInfo)} {subjectInfo.biome ? `\u00b7 ${loc(subjectInfo, 'biome')}` : ''}</span>
             </div>
 
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.25, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)', filter: blurStmt ? 'blur(8px)' : 'none', transition: 'filter 0.4s ease', userSelect: blurStmt ? 'none' : 'auto' }}>

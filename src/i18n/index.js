@@ -5,6 +5,7 @@
 // clés à points namespacées (setup.*, game.*, modal.*, mobile.*, fight.*, common.*).
 import { useMemo } from 'react';
 import { useGameStore } from '../store/gameStore';
+export { getLang, setLang } from './lang.js';
 import common from './dicts/common.js';
 import setup from './dicts/setup.js';
 import game from './dicts/game.js';

@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
+import { locName, loc } from '../../i18n/content';
 
 const TILE_TYPES = {
   depart:   { icon: '\u{1F3F0}', label: 'Départ' },
@@ -14,7 +15,7 @@ function locationLabel(board, pos) {
   if (!node) return null;
   if (node.type === 'subject' && node.subject !== 'multi') {
     const s = SUBJECTS[node.subject];
-    if (s) return { icon: s.icon, text: s.biome || s.name };
+    if (s) return { icon: s.icon, text: loc(s, 'biome') || locName(s) };
   }
   if (node.type === 'subject') return { icon: '\u{1F500}', text: 'Case multi' };
   const t = TILE_TYPES[node.type];

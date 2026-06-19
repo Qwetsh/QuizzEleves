@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { POWERS } from '../../data/powers';
 import { specOptionsFor } from '../../logic/powerEffects';
 import ModalOverlay from './ModalOverlay';
@@ -33,7 +34,7 @@ export default function SpecPickerModal() {
               {power.icon}
             </div>
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 23, color: 'var(--ink-900)' }}>
-              {T('modal.spec.title', { name: power.name, tier })}
+              {T('modal.spec.title', { name: locName(power), tier })}
             </h2>
             <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>
               {T('modal.spec.choose')}
@@ -56,8 +57,8 @@ export default function SpecPickerModal() {
               >
                 <span style={{ fontSize: 30, flexShrink: 0 }}>{opt.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--ink-900)' }}>{opt.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--ink-600)', lineHeight: 1.35, marginTop: 2 }}>{opt.desc}</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--ink-900)' }}>{locName(opt)}</div>
+                  <div style={{ fontSize: 13, color: 'var(--ink-600)', lineHeight: 1.35, marginTop: 2 }}>{locDesc(opt)}</div>
                 </div>
               </button>
             ))}

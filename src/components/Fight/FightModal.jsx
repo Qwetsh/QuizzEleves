@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
+import { locName } from '../../i18n/content';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
@@ -153,7 +154,7 @@ function VersusScreen({ fight, attacker, defender }) {
         }}
       >
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--ink-900)' }}>
-          {subjectInfo.icon} {T('fight.versus.duelOf', { subject: subjectInfo.name || fight.subject })} — {T(minigame.name)}
+          {subjectInfo.icon} {T('fight.versus.duelOf', { subject: locName(subjectInfo) || fight.subject })} — {T(minigame.name)}
         </span>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginTop: 4, fontFamily: 'var(--font-ui)' }}>
           {T(minigame.rules)}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc, loc } from '../../i18n/content';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { getMinigame } from '../Fight/minigames';
 import { POWERS } from '../../data/powers';
@@ -84,7 +85,7 @@ export default function EventModal() {
             <div className="tm-banner" style={{ marginBottom: 12 }}>
               {T('modal.event.special')}
             </div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--ink-900)' }}>{event?.name}</h2>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--ink-900)' }}>{locName(event)}</h2>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, margin: '10px 0 4px', color: 'var(--ink-600)' }}>
               <span className="text-lg">{team?.emoji}</span>
               <span>{team?.name}</span>
@@ -215,7 +216,7 @@ const IntroPhase = React.memo(function IntroPhase({ event, onAccept, onDecline }
   return (
     <>
       <p style={{ fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)', margin: '12px 0 22px' }}>
-        {event.desc}
+        {locDesc(event)}
       </p>
       <div className="flex gap-3 justify-center">
         {event.optional ? (
@@ -295,7 +296,7 @@ const QuestionPhase = React.memo(function QuestionPhase({ data, onAnswer }) {
     <div>
       <div className="flex items-center gap-2 mb-3 justify-center">
         <span className="text-xl">{subjectInfo.icon}</span>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: subjectInfo.color }}>{subjectInfo.name}</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: subjectInfo.color }}>{locName(subjectInfo)}</span>
       </div>
       <p style={{ fontWeight: 600, marginBottom: 16 }}>{question.q}</p>
       <div className="space-y-2">
@@ -358,7 +359,7 @@ function PowerChoiceButton({ powerKey, charges, onClick, disabled }) {
     >
       <span className="text-2xl">{power.icon}</span>
       <span style={{ fontFamily: 'var(--font-display)', flex: 1, textAlign: 'left' }}>
-        {power.name}
+        {locName(power)}
         {charges != null && (
           <span style={{ fontSize: 11, color: 'var(--ink-500)', marginLeft: 8 }}>
             {charges} {T.plural('modal.event.charges', charges)}
@@ -488,7 +489,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
     return (
       <>
         <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>
-          {T('modal.event.vol.whichRecharge', { power: POWERS[stealKey]?.name })}
+          {T('modal.event.vol.whichRecharge', { power: locName(POWERS[stealKey]) })}
         </p>
         <div className="space-y-2">
           {mine.map(([key, entry]) => (
@@ -546,7 +547,7 @@ function ChoicePhase({ eventKey, team, teams, data, onChoice, onMarcheNoirBuy, o
               >
                 <span className="text-2xl">{power.icon}</span>
                 <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--ink-900)', flex: 1, textAlign: 'left' }}>
-                  {power.name}
+                  {locName(power)}
                   <span style={{ fontSize: 13, color: 'var(--ink-600)', marginLeft: 8 }}>
                     {entry?.charges ?? 0} {T.plural('modal.event.charges', entry?.charges ?? 0)}
                   </span>

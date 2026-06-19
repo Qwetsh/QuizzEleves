@@ -2,6 +2,7 @@ import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
 import { lighten } from '../../utils/colors';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 
 export default function PowerSetup() {
   const T = useT();
@@ -72,7 +73,7 @@ export default function PowerSetup() {
               onClick={() => handleSelect(key)}
               role="button"
               tabIndex={0}
-              aria-label={T('setup.powerChooseAria', { name: p.name })}
+              aria-label={T('setup.powerChooseAria', { name: locName(p) })}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(key); } }}
               className="cursor-pointer"
               style={{
@@ -108,10 +109,10 @@ export default function PowerSetup() {
                 {p.icon}
               </div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ink-900)', marginBottom: 6 }}>
-                {p.name}
+                {locName(p)}
               </div>
               <div style={{ fontSize: 14, color: 'var(--ink-600)', lineHeight: 1.4, minHeight: 56 }}>
-                {p.desc}
+                {locDesc(p)}
               </div>
             </div>
           ))}

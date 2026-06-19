@@ -2,6 +2,7 @@ import { SUBJECTS } from '../../../data/subjects';
 import { POWERS } from '../../../data/powers';
 import { useGameStore } from '../../../store/gameStore';
 import { useT } from '../../../i18n';
+import { locName } from '../../../i18n/content';
 
 export default function TeamCard({ team, index }) {
   const T = useT();
@@ -38,7 +39,7 @@ export default function TeamCard({ team, index }) {
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-500)', display: 'flex', alignItems: 'center', gap: 8, marginTop: 1 }}>
           {powerEntries.map(({ key, info, charges }) => (
-            <span key={key} title={info.name}>{info.icon} {charges}</span>
+            <span key={key} title={locName(info)}>{info.icon} {charges}</span>
           ))}
           {(team.sablierActif || (team.doubleActive && team.doubleTimerDivisor)) && <span title={T('game.timerHalf')}>{"\u23F1\uFE0F"}</span>}
           {team.doubleActive && <span title={T('game.doubleQuestion')}>{"\u2753"}</span>}

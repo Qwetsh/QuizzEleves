@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { POWERS } from '../../data/powers';
 import ModalOverlay from './ModalOverlay';
 import TeamTargetButton from './TeamTargetButton';
@@ -19,7 +20,7 @@ function pickerInfo(stp, T) {
     };
   }
   const p = POWERS[stp.powerKey];
-  return p ? { icon: p.icon, color: p.color, name: p.name, desc: p.desc } : null;
+  return p ? { icon: p.icon, color: p.color, name: locName(p), desc: locDesc(p) } : null;
 }
 
 export default function TargetPickerModal() {

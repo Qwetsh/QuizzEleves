@@ -2,6 +2,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { locName } from '../../i18n/content';
 import ModalOverlay from './ModalOverlay';
 
 // Sélecteur de thème : choix de la matière pour une relance de question « au choix ».
@@ -35,7 +36,7 @@ export default function SubjectPickerModal() {
                   }}
                 >
                   <span style={{ fontSize: 22 }}>{s.icon}</span>
-                  <span>{s.name || key}</span>
+                  <span>{locName(s) || key}</span>
                 </button>
               );
             })}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
+import { loc, locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { itemImg } from '../../logic/itemAssets';
@@ -42,7 +43,7 @@ function PowerBadge({ powerKey, charges, level, kindLabel }) {
     <div
       className={'power-badge ' + (charges <= 0 ? 'is-empty' : '')}
       style={{ '--power-color': info.color }}
-      title={T('game.powerTitleDesc', { name: info.name, level, charges: chargesLabel, desc: info.desc })}
+      title={T('game.powerTitleDesc', { name: locName(info), level, charges: chargesLabel, desc: locDesc(info) })}
     >
       <div className="power-badge-disc">
         <span className="power-badge-icon">{info.icon}</span>
@@ -51,7 +52,7 @@ function PowerBadge({ powerKey, charges, level, kindLabel }) {
       </div>
       <div className="power-badge-meta">
         <div className="power-badge-kind">{kindLabel}</div>
-        <div className="power-badge-name">{info.name}</div>
+        <div className="power-badge-name">{locName(info)}</div>
       </div>
     </div>
   );
@@ -67,7 +68,7 @@ function PowerDisc({ powerKey, charges, level }) {
     <div
       className={'power-disc ' + (charges <= 0 ? 'is-empty' : '')}
       style={{ '--power-color': info.color }}
-      title={T('game.powerTitleLong', { name: info.name, level, charges: chargesLabel })}
+      title={T('game.powerTitleLong', { name: locName(info), level, charges: chargesLabel })}
     >
       <span className="power-disc-icon">{info.icon}</span>
       <span className="power-disc-count">{charges}</span>
@@ -240,7 +241,7 @@ function TeamLocation({ team }) {
             background: `var(--m-${biomeKey(node.subject)}-soft)`,
             color: `var(--m-${biomeKey(node.subject)}-deep)`,
           }}>{subject.icon}</span>
-          <span className="ts-card-location-text">{subject.biome}</span>
+          <span className="ts-card-location-text">{loc(subject, 'biome')}</span>
         </>
       ) : tileType ? (
         <>

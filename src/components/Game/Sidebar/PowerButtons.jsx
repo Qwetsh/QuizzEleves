@@ -1,6 +1,7 @@
 import { useGameStore } from '../../../store/gameStore';
 import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
 import { useT } from '../../../i18n';
+import { locName } from '../../../i18n/content';
 import '../../../styles/power-cast.css';
 
 export default function PowerButtons() {
@@ -38,7 +39,10 @@ export default function PowerButtons() {
     <div className="flex flex-col items-center gap-3 mt-3">
       {castable.length > 0 && (
         <div className="power-cast-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', width: '100%' }}>
-          {castable.map(({ key, icon, name, charges, color }) => (
+          {castable.map((p) => {
+            const { key, icon, charges, color } = p;
+            const name = locName(p);
+            return (
             <button
               key={key}
               onClick={() => usePower(key)}
@@ -52,7 +56,8 @@ export default function PowerButtons() {
               </span>
               <span className="power-cast-name">{name}</span>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 

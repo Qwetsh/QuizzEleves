@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { POWERS } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
@@ -138,7 +139,7 @@ function RechargeStall({ ownedPowers, money, onBuyCharge }) {
               <div className="shop-card-head">
                 <CardIcon icon={power.icon} color={power.color} />
                 <div className="shop-card-titles">
-                  <div className="shop-card-name">{power.name}</div>
+                  <div className="shop-card-name">{locName(power)}</div>
                 </div>
                 <ChargePips current={charges} />
               </div>
@@ -171,8 +172,8 @@ function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
         const cost = powerUpgradeCost(key, level, masteryOn);
         const canUpgrade = cost != null && money >= cost;
         // Mode Maîtrise : résumés générés (10 niveaux) ; sinon descriptions des `levels`.
-        const currentDesc = masteryOn ? describePowerScale(key, level, true) : power.levels[level - 1]?.desc;
-        const nextDesc = masteryOn ? describePowerScale(key, level + 1, true) : power.levels[level]?.desc;
+        const currentDesc = masteryOn ? describePowerScale(key, level, true) : locDesc(power.levels[level - 1]);
+        const nextDesc = masteryOn ? describePowerScale(key, level + 1, true) : locDesc(power.levels[level]);
         const branchNext = masteryOn ? specSlotForLevel(level + 1) : null; // 5 ou 10 = embranchement
 
         return (
@@ -181,7 +182,7 @@ function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
               <div className="shop-card-head">
                 <CardIcon icon={power.icon} color={power.color} />
                 <div className="shop-card-titles">
-                  <div className="shop-card-name">{power.name}</div>
+                  <div className="shop-card-name">{locName(power)}</div>
                 </div>
                 <span className="shop-lvl" style={{ color: power.color }}>
                   {T('modal.shop.level', { a: level, b: level + 1 })}
@@ -221,13 +222,13 @@ function UnlockStall({ unownedPowers, money, onBuyNew }) {
               <div className="shop-card-head">
                 <CardIcon icon={power.icon} color={power.color} desaturate />
                 <div className="shop-card-titles">
-                  <div className="shop-card-name">{power.name}</div>
+                  <div className="shop-card-name">{locName(power)}</div>
                   <div className="shop-card-sub" style={{ color: power.color }}>
                     {power.category === 'def' ? T('modal.shop.defensive') : T('modal.shop.offensive')}
                   </div>
                 </div>
               </div>
-              <div className="shop-card-desc">{power.desc}</div>
+              <div className="shop-card-desc">{locDesc(power)}</div>
               <button
                 className="shop-buy"
                 disabled={!canAfford}

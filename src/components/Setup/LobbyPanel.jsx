@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
+import { locName } from '../../i18n/content';
 import {
   createSession, buildSessionPayload, joinUrl,
   fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
@@ -97,8 +98,8 @@ export default function LobbyPanel() {
                   </span>
                   <span style={{ display: 'block', fontSize: 10, color: 'var(--ink-500)' }}>
                     {r.ready ? T('setup.lobbyReady') : T('setup.lobbyInProgress')}
-                    {r.power_def ? ` · 🛡️ ${POWERS[r.power_def]?.name || r.power_def}` : ''}
-                    {r.power_off ? ` · ⚔️ ${POWERS[r.power_off]?.name || r.power_off}` : ''}
+                    {r.power_def ? ` · 🛡️ ${locName(POWERS[r.power_def]) || r.power_def}` : ''}
+                    {r.power_off ? ` · ⚔️ ${locName(POWERS[r.power_off]) || r.power_off}` : ''}
                   </span>
                 </span>
                 <button className="btn btn--ghost btn--sm" onClick={() => removeLobbyTeam(r.id)} title={T('setup.lobbyRemoveTeam')}>✕</button>
