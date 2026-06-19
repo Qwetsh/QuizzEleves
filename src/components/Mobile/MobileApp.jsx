@@ -669,6 +669,39 @@ function tradeSideText(spec, equipOf) {
   return parts.length ? parts.join(' + ') : 'rien';
 }
 
+// Résumé post-échange (l'équipement a déjà changé de main → on ne peut plus
+// résoudre l'item porté ; on compte juste les pièces d'équipement).
+function tradeDoneText(spec) {
+  const parts = [];
+  if (spec?.gold) parts.push(`${spec.gold} 🪙`);
+  for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
+  const eq = (spec?.equip || []).length;
+  if (eq) parts.push(`${eq} équipement${eq > 1 ? 's' : ''}`);
+  return parts.length ? parts.join(' + ') : 'rien';
+}
+
+// Bandeau de confirmation « échange conclu », du point de vue de mon équipe.
+function DealToast({ trade, teamIdx, teams, onClose }) {
+  const isTo = trade.to_idx === teamIdx;
+  const received = isTo ? trade.give : trade.want;
+  const gave = isTo ? trade.want : trade.give;
+  const other = teams[isTo ? trade.from_idx : trade.to_idx];
+  return (
+    <div className="mob-deal-wrap" onClick={onClose}>
+      <div className="mob-deal" onClick={(e) => e.stopPropagation()}>
+        <div className="mob-deal-emoji">🤝</div>
+        <div className="mob-deal-title">Échange conclu !</div>
+        <div className="mob-deal-with">avec {other ? `${other.emoji} ${other.name}` : 'une autre équipe'}</div>
+        <div className="mob-deal-lines">
+          <div><span className="mob-deal-plus">＋ Tu reçois :</span> {tradeDoneText(received)}</div>
+          <div><span className="mob-deal-minus">－ Tu donnes :</span> {tradeDoneText(gave)}</div>
+        </div>
+        <button className="mob-btn mob-btn--gold" style={{ marginTop: 12 }} onClick={onClose}>Super !</button>
+      </div>
+    </div>
+  );
+}
+
 // Ligne d'objet dans le compositeur de troc : bouton de sélection (icône + nom +
 // aperçu d'effet en ligne, pour voir d'un coup d'œil ce que fait l'objet) et un
 // bouton ⓘ qui ouvre la fiche complète (ItemSheet en lecture seule).
@@ -700,12 +733,13 @@ function TradeItemRow({ itemKey, on, worn, onToggle, onInfo }) {
 }
 
 // Compositeur de troc : cible + « je donne » (mon inventaire) / « je veux » (le sien).
-function TradeComposer({ session, teamIdx, onClose, onSend }) {
+function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, title = '🤝 Proposer un troc', sendLabel = 'Envoyer' }) {
   const me = session.teams[teamIdx];
   const others = session.teams.map((t, i) => ({ t, i })).filter((x) => x.i !== teamIdx);
-  const [toIdx, setToIdx] = useState(others[0]?.i ?? null);
-  const [give, setGive] = useState({ gold: 0, bag: [], equip: [] });
-  const [want, setWant] = useState({ gold: 0, bag: [], equip: [] });
+  const norm = (s) => ({ gold: s?.gold || 0, bag: [...(s?.bag || [])], equip: [...(s?.equip || [])] });
+  const [toIdx, setToIdx] = useState(initial?.toIdx ?? others[0]?.i ?? null);
+  const [give, setGive] = useState(norm(initial?.give));
+  const [want, setWant] = useState(norm(initial?.want));
   const [info, setInfo] = useState(null); // { itemKey, team } : fiche d'objet ouverte
   const target = toIdx != null ? session.teams[toIdx] : null;
 
@@ -738,7 +772,7 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
    <>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 20, padding: 16, border: '1px solid rgba(122,94,58,0.25)' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>🤝 Proposer un troc</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>{title}</div>
         <div className="mob-trade-targets">
           {others.map(({ t, i }) => (
             <button key={i} className={'mob-trade-target' + (toIdx === i ? ' on' : '')} onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
@@ -750,7 +784,7 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
         {target && <Panel title={`Je veux (de ${target.emoji})`} team={target} spec={want} set={setWant} />}
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} disabled={toIdx == null || (empty(give) && empty(want))}
-            onClick={() => onSend(toIdx, give, want)}>Envoyer</button>
+            onClick={() => onSend(toIdx, give, want)}>{sendLabel}</button>
           <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={onClose}>Annuler</button>
         </div>
       </div>
@@ -767,6 +801,7 @@ function TradeComposer({ session, teamIdx, onClose, onSend }) {
 // `trades` est alimenté par l'abonnement partagé de MobileApp (badge + vue).
 function TradeView({ session, teamIdx, code, token, trades = [] }) {
   const [compose, setCompose] = useState(false);
+  const [counter, setCounter] = useState(null); // offre reçue qu'on contre (ou null)
   const me = session.teams[teamIdx];
 
   const incoming = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending');
@@ -789,6 +824,7 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
               <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'accepted').catch(() => {})}>Accepter</button>
               <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'declined').catch(() => {})}>Refuser</button>
             </div>
+            <button className="mob-btn mob-btn--ghost" style={{ width: '100%', marginTop: 6 }} onClick={() => { setCounter(tr); setCompose(true); }}>↔ Contre-proposition</button>
           </div>
         ))}
       </section>
@@ -812,8 +848,16 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
 
       {compose && (
         <TradeComposer session={session} teamIdx={teamIdx}
-          onClose={() => setCompose(false)}
-          onSend={(toIdx, give, want) => { createTrade(code, token, teamIdx, toIdx, give, want).catch(() => {}); setCompose(false); }} />
+          title={counter ? '↔ Contre-proposition' : '🤝 Proposer un troc'}
+          sendLabel={counter ? 'Envoyer la contre-proposition' : 'Envoyer'}
+          initial={counter ? { toIdx: counter.from_idx, give: counter.want, want: counter.give } : null}
+          onClose={() => { setCompose(false); setCounter(null); }}
+          onSend={(toIdx, give, want) => {
+            createTrade(code, token, teamIdx, toIdx, give, want).catch(() => {});
+            // Contre-proposition : l'offre d'origine est remplacée (refusée).
+            if (counter) setTradeStatus(counter.id, 'declined').catch(() => {});
+            setCompose(false); setCounter(null);
+          }} />
       )}
     </div>
   );
@@ -1153,6 +1197,8 @@ export default function MobileApp() {
   const [owned, setOwned] = useState(false); // l'équipe affichée est-elle CELLE du téléphone (édition autorisée)
   const [admin, setAdmin] = useState(false); // interface prof (contrôle total), déverrouillée au triple-tap + code
   const [trades, setTrades] = useState([]); // offres de troc de la session (badge + onglet Troc)
+  const [dealToast, setDealToast] = useState(null); // confirmation visuelle d'un échange conclu
+  const seenDeals = useRef(null); // ids de trocs déjà « appliqués » connus (évite de re-notifier)
   const adminTap = useRef({ n: 0, t: 0 });
 
   // Triple-tap (< 700 ms) puis code 54150 → ouvre l'interface admin (même code
@@ -1257,6 +1303,24 @@ export default function MobileApp() {
   }, [canTrade, code]);
   const tradeAlert = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending').length;
 
+  // Confirmation visuelle : dès qu'un troc impliquant MON équipe passe « applied »,
+  // on affiche un bandeau de succès. Au 1er chargement, on mémorise les deals déjà
+  // appliqués sans notifier (sinon on rejouerait l'historique à la connexion).
+  useEffect(() => {
+    if (teamIdx == null) return;
+    const mineApplied = trades.filter((t) => t.status === 'applied' && (t.to_idx === teamIdx || t.from_idx === teamIdx));
+    if (seenDeals.current === null) { seenDeals.current = new Set(mineApplied.map((t) => t.id)); return; }
+    const fresh = mineApplied.find((t) => !seenDeals.current.has(t.id));
+    if (fresh) { seenDeals.current.add(fresh.id); setDealToast(fresh); }
+  }, [trades, teamIdx]);
+
+  // Auto-fermeture du bandeau de confirmation après quelques secondes.
+  useEffect(() => {
+    if (!dealToast) return;
+    const id = setTimeout(() => setDealToast(null), 4500);
+    return () => clearTimeout(id);
+  }, [dealToast]);
+
   let content;
   if (!code || code.length < 4 || (error && !session)) {
     content = <CodeScreen code={code} setCode={setCode} error={error} connecting={connecting} />;
@@ -1299,6 +1363,9 @@ export default function MobileApp() {
           style={{ position: 'fixed', top: 0, left: 0, width: 84, height: 46, opacity: 0, zIndex: 70, border: 'none', background: 'transparent' }} />
       )}
       {admin && session && <AdminPanel code={code} session={session} onClose={() => setAdmin(false)} />}
+      {dealToast && session?.teams && teamIdx != null && (
+        <DealToast trade={dealToast} teamIdx={teamIdx} teams={session.teams} onClose={() => setDealToast(null)} />
+      )}
     </>
   );
 }
