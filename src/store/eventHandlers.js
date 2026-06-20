@@ -1,4 +1,4 @@
-import { POWERS } from '../data/powers.js';
+import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
 import { moveForward, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { applyRecul } from '../logic/turnHelpers.js';
@@ -334,7 +334,7 @@ export function eventVolApply(set, get, stealKey, giveKey) {
   const myEntry = team.powers?.[giveKey] || { charges: 0, level: 1 };
   const newTeams = [...teams];
   newTeams[targetIndex] = { ...target, powers: { ...target.powers, [stealKey]: { ...targetEntry, charges: targetEntry.charges - 1 } } };
-  newTeams[currentTeam] = { ...team, powers: { ...team.powers, [giveKey]: { ...myEntry, charges: myEntry.charges + 1 } } };
+  newTeams[currentTeam] = { ...team, powers: { ...team.powers, [giveKey]: { ...myEntry, charges: addCharge(myEntry.charges) } } };
   addLog(tg('log.ev.volCharge', { emoji: team.emoji, name: team.name, stolen: locName(POWERS[stealKey]), vemoji: target.emoji, vname: target.name, given: locName(POWERS[giveKey]) }));
   set({ teams: newTeams, showEvent: null });
   get().finishEventTurn();
@@ -350,11 +350,13 @@ export function eventMarcheNoirBuy(set, get, powerKey) {
   if ((team.money ?? 0) < price) return;
 
   const entry = team.powers?.[powerKey] || { charges: 0, level: 1 };
+  // Plafond : pas d'achat (ni de dépense) si déjà au maximum de charges.
+  if ((entry.charges ?? 0) >= MAX_CHARGES) return;
   const newTeams = [...teams];
   newTeams[currentTeam] = {
     ...team,
     money: team.money - price,
-    powers: { ...team.powers, [powerKey]: { ...entry, charges: entry.charges + 1 } },
+    powers: { ...team.powers, [powerKey]: { ...entry, charges: addCharge(entry.charges) } },
   };
   addLog(tg('log.ev.marcheNoirBuy', { emoji: team.emoji, name: team.name, power: locName(power), price }));
   set({ teams: newTeams, showEvent: null });

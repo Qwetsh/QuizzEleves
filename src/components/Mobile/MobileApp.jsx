@@ -4,7 +4,7 @@
 // l'état ; ici on ne fait que lire (l'édition viendra en Phase 3).
 import { useState, useEffect, useRef } from 'react';
 import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent, createTrade, fetchTrades, setTradeStatus, deleteTrade, subscribeTrades } from '../../logic/sessionConfig';
-import { POWERS } from '../../data/powers';
+import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
@@ -408,17 +408,25 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
           </div>
         </div>
       </div>
-      {/* Rangée « charges » : réserve actuelle à gauche, recharge soignée à droite.
-          L'amélioration de niveau est portée par le nœud « prochain niveau » plus bas. */}
+      {/* Rangée « charges » : jauge segmentée (max {MAX_CHARGES}) qui se remplit, et
+          recharge soignée à droite (désactivée/masquée au max). L'amélioration de
+          niveau est portée par le nœud « prochain niveau » plus bas. */}
       <div className="mob-tt-charge">
-        <span className="mob-tt-charge-state">{T('mobile.chargesInStock', { n: charges })}</span>
-        {owned && (
+        <span className="mob-tt-gauge" title={`${charges}/${MAX_CHARGES}`}>
+          {Array.from({ length: MAX_CHARGES }, (_, i) => (
+            <span key={i} className={'mob-tt-seg' + (i < charges ? ' is-on' : '')} />
+          ))}
+          <span className="mob-tt-gauge-n">{charges}/{MAX_CHARGES}</span>
+        </span>
+        {owned && (charges >= MAX_CHARGES ? (
+          <span className="mob-tt-charge-full">{T('mobile.chargesFull')}</span>
+        ) : (
           <button className="mob-tt-charge-btn"
             disabled={locked || money < rechargePrice}
             onClick={() => onAction('buyPowerCharge', { key: powerKey })}>
             {T('mobile.rechargeBtn', { price: rechargePrice })}
           </button>
-        )}
+        ))}
       </div>
       <div className="mob-tt-track">
         {Array.from({ length: count }, (_, i) => {

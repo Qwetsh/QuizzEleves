@@ -2,6 +2,12 @@
 // 9 entrées : L1→2 … L9→10. Calibrable via balanceConfig à terme.
 export const TREE_COSTS = [20, 30, 45, 65, 90, 120, 155, 195, 240];
 
+// Plafond de charges accumulables par pouvoir (recharge, butin, événements…).
+// Appliqué à TOUS les points d'incrément + désactive l'achat de recharge au max.
+export const MAX_CHARGES = 5;
+// Incrément d'une charge en respectant le plafond.
+export const addCharge = (n) => Math.min((n ?? 0) + 1, MAX_CHARGES);
+
 export const POWERS = {
   bouclier: {
     name: 'Bouclier',

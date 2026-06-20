@@ -87,6 +87,7 @@ export default {
   'modal.shop.slotTaken': { fr: '{slot} occupée → ira dans le sac', en: '{slot} taken → goes to the bag' },
   'modal.shop.bagFull': { fr: 'Sac plein !', en: 'Bag full!' },
   'modal.shop.addCharge': { fr: '+1 Charge', en: '+1 Charge' },
+  'modal.shop.chargeFull': { fr: '⚡ Au max', en: '⚡ Full' },
   'modal.shop.level': { fr: 'Niv. {a} → {b}', en: 'Lvl. {a} → {b}' },
   'modal.shop.current': { fr: 'Actuel : {desc}', en: 'Current: {desc}' },
   'modal.shop.next': { fr: 'Suivant : {desc}', en: 'Next: {desc}' },

@@ -1,4 +1,4 @@
-import { POWERS } from '../data/powers.js';
+import { POWERS, addCharge } from '../data/powers.js';
 import { SUBJECT_KEYS } from '../data/subjects.js';
 import { moveBack } from './pathfinding.js';
 import { getEffectValue, hasBuff } from './itemEffects.js';
@@ -82,7 +82,7 @@ export function applyRecul(team, board, base, masteryOn = false) {
       const keys = Object.keys(baseP).filter((k) => POWERS[k]);
       if (keys.length) {
         const pick = keys[Math.floor(Math.random() * keys.length)];
-        patch.powers = { ...baseP, [pick]: { ...baseP[pick], charges: (baseP[pick].charges ?? 0) + 1 } };
+        patch.powers = { ...baseP, [pick]: { ...baseP[pick], charges: addCharge(baseP[pick].charges) } };
         detail.push({ label: tg('log.turn.detail.tresorGuerre'), note: tg('log.turn.detail.chargePlus', { power: locName(POWERS[pick]) }) });
       }
     }

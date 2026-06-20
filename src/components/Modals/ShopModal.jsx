@@ -7,7 +7,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
-import { POWERS } from '../../data/powers';
+import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
@@ -45,7 +45,7 @@ function CardIcon({ icon, color, desaturate = false }) {
   );
 }
 
-function ChargePips({ current, max = 5 }) {
+function ChargePips({ current, max = MAX_CHARGES }) {
   return (
     <span className="shop-pips">
       {Array.from({ length: max }, (_, i) => (
@@ -132,7 +132,8 @@ function RechargeStall({ ownedPowers, money, onBuyCharge }) {
       {ownedPowers.map(([key, teamPower]) => {
         const power = POWERS[key];
         const charges = teamPower?.charges || 0;
-        const canBuy = money >= power.price;
+        const full = charges >= MAX_CHARGES;
+        const canBuy = money >= power.price && !full;
         return (
           <div className="shop-card" key={key}>
             <div className="shop-card-inner">
@@ -148,7 +149,7 @@ function RechargeStall({ ownedPowers, money, onBuyCharge }) {
                 disabled={!canBuy}
                 onClick={() => { soundClick(); onBuyCharge(key); }}
               >
-                {T('modal.shop.addCharge')} <Price value={power.price} />
+                {full ? T('modal.shop.chargeFull') : <>{T('modal.shop.addCharge')} <Price value={power.price} /></>}
               </button>
             </div>
           </div>

@@ -49,6 +49,13 @@ describe('applyTeamIntent : achats par équipe (téléphone)', () => {
     expect(S().teams[1].money).toBe(200 - (POWERS.bouclier.price || 15));
   });
 
+  it('buyPowerCharge : plafonné à 5 (pas de charge au-delà ni de dépense)', () => {
+    setup([team(0), team(1, { powers: { bouclier: { charges: 5, level: 1 } } })]);
+    S().applyTeamIntent('tok1', 'buyPowerCharge', { key: 'bouclier' });
+    expect(S().teams[1].powers.bouclier.charges).toBe(5); // inchangé
+    expect(S().teams[1].money).toBe(200); // pas débité au max
+  });
+
   it('upgradePower : monte le niveau (et débite l’or)', () => {
     setup([team(0), team(1, { powers: { bouclier: { charges: 1, level: 1 } } })]);
     const before = S().teams[1].money;

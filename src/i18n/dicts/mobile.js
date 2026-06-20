@@ -62,7 +62,7 @@ export default {
   'mobile.activeTag': { fr: '✦ actif', en: '✦ active' },
   'mobile.levelShort': { fr: 'Niv. {level}/{count}', en: 'Lvl {level}/{count}' },
   'mobile.rechargeBtn': { fr: '🔋 Recharger · {price} 🪙', en: '🔋 Recharge · {price} 🪙' },
-  'mobile.chargesInStock': { fr: '⚡ {n} en réserve', en: '⚡ {n} in reserve' },
+  'mobile.chargesFull': { fr: '⚡ Au max', en: '⚡ Full' },
   'mobile.upgradeBtn': { fr: '⬆️ Niv.{level} · {cost} 🪙', en: '⬆️ Lvl {level} · {cost} 🪙' },
   'mobile.upgradeHere': { fr: '⬆️ Débloquer · {cost} 🪙', en: '⬆️ Unlock · {cost} 🪙' },
   'mobile.maxLevel': { fr: 'Niveau max', en: 'Max level' },

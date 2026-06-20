@@ -1,4 +1,4 @@
-import { POWERS } from '../data/powers.js';
+import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
 import { moveBack, findPrevJunction } from '../logic/pathfinding.js';
 import { consumePowerCharge } from '../logic/turnHelpers.js';
 import { reducedRecul, resolveAmount, diceLabel, moveDieSides } from '../logic/itemEffects.js';
@@ -190,7 +190,7 @@ export function useRelance(set, get) {
         if (keys.length) {
           const pick = keys[Math.floor(Math.random() * keys.length)];
           const nt = [...get().teams];
-          nt[currentTeam] = { ...t, powers: { ...t.powers, [pick]: { ...t.powers[pick], charges: (t.powers[pick].charges ?? 0) + 1 } } };
+          nt[currentTeam] = { ...t, powers: { ...t.powers, [pick]: { ...t.powers[pick], charges: addCharge(t.powers[pick].charges) } } };
           set({ teams: nt });
           addLog(tg('log.pw.surcharge', { power: locName(POWERS[pick]) }));
         }
@@ -393,7 +393,7 @@ export function chargePickerChoice(set, get, powerKey) {
   const team = teams[currentTeam];
   const newTeams = [...teams];
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
-  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
+  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: addCharge(currentCharges) } };
   newTeams[currentTeam] = { ...team, powers: newPowers };
   const pName = locName(POWERS[powerKey]) || powerKey;
   addLog(tg('log.pw.gainCharge', { emoji: team.emoji, name: team.name, power: pName }));
@@ -441,12 +441,14 @@ export function buyPowerCharge(set, get, powerKey, teamIndex) {
   const team = teams[idx];
   // On ne recharge qu'un pouvoir D\u00c9J\u00c0 poss\u00e9d\u00e9 (\u00e9vite une entr\u00e9e sans `level`).
   if (!team?.powers?.[powerKey]) return;
+  const currentCharges = team.powers[powerKey].charges ?? 0;
+  // Plafond : pas d'achat (ni de d\u00e9pense) si d\u00e9j\u00e0 au maximum de charges.
+  if (currentCharges >= MAX_CHARGES) return;
   const price = POWERS[powerKey]?.price || 15;
   if (team.money < price) return;
 
   const newTeams = [...teams];
-  const currentCharges = team.powers[powerKey].charges ?? 0;
-  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
+  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: addCharge(currentCharges) } };
   newTeams[idx] = { ...team, money: team.money - price, powers: newPowers };
 
   const pName = locName(POWERS[powerKey]) || powerKey;
