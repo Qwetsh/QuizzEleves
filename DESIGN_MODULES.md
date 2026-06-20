@@ -51,6 +51,10 @@ et décor sur-mesure (qui « se fondent ») plus tard, thème par thème.
 
 **Objets = UN pool + tags de thème, affinité généralisée (nouveau chantier, voir §14).**
 
+**Analyse de données = réservée aux modules SCOLAIRES (voir §15).** On n'enregistre/
+archive les stats que pour une session **100 % `school`** (Collège, Lycée). Dès qu'un
+thème `themed` est présent, aucun enregistrement.
+
 ---
 
 ## 1. Objectif
@@ -401,6 +405,31 @@ dé, loot, piège…) donc **thème-agnostiques**.
 > Effort : **moyen** côté moteur (champ + filtre loot/boutique + résolveur d'affinité),
 > **récurrent** côté contenu (créer des objets de saveur par thème, au fil de l'eau).
 > À typer en TS dès le départ (champ `themes` sur le type `Item`, déjà dans `src/types`).
+
+---
+
+## 15. Analyse de données — réservée aux modules scolaires (décision 2026-06-20)
+
+L'analyse (`recordStat`/`gameStats`/`quete_game_stats`/dashboard `?analyse`) est un
+outil **pédagogique** (suivi par matière, étiquette de classe/séance). On ne veut PAS
+la polluer avec des thèmes ludiques.
+
+**Règle (option 1 validée) :** on enregistre/archive **uniquement** quand la session
+est **100 % scolaire** — c.-à-d. tous les thèmes actifs sont de `kind:'school'`
+(Collège ; Lycée plus tard). Dès qu'un thème `themed` est présent (même mixé avec
+Collège), **aucun enregistrement**.
+
+**Levier :** la colonne `kind` de `quete_modules` (créée en Phase 1.2). Une session est
+« analytique » si tous les modules des catégories actives sont `school`.
+
+**Points à gater (Phase 2, quand on touche au Setup/sélection) :**
+- `recordStat` (gameStore : answers/itemUses/powerUses) → no-op hors session scolaire.
+- `StatsArchiver` (archivage `quete_game_stats` en fin de partie) → ne s'exécute pas.
+- Étiquette « Classe / séance » au Setup → masquée/optionnelle hors `school`.
+- Dashboard `?analyse` : inchangé (ne verra que des données scolaires par construction).
+
+> Pas implémenté maintenant : à câbler en Phase 2 (un helper `isSchoolSession()` lu par
+> `recordStat` + `StatsArchiver` + le champ classe). Voir [[dashboard-analyse]].
 
 ---
 
