@@ -9,7 +9,7 @@ const URL = process.env.VITE_SUPABASE_URL || 'https://tppecozmygtjmbcdqgfc.supab
 const KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tVHWrjNRFN_RDTuD5PEdkA_uMaP7HXJ';
 const sb = createClient(URL, KEY, { auth: { persistSession: false } });
 
-const moduleRow = { key: 'film', name: 'Film', name_en: 'Movies', icon: '🎬', kind: 'themed', description: 'Thème démo : cinéma.', enabled: true, ord: 1 };
+const moduleRow = { key: 'film', name: 'Film', name_en: 'Movies', icon: '🎬', kind: 'themed', description: 'Thème démo : cinéma.', color: '#c0392b', color_soft: '#f3d4cf', color_deep: '#5e1a13', biome: 'Le Grand Écran', biome_en: 'The Silver Screen', enabled: true, ord: 1 };
 
 const catRows = [
   { key: 'film_scifi',  module: 'film', name: 'Science-fiction', name_en: 'Sci-fi',    short: 'SF', icon: '🚀', color: '#3b6cb3', color_soft: '#d2dceb', color_deep: '#1a3357', biome: 'La Galaxie Lointaine', biome_en: 'The Far Galaxy', role: 'subject', board: true, default_on: true, lv2_member: false, enabled: true, ord: 20 },

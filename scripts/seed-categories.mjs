@@ -21,7 +21,9 @@ const roleOf = (key) => {
 
 const moduleRows = Object.values(MODULES).map((m, i) => ({
   key: m.key, name: m.name, name_en: m.name_en ?? null, icon: m.icon ?? null,
-  kind: m.kind || 'themed', description: m.description ?? null, enabled: true, ord: i,
+  kind: m.kind || 'themed', description: m.description ?? null,
+  color: m.color ?? null, color_soft: m.colorSoft ?? null, color_deep: m.colorDeep ?? null,
+  biome: m.biome ?? null, biome_en: m.biome_en ?? null, enabled: true, ord: i,
 }));
 
 const catRows = Object.entries(BASE_SUBJECTS).map(([key, c], i) => ({

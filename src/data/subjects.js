@@ -10,7 +10,7 @@
 
 // Registre des MODULES (= thèmes). Pour l'instant : Collège uniquement (school).
 export const MODULES = {
-  college: { key: 'college', name: 'Collège', name_en: 'Middle School', icon: '🎒', kind: 'school' },
+  college: { key: 'college', name: 'Collège', name_en: 'Middle School', icon: '🎒', kind: 'school', color: '#b8862c', colorSoft: '#f3e7ce', colorDeep: '#6e4e10', biome: 'L’École des Savoirs', biome_en: 'The School of Knowledge' },
 };
 export let MODULE_KEYS = ['college'];
 

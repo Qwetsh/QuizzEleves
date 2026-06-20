@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { EVENTS } from '../data/events.js';
-import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS } from '../data/subjects.js';
+import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES } from '../data/subjects.js';
 import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
@@ -530,6 +530,21 @@ export const useGameStore = create((set, get) => ({
     // ≥2 THÈMES, les voies deviennent les thèmes (chacun poolant ses sous-thèmes) ;
     // sinon les voies = les sous-thèmes (mono-thème = Collège seul = historique).
     const { boardCats, categoryPools } = boardCategoriesFor(subjects, (k) => SUBJECTS[k]?.module || 'college');
+    // Mode multi : une voie = un THÈME (clé de module). On injecte une pseudo-
+    // catégorie d'affichage dans le catalogue runtime pour que tout (disque coloré
+    // du plateau, libellés) la rende comme une matière. Display-only (hors SUBJECT_KEYS).
+    if (Object.keys(categoryPools).length) {
+      for (const themeKey of boardCats) {
+        const m = MODULES[themeKey];
+        if (m && !SUBJECTS[themeKey]) {
+          SUBJECTS[themeKey] = {
+            module: themeKey, name: m.name, name_en: m.name_en, icon: m.icon,
+            color: m.color || '#d9cda5', colorSoft: m.colorSoft, colorDeep: m.colorDeep,
+            biome: m.biome, biome_en: m.biome_en,
+          };
+        }
+      }
+    }
     const { nodes, viewBox } = generateBoard({ ...boardParams, subjects: boardCats });
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},

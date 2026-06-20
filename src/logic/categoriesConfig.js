@@ -32,6 +32,12 @@ function rowToModule(r) {
   if (r.icon != null) m.icon = r.icon;
   if (r.kind != null) m.kind = r.kind;
   if (r.description != null) m.description = r.description;
+  // Identité visuelle d'un thème (pour les voies-thèmes en mode multi).
+  if (r.color != null) m.color = r.color;
+  if (r.color_soft != null) m.colorSoft = r.color_soft;
+  if (r.color_deep != null) m.colorDeep = r.color_deep;
+  if (r.biome != null) m.biome = r.biome;
+  if (r.biome_en != null) m.biome_en = r.biome_en;
   return m;
 }
 
