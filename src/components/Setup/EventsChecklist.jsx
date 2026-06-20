@@ -5,7 +5,10 @@ import { EVENT_IMG } from '../../data/eventAssets';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 
-export default function EventsChecklist() {
+// `embedded` (refonte Setup) : rend uniquement la grille, sans en-t\u00eate repliable
+// ni bouton \u00ab tout cocher \u00bb \u2014 c'est d\u00e9sormais SetupSection qui fournit le pli, le
+// r\u00e9sum\u00e9 et l'action. Mode legacy (autonome) conserv\u00e9 pour compat.
+export default function EventsChecklist({ embedded = false }) {
   const T = useT();
   const enabledEvents = useGameStore((s) => s.enabledEvents);
   const toggleEvent = useGameStore((s) => s.toggleEvent);
@@ -15,21 +18,7 @@ export default function EventsChecklist() {
   const allKeys = Object.keys(EVENTS);
   const allChecked = enabledEvents.length === allKeys.length;
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
-        <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'\u25b6'}</span>
-          {T('setup.eventsTitle', { n: enabledEvents.length, total: allKeys.length })}
-        </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setAllEvents(!allChecked); }}
-          style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
-        >
-          {allChecked ? T('setup.eventsUncheckAll') : T('setup.eventsCheckAll')}
-        </button>
-      </div>
-      {open && (
+  const grid = (
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {allKeys.map((key) => {
           const ev = EVENTS[key];
@@ -73,7 +62,39 @@ export default function EventsChecklist() {
           );
         })}
       </div>
-      )}
+  );
+
+  if (embedded) {
+    return (
+      <div>
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setAllEvents(!allChecked)}
+            style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
+          >
+            {allChecked ? T('setup.eventsUncheckAll') : T('setup.eventsCheckAll')}
+          </button>
+        </div>
+        {grid}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
+        <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'▶'}</span>
+          {T('setup.eventsTitle', { n: enabledEvents.length, total: allKeys.length })}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); setAllEvents(!allChecked); }}
+          style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
+        >
+          {allChecked ? T('setup.eventsUncheckAll') : T('setup.eventsCheckAll')}
+        </button>
+      </div>
+      {open && grid}
     </div>
   );
 }

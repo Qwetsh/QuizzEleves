@@ -19,6 +19,36 @@ export default {
   'setup.toolsBadCode': { fr: 'Code incorrect.', en: 'Wrong code.' },
   'setup.kingdomsTitle': { fr: 'Les 6 royaumes', en: 'The 6 kingdoms' },
 
+  // --- Refonte accueil : en-tête, sections, résumés ---
+  'setup.newGame': { fr: '🚀 Nouvelle partie', en: '🚀 New game' },
+  'setup.resumeShort': { fr: '↩️ Reprendre', en: '↩️ Resume' },
+  'setup.essentialTitle': { fr: 'L\'essentiel', en: 'The essentials' },
+  'setup.optionsTitle': { fr: 'Options de jeu', en: 'Game options' },
+  'setup.optionsHint': { fr: '(réglages avancés — repliés)', en: '(advanced settings — collapsed)' },
+  'setup.toolsBtn': { fr: '🛠️ Outils', en: '🛠️ Tools' },
+  'setup.toolsTitle': { fr: '🛠️ Outils d\'édition', en: '🛠️ Editing tools' },
+  'setup.phoneStartHint': {
+    fr: 'La partie démarrera depuis le lobby une fois les équipes prêtes.',
+    en: 'The game will start from the lobby once the teams are ready.',
+  },
+  // Sections (titres courts)
+  'setup.secExtensions': { fr: '🧩 Extensions', en: '🧩 Extensions' },
+  'setup.secBoard': { fr: '🗺️ Plateau', en: '🗺️ Board' },
+  'setup.secEvents': { fr: '✨ Événements', en: '✨ Events' },
+  'setup.secItems': { fr: '🎒 Objets & coffre', en: '🎒 Items & chest' },
+  'setup.secRules': { fr: '⚔️ Règles', en: '⚔️ Rules' },
+  // Résumés (1 ligne)
+  'setup.sumNone': { fr: 'aucune', en: 'none' },
+  'setup.sumBoard': { fr: '{cases} cases · {voies} voies · {events}', en: '{cases} spaces · {voies} lanes · {events}' },
+  'setup.sumEventsEvery': { fr: 'événement 1/{n}', en: 'event 1/{n}' },
+  'setup.sumEventsOff': { fr: 'sans événement', en: 'no events' },
+  'setup.sumActive': { fr: '{n}/{total} actifs', en: '{n}/{total} on' },
+  'setup.sumItems': { fr: '{n} objets · {chest}', en: '{n} items · {chest}' },
+  'setup.sumChestOn': { fr: 'coffre activé', en: 'chest on' },
+  'setup.sumChestOff': { fr: 'sans coffre', en: 'no chest' },
+  'setup.sumDuelsForced': { fr: 'duels forcés', en: 'forced duels' },
+  'setup.sumDuelsChoice': { fr: 'duels au choix', en: 'duels by choice' },
+
   // --- LevelSelect.jsx ---
   'setup.levelLabel': { fr: 'Niveau', en: 'Level' },
   'setup.levelHint': { fr: '(plusieurs possibles)', en: '(several allowed)' },

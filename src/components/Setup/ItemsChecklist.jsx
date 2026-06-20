@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
-import { locName } from '../../i18n/content';
+import { locName, locDesc } from '../../i18n/content';
+import { useT } from '../../i18n';
 
 const GROUPS = [
   { slot: 'head', label: `${SLOTS.head.icon} Coiffes` },
@@ -11,34 +12,23 @@ const GROUPS = [
   { slot: 'consumable', label: '🧳 Consommables' },
 ];
 
-export default function ItemsChecklist() {
+// Clés des objets « équipement + consommables purs » (exclut l'alchimie/parchemins,
+// gérés dans l'éditeur). Partagé avec Setup (résumé + action « tout cocher »).
+export const equipmentItemKeys = () => Object.keys(ITEMS).filter((k) => !ITEMS[k].family);
+
+// `embedded` (refonte Setup) : rend uniquement les groupes, sans en-tête repliable
+// ni bouton « tout cocher » (fournis par SetupSection / Setup). Mode legacy gardé.
+export default function ItemsChecklist({ embedded = false }) {
+  const T = useT();
   const enabledItems = useGameStore((s) => s.enabledItems);
   const toggleItem = useGameStore((s) => s.toggleItem);
   const setAllItems = useGameStore((s) => s.setAllItems);
   const [open, setOpen] = useState(false);
 
-  // Les items d'alchimie (ingrédients/potions) et parchemins se gèrent dans
-  // l'éditeur (onglet Alchimie) : on les exclut de cette checklist (sinon 1100+
-  // potions la noieraient). On ne liste ici que l'équipement + consommables purs.
-  const allKeys = Object.keys(ITEMS).filter((k) => !ITEMS[k].family);
+  const allKeys = equipmentItemKeys();
   const allChecked = allKeys.every((k) => enabledItems.includes(k));
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
-        <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'▶'}</span>
-          {`Objets (${enabledItems.filter((k) => allKeys.includes(k)).length}/${allKeys.length})`}
-        </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setAllItems(!allChecked); }}
-          style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
-        >
-          {allChecked ? 'Tout décocher' : 'Tout cocher'}
-        </button>
-      </div>
-
-      {open && GROUPS.map(({ slot, label }) => (
+  const groups = GROUPS.map(({ slot, label }) => (
         <div key={slot} style={{ marginBottom: 10 }}>
           <div style={{
             fontSize: 11, fontWeight: 700, color: 'var(--ink-500)',
@@ -93,7 +83,7 @@ export default function ItemsChecklist() {
                       </span>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--ink-500)', lineHeight: 1.35, marginTop: 1 }}>
-                      {item.desc}
+                      {locDesc(item)}
                     </div>
                   </div>
                 </div>
@@ -101,7 +91,41 @@ export default function ItemsChecklist() {
             })}
           </div>
         </div>
-      ))}
+      ));
+
+  const allBtn = (
+    <button
+      onClick={() => setAllItems(!allChecked)}
+      style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
+    >
+      {allChecked ? T('setup.eventsUncheckAll') : T('setup.eventsCheckAll')}
+    </button>
+  );
+
+  if (embedded) {
+    return (
+      <div>
+        <div className="flex justify-end mb-2">{allBtn}</div>
+        {groups}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 cursor-pointer select-none" onClick={() => setOpen((o) => !o)}>
+        <div className="field-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-400)', transition: 'transform 150ms', transform: open ? 'rotate(90deg)' : 'none', display: 'inline-block' }}>{'▶'}</span>
+          {`Objets (${enabledItems.filter((k) => allKeys.includes(k)).length}/${allKeys.length})`}
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); setAllItems(!allChecked); }}
+          style={{ fontSize: 12, color: 'var(--gold-600)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 600 }}
+        >
+          {allChecked ? T('setup.eventsUncheckAll') : T('setup.eventsCheckAll')}
+        </button>
+      </div>
+      {open && groups}
     </div>
   );
 }

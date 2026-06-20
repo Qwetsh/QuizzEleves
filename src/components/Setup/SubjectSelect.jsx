@@ -5,6 +5,7 @@ import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { getQuestions } from '../../data/questions/index.js';
 import { useT } from '../../i18n';
+import { loc } from '../../i18n/content';
 
 export default function SubjectSelect() {
   const T = useT();
@@ -53,7 +54,10 @@ export default function SubjectSelect() {
                   {s.icon} {s.name}
                 </strong>
                 <small style={{ fontSize: 12, color: 'var(--ink-500)', fontWeight: 400 }}>
-                  {empty ? T('setup.subjectSoon') : T('setup.questionsCount', { n: count })}
+                  {/* Matière choisie : on montre le « royaume » (biome) — touche de
+                      saveur qui remplace l'ancienne grille décorative ; sinon le
+                      nombre de questions (info utile au choix). */}
+                  {empty ? T('setup.subjectSoon') : (on ? loc(s, 'biome') : T('setup.questionsCount', { n: count }))}
                 </small>
               </span>
             </button>
