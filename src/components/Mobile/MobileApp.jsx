@@ -388,6 +388,7 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
   const info = POWERS[powerKey];
   if (!info) return null;
   const level = entry?.level ?? 1;
+  const charges = entry?.charges ?? 0;
   const useTree = masteryOn && info.tree;
   const count = useTree ? info.tree.scale.length : (info.levels?.length || 3);
   const costs = useTree ? info.tree.upgradeCosts : info.upgradeCosts;
@@ -407,24 +408,18 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
           </div>
         </div>
       </div>
-      {owned && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }}
+      {/* Rangée « charges » : réserve actuelle à gauche, recharge soignée à droite.
+          L'amélioration de niveau est portée par le nœud « prochain niveau » plus bas. */}
+      <div className="mob-tt-charge">
+        <span className="mob-tt-charge-state">{T('mobile.chargesInStock', { n: charges })}</span>
+        {owned && (
+          <button className="mob-tt-charge-btn"
             disabled={locked || money < rechargePrice}
             onClick={() => onAction('buyPowerCharge', { key: powerKey })}>
             {T('mobile.rechargeBtn', { price: rechargePrice })}
           </button>
-          {nextCost != null ? (
-            <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }}
-              disabled={locked || money < nextCost}
-              onClick={() => onAction('upgradePower', { key: powerKey })}>
-              {T('mobile.upgradeBtn', { level: level + 1, cost: nextCost })}
-            </button>
-          ) : (
-            <span style={{ flex: 1, textAlign: 'center', alignSelf: 'center', fontSize: 12, opacity: 0.6 }}>{T('mobile.maxLevel')}</span>
-          )}
-        </div>
-      )}
+        )}
+      </div>
       <div className="mob-tt-track">
         {Array.from({ length: count }, (_, i) => {
           const n = i + 1;
@@ -440,12 +435,22 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
                   <span className="mob-tt-lvl">{T('mobile.levelN', { n })}</span>
                   {state === 'current' && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.currentLevel')}</span>}
                   {state === 'done' && <span className="mob-tt-tag mob-tt-tag--done">{T('mobile.acquired')}</span>}
-                  {(state === 'next' || state === 'locked') && cost != null && (
+                  {/* Prix : sur un niveau verrouillé (info), ou sur le prochain en
+                      lecture seule. Quand on possède le pouvoir, le prochain niveau
+                      porte un bouton d'amélioration cliquable (avec le prix). */}
+                  {(state === 'locked' || (state === 'next' && !owned)) && cost != null && (
                     <span className="mob-tt-tag mob-tt-tag--cost">{'\u{1FA99}'} {cost}</span>
                   )}
                   {slot && <span className="mob-tt-tag mob-tt-tag--branch">{T('mobile.pathTag')}</span>}
                 </div>
                 <div className="mob-tt-desc">{desc}</div>
+                {owned && state === 'next' && nextCost != null && (
+                  <button className="mob-tt-upbtn"
+                    disabled={locked || money < nextCost}
+                    onClick={() => onAction('upgradePower', { key: powerKey })}>
+                    {T('mobile.upgradeHere', { cost: nextCost })}
+                  </button>
+                )}
                 {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n}
                   owned={owned} locked={locked} T={T}
                   onChoose={(specKey) => onAction('chooseSpec', { key: powerKey, slot, specKey })} />}

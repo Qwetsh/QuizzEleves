@@ -242,6 +242,38 @@
 }
 .mob-tt-node.is-next .mob-tt-bullet { background: #fffdf7; color: var(--accent); border-color: var(--accent); border-style: dashed; }
 .mob-tt-node.is-locked { opacity: 0.5; }
+
+/* Rangée « charges » + recharge soignée (en tête de carte de pouvoir). */
+.mob-tt-charge {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 10px; padding: 7px 8px 7px 12px; border-radius: 12px;
+  background: color-mix(in oklab, var(--accent) 9%, #fffdf7);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, rgba(122,94,58,0.18));
+}
+.mob-tt-charge-state { font-size: 13px; font-weight: 800; color: var(--ink-700, #43331a); }
+.mob-tt-charge-btn {
+  flex-shrink: 0; border: none; cursor: pointer; border-radius: 999px; padding: 8px 16px;
+  font-family: var(--font-display); font-size: 13px; color: #fff; white-space: nowrap;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 78%, #fff), var(--accent));
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--accent) 55%, #000), 0 4px 9px rgba(0,0,0,0.16);
+}
+.mob-tt-charge-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 color-mix(in oklab, var(--accent) 55%, #000); }
+.mob-tt-charge-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+/* Bouton d'amélioration porté par le nœud « prochain niveau ». */
+.mob-tt-upbtn {
+  margin-top: 8px; width: 100%; border: none; cursor: pointer; border-radius: 10px;
+  padding: 9px 12px; font-family: var(--font-display); font-size: 13px; color: #fff;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 78%, #fff), var(--accent));
+  box-shadow: 0 2px 0 color-mix(in oklab, var(--accent) 55%, #000), 0 4px 9px rgba(0,0,0,0.14);
+}
+.mob-tt-upbtn:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 color-mix(in oklab, var(--accent) 55%, #000); }
+.mob-tt-upbtn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+/* Le prochain niveau (actionnable) ressort. */
+.mob-tt-node.is-next .mob-tt-node-body {
+  background: #fffdf7;
+  border-color: color-mix(in oklab, var(--accent) 45%, rgba(122,94,58,0.2));
+}
 .mob-tt-node-body {
   flex: 1; min-width: 0; padding: 6px 10px; border-radius: 12px;
   background: rgba(255,255,255,0.6); border: 1px solid rgba(122,94,58,0.12);
