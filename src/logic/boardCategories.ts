@@ -11,13 +11,23 @@ export interface BoardCategories {
   categoryPools: Record<string, string[]>;
 }
 
-// `subjects` = sous-thèmes effectifs (avec contenu) ; `themeOf(key)` = clé du
-// thème/module d'un sous-thème (défaut 'college').
-export function boardCategoriesFor(subjects: string[], themeOf: (k: string) => string): BoardCategories {
+// `subjects` = sous-thèmes effectifs sélectionnés (avec contenu) ;
+// `themeOf(key)` = clé du thème/module d'un sous-thème (défaut 'college') ;
+// `subthemesOf(theme)` (optionnel) = TOUS les sous-thèmes (avec contenu) d'un thème
+// — en MULTI, on pioche dans le thème ENTIER (« pas de mixage fin », DESIGN_MODULES
+// §0). Sans `subthemesOf`, on retombe sur les sous-thèmes sélectionnés.
+export function boardCategoriesFor(
+  subjects: string[],
+  themeOf: (k: string) => string,
+  subthemesOf?: (theme: string) => string[],
+): BoardCategories {
   const themes = [...new Set(subjects.map(themeOf))];
   if (themes.length >= 2) {
     const categoryPools: Record<string, string[]> = {};
-    for (const th of themes) categoryPools[th] = subjects.filter((k) => themeOf(k) === th);
+    for (const th of themes) {
+      const whole = subthemesOf ? subthemesOf(th) : null;
+      categoryPools[th] = whole && whole.length ? whole : subjects.filter((k) => themeOf(k) === th);
+    }
     return { boardCats: themes, categoryPools };
   }
   return { boardCats: subjects, categoryPools: {} };

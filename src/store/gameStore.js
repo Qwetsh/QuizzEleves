@@ -398,7 +398,18 @@ export const useGameStore = create((set, get) => ({
   // --- Analytics : enregistre un événement structuré dans gameStats ---
   // category ∈ { 'answers', 'itemUses', 'powerUses' }. Chaque entrée reçoit un
   // `seq` (ordre) et un horodatage `at`. No-op si la catégorie est inconnue.
+  // Session « scolaire » = tous les thèmes des voies du plateau sont de kind 'school'
+  // (Collège, Lycée…). L'analyse de données (recordStat/archivage) y est RÉSERVÉE :
+  // un thème ludique (Film, Sport…) ne pollue pas les stats de classe (DESIGN_MODULES §15).
+  isSchoolSession: () => {
+    const cats = get().boardSubjects;
+    if (!Array.isArray(cats) || !cats.length) return true; // défaut : scolaire (rétro-compat)
+    const themeOf = (k) => (MODULES[k] ? k : (SUBJECTS[k]?.module || 'college'));
+    return [...new Set(cats.map(themeOf))].every((t) => (MODULES[t]?.kind ?? 'school') === 'school');
+  },
   recordStat: (category, payload) => set((s) => {
+    // Analyse réservée aux sessions scolaires (sinon no-op).
+    if (!get().isSchoolSession()) return {};
     const gs = s.gameStats;
     const arr = Array.isArray(gs?.[category]) ? gs[category] : null;
     if (!arr) return {};
@@ -527,9 +538,14 @@ export const useGameStore = create((set, get) => ({
     const lv2On = lv2Mode && LV2_SUBJECTS.every((k) => subjects.includes(k));
     if (lv2On) subjects = [...subjects.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
     // Granularité automatique (DESIGN_MODULES §0) : si les sous-thèmes couvrent
-    // ≥2 THÈMES, les voies deviennent les thèmes (chacun poolant ses sous-thèmes) ;
-    // sinon les voies = les sous-thèmes (mono-thème = Collège seul = historique).
-    const { boardCats, categoryPools } = boardCategoriesFor(subjects, (k) => SUBJECTS[k]?.module || 'college');
+    // ≥2 THÈMES, les voies deviennent les thèmes (chacun poolant TOUS ses sous-thèmes
+    // = « pas de mixage fin ») ; sinon les voies = les sous-thèmes sélectionnés.
+    const themeOf = (k) => SUBJECTS[k]?.module || 'college';
+    // Tous les sous-thèmes avec contenu (fusion lv2 appliquée comme à la sélection).
+    let allWithContent = SUBJECT_KEYS.filter((k) => questions[k]?.length);
+    if (lv2On) allWithContent = [...allWithContent.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
+    const subthemesOf = (theme) => allWithContent.filter((k) => themeOf(k) === theme);
+    const { boardCats, categoryPools } = boardCategoriesFor(subjects, themeOf, subthemesOf);
     // Mode multi : une voie = un THÈME (clé de module). On injecte une pseudo-
     // catégorie d'affichage dans le catalogue runtime pour que tout (disque coloré
     // du plateau, libellés) la rende comme une matière. Display-only (hors SUBJECT_KEYS).

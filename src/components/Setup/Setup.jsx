@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { loadGame } from '../../store/persistence';
-import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { SUBJECTS, SUBJECT_KEYS, MODULES } from '../../data/subjects';
 import { getMinigame, getDefaultMinigame } from '../Fight/minigames';
 import { ITEMS } from '../../data/items';
 import LootReveal from '../Modals/LootReveal';
@@ -142,6 +142,8 @@ export default function Setup() {
   const setEnglishMode = useGameStore((s) => s.setEnglishMode);
   // Lectures pour les résumés d'accordéon (« Options de jeu »).
   const boardParams = useGameStore((s) => s.boardParams);
+  const selectedSubjects = useGameStore((s) => s.selectedSubjects);
+  useGameStore((s) => s.questionsVersion); // re-render quand le catalogue change
   const enabledEvents = useGameStore((s) => s.enabledEvents);
   const enabledItems = useGameStore((s) => s.enabledItems);
   const starterChestConfig = useGameStore((s) => s.starterChestConfig);
@@ -194,6 +196,10 @@ export default function Setup() {
   const chestOn = starterChestConfig ? starterChestConfig.enabled !== false : false;
   const itemsSummary = T('setup.sumItems', { n: itemsCount, chest: chestOn ? T('setup.sumChestOn') : T('setup.sumChestOff') });
   const rulesSummary = forcedDuels ? T('setup.sumDuelsForced') : T('setup.sumDuelsChoice');
+  // Les niveaux scolaires (6e/3e…) ne sont pertinents que si un thème SCOLAIRE est
+  // sélectionné (Collège, Lycée…). Pour une partie 100 % ludique → on les masque.
+  const selSubs = Array.isArray(selectedSubjects) ? selectedSubjects : [];
+  const hasSchoolSel = !selSubs.length || selSubs.some((k) => (MODULES[SUBJECTS[k]?.module || 'college']?.kind ?? 'school') === 'school');
 
   return (
     <div className="absolute inset-0 overflow-y-auto">
@@ -283,8 +289,8 @@ export default function Setup() {
         {/* L'ESSENTIEL — toujours visible */}
         <div className="panel">
           <div className="field-label">{T('setup.essentialTitle')}</div>
-          <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
-            <LevelSelect />
+          <div className={hasSchoolSel ? 'grid gap-5 grid-cols-1 lg:grid-cols-2' : ''}>
+            {hasSchoolSel && <LevelSelect />}
             <SubjectSelect />
           </div>
           {!OFFLINE && (

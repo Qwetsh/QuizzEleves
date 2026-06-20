@@ -1,11 +1,12 @@
-// Sélection des matières actives sur le plateau (sous-ensemble). Une matière
-// sans question (au niveau choisi) est désactivée — on ne peut pas l'activer
-// tant qu'elle n'a pas de contenu (ex. Allemand/Espagnol au début).
+// Sélection des sous-thèmes (matières) actifs, REGROUPÉS PAR THÈME (module).
+// Avec un seul thème (Collège), aucun en-tête → look historique. Dès qu'un 2e
+// thème existe (ex. Film), chaque groupe a son en-tête (icône + nom du thème).
+// Une matière sans question (au niveau choisi) est désactivée.
 import { useGameStore } from '../../store/gameStore';
-import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { SUBJECTS, SUBJECT_KEYS, MODULES, MODULE_KEYS } from '../../data/subjects';
 import { getQuestions } from '../../data/questions/index.js';
 import { useT } from '../../i18n';
-import { loc } from '../../i18n/content';
+import { loc, locName } from '../../i18n/content';
 
 export default function SubjectSelect() {
   const T = useT();
@@ -15,55 +16,77 @@ export default function SubjectSelect() {
   const toggleSubject = useGameStore((s) => s.toggleSubject);
   const lv2Mode = useGameStore((s) => s.lv2Mode);
   const setLv2Mode = useGameStore((s) => s.setLv2Mode);
-  // Re-render quand les questions sont (re)chargées depuis Supabase.
+  // Re-render quand les questions/catégories sont (re)chargées depuis Supabase.
   useGameStore((s) => s.questionsVersion);
 
   const sel = Array.isArray(selected) ? selected : [];
   const pools = getQuestions(level, { brevet: useBrevet });
-  // Le mode « LV2 au choix » n'a de sens que si les deux langues sont actives ET
-  // ont du contenu au niveau choisi.
   const bothLv2 = ['allemand', 'espagnol'].every((k) => sel.includes(k) && (pools[k]?.length || 0) > 0);
+
+  // Regroupe les sous-thèmes par THÈME (module), dans l'ordre des modules.
+  const order = (Array.isArray(MODULE_KEYS) && MODULE_KEYS.length) ? MODULE_KEYS : ['college'];
+  const seen = new Set();
+  const groups = [];
+  for (const mod of order) {
+    const keys = SUBJECT_KEYS.filter((k) => (SUBJECTS[k]?.module || 'college') === mod);
+    keys.forEach((k) => seen.add(k));
+    if (keys.length) groups.push({ mod, keys });
+  }
+  const orphans = SUBJECT_KEYS.filter((k) => !seen.has(k));
+  if (orphans.length) groups.push({ mod: null, keys: orphans });
+  const showHeaders = groups.length > 1;
+
+  const renderChip = (key) => {
+    const s = SUBJECTS[key];
+    if (!s) return null;
+    const count = pools[key]?.length || 0;
+    const on = sel.includes(key);
+    const empty = count === 0;
+    const disabled = empty && !on; // matière vide : non activable
+    return (
+      <button
+        key={key}
+        onClick={() => !disabled && toggleSubject(key)}
+        disabled={disabled}
+        className={`chip ${on ? 'is-active' : ''}`}
+        style={{
+          opacity: disabled ? 0.45 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          borderColor: on ? s.color : undefined,
+        }}
+        title={empty ? T('setup.subjectEmpty') : T('setup.questionsCount', { n: count })}
+      >
+        <span className="flex flex-col items-center">
+          <strong style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: on ? s.colorDeep : 'var(--ink-700)' }}>
+            {s.icon} {s.name}
+          </strong>
+          <small style={{ fontSize: 12, color: 'var(--ink-500)', fontWeight: 400 }}>
+            {/* Matière choisie : on montre le « royaume » (biome) ; sinon le nb de questions. */}
+            {empty ? T('setup.subjectSoon') : (on ? loc(s, 'biome') : T('setup.questionsCount', { n: count }))}
+          </small>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div>
       <div className="field-label">
         {T('setup.subjectsLabel')} <span style={{ fontWeight: 400, color: 'var(--ink-400)', fontSize: 12 }}>{T('setup.subjectsHint')}</span>
       </div>
-      <div className="flex gap-2.5 flex-wrap items-stretch">
-        {SUBJECT_KEYS.map((key) => {
-          const s = SUBJECTS[key];
-          const count = pools[key]?.length || 0;
-          const on = sel.includes(key);
-          const empty = count === 0;
-          const disabled = empty && !on; // matière vide : non activable
-          return (
-            <button
-              key={key}
-              onClick={() => !disabled && toggleSubject(key)}
-              disabled={disabled}
-              className={`chip ${on ? 'is-active' : ''}`}
-              style={{
-                opacity: disabled ? 0.45 : 1,
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                borderColor: on ? s.color : undefined,
-              }}
-              title={empty ? T('setup.subjectEmpty') : T('setup.questionsCount', { n: count })}
-            >
-              <span className="flex flex-col items-center">
-                <strong style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: on ? s.colorDeep : 'var(--ink-700)' }}>
-                  {s.icon} {s.name}
-                </strong>
-                <small style={{ fontSize: 12, color: 'var(--ink-500)', fontWeight: 400 }}>
-                  {/* Matière choisie : on montre le « royaume » (biome) — touche de
-                      saveur qui remplace l'ancienne grille décorative ; sinon le
-                      nombre de questions (info utile au choix). */}
-                  {empty ? T('setup.subjectSoon') : (on ? loc(s, 'biome') : T('setup.questionsCount', { n: count }))}
-                </small>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+
+      {groups.map(({ mod, keys }) => (
+        <div key={mod || '_orphans'} style={{ marginBottom: showHeaders ? 12 : 0 }}>
+          {showHeaders && mod && MODULES[mod] && (
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>{MODULES[mod].icon}</span>{locName(MODULES[mod])}
+            </div>
+          )}
+          <div className="flex gap-2.5 flex-wrap items-stretch">
+            {keys.map(renderChip)}
+          </div>
+        </div>
+      ))}
 
       {bothLv2 && (
         <button
