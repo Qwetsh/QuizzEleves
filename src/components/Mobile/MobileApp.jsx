@@ -1200,9 +1200,11 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T 
 export default function MobileApp() {
   const [code, setCode] = useState(readInitialCode());
   const [session, setSession] = useState(null);
-  // Langue globale (getLang) synchronisée avec le mode anglais de la session,
-  // pour que les helpers de contenu (effectText, noms) s'affichent en anglais.
-  useEffect(() => { setLang(session?.englishMode ? 'en' : 'fr'); }, [session?.englishMode]);
+  // Langue globale (getLang) synchronisée avec le mode anglais de la session, pour
+  // que les helpers de contenu (effectText, noms) s'affichent dans la bonne langue.
+  // SYNCHRONE pendant le rendu (et non dans un effet) : sinon locName/locDesc lus
+  // pendant le rendu auraient un cran de retard.
+  setLang(session?.englishMode ? 'en' : 'fr');
   const [error, setError] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [teamIdx, setTeamIdx] = useState(null);
