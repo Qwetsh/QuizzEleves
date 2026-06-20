@@ -2,7 +2,7 @@ const STORAGE_KEY = 'quete-matieres-save';
 
 const SAVE_FIELDS = [
   'teams', 'currentTeam', 'board', 'boardDecor', 'viewBox', 'finished',
-  'askedQuestions', 'questions', 'log', 'phase',
+  'askedQuestions', 'questions', 'log', 'phase', 'boardSubjects', 'categoryPools',
   'extensions', 'enabledEvents', 'knownEventKeys', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'forcedDuels', 'connectionMode', 'sessionCode', 'boardParams', 'englishMode',
   'shopStock', 'shopStockTurns',
   'starterChestConfig', 'starterGold',

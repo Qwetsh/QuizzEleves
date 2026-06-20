@@ -6,6 +6,7 @@ import { POWERS } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
 import { moveForward } from '../logic/pathfinding.js';
+import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
@@ -193,14 +194,26 @@ export const useGameStore = create((set, get) => ({
   // `randomBoardSubject` pour que les cases « multi »/jonctions ne tirent que
   // parmi la sélection effective (et 'lv2' si le mode est actif).
   boardSubjects: SUBJECT_KEYS.slice(),
+  // Mode multi-thèmes : une voie = un THÈME qui pioche parmi ses sous-thèmes.
+  // `categoryPools[themeKey] = [sousThèmes]`. Vide en mono-thème (Collège seul)
+  // → résolution identité, comportement historique. Posé au startGame.
+  categoryPools: {},
   randomBoardSubject: () => {
     const pool = get().boardSubjects;
     const list = Array.isArray(pool) && pool.length ? pool : SUBJECT_KEYS;
     return list[Math.floor(Math.random() * list.length)];
   },
-  // Résout une filière 'lv2' vers la langue concrète d'une équipe (team.lv2),
-  // avec repli espagnol. Les autres sujets sont renvoyés tels quels.
+  // Résout une CATÉGORIE de voie vers un sous-thème concret (clé de pool de
+  // questions) pour une équipe :
+  //  - thème multi (categoryPools[cat]) → un de ses sous-thèmes au hasard ;
+  //  - 'lv2' → la langue de l'équipe (team.lv2, repli espagnol) ;
+  //  - sinon → identité (sous-thème direct ; mode mono = historique).
   resolveSubjectFor: (subject, teamIdx) => {
+    const pool = get().categoryPools?.[subject];
+    if (Array.isArray(pool) && pool.length) {
+      const sub = pool[Math.floor(Math.random() * pool.length)];
+      return sub === 'lv2' ? (get().teams[teamIdx]?.lv2 || 'espagnol') : sub;
+    }
     if (subject !== 'lv2') return subject;
     return get().teams[teamIdx]?.lv2 || 'espagnol';
   },
@@ -513,7 +526,11 @@ export const useGameStore = create((set, get) => ({
     // filière unique 'lv2' (chaque équipe répondra dans sa langue, cf. team.lv2).
     const lv2On = lv2Mode && LV2_SUBJECTS.every((k) => subjects.includes(k));
     if (lv2On) subjects = [...subjects.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
-    const { nodes, viewBox } = generateBoard({ ...boardParams, subjects });
+    // Granularité automatique (DESIGN_MODULES §0) : si les sous-thèmes couvrent
+    // ≥2 THÈMES, les voies deviennent les thèmes (chacun poolant ses sous-thèmes) ;
+    // sinon les voies = les sous-thèmes (mono-thème = Collège seul = historique).
+    const { boardCats, categoryPools } = boardCategoriesFor(subjects, (k) => SUBJECTS[k]?.module || 'college');
+    const { nodes, viewBox } = generateBoard({ ...boardParams, subjects: boardCats });
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
       // Langue LV2 de l'équipe (choisie à la création) ; repli espagnol si le mode
@@ -525,7 +542,8 @@ export const useGameStore = create((set, get) => ({
     set({
       devSandbox: false,
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
-      boardSubjects: subjects,
+      boardSubjects: boardCats,
+      categoryPools,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       // Journal analytique neuf pour cette partie (cf. recordStat / dashboard).
@@ -898,8 +916,9 @@ export const useGameStore = create((set, get) => ({
     // équipe) prioritaire, sinon le forçage global historique. Consommé ici, et
     // s'applique à la PROCHAINE question de l'équipe concernée.
     const cur = get().currentTeam;
-    // LV2 au choix : la case 'lv2' devient la langue de l'équipe (team.lv2).
-    if (subject === 'lv2') subject = get().resolveSubjectFor('lv2', cur);
+    // Résout la catégorie de voie → sous-thème concret : thème multi → un de ses
+    // sous-thèmes ; 'lv2' → langue de l'équipe ; sinon identité (mono = historique).
+    subject = get().resolveSubjectFor(subject, cur);
     const teamForced = get().teams[cur]?.forcedSubject;
     const forced = teamForced || get().forcedSubject;
     if (forced) {
@@ -1489,8 +1508,9 @@ export const useGameStore = create((set, get) => ({
   // Tire une question pour un mini-jeu de combat (marquee comme posee)
   fightPickQuestion: (subject) => {
     const st = get();
-    // LV2 : en duel, on tire dans la langue de l'équipe qui arrive (attaquant).
-    if (subject === 'lv2') subject = st.resolveSubjectFor('lv2', st.showFight?.attackerIndex ?? st.currentTeam);
+    // Résout la catégorie → sous-thème (thème multi / 'lv2' = langue de l'attaquant
+    // / identité). En duel, on résout pour l'équipe qui arrive (attaquant).
+    subject = st.resolveSubjectFor(subject, st.showFight?.attackerIndex ?? st.currentTeam);
     const { questions, askedQuestions } = st;
     const pool = questions[subject] || [];
     const asked = askedQuestions[subject] || new Set();
