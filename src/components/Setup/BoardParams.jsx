@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import BoardPreview from './BoardPreview';
 
 export default function BoardParams() {
   const T = useT();
@@ -9,6 +10,9 @@ export default function BoardParams() {
   return (
     <div>
       <div className="field-label">{T('setup.boardTitle')}</div>
+
+      {/* Aperçu schématique live (longueur × largeur) */}
+      <BoardPreview />
 
       <div style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>

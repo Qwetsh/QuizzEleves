@@ -169,6 +169,11 @@ export default {
   'setup.boardEvents': { fr: 'Événements : ', en: 'Events: ' },
   'setup.boardEventsNone': { fr: 'Aucun', en: 'None' },
   'setup.boardEventsEvery': { fr: '1 toutes les {n} cases', en: '1 every {n} spaces' },
+  'setup.boardPreviewDims': {
+    fr: '{voies} voies · {sections} sections de {cases} cases',
+    en: '{voies} lanes · {sections} sections of {cases} spaces',
+  },
+  'setup.boardPreviewAria': { fr: 'Aperçu du plateau', en: 'Board preview' },
 
   // --- EventsChecklist.jsx (chrome only) ---
   'setup.eventsTitle': { fr: 'Événements ({n}/{total})', en: 'Events ({n}/{total})' },
