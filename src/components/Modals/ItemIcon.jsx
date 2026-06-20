@@ -4,6 +4,7 @@
 // le LootReveal et la checklist du Setup.
 import { ITEMS, RARITIES } from '../../data/items';
 import { itemImg, rarityRing } from '../../logic/itemAssets';
+import { locName } from '../../i18n/content';
 
 export default function ItemIcon({ itemKey, item: itemProp, size = 44, radius, ring = false, style, className }) {
   const item = itemProp || ITEMS[itemKey];
@@ -32,7 +33,7 @@ export default function ItemIcon({ itemKey, item: itemProp, size = 44, radius, r
       {img ? (
         <img
           src={img}
-          alt={item.name}
+          alt={locName(item)}
           style={{ maxWidth: '82%', maxHeight: '84%', objectFit: 'contain', filter: 'drop-shadow(0 2px 2px rgba(50,32,8,0.35))' }}
         />
       ) : (

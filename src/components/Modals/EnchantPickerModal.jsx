@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS } from '../../data/items';
 import { itemKeyOf } from '../../logic/itemEffects';
 import { cellKey } from '../../store/itemHandlers';
@@ -28,8 +29,8 @@ export default function EnchantPickerModal() {
         <ModalOverlay onClose={cancelEnchant} className="max-w-sm">
           <div style={{ padding: '24px 24px 4px', textAlign: 'center' }}>
             <div style={{ fontSize: 44 }}>{'📜'}</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ink-900)' }}>{parch.name}</h2>
-            <p style={{ fontSize: 13.5, color: 'var(--ink-600)', marginTop: 4 }}>{parch.desc}</p>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ink-900)' }}>{locName(parch)}</h2>
+            <p style={{ fontSize: 13.5, color: 'var(--ink-600)', marginTop: 4 }}>{locDesc(parch)}</p>
             <p style={{ fontSize: 14, color: 'var(--ink-700)', marginTop: 10, fontWeight: 700 }}>{T('modal.enchant.onWhich')}</p>
           </div>
           <div style={{ padding: '8px 22px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -45,7 +46,7 @@ export default function EnchantPickerModal() {
                   }}>
                   <span style={{ fontSize: 26 }}>{it.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-900)' }}>{it.name}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-900)' }}>{locName(it)}</div>
                     <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{SLOTS[slot]?.name}</div>
                   </div>
                   <span style={{ fontSize: 18 }}>{'✨'}</span>

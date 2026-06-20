@@ -90,14 +90,14 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
               <div className="shop-card-head">
                 <ItemIcon item={item} size={38} ring />
                 <div className="shop-card-titles">
-                  <div className="shop-card-name">{item.name}</div>
+                  <div className="shop-card-name">{locName(item)}</div>
                   <div className="shop-card-sub" style={{ color: rarityColor }}>
                     {RARITIES[item.rarity]?.name} · {isConsumable ? T('modal.shop.consumable') : SLOTS[item.slot]?.name}
                   </div>
                 </div>
               </div>
               <div className="shop-card-desc">
-                {item.desc}
+                {locDesc(item)}
                 <EffectDetails item={item} compact />
                 {slotTaken && !bagFull && (
                   <div className="shop-card-warn">

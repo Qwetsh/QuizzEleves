@@ -395,12 +395,12 @@ function ItemChoiceButton({ itemKey, priceLabel, disabled, onClick }) {
       <ItemIcon item={item} size={38} ring />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--font-display)', display: 'block' }}>
-          {item.name}
+          {locName(item)}
           <span style={{ fontSize: 11, color: rarityColor, marginLeft: 8 }}>
             {RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? T('modal.event.consumable') : SLOTS[item.slot]?.name}
           </span>
         </span>
-        <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{item.desc}</span>
+        <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{locDesc(item)}</span>
       </span>
       {priceLabel != null && (
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, flexShrink: 0 }}>

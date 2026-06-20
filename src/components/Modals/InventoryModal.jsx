@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, RARITIES } from '../../data/items';
 import { isValidMove, normalizeBag, cellKey, cellN } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -66,10 +67,10 @@ function ImgSlot({ k, variant, glyph, itemKey, count = 1, style, refCb, onGrab, 
           className={'inv-item' + (away ? ' is-away' : '')}
           key={popStamp || 0}
           onPointerDown={(e) => onGrab(e, k)}
-          title={`${item.name} — ${item.desc}`}
+          title={`${locName(item)} — ${locDesc(item)}`}
         >
           {img
-            ? <img className="inv-item-img" src={img} alt={item.name} draggable={false} />
+            ? <img className="inv-item-img" src={img} alt={locName(item)} draggable={false} />
             : <span className="inv-emoji">{item.icon}</span>}
           {count > 1 && <span className="inv-stack-badge">×{count}</span>}
         </div>

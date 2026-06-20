@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { soundClick } from '../../logic/sounds';
@@ -47,7 +48,7 @@ export function LootCard({ item, subtitle, compact = false }) {
           transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
         >
           {img ? (
-            <img className="loot-item-img" src={img} alt={item.name}
+            <img className="loot-item-img" src={img} alt={locName(item)}
               style={{ filter: `drop-shadow(0 0 22px ${r.color}aa) drop-shadow(0 6px 8px rgba(0,0,0,.5))` }} />
           ) : (
             <span className="loot-item-emoji" style={{ filter: `drop-shadow(0 0 18px ${r.color}aa)` }}>{item.icon}</span>
@@ -62,8 +63,8 @@ export function LootCard({ item, subtitle, compact = false }) {
         transition={{ delay: 0.35 }}
       >
         <span className="loot-pill" style={{ background: r.color }}>{r.name} · {slotLabel}</span>
-        <div className="loot-name">{item.name}</div>
-        <p className="loot-desc">{item.desc}</p>
+        <div className="loot-name">{locName(item)}</div>
+        <p className="loot-desc">{locDesc(item)}</p>
         {subtitle && <div className="loot-subtitle">{subtitle}</div>}
       </motion.div>
     </div>

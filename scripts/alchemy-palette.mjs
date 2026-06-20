@@ -17,26 +17,26 @@ export const ALL_AXES = [...POSITIVE, ...NEGATIVE, ...RANDOM];
 // lootWeight : poids de base au loot · favMult : ×proba sur sa matière favorite
 // solo : ≤2 effets simples (révélés à l'usage) ; si absent, dérivé du profil.
 export const INGREDIENTS = [
-  { key: 'herbeSolaire',  name: 'Herbe solaire',     icon: '🌻', rarity: 'commun', favSubject: 'svt',        lootWeight: 10, favMult: 2.5, profile: { gold: 2, time: 1 } },
-  { key: 'roseeMatin',    name: 'Rosée du matin',    icon: '💧', rarity: 'commun', favSubject: 'francais',   lootWeight: 10, favMult: 2.5, profile: { time: 2, shield: 1 } },
-  { key: 'champNuit',     name: 'Champignon de nuit', icon: '🍄', rarity: 'commun', favSubject: 'svt',       lootWeight: 9,  favMult: 2.0, profile: { gamble: 2, foeQuestion: 1 } },
-  { key: 'silexAncien',   name: 'Silex ancien',      icon: '🪨', rarity: 'commun', favSubject: 'histoire',   lootWeight: 10, favMult: 2.5, profile: { shield: 2, foeMove: 1 } },
-  { key: 'pousseVive',    name: 'Pousse vive',       icon: '🌱', rarity: 'commun', favSubject: 'svt',        lootWeight: 10, favMult: 2.5, profile: { move: 2, advance: 1 } },
-  { key: 'plumeCorbeau',  name: 'Plume de corbeau',  icon: '🪶', rarity: 'commun', favSubject: 'francais',   lootWeight: 9,  favMult: 2.0, profile: { foeForce: 2, dice: 1 } },
-  { key: 'sableDore',     name: 'Sable doré',        icon: '⏳', rarity: 'commun', favSubject: 'geographie', lootWeight: 10, favMult: 2.5, profile: { time: 2, gold: 1 } },
-  { key: 'ecorceRunique', name: 'Écorce runique',    icon: '🪵', rarity: 'commun', favSubject: 'histoire',   lootWeight: 9,  favMult: 2.0, profile: { charge: 2, immune: 1 } },
-  { key: 'baieEcarlate',  name: 'Baie écarlate',     icon: '🍒', rarity: 'commun', favSubject: 'anglais',    lootWeight: 10, favMult: 2.5, profile: { gold: 2, gamble: 1 } },
-  { key: 'ailePapillon',  name: 'Aile de papillon',  icon: '🦋', rarity: 'commun', favSubject: 'geographie', lootWeight: 9,  favMult: 2.0, profile: { move: 2, teleport: 1 } },
-  { key: 'crinMetal',     name: 'Crin de métal',     icon: '⚙️', rarity: 'rare',   favSubject: 'maths',      lootWeight: 6,  favMult: 2.5, profile: { dice: 2, move: 1 } },
-  { key: 'larmeLune',     name: 'Larme de lune',     icon: '🌙', rarity: 'rare',   favSubject: 'francais',   lootWeight: 6,  favMult: 2.5, profile: { time: 2, charge: 2 } },
-  { key: 'epineRonce',    name: 'Épine de ronce',    icon: '🌵', rarity: 'rare',   favSubject: 'svt',        lootWeight: 6,  favMult: 2.5, profile: { foeMove: 2, foeMoney: 2 } },
-  { key: 'cristalFoudre', name: 'Cristal de foudre', icon: '⚡', rarity: 'rare',   favSubject: 'maths',      lootWeight: 6,  favMult: 2.5, profile: { charge: 2, foeTimer: 2 } },
-  { key: 'cendreVolcan',  name: 'Cendre de volcan',  icon: '🌋', rarity: 'rare',   favSubject: 'geographie', lootWeight: 6,  favMult: 2.5, profile: { foeMove: 2, gold: 2 } },
-  { key: 'mielSauvage',   name: 'Miel sauvage',      icon: '🍯', rarity: 'rare',   favSubject: 'anglais',    lootWeight: 6,  favMult: 2.5, profile: { gold: 2, themeBuff: 2 } },
-  { key: 'osDragon',      name: 'Os de dragon',      icon: '🦴', rarity: 'rare',   favSubject: 'histoire',   lootWeight: 6,  favMult: 2.5, profile: { foeMoney: 2, shield: 2 } },
-  { key: 'vifArgent',     name: 'Vif-argent',        icon: '💠', rarity: 'rare',   favSubject: 'maths',      lootWeight: 6,  favMult: 2.5, profile: { move: 2, dice: 2 } },
-  { key: 'fleurAbysse',   name: 'Fleur des abysses', icon: '🪸', rarity: 'legendaire', favSubject: 'svt',    lootWeight: 3,  favMult: 3.0, profile: { teleport: 2, foePath: 2, gold: 2 } },
-  { key: 'coeurEtoile',   name: "Cœur d'étoile",     icon: '🌟', rarity: 'legendaire', favSubject: 'anglais', lootWeight: 3, favMult: 3.0, profile: { charge: 2, loot: 2, time: 2 } },
+  { key: 'herbeSolaire',  name: 'Herbe solaire',     name_en: 'Sunleaf',          icon: '🌻', rarity: 'commun', favSubject: 'svt',        lootWeight: 10, favMult: 2.5, profile: { gold: 2, time: 1 } },
+  { key: 'roseeMatin',    name: 'Rosée du matin',    name_en: 'Morning Dew',      icon: '💧', rarity: 'commun', favSubject: 'francais',   lootWeight: 10, favMult: 2.5, profile: { time: 2, shield: 1 } },
+  { key: 'champNuit',     name: 'Champignon de nuit', name_en: 'Nightcap Mushroom', icon: '🍄', rarity: 'commun', favSubject: 'svt',       lootWeight: 9,  favMult: 2.0, profile: { gamble: 2, foeQuestion: 1 } },
+  { key: 'silexAncien',   name: 'Silex ancien',      name_en: 'Ancient Flint',    icon: '🪨', rarity: 'commun', favSubject: 'histoire',   lootWeight: 10, favMult: 2.5, profile: { shield: 2, foeMove: 1 } },
+  { key: 'pousseVive',    name: 'Pousse vive',       name_en: 'Quick Sprout',     icon: '🌱', rarity: 'commun', favSubject: 'svt',        lootWeight: 10, favMult: 2.5, profile: { move: 2, advance: 1 } },
+  { key: 'plumeCorbeau',  name: 'Plume de corbeau',  name_en: 'Raven Feather',    icon: '🪶', rarity: 'commun', favSubject: 'francais',   lootWeight: 9,  favMult: 2.0, profile: { foeForce: 2, dice: 1 } },
+  { key: 'sableDore',     name: 'Sable doré',        name_en: 'Golden Sand',      icon: '⏳', rarity: 'commun', favSubject: 'geographie', lootWeight: 10, favMult: 2.5, profile: { time: 2, gold: 1 } },
+  { key: 'ecorceRunique', name: 'Écorce runique',    name_en: 'Runic Bark',       icon: '🪵', rarity: 'commun', favSubject: 'histoire',   lootWeight: 9,  favMult: 2.0, profile: { charge: 2, immune: 1 } },
+  { key: 'baieEcarlate',  name: 'Baie écarlate',     name_en: 'Scarlet Berry',    icon: '🍒', rarity: 'commun', favSubject: 'anglais',    lootWeight: 10, favMult: 2.5, profile: { gold: 2, gamble: 1 } },
+  { key: 'ailePapillon',  name: 'Aile de papillon',  name_en: 'Butterfly Wing',   icon: '🦋', rarity: 'commun', favSubject: 'geographie', lootWeight: 9,  favMult: 2.0, profile: { move: 2, teleport: 1 } },
+  { key: 'crinMetal',     name: 'Crin de métal',     name_en: 'Metal Mane',       icon: '⚙️', rarity: 'rare',   favSubject: 'maths',      lootWeight: 6,  favMult: 2.5, profile: { dice: 2, move: 1 } },
+  { key: 'larmeLune',     name: 'Larme de lune',     name_en: 'Moon Tear',        icon: '🌙', rarity: 'rare',   favSubject: 'francais',   lootWeight: 6,  favMult: 2.5, profile: { time: 2, charge: 2 } },
+  { key: 'epineRonce',    name: 'Épine de ronce',    name_en: 'Bramble Thorn',    icon: '🌵', rarity: 'rare',   favSubject: 'svt',        lootWeight: 6,  favMult: 2.5, profile: { foeMove: 2, foeMoney: 2 } },
+  { key: 'cristalFoudre', name: 'Cristal de foudre', name_en: 'Thunder Crystal',  icon: '⚡', rarity: 'rare',   favSubject: 'maths',      lootWeight: 6,  favMult: 2.5, profile: { charge: 2, foeTimer: 2 } },
+  { key: 'cendreVolcan',  name: 'Cendre de volcan',  name_en: 'Volcanic Ash',     icon: '🌋', rarity: 'rare',   favSubject: 'geographie', lootWeight: 6,  favMult: 2.5, profile: { foeMove: 2, gold: 2 } },
+  { key: 'mielSauvage',   name: 'Miel sauvage',      name_en: 'Wild Honey',       icon: '🍯', rarity: 'rare',   favSubject: 'anglais',    lootWeight: 6,  favMult: 2.5, profile: { gold: 2, themeBuff: 2 } },
+  { key: 'osDragon',      name: 'Os de dragon',      name_en: 'Dragon Bone',      icon: '🦴', rarity: 'rare',   favSubject: 'histoire',   lootWeight: 6,  favMult: 2.5, profile: { foeMoney: 2, shield: 2 } },
+  { key: 'vifArgent',     name: 'Vif-argent',        name_en: 'Quicksilver',      icon: '💠', rarity: 'rare',   favSubject: 'maths',      lootWeight: 6,  favMult: 2.5, profile: { move: 2, dice: 2 } },
+  { key: 'fleurAbysse',   name: 'Fleur des abysses', name_en: 'Abyssal Flower',   icon: '🪸', rarity: 'legendaire', favSubject: 'svt',    lootWeight: 3,  favMult: 3.0, profile: { teleport: 2, foePath: 2, gold: 2 } },
+  { key: 'coeurEtoile',   name: "Cœur d'étoile",     name_en: 'Star Heart',       icon: '🌟', rarity: 'legendaire', favSubject: 'anglais', lootWeight: 3, favMult: 3.0, profile: { charge: 2, loot: 2, time: 2 } },
 ];
 
 // ----- BARÈMES de magnitude (m = score d'axe sommé sur les 3 ingrédients) ------
@@ -101,18 +101,22 @@ export const FOE_TARGETS = [['allOthers', 0.5], ['randomOpponent', 0.3], ['targe
 
 // ----- Nommage & icônes -------------------------------------------------------
 export const FORMS = ['Potion', 'Élixir', 'Philtre', 'Décoction', 'Breuvage', 'Tonique', 'Mixture', 'Essence', 'Sérum', 'Nectar'];
-// Fragment de nom + icône par axe dominant.
+// Formes EN (mêmes indices que FORMS) — le nom EN = `${form_en} ${word_en}`.
+export const FORMS_EN = ['Potion', 'Elixir', 'Philter', 'Decoction', 'Brew', 'Tonic', 'Mixture', 'Essence', 'Serum', 'Nectar'];
+// Fragment de nom (FR `word` + EN `word_en`) + icône par axe dominant.
 export const AXIS_FLAVOR = {
-  gold: { word: "de l'Avare", icon: '🟡' }, move: { word: 'de la Ruée', icon: '🚀' },
-  time: { word: 'du Temps', icon: '⏳' }, shield: { word: 'du Roc', icon: '🛡️' },
-  charge: { word: 'de l\'Arcane', icon: '🔮' }, themeBuff: { word: 'du Savoir', icon: '📚' },
-  advance: { word: 'du Marathon', icon: '🏃' }, dice: { word: 'du Joueur', icon: '🎲' },
-  loot: { word: 'du Butin', icon: '🎁' }, teleport: { word: 'du Mirage', icon: '🌀' },
-  fumigene: { word: 'de la Brume', icon: '💨' }, immune: { word: 'du Rempart', icon: '🏰' },
-  foeMoney: { word: 'du Larcin', icon: '🪙' }, foeMove: { word: 'du Faux Pas', icon: '🥾' },
-  foeForce: { word: 'du Défi', icon: '💀' }, foeTimer: { word: 'de la Hâte', icon: '⏱️' },
-  foeQuestion: { word: 'de l\'Examen', icon: '❓' }, foePath: { word: 'de l\'Égarement', icon: '🧭' },
-  gamble: { word: 'du Hasard', icon: '🃏' },
+  gold: { word: "de l'Avare", word_en: 'of the Miser', icon: '🟡' }, move: { word: 'de la Ruée', word_en: 'of the Rush', icon: '🚀' },
+  time: { word: 'du Temps', word_en: 'of Time', icon: '⏳' }, shield: { word: 'du Roc', word_en: 'of the Rock', icon: '🛡️' },
+  charge: { word: 'de l\'Arcane', word_en: 'of the Arcane', icon: '🔮' }, themeBuff: { word: 'du Savoir', word_en: 'of Knowledge', icon: '📚' },
+  advance: { word: 'du Marathon', word_en: 'of the Marathon', icon: '🏃' }, dice: { word: 'du Joueur', word_en: 'of the Gambler', icon: '🎲' },
+  loot: { word: 'du Butin', word_en: 'of Loot', icon: '🎁' }, teleport: { word: 'du Mirage', word_en: 'of the Mirage', icon: '🌀' },
+  fumigene: { word: 'de la Brume', word_en: 'of the Mist', icon: '💨' }, immune: { word: 'du Rempart', word_en: 'of the Bulwark', icon: '🏰' },
+  foeMoney: { word: 'du Larcin', word_en: 'of Larceny', icon: '🪙' }, foeMove: { word: 'du Faux Pas', word_en: 'of the Misstep', icon: '🥾' },
+  foeForce: { word: 'du Défi', word_en: 'of the Challenge', icon: '💀' }, foeTimer: { word: 'de la Hâte', word_en: 'of Haste', icon: '⏱️' },
+  foeQuestion: { word: 'de l\'Examen', word_en: 'of the Exam', icon: '❓' }, foePath: { word: 'de l\'Égarement', word_en: 'of Straying', icon: '🧭' },
+  gamble: { word: 'du Hasard', word_en: 'of Chance', icon: '🃏' },
 };
+// Libellés de rareté EN (pour la description générée).
+export const RARITY_EN = { commun: 'Common', rare: 'Rare', legendaire: 'Legendary' };
 export const LEGENDARY_ICON = '🌟';
 export const ri_ = ri; // exporté pour le générateur

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
+import { locName } from '../../i18n/content';
 
 const GROUPS = [
   { slot: 'head', label: `${SLOTS.head.icon} Coiffes` },
@@ -79,7 +80,7 @@ export default function ItemsChecklist() {
                         {itemImg(item)
                           ? <img src={itemImg(item)} alt="" style={{ width: 18, height: 18, objectFit: 'contain', verticalAlign: 'middle' }} />
                           : <span>{item.icon}</span>}
-                        {item.name}
+                        {locName(item)}
                       </span>
                       <span style={{
                         fontSize: 9, fontWeight: 700, color: rarityColor,

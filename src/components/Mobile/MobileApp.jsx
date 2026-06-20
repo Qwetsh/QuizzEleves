@@ -228,8 +228,8 @@ function EquipSlot({ itemKey, slot, onTap, enchanted = 0, T = tFor(false) }) {
       </span>
       <div className="mob-eq-text">
         <div className="mob-eq-slot">{SLOTS[slot].name}</div>
-        <div className="mob-eq-name">{item ? item.name : <em>{T('mobile.empty')}</em>}{item && enchanted > 0 && <span style={{ color: '#9b59d0', marginLeft: 6, fontSize: 12 }}>{T('mobile.enchantedBadge')}</span>}</div>
-        {item && <div className="mob-eq-desc">{item.desc}{itemEffectLines(item).length > 0 ? T('mobile.tapForEffects') : ''}</div>}
+        <div className="mob-eq-name">{item ? locName(item) : <em>{T('mobile.empty')}</em>}{item && enchanted > 0 && <span style={{ color: '#9b59d0', marginLeft: 6, fontSize: 12 }}>{T('mobile.enchantedBadge')}</span>}</div>
+        {item && <div className="mob-eq-desc">{locDesc(item)}{itemEffectLines(item).length > 0 ? T('mobile.tapForEffects') : ''}</div>}
       </div>
     </div>
   );
@@ -254,7 +254,7 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = t
             {itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '80%', height: '80%', objectFit: 'contain' }} /> : item.icon}
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--ink-900)' }}>{item.name}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--ink-900)' }}>{locName(item)}</div>
             <div style={{ fontSize: 12, color }}>{RARITIES[item.rarity]?.name} · {item.slot === 'consumable' ? T('mobile.consumable') : SLOTS[item.slot]?.name}</div>
           </div>
         </div>
@@ -262,7 +262,7 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = t
           <div style={{
             fontSize: 14, color: 'var(--ink-600)', fontStyle: 'italic', lineHeight: 1.4,
             margin: '2px 0 12px', paddingLeft: 12, borderLeft: `3px solid ${color}66`,
-          }}>{item.desc}</div>
+          }}>{locDesc(item)}</div>
         )}
         {fx.length > 0 && (
           <div style={{
@@ -542,7 +542,7 @@ function ShopView({ session, teamIdx, owned, code, token }) {
               return (
                 <button key={i} className="mob-bag-item" onClick={() => setSheet({ itemKey: k, loc: { kind: 'shop' } })} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
                   {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
-                  <span className="mob-bag-name">{item.name}</span>
+                  <span className="mob-bag-name">{locName(item)}</span>
                   <span className="mob-shop-price">{'\u{1FA99}'} {item.price}</span>
                 </button>
               );
@@ -652,7 +652,7 @@ function TeamView({ session, teamIdx, owned, code, token }) {
               return (
                 <button key={i} className="mob-bag-item" onClick={() => setSheet({ itemKey: c.key, loc: { kind: 'bag', key: c.key } })} style={{ cursor: 'pointer', border: 'none', font: 'inherit', textAlign: 'left' }}>
                   {itemImg(item) ? <img src={itemImg(item)} alt="" /> : <span className="mob-eq-emoji">{item.icon}</span>}
-                  <span className="mob-bag-name">{item.name}{c.n > 1 ? ` ×${c.n}` : ''}</span>
+                  <span className="mob-bag-name">{locName(item)}{c.n > 1 ? ` ×${c.n}` : ''}</span>
                 </button>
               );
             })}
@@ -672,8 +672,8 @@ function TeamView({ session, teamIdx, owned, code, token }) {
 function tradeSideText(spec, equipOf, T = tFor(false)) {
   const parts = [];
   if (spec?.gold) parts.push(`${spec.gold} 🪙`);
-  for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
-  for (const s of (spec?.equip || [])) { const k = equipOf?.(s); if (k && ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`); }
+  for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${locName(ITEMS[k])}`);
+  for (const s of (spec?.equip || [])) { const k = equipOf?.(s); if (k && ITEMS[k]) parts.push(`${ITEMS[k].icon} ${locName(ITEMS[k])}`); }
   return parts.length ? parts.join(' + ') : T('mobile.nothing');
 }
 
@@ -682,7 +682,7 @@ function tradeSideText(spec, equipOf, T = tFor(false)) {
 function tradeDoneText(spec, T = tFor(false)) {
   const parts = [];
   if (spec?.gold) parts.push(`${spec.gold} 🪙`);
-  for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
+  for (const k of (spec?.bag || [])) if (ITEMS[k]) parts.push(`${ITEMS[k].icon} ${locName(ITEMS[k])}`);
   const eq = (spec?.equip || []).length;
   if (eq) parts.push(T.plural('mobile.equipmentCount', eq));
   return parts.length ? parts.join(' + ') : T('mobile.nothing');
@@ -716,14 +716,14 @@ function DealToast({ trade, teamIdx, teams, onClose, T = tFor(false) }) {
 function TradeItemRow({ itemKey, on, worn, onToggle, onInfo, T = tFor(false) }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
-  const preview = item.desc || itemEffectLines(item)[0] || '';
+  const preview = locDesc(item) || itemEffectLines(item)[0] || '';
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', marginBottom: 6 }}>
       <button type="button" className={'mob-trade-it' + (on ? ' on' : '')} onClick={onToggle}
         style={{ flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>{item.icon}</span>
-          <span style={{ fontWeight: 700 }}>{item.name}</span>
+          <span style={{ fontWeight: 700 }}>{locName(item)}</span>
           {worn && <small style={{ opacity: 0.7 }}>{T('mobile.worn')}</small>}
         </span>
         {preview && (
@@ -927,7 +927,7 @@ function AlchemyView({ session, teamIdx, code, token }) {
             : bagIngredients.map(({ i, key }) => (
               <button key={i} className={'mob-alch-ing' + (slots.includes(i) ? ' picked' : '')} onClick={() => toggle(i)}>
                 <span style={{ fontSize: 20 }}>{ITEMS[key].icon}</span>
-                <span className="mob-alch-ing-name">{ITEMS[key].name}{cellN(t.bag[i]) > 1 ? ` ×${cellN(t.bag[i])}` : ''}</span>
+                <span className="mob-alch-ing-name">{locName(ITEMS[key])}{cellN(t.bag[i]) > 1 ? ` ×${cellN(t.bag[i])}` : ''}</span>
                 <small style={known.has(key) ? undefined : { opacity: 0.6, fontStyle: 'italic' }}>
                   {itemEffectLines(ITEMS[key], { key, knownIngredients: t.knownIngredients }).join(' · ')}
                 </small>
@@ -944,7 +944,7 @@ function AlchemyView({ session, teamIdx, code, token }) {
           <div key={r.id} className="mob-alch-recipe found">
             <span>{r.ingredients.map((k) => ITEMS[k]?.icon || '?').join(' + ')}</span>
             <span className="mob-alch-arrow">→</span>
-            <span>{ITEMS[r.potion]?.icon} <b>{ITEMS[r.potion]?.name}</b></span>
+            <span>{ITEMS[r.potion]?.icon} <b>{ITEMS[r.potion] ? locName(ITEMS[r.potion]) : ''}</b></span>
           </div>
         ))}
       </section>
@@ -1051,7 +1051,7 @@ function OldQuestionsView({ session, teamIdx }) {
 // Sélecteur d'objet (admin) : recherche + grille de tout le catalogue.
 function AdminItemPicker({ onPick, onClose, T = tFor(false) }) {
   const [q, setQ] = useState('');
-  const keys = Object.keys(ITEMS).filter((k) => !q || ITEMS[k].name.toLowerCase().includes(q.toLowerCase()));
+  const keys = Object.keys(ITEMS).filter((k) => !q || locName(ITEMS[k]).toLowerCase().includes(q.toLowerCase()) || ITEMS[k].name.toLowerCase().includes(q.toLowerCase()));
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'flex-end' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: '80vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: '14px 16px 24px' }}>
@@ -1064,7 +1064,7 @@ function AdminItemPicker({ onPick, onClose, T = tFor(false) }) {
             return (
               <button key={k} onClick={() => onPick(k)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: `1.5px solid ${color}55`, background: '#fffefb', cursor: 'pointer', textAlign: 'left' }}>
                 <span style={{ width: 30, height: 30, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>{itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.icon}</span>
-                <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{item.name}</span>
+                <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{locName(item)}</span>
               </button>
             );
           })}
@@ -1124,7 +1124,7 @@ function AdminPanel({ code, session, onClose }) {
                   const it = ITEMS[t.equipment[s]];
                   return (
                     <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 999, background: 'rgba(122,94,58,0.08)', border: '1px solid rgba(122,94,58,0.25)', fontSize: 12 }}>
-                      {it.icon} {it.name}
+                      {it.icon} {locName(it)}
                       <button onClick={() => send('adminRemoveEquip', { teamIdx: t.idx, slot: s })} style={{ border: 'none', background: '#f7d7d2', color: '#7a1320', borderRadius: 6, cursor: 'pointer', fontWeight: 700, padding: '0 5px' }}>✕</button>
                     </span>
                   );
@@ -1136,7 +1136,7 @@ function AdminPanel({ code, session, onClose }) {
               {bagCells.length === 0 ? <span style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}>{T('mobile.empty')}</span>
                 : bagCells.map((c, i) => (
                   <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 999, background: 'rgba(122,94,58,0.08)', border: '1px solid rgba(122,94,58,0.25)', fontSize: 12 }}>
-                    {ITEMS[c.key].icon} {ITEMS[c.key].name}{c.n > 1 ? ` ×${c.n}` : ''}
+                    {ITEMS[c.key].icon} {locName(ITEMS[c.key])}{c.n > 1 ? ` ×${c.n}` : ''}
                     <button onClick={() => send('adminRemoveBag', { teamIdx: t.idx, key: c.key })} style={{ border: 'none', background: '#f7d7d2', color: '#7a1320', borderRadius: 6, cursor: 'pointer', fontWeight: 700, padding: '0 5px' }}>✕</button>
                   </span>
                 ))}

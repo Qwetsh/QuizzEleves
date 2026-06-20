@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   INGREDIENTS, TEMPLATES, AXIS_POWER, AXIS_THRESHOLD, MAX_POTION_EFFECTS, MAX_INGREDIENT_EFFECTS,
-  RARITY_SPLIT, FOE_TARGETS, FORMS, AXIS_FLAVOR, LEGENDARY_ICON, NEGATIVE,
+  RARITY_SPLIT, FOE_TARGETS, FORMS, FORMS_EN, AXIS_FLAVOR, RARITY_EN, LEGENDARY_ICON, NEGATIVE,
 } from './alchemy-palette.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -78,6 +78,40 @@ function describe(a) {
   }
 }
 
+// --- Variante ANGLAISE de describe() (pour desc_en des potions) ---------------
+function describeEn(a) {
+  const t = (n) => (typeof n === 'object' ? '?' : n);
+  switch (a.action) {
+    case 'money': {
+      const who = a.target === 'self' ? '' : (a.target === 'allOthers' ? ' from others' : (a.target === 'target' ? ' from a team' : ' from an opponent'));
+      if (a.mode === 'gain') return `+${t(a.n)} gold`;
+      if (a.mode === 'lose') return `−${t(a.n)} gold${who}`;
+      if (a.mode === 'steal') return `steal ${t(a.n)} gold${who}`;
+      return `${t(a.n)} gold`;
+    }
+    case 'move': return a.dir === 'forward' ? `advance ${t(a.n)}` : `back ${t(a.n)}${a.target !== 'self' ? ' (others)' : ''}`;
+    case 'extraTime': return `+${t(a.n)}s`;
+    case 'shieldNext': return `shield ${t(a.n)}`;
+    case 'gainCharge': return 'recharge power';
+    case 'fumigene': return 'smoke screen';
+    case 'loot': return 'loot';
+    case 'teleportFurthest': return 'teleport forward';
+    case 'forceSubject': return `force ${a.subject} (others)`;
+    case 'curseTimer': return 'timer ÷2 (others)';
+    case 'curseExtraQuestion': return `+${t(a.n)} question (others)`;
+    case 'randomPathNext': return 'random path (others)';
+    case 'buff': {
+      const b = a.buff || {};
+      if (b.type === 'themeBonus') return `+${t(b.n)} gold/correct (${b.turns}T)`;
+      if (b.type === 'advanceOnCorrect') return `advance/correct (${b.turns}T)`;
+      if (b.type === 'diceBonus') return `die +${t(b.n)} (${b.turns}T)`;
+      if (b.type === 'duelImmune') return `duel immunity (${b.turns}T)`;
+      return `buff ${b.type}`;
+    }
+    default: return a.action;
+  }
+}
+
 // --- Génération d'une potion pour une combinaison de 3 ingrédients ------------
 function buildPotion(ings, rng) {
   // 1) somme des scores d'axe
@@ -123,7 +157,8 @@ function assembleEffects(actions, rollTable, cap) {
   if (rollTable && cap - kept.length >= 1) { trigger.roll = 'd6'; trigger.table = rollTable; }
   if (!trigger.do && !trigger.table) trigger.do = [{ action: 'money', mode: 'gain', target: 'self', n: 5, unit: 'flat' }];
   const descParts = (trigger.do || []).map(describe).concat(trigger.table ? ['🎲 hasard'] : []);
-  return { effects: [trigger], descParts };
+  const descPartsEn = (trigger.do || []).map(describeEn).concat(trigger.table ? ['🎲 chance'] : []);
+  return { effects: [trigger], descParts, descPartsEn };
 }
 
 // --- MAIN --------------------------------------------------------------------
@@ -131,9 +166,10 @@ const ingredientsOut = {};
 const INGREDIENT_LOOT = {};
 INGREDIENTS.forEach((ing) => {
   ingredientsOut[ing.key] = {
-    name: ing.name, icon: ing.icon, slot: 'consumable', family: 'ingredient',
+    name: ing.name, name_en: ing.name_en, icon: ing.icon, slot: 'consumable', family: 'ingredient',
     rarity: ing.rarity, price: ing.rarity === 'commun' ? 4 : ing.rarity === 'rare' ? 6 : 9,
     desc: 'Ingrédient d\'alchimie. Combine-le par 3 pour distiller une potion.',
+    desc_en: 'Alchemy ingredient. Combine three to distill a potion.',
     effects: soloEffects(ing),
   };
   INGREDIENT_LOOT[ing.key] = { weight: ing.lootWeight, favSubject: ing.favSubject, favMult: ing.favMult };
@@ -171,15 +207,18 @@ built.forEach((b) => {
   const key = `pot${pad2(b.i)}${pad2(b.j)}${pad2(b.k)}`;
   const domAxis = b.axes[0] || 'gold';
   const flavor = AXIS_FLAVOR[domAxis] || AXIS_FLAVOR.gold;
-  const form = FORMS[(formCounter++) % FORMS.length];
+  const formIdx = (formCounter++) % FORMS.length;
+  const form = FORMS[formIdx];
   const name = `${form} ${flavor.word}`;
+  const name_en = `${FORMS_EN[formIdx]} ${flavor.word_en}`;
   const icon = b.rarity === 'legendaire' ? LEGENDARY_ICON : flavor.icon;
-  const { effects, descParts } = assembleEffects(b.actions, b.rollTable, EFFECT_CAP[b.rarity]);
+  const { effects, descParts, descPartsEn } = assembleEffects(b.actions, b.rollTable, EFFECT_CAP[b.rarity]);
   effCounts.push((effects[0].do?.length || 0) + (effects[0].table ? 1 : 0));
   const desc = `Potion ${b.rarity}. ${descParts.slice(0, 5).join(', ') || 'effet mineur'}.`;
+  const desc_en = `${RARITY_EN[b.rarity] || 'Common'} potion. ${descPartsEn.slice(0, 5).join(', ') || 'minor effect'}.`;
   potionsOut[key] = {
-    name, icon, slot: 'consumable', family: 'potion', rarity: b.rarity, price: 0, lootOnly: true,
-    desc, effects,
+    name, name_en, icon, slot: 'consumable', family: 'potion', rarity: b.rarity, price: 0, lootOnly: true,
+    desc, desc_en, effects,
   };
   recipes.push({ id: key, ingredients: [b.ings[0].key, b.ings[1].key, b.ings[2].key], potion: key });
 });

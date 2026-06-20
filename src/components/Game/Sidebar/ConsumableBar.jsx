@@ -9,6 +9,7 @@ import { ITEMS, RARITIES } from '../../../data/items';
 import { cellKey, cellN } from '../../../store/itemHandlers';
 import { itemImg } from '../../../logic/itemAssets';
 import { useT } from '../../../i18n';
+import { locName } from '../../../i18n/content';
 import ItemActionCard from '../../Modals/ItemActionCard';
 
 export default function ConsumableBar() {
@@ -42,7 +43,7 @@ export default function ConsumableBar() {
               type="button"
               className="hud-conso-btn"
               style={{ '--rar': color }}
-              title={T('game.tapToUse', { name: item.name })}
+              title={T('game.tapToUse', { name: locName(item) })}
               onClick={() => setPop({ cellKey: 'bag:' + i, itemKey: key })}
             >
               <span className="hud-conso-ico">
@@ -51,7 +52,7 @@ export default function ConsumableBar() {
                   : <span className="hud-conso-emoji">{item.icon}</span>}
                 {n > 1 && <span className="hud-conso-badge">×{n}</span>}
               </span>
-              <span className="hud-conso-name">{item.name}</span>
+              <span className="hud-conso-name">{locName(item)}</span>
             </button>
           );
         })}

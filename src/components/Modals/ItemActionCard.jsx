@@ -7,6 +7,7 @@
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { sellPrice } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -34,11 +35,11 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
               ? <img src={img} alt="" draggable={false} />
               : <span className="inv-card-emoji">{item.icon}</span>}
           </div>
-          <div className="inv-card-name">{item.name}</div>
+          <div className="inv-card-name">{locName(item)}</div>
           <div className="inv-card-rar">◆ {rar?.name} · {slotName}</div>
         </div>
         <div className="inv-card-body">
-          {item.desc && <div className="inv-card-desc">{item.desc}</div>}
+          {item.desc && <div className="inv-card-desc">{locDesc(item)}</div>}
           {fx.length > 0 && (
             <>
               <div className="inv-card-fxlabel">{T('modal.item.effects')}</div>

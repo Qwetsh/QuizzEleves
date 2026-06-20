@@ -94,7 +94,7 @@ function EquipmentStrip({ team, className }) {
             key={slot}
             className="ts-eq-slot"
             title={item
-              ? `${T('game.slotItem', { slot: SLOTS[slot].name, item: item.name })}${ench ? ` ${T('game.enchanted', { n: ench })}` : ''}\n${item.desc}`
+              ? `${T('game.slotItem', { slot: SLOTS[slot].name, item: locName(item) })}${ench ? ` ${T('game.enchanted', { n: ench })}` : ''}\n${locDesc(item)}`
               : T('game.slotEmpty', { slot: SLOTS[slot].name })}
             style={{
               position: 'relative',
@@ -113,7 +113,7 @@ function EquipmentStrip({ team, className }) {
         );
       })}
       {bag.length > 0 && (
-        <span className="ts-eq-bag" title={`${T('game.bagLabel')} : ${bag.map((c) => { const it = ITEMS[cellKey(c)]; return it ? it.name + (cellN(c) > 1 ? ` ×${cellN(c)}` : '') : null; }).filter(Boolean).join(', ')}`}>
+        <span className="ts-eq-bag" title={`${T('game.bagLabel')} : ${bag.map((c) => { const it = ITEMS[cellKey(c)]; return it ? locName(it) + (cellN(c) > 1 ? ` ×${cellN(c)}` : '') : null; }).filter(Boolean).join(', ')}`}>
           {'\u{1F9F3}'} {bag.reduce((s, c) => s + cellN(c), 0)}
         </span>
       )}
@@ -297,12 +297,12 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
               }}>
                 {item ? (itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} /> : item.icon) : SLOTS[slot].icon}
               </span>
-              <span className="ts-pop-eq-name">{item ? item.name : <em style={{ opacity: 0.5 }}>{T('game.slotEmpty', { slot: SLOTS[slot].name })}</em>}</span>
+              <span className="ts-pop-eq-name">{item ? locName(item) : <em style={{ opacity: 0.5 }}>{T('game.slotEmpty', { slot: SLOTS[slot].name })}</em>}</span>
             </div>
           );
         })}
         {bag.length > 0 && (
-          <div className="ts-pop-bag">{'\u{1F9F3}'} {T('game.bagLabel')} : {bag.map((k) => ITEMS[k]?.name).filter(Boolean).join(', ')}</div>
+          <div className="ts-pop-bag">{'\u{1F9F3}'} {T('game.bagLabel')} : {bag.map((k) => ITEMS[k] ? locName(ITEMS[k]) : null).filter(Boolean).join(', ')}</div>
         )}
       </div>
       <div className="ts-pop-section">

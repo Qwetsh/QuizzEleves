@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
+import { locName, locDesc } from '../../i18n/content';
 import ItemIcon from '../Modals/ItemIcon';
 import { useGameStore } from '../../store/gameStore';
 
@@ -31,7 +32,7 @@ export default function DevItemGiver() {
   const team = teams[currentTeam];
 
   const give = (key) => { devGiveItem(key); setGiven(key); setTimeout(() => setGiven((g) => (g === key ? null : g)), 900); };
-  const matches = (it) => !q || it.name.toLowerCase().includes(q.toLowerCase());
+  const matches = (it) => !q || locName(it).toLowerCase().includes(q.toLowerCase());
 
   return (
     <>
@@ -64,7 +65,7 @@ export default function DevItemGiver() {
                       {list.map(([key, it]) => {
                         const rar = RARITIES[it.rarity] || { color: '#888' };
                         return (
-                          <button key={key} onClick={() => give(key)} title={it.desc || it.name}
+                          <button key={key} onClick={() => give(key)} title={locDesc(it) || locName(it)}
                             style={{
                               display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', textAlign: 'left',
                               borderRadius: 10, cursor: 'pointer',
@@ -73,7 +74,7 @@ export default function DevItemGiver() {
                             }}>
                             <ItemIcon item={it} size={30} ring />
                             <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--ink-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {given === key ? '✓ donné !' : it.name}
+                              {given === key ? '✓ donné !' : locName(it)}
                             </span>
                           </button>
                         );

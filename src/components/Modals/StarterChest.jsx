@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
@@ -28,7 +29,7 @@ function ChoiceCard({ itemKey, index, onPick, selected }) {
   const r = RARITIES[item.rarity] || { color: '#888', name: '' };
   const img = itemImg(item);
   // Description lisible : desc simple si présente, sinon lignes d'effet auto.
-  const desc = (item.desc && item.desc.trim()) || itemEffectLines(item).join(' · ');
+  const desc = (locDesc(item) && locDesc(item).trim()) || itemEffectLines(item).join(' · ');
   return (
     <motion.button
       type="button"
@@ -55,7 +56,7 @@ function ChoiceCard({ itemKey, index, onPick, selected }) {
       {img
         ? <img src={img} alt="" draggable={false} style={{ width: '64%', maxWidth: 56, aspectRatio: '1 / 1', objectFit: 'contain', filter: `drop-shadow(0 0 10px ${r.color}88)` }} />
         : <span style={{ fontSize: 36, lineHeight: 1 }}>{item.icon}</span>}
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, lineHeight: 1.1, textAlign: 'center', color: 'var(--ink-800)' }}>{item.name}</span>
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, lineHeight: 1.1, textAlign: 'center', color: 'var(--ink-800)' }}>{locName(item)}</span>
       <span style={{ fontSize: 8.5, fontWeight: 700, color: '#fff', background: r.color, borderRadius: 6, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
       {desc && (
         <span style={{ fontSize: 11, lineHeight: 1.25, textAlign: 'center', color: 'var(--ink-600)', marginTop: 1 }}>{desc}</span>

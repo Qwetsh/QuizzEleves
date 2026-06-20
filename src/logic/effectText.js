@@ -239,9 +239,10 @@ export function itemEffectLines(item, opts = {}) {
       && !opts.knownIngredients.includes(opts.key)) {
     return [EN(lang) ? '❓ Unknown effect — use it once to reveal it' : '❓ Effet inconnu — utilise-le une fois pour le révéler'];
   }
-  // descExpert (FR saisi à la main) ne s'applique qu'en français ; en anglais on
-  // retombe sur l'auto-généré (bilingue).
-  const expert = (!EN(lang) && typeof item?.descExpert === 'string') ? item.descExpert.trim() : '';
+  // Détail expert saisi à la main : en anglais on prend descExpert_en s'il existe,
+  // sinon on retombe sur l'auto-généré (bilingue) ; en français, descExpert.
+  const manual = EN(lang) ? item?.descExpert_en : item?.descExpert;
+  const expert = (typeof manual === 'string') ? manual.trim() : '';
   if (expert) return expert.split('\n').map((l) => l.trim()).filter(Boolean);
   return describeItemEffects(item, lang);
 }

@@ -14,6 +14,11 @@ const BUCKET = 'quete-items';
 function rowToItem(r) {
   return {
     name: r.name,
+    // Variantes anglaises (Phase C i18n) : lues par locName/locDesc et
+    // itemEffectLines selon la langue ; repli FR géré côté affichage.
+    name_en: r.name_en ?? undefined,
+    desc_en: r.description_en ?? undefined,
+    descExpert_en: r.desc_expert_en ?? undefined,
     desc: r.description ?? '',
     descExpert: r.desc_expert ?? '',
     set: r.set_key ?? undefined,
@@ -35,8 +40,11 @@ export function itemToPayload(it) {
   return {
     key: it.key,
     name: it.name,
+    name_en: it.name_en || null,
     description: it.desc || null,
+    description_en: it.desc_en || null,
     desc_expert: it.descExpert || null,
+    desc_expert_en: it.descExpert_en || null,
     set_key: it.set || null,
     icon: it.icon || null,
     img: it.img || null,

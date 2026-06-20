@@ -12,6 +12,8 @@ const LS_KEY = 'quete_events_v1';
 function rowToEvent(r) {
   return {
     name: r.name,
+    name_en: r.name_en ?? undefined,
+    desc_en: r.description_en ?? undefined,
     icon: r.icon || '✨',
     desc: r.description || '',
     optional: r.optional !== false,
@@ -28,8 +30,10 @@ export function eventToPayload(ev) {
   return {
     key: ev.key,
     name: ev.name,
+    name_en: ev.name_en || null,
     icon: ev.icon || '✨',
     description: ev.desc || null,
+    description_en: ev.desc_en || null,
     optional: ev.optional !== false,
     weight: typeof ev.weight === 'number' ? ev.weight : 1,
     category: ev.category || null,
