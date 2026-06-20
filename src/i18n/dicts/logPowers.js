@@ -1,0 +1,69 @@
+// Journal de partie — messages localisés (FR/EN) pour powerHandlers.js.
+// Clés namespacées log.pw.* ; vars interpolées via {x}.
+export default {
+  // --- Indice ---
+  'log.pw.silenced':        { fr: '🔇 {emoji} {name} est réduit au silence : aucun pouvoir ce tour-ci.',
+                              en: '🔇 {emoji} {name} is silenced: no power this turn.' },
+  'log.pw.indiceAllGone':   { fr: '💡 {emoji} {name} : toutes les mauvaises réponses sont déjà éliminées.',
+                              en: '💡 {emoji} {name}: all wrong answers are already eliminated.' },
+  'log.pw.indiceUse':       { fr: ['💡 {emoji} {name} utilise {power} (niv.{level}) ! {n} réponse éliminée{bonus}.', '💡 {emoji} {name} utilise {power} (niv.{level}) ! {n} réponses éliminées{bonus}.'],
+                              en: ['💡 {emoji} {name} uses {power} (lvl.{level})! {n} answer eliminated{bonus}.', '💡 {emoji} {name} uses {power} (lvl.{level})! {n} answers eliminated{bonus}.'] },
+  'log.pw.indiceToast':     { fr: ['{power} — {n} réponse éliminée{bonus}', '{power} — {n} réponses éliminées{bonus}'],
+                              en: ['{power} — {n} answer eliminated{bonus}', '{power} — {n} answers eliminated{bonus}'] },
+  'log.pw.bonusTime':       { fr: ' (+{n}s)', en: ' (+{n}s)' },
+
+  // --- Relance ---
+  'log.pw.relanceUse':      { fr: '🎲 {emoji} {name} utilise {power} (niv.{level}) !',
+                              en: '🎲 {emoji} {name} uses {power} (lvl.{level})!' },
+  'log.pw.relanceToast':    { fr: '{emoji} {name} relance le dé !', en: '{emoji} {name} rerolls the die!' },
+  'log.pw.relanceResult':   { fr: '🎲 {power} : {value} !{effective}', en: '🎲 {power}: {value}!{effective}' },
+  'log.pw.relanceEffective':{ fr: ' (effectif: {value})', en: ' (effective: {value})' },
+  'log.pw.surcharge':       { fr: '✨ Surcharge : +1 charge de {power} !', en: '✨ Overload: +1 charge of {power}!' },
+
+  // --- Offensif : fumigène ---
+  'log.pw.fumigeneBlock':   { fr: '💨 La bombe fumigène de {emoji} {name} annule {power} !',
+                              en: "💨 {emoji} {name}'s smoke bomb cancels {power}!" },
+  'log.pw.fumigeneToast':   { fr: '{emoji} Contré par le fumigène !', en: '{emoji} Blocked by the smoke bomb!' },
+
+  // --- Foudre ---
+  'log.pw.orage':           { fr: '🌩️ {emoji} {name} prépare un Orage : choisis une case piégée !',
+                              en: '🌩️ {emoji} {name} prepares a Storm: pick a trapped space!' },
+  'log.pw.foudreUseMany':   { fr: '⚡ {emoji} {name} utilise {power} (niv.{level}, {die}) sur {nT} équipes !{steal}{reflect}',
+                              en: '⚡ {emoji} {name} uses {power} (lvl.{level}, {die}) on {nT} teams!{steal}{reflect}' },
+  'log.pw.foudreUseOne':    { fr: '⚡ {emoji} {name} utilise {power} (niv.{level}, {die}) sur {vemoji} {vname} !{steal}{reflect}',
+                              en: '⚡ {emoji} {name} uses {power} (lvl.{level}, {die}) on {vemoji} {vname}!{steal}{reflect}' },
+  'log.pw.foudreSteal':     { fr: ' Vol de {n} or.', en: ' Stole {n} gold.' },
+  'log.pw.foudreReflect':   { fr: ' ↩️ Recul réfléchi !', en: ' ↩️ Setback reflected!' },
+  'log.pw.foudreToastMany': { fr: '{power} {die} ×{nT}', en: '{power} {die} ×{nT}' },
+  'log.pw.foudreToastOne':  { fr: '{power} {die} sur {vemoji} {vname}', en: '{power} {die} on {vemoji} {vname}' },
+
+  // --- Sablier ---
+  'log.pw.sablierUseMany':  { fr: '⏱️ {emoji} {name} utilise {power} (niv.{level}) sur {nS} équipes ! Timer /{divisor}{extras}.',
+                              en: '⏱️ {emoji} {name} uses {power} (lvl.{level}) on {nS} teams! Timer /{divisor}{extras}.' },
+  'log.pw.sablierUseOne':   { fr: '⏱️ {emoji} {name} utilise {power} (niv.{level}) sur {vemoji} {vname} ! Timer /{divisor}{extras}.',
+                              en: '⏱️ {emoji} {name} uses {power} (lvl.{level}) on {vemoji} {vname}! Timer /{divisor}{extras}.' },
+  'log.pw.sablierSilence':  { fr: ' · 🔇 Silence', en: ' · 🔇 Silence' },
+  'log.pw.sablierFreeze':   { fr: ' · 🧊 Gel du lancer', en: ' · 🧊 Roll freeze' },
+  'log.pw.sablierTax':      { fr: ' · 💸 Taxe {n}', en: ' · 💸 Tax {n}' },
+  'log.pw.sablierToastMany':{ fr: '{power} /{divisor} ×{nS}', en: '{power} /{divisor} ×{nS}' },
+  'log.pw.sablierToastOne': { fr: '{power} /{divisor} sur {vemoji} {vname}', en: '{power} /{divisor} on {vemoji} {vname}' },
+
+  // --- Double ---
+  'log.pw.doubleUse':       { fr: ['❓ {emoji} {name} utilise {power} (niv.{level}) sur {vemoji} {vname} ! +{add} question ({total} au total).{noBonus}{timer}', '❓ {emoji} {name} utilise {power} (niv.{level}) sur {vemoji} {vname} ! +{add} questions ({total} au total).{noBonus}{timer}'],
+                              en: ['❓ {emoji} {name} uses {power} (lvl.{level}) on {vemoji} {vname}! +{add} question ({total} total).{noBonus}{timer}', '❓ {emoji} {name} uses {power} (lvl.{level}) on {vemoji} {vname}! +{add} questions ({total} total).{noBonus}{timer}'] },
+  'log.pw.doubleNoBonus':   { fr: ' (sans bonus)', en: ' (no bonus)' },
+  'log.pw.doubleTimer':     { fr: ' Timer /{n} !', en: ' Timer /{n}!' },
+  'log.pw.doubleToast':     { fr: ['{power} sur {vemoji} {vname} — {total} question', '{power} sur {vemoji} {vname} — {total} questions'],
+                              en: ['{power} on {vemoji} {vname} — {total} question', '{power} on {vemoji} {vname} — {total} questions'] },
+
+  // --- Recharge (gainCharge) ---
+  'log.pw.gainCharge':      { fr: '✨ {emoji} {name} gagne 1 charge de {power} !', en: '✨ {emoji} {name} gains 1 charge of {power}!' },
+
+  // --- Boutique (shop) ---
+  'log.pw.unlock':          { fr: '🛒 {emoji} {name} débloque {power} ! (-{price} 💰)', en: '🛒 {emoji} {name} unlocks {power}! (-{price} 💰)' },
+  'log.pw.buyCharge':       { fr: '🛒 {emoji} {name} achète 1 charge de {power} ({price} 💰)', en: '🛒 {emoji} {name} buys 1 charge of {power} ({price} 💰)' },
+  'log.pw.upgrade':         { fr: '⬆️ {emoji} {name} améliore {power} au niveau {level} ! (-{cost} 💰)', en: '⬆️ {emoji} {name} upgrades {power} to level {level}! (-{cost} 💰)' },
+
+  // --- Choix de voie (spec) ---
+  'log.pw.specChosen':      { fr: '{icon} {emoji} {name} — {power} : voie « {spec} » choisie !', en: '{icon} {emoji} {name} — {power}: path "{spec}" chosen!' },
+};

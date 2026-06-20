@@ -1,5 +1,7 @@
 import { ITEMS } from '../data/items.js';
 import { SETS } from '../data/sets.js';
+import { getLang } from '../i18n/lang.js';
+import { locName } from '../i18n/content.js';
 
 // --- Sets d'équipement -------------------------------------------------
 // Compte les pièces équipées de chaque set.
@@ -107,14 +109,18 @@ export function resolveAmount(v, team) {
   return Number(v) || 0;
 }
 
-const METRIC_LABEL = { streak: 'série', correct: 'bonnes', wrong: 'ratées', precision: 'préc.%', imprecision: 'impréc.%', timeleft: '%tps' };
+const METRIC_LABEL = {
+  fr: { streak: 'série', correct: 'bonnes', wrong: 'ratées', precision: 'préc.%', imprecision: 'impréc.%', timeleft: '%tps' },
+  en: { streak: 'streak', correct: 'correct', wrong: 'wrong', precision: 'prec.%', imprecision: 'imprec.%', timeleft: '%time' },
+};
 
 // Étiquette lisible d'une quantité ('d6' ⇒ '1D6', 3 ⇒ '3', objet ⇒ 'base+f×série').
 export function diceLabel(v) {
   if (typeof v === 'string' && DICE_SIDES[v]) return `1${v.toUpperCase()}`;
   if (v && typeof v === 'object') {
     const f = v.factor ?? 1, b = v.base ?? 0;
-    return `${b ? `${b}+` : ''}${f}×${METRIC_LABEL[v.per] || v.per}`;
+    const ml = METRIC_LABEL[getLang()] || METRIC_LABEL.fr;
+    return `${b ? `${b}+` : ''}${f}×${ml[v.per] || v.per}`;
   }
   return String(v);
 }
@@ -212,9 +218,9 @@ export function explainEffectValue(team, type) {
     if (amt !== 0) parts.push({ label, formula: diceLabel(fx.value), amount: amt });
   };
   for (const item of equippedItems(team)) {
-    for (const fx of item.effects) consider(fx, item.name);
+    for (const fx of item.effects) consider(fx, locName(item));
   }
-  for (const fx of activeSetEffects(team)) consider(fx, 'Set d’objets');
+  for (const fx of activeSetEffects(team)) consider(fx, getLang() === 'en' ? 'Item set' : 'Set d’objets');
   return { total, parts };
 }
 

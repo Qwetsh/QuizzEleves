@@ -5,6 +5,7 @@
 // clés à points namespacées (setup.*, game.*, modal.*, mobile.*, fight.*, common.*).
 import { useMemo } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { getLang } from './lang.js';
 export { getLang, setLang } from './lang.js';
 import common from './dicts/common.js';
 import setup from './dicts/setup.js';
@@ -12,9 +13,20 @@ import game from './dicts/game.js';
 import modals from './dicts/modals.js';
 import mobile from './dicts/mobile.js';
 import fight from './dicts/fight.js';
+// Journal de partie (messages addLog/announce générés dans les handlers du store).
+import logStore from './dicts/logStore.js';
+import logEffects from './dicts/logEffects.js';
+import logEvents from './dicts/logEvents.js';
+import logPowers from './dicts/logPowers.js';
+import logItems from './dicts/logItems.js';
+import logFight from './dicts/logFight.js';
+import logTurn from './dicts/logTurn.js';
 
 // DICT[key] = { fr, en } (ou { fr:[sing,plur], en:[sing,plur] } pour les pluriels).
-export const DICT = { ...common, ...setup, ...game, ...modals, ...mobile, ...fight };
+export const DICT = {
+  ...common, ...setup, ...game, ...modals, ...mobile, ...fight,
+  ...logStore, ...logEffects, ...logEvents, ...logPowers, ...logItems, ...logFight, ...logTurn,
+};
 
 const interpolate = (s, vars) => (vars
   ? s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '' : String(vars[k])))
@@ -46,6 +58,12 @@ export function tFor(en) {
   fn.plural = (key, n, vars) => tplural(key, n, vars, lang);
   return fn;
 }
+
+// Traduction « globale » pour le code HORS React (handlers du store, moteurs) :
+// suit la langue module-globale (getLang(), synchronisée au toggle). Pratique
+// pour les messages du journal générés côté logique.
+export function tg(key, vars) { return t(key, vars, getLang()); }
+export function tgPlural(key, n, vars) { return tplural(key, n, vars, getLang()); }
 
 // Hook TBI : renvoie une fonction de traduction qui suit le toggle du store.
 export function useT() {

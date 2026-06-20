@@ -15,6 +15,8 @@ import { SUBJECTS } from '../data/subjects.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { ITEMS } from '../data/items.js';
 import { saveGame } from './persistence.js';
+import { tg, tgPlural } from '../i18n';
+import { loc } from '../i18n/content';
 
 const SLOTS_EQUIP = ['head', 'body', 'feet'];
 
@@ -35,7 +37,7 @@ function fxFormula(n) {
   return (typeof n === 'string' || (n && typeof n === 'object')) ? diceLabel(n) : null;
 }
 
-const cases = (n) => `${n} case${Math.abs(n) > 1 ? 's' : ''}`;
+const cases = (n) => tgPlural('log.fx.cases', n, { n });
 
 // --- Feedback visuel : « toasts » d'effet animés ----------------------
 let fxId = 0;
@@ -243,7 +245,7 @@ function applyMoney(set, get, action, ctx, indices) {
   const nt = [...teams];
   // Étiquette de la base d'un montant (formule de dé/échelle, ou « X% de son or »).
   const baseLabel = action.unit === 'percent'
-    ? `${action.formula ? action.formula + ' = ' : ''}${action.n}% de l'or`
+    ? tg('log.fx.percentOfGold', { prefix: action.formula ? action.formula + ' = ' : '', n: action.n })
     : (action.formula || null);
   const amountFor = (team) => {
     if (action.unit === 'percent') return Math.floor((team.money ?? 0) * (action.n / 100));
@@ -259,11 +261,11 @@ function applyMoney(set, get, action, ctx, indices) {
       nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) + stolen };
       // Détail : montant visé, protection éventuelle de la victime, butin réel.
       const detail = [];
-      if (baseLabel) detail.push({ label: 'Vol prévu', note: baseLabel });
-      if (stolen < raw) detail.push({ label: `Protection de ${victim.name}`, note: `−${raw - stolen} 🪙` });
-      if (detail.length) detail.push({ label: 'Pièces volées', amount: stolen });
+      if (baseLabel) detail.push({ label: tg('log.fx.detail.stealPlanned'), note: baseLabel });
+      if (stolen < raw) detail.push({ label: tg('log.fx.detail.protectionOf', { name: victim.name }), note: `−${raw - stolen} 🪙` });
+      if (detail.length) detail.push({ label: tg('log.fx.detail.coinsStolen'), amount: stolen });
       addLog({
-        text: `💰 ${nt[stealRecipient].emoji} vole ${stolen} pièce${stolen > 1 ? 's' : ''} à ${victim.emoji} ${victim.name} !`,
+        text: tgPlural('log.fx.steal', stolen, { emoji: nt[stealRecipient].emoji, n: stolen, vemoji: victim.emoji, vname: victim.name }),
         detail: detail.length ? detail : undefined,
       });
     }
@@ -275,11 +277,11 @@ function applyMoney(set, get, action, ctx, indices) {
       nt[i] = { ...t, money: Math.max(0, (t.money ?? 0) - loss) };
       if (loss > 0) {
         const detail = [];
-        if (baseLabel) detail.push({ label: 'Perte prévue', note: baseLabel });
-        if (loss < raw) detail.push({ label: 'Protection', note: `−${raw - loss} 🪙` });
-        if (detail.length) detail.push({ label: 'Pièces perdues', amount: -loss });
+        if (baseLabel) detail.push({ label: tg('log.fx.detail.lossPlanned'), note: baseLabel });
+        if (loss < raw) detail.push({ label: tg('log.fx.detail.protection'), note: `−${raw - loss} 🪙` });
+        if (detail.length) detail.push({ label: tg('log.fx.detail.coinsLost'), amount: -loss });
         addLog({
-          text: `💸 ${t.emoji} ${t.name} perd ${loss} pièce${loss > 1 ? 's' : ''}.`,
+          text: tgPlural('log.fx.lose', loss, { emoji: t.emoji, name: t.name, n: loss }),
           detail: detail.length ? detail : undefined,
         });
       }
@@ -293,7 +295,7 @@ function applyMoney(set, get, action, ctx, indices) {
       const amt = amountFor(t);
       nt[i] = { ...t, money: (t.money ?? 0) + amt };
       total += amt;
-      addLog(`💰 ${t.emoji} ${t.name} reçoit ${amt} pièce${amt > 1 ? 's' : ''}.`);
+      addLog(tgPlural('log.fx.give', amt, { emoji: t.emoji, name: t.name, n: amt }));
     }
     if (total > 0) nt[src] = { ...nt[src], money: Math.max(0, (nt[src].money ?? 0) - total) };
   } else { // gain
@@ -302,7 +304,7 @@ function applyMoney(set, get, action, ctx, indices) {
       const amt = amountFor(t);
       nt[i] = { ...t, money: (t.money ?? 0) + amt };
       addLog({
-        text: `💰 ${t.emoji} ${t.name} gagne ${amt} pièce${amt > 1 ? 's' : ''} !`,
+        text: tgPlural('log.fx.gain', amt, { emoji: t.emoji, name: t.name, n: amt }),
         detail: baseLabel ? [{ label: baseLabel, amount: amt }] : undefined,
       });
     }
@@ -323,8 +325,9 @@ function applyReroll(set, get, action, ctx) {
       subject = ctx.subject;
     }
     set({ forcedSubject: subject });
-    addLog(`🔄 Prochaine question forcée en ${SUBJECTS[subject]?.name || subject} !`);
-    announce(set, get, SUBJECTS[subject]?.icon || '🔄', `Prochaine question → ${SUBJECTS[subject]?.name || subject}`, '#8745d4');
+    const sname0 = loc(SUBJECTS[subject], 'name') || subject;
+    addLog(tg('log.fx.forcedNext', { subject: sname0 }));
+    announce(set, get, SUBJECTS[subject]?.icon || '🔄', tg('log.fx.forcedNext.toast', { subject: sname0 }), '#8745d4');
     return { done: true };
   }
 
@@ -336,14 +339,15 @@ function applyReroll(set, get, action, ctx) {
   const pool = questions[subject] || [];
   const asked = askedQuestions[subject] || new Set();
   const result = pickQuestion(pool, asked);
-  if (!result) { addLog(`⚠️ Pas de question en ${SUBJECTS[subject]?.name || subject}.`); return { done: true }; }
+  if (!result) { addLog(tg('log.fx.noQuestionIn', { subject: loc(SUBJECTS[subject], 'name') || subject })); return { done: true }; }
   set({
     showQuestion: { ...showQuestion, question: result.question, subject, index: result.index },
     askedQuestions: { ...askedQuestions, [subject]: result.newAsked },
     indiceUsed: false, indiceHidden: [], rerollUsed: true,
   });
-  addLog(`🔄 ${SUBJECTS[subject]?.icon || ''} Nouvelle question (${SUBJECTS[subject]?.name || subject}) !`);
-  announce(set, get, SUBJECTS[subject]?.icon || '🔄', `Nouvelle question (${SUBJECTS[subject]?.name || subject})`, '#8745d4');
+  const sname1 = loc(SUBJECTS[subject], 'name') || subject;
+  addLog(tg('log.fx.newQuestion', { icon: SUBJECTS[subject]?.icon || '', subject: sname1 }));
+  announce(set, get, SUBJECTS[subject]?.icon || '🔄', tg('log.fx.newQuestion.toast', { subject: sname1 }), '#8745d4');
   return { done: true };
 }
 
@@ -418,26 +422,26 @@ function stepHead(set, get, action, ctx) {
             let text;
             if (applied <= 0) {
               text = res.absorbedBy === 'buff'
-                ? `🛟 ${tm.emoji} ${tm.name} : recul annulé (effet de durée) !`
+                ? tg('log.fx.reculBuff', { emoji: tm.emoji, name: tm.name })
                 : res.absorbedBy === 'equip'
-                  ? `🎒 ${tm.emoji} ${tm.name} : l'équipement absorbe le recul !`
-                  : `🛡️ ${tm.emoji} ${tm.name} : recul totalement absorbé !`;
+                  ? tg('log.fx.reculEquip', { emoji: tm.emoji, name: tm.name })
+                  : tg('log.fx.reculFull', { emoji: tm.emoji, name: tm.name });
             } else {
-              text = `⬅️ ${tm.emoji} ${tm.name} recule de ${cases(applied)}${res.absorbedBy ? ' (réduit)' : ''}.`;
+              text = tgPlural('log.fx.back', applied, { emoji: tm.emoji, name: tm.name, n: applied, reduced: res.absorbedBy ? tg('log.fx.reduced') : '' });
             }
             get().addLog({ text, detail });
           } else {
             const detail = formula ? [{ label: formula, note: cases(applied) }] : undefined;
-            get().addLog({ text: `➡️ ${tm.emoji} ${tm.name} avance de ${cases(applied)}.`, detail });
+            get().addLog({ text: tgPlural('log.fx.forward', applied, { emoji: tm.emoji, name: tm.name, n: applied }), detail });
           }
         }
         if (res.finalPos && get().board[res.finalPos]?.type === 'arrivee') {
-          get().addLog(`🏆 ${get().teams[idx].emoji} ${get().teams[idx].name} atteint l'arrivée !`);
+          get().addLog(tg('log.fx.reachFinish', { emoji: get().teams[idx].emoji, name: get().teams[idx].name }));
           set({ finished: true });
         }
       }
       announce(set, get, action.dir === 'back' ? '⬅️' : '➡️',
-        `${action.dir === 'back' ? 'Recul' : 'Avance'} de ${n} case${n > 1 ? 's' : ''}${dieTag(action.n)}`,
+        tgPlural('log.fx.move.toast', n, { label: action.dir === 'back' ? tg('log.fx.move.back') : tg('log.fx.move.advance'), n, tag: dieTag(action.n) }),
         action.dir === 'back' ? '#c9472f' : '#5b8c3a');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
@@ -449,7 +453,7 @@ function stepHead(set, get, action, ctx) {
       const mn = resolveAmount(action.n, srcTeam);
       applyMoney(set, get, { ...action, n: mn, formula: fxFormula(action.n) }, ctx, t.indices);
       if (typeof action.n === 'string' || (action.n && typeof action.n === 'object')) {
-        announce(set, get, '🎲', `${diceLabel(action.n)} → ${mn}${action.unit === 'percent' ? '%' : ' or'}`, '#e8b117');
+        announce(set, get, '🎲', tg('log.fx.money.toast', { formula: diceLabel(action.n), n: mn, unit: action.unit === 'percent' ? tg('log.fx.unit.percent') : tg('log.fx.unit.gold') }), '#e8b117');
       }
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
@@ -461,12 +465,12 @@ function stepHead(set, get, action, ctx) {
         // Question DÉJÀ ouverte (ex. déclencheur on:questionSubject) : prolonge la
         // question COURANTE — la modale relit itemBonusTime et réajuste le timer.
         set({ showQuestion: { ...sq, itemBonusTime: (sq.itemBonusTime || 0) + et } });
-        get().addLog(`⌛ +${et}s sur cette question.`);
-        announce(set, get, '⌛', `+${et}s sur cette question${dieTag(action.n)}`, '#3b6cb3');
+        get().addLog(tg('log.fx.extraTimeThis', { n: et }));
+        announce(set, get, '⌛', tg('log.fx.extraTimeThis.toast', { n: et, tag: dieTag(action.n) }), '#3b6cb3');
       } else {
         patchSource(set, get, (t) => ({ itemTimerBonus: (t.itemTimerBonus || 0) + et }));
-        get().addLog(`⌛ +${et}s à la prochaine question.`);
-        announce(set, get, '⌛', `+${et}s à la prochaine question${dieTag(action.n)}`, '#3b6cb3');
+        get().addLog(tg('log.fx.extraTimeNext', { n: et }));
+        announce(set, get, '⌛', tg('log.fx.extraTimeNext.toast', { n: et, tag: dieTag(action.n) }), '#3b6cb3');
       }
       return 'done';
     }
@@ -486,15 +490,15 @@ function stepHead(set, get, action, ctx) {
       const want = Math.max(1, resolveAmount(action.n, srcTeam) || 1);
       const picked = wrong.slice(0, Math.min(want, wrong.length));
       set({ indiceHidden: [...already, ...picked] });
-      get().addLog(`💡 ${picked.length} mauvaise réponse${picked.length > 1 ? 's' : ''} éliminée${picked.length > 1 ? 's' : ''} !`);
-      announce(set, get, '💡', `−${picked.length} mauvaise réponse${picked.length > 1 ? 's' : ''}${dieTag(action.n)}`, '#c8911f');
+      get().addLog(tgPlural('log.fx.hideWrong', picked.length, { n: picked.length }));
+      announce(set, get, '💡', tgPlural('log.fx.hideWrong.toast', picked.length, { n: picked.length, tag: dieTag(action.n) }), '#c8911f');
       return 'done';
     }
     case 'shieldNext': {
       const sn = typeof action.n === 'number' ? (action.n || 1) : (resolveAmount(action.n, srcTeam) || 1);
       patchSource(set, get, (t) => ({ itemShield: (t.itemShield || 0) + sn }));
-      get().addLog(`🪵 Bouclier de bois armé : ton prochain recul sera réduit de ${sn} case${sn > 1 ? 's' : ''}.`);
-      announce(set, get, '🛡️', `Bouclier armé (−${sn} case${sn > 1 ? 's' : ''})${dieTag(action.n)}`, '#3b6cb3');
+      get().addLog(tgPlural('log.fx.shieldNext', sn, { n: sn }));
+      announce(set, get, '🛡️', tgPlural('log.fx.shieldNext.toast', sn, { n: sn, tag: dieTag(action.n) }), '#3b6cb3');
       return 'done';
     }
     case 'fumigene': {
@@ -503,16 +507,16 @@ function stepHead(set, get, action, ctx) {
       const ft = action.turns != null ? resolveAmount(action.turns, srcTeam) : 0;
       patchSource(set, get, () => ({ itemFumigene: true, ...(ft > 0 ? { itemFumigeneTurns: ft } : {}) }));
       get().addLog(ft > 0
-        ? `💨 Fumigène actif pendant ${ft} tour${ft > 1 ? 's' : ''}.`
-        : `💨 Le prochain pouvoir offensif subi sera annulé.`);
-      announce(set, get, '💨', `Fumigène armé${ft > 0 ? ` (${ft}T)` : ''}`, '#7a8a99');
+        ? tgPlural('log.fx.fumigeneTurns', ft, { n: ft })
+        : tg('log.fx.fumigeneUntil'));
+      announce(set, get, '💨', tg('log.fx.fumigene.toast', { suffix: ft > 0 ? ` (${ft}T)` : '' }), '#7a8a99');
       return 'done';
     }
     case 'gainCharge': {
       if (ctx.chargeDone) { clearCtxResolution(set, get, 'chargeDone'); return 'done'; }
       // Aucun pouvoir à recharger : on saute (évite un sélecteur vide).
       const ct = get().teams[ctx.sourceTeam ?? get().currentTeam];
-      if (!ct?.powers || Object.keys(ct.powers).length === 0) { get().addLog(`✨ Aucun pouvoir à recharger.`); return 'done'; }
+      if (!ct?.powers || Object.keys(ct.powers).length === 0) { get().addLog(tg('log.fx.noPowerToCharge')); return 'done'; }
       set({ showChargePicker: { source: 'engine' } });
       return 'suspend';
     }
@@ -547,10 +551,10 @@ function stepHead(set, get, action, ctx) {
       const nt = [...get().teams];
       for (const idx of t.indices) nt[idx] = { ...nt[idx], forcedSubject: subj };
       set({ teams: nt });
-      const sname = SUBJECTS[subj]?.name || subj;
-      const whoLabel = action.target === 'self' ? 'ta prochaine question' : 'la prochaine question de la cible';
-      get().addLog(`🎯 ${SUBJECTS[subj]?.icon || ''} ${whoLabel} forcée en ${sname} !`);
-      announce(set, get, SUBJECTS[subj]?.icon || '🎯', `Question forcée → ${sname}`, SUBJECTS[subj]?.color || '#8745d4');
+      const sname = loc(SUBJECTS[subj], 'name') || subj;
+      const whoLabel = action.target === 'self' ? tg('log.fx.who.self') : tg('log.fx.who.target');
+      get().addLog(tg('log.fx.forceSubject', { icon: SUBJECTS[subj]?.icon || '', who: whoLabel, subject: sname }));
+      announce(set, get, SUBJECTS[subj]?.icon || '🎯', tg('log.fx.forceSubject.toast', { subject: sname }), SUBJECTS[subj]?.color || '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -563,11 +567,11 @@ function stepHead(set, get, action, ctx) {
       const nt = [...get().teams];
       for (const idx of t.indices) nt[idx] = { ...nt[idx], randomPathNext: true };
       set({ teams: nt });
-      const whoLabel = action.target === 'self' ? 'Ta prochaine voie'
-        : action.target === 'all' ? 'La prochaine voie de chaque équipe'
-        : 'La prochaine voie de la cible';
-      get().addLog(`🎲 ${whoLabel} sera choisie au hasard !`);
-      announce(set, get, '🎲', `${whoLabel} → au hasard`, '#8745d4');
+      const whoLabel = action.target === 'self' ? tg('log.fx.path.self')
+        : action.target === 'all' ? tg('log.fx.path.all')
+        : tg('log.fx.path.target');
+      get().addLog(tg('log.fx.randomPath', { who: whoLabel }));
+      announce(set, get, '🎲', tg('log.fx.randomPath.toast', { who: whoLabel }), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -586,13 +590,13 @@ function stepHead(set, get, action, ctx) {
           movePath = [{ teamIndex: idx, waypoints: [{ x: board[tm.pos].x, y: board[tm.pos].y }, { x: board[best].x, y: board[best].y }], type: 'forward' }];
           nt[idx] = { ...tm, pos: best };
           moved = true;
-          get().addLog(`✨ ${tm.emoji} ${tm.name} se téléporte sur sa case la plus avancée !`);
-          if (board[best].type === 'arrivee') { get().addLog(`🏆 ${tm.emoji} ${tm.name} atteint l'arrivée !`); }
+          get().addLog(tg('log.fx.teleport', { emoji: tm.emoji, name: tm.name }));
+          if (board[best].type === 'arrivee') { get().addLog(tg('log.fx.reachFinish', { emoji: tm.emoji, name: tm.name })); }
         }
       }
       set({ teams: nt, ...(movePath ? { movePath } : {}) });
       if (moved && nt.some((tm) => board[tm.pos]?.type === 'arrivee')) set({ finished: true });
-      announce(set, get, '✨', moved ? 'Téléportation : case la plus avancée !' : 'Déjà au plus loin atteint', '#8745d4');
+      announce(set, get, '✨', moved ? tg('log.fx.teleport.done') : tg('log.fx.teleport.already'), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -603,9 +607,9 @@ function stepHead(set, get, action, ctx) {
       // / timeoutQuestion (team.wager).
       const subj = action.subject;
       patchSource(set, get, () => ({ forcedSubject: subj, wager: { do: action.do || [], else: action.else || [] } }));
-      const sname = SUBJECTS[subj]?.name || subj;
-      get().addLog(`🎲 Défi lancé ! Ta prochaine question sera en ${sname}.`);
-      announce(set, get, SUBJECTS[subj]?.icon || '🎲', `Défi → ${sname}`, SUBJECTS[subj]?.color || '#8a1f2e');
+      const sname = loc(SUBJECTS[subj], 'name') || subj;
+      get().addLog(tg('log.fx.challenge', { subject: sname }));
+      announce(set, get, SUBJECTS[subj]?.icon || '🎲', tg('log.fx.challenge.toast', { subject: sname }), SUBJECTS[subj]?.color || '#8a1f2e');
       return 'done';
     }
     case 'buff': {
@@ -620,7 +624,7 @@ function stepHead(set, get, action, ctx) {
         nt[idx] = { ...cur, buffs: [...(cur.buffs || []), { type: src.type, turns, n: src.n, subject: src.subject }] };
       }
       set({ teams: nt });
-      get().addLog(`✨ Effet de durée posé pour ${turns} tour${turns > 1 ? 's' : ''}.`);
+      get().addLog(tgPlural('log.fx.buff', turns, { n: turns }));
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -645,8 +649,8 @@ function stepHead(set, get, action, ctx) {
       const nt = [...get().teams];
       for (const idx of t.indices) nt[idx] = { ...nt[idx], sablierActif: true, sablierDivisor: div };
       set({ teams: nt });
-      get().addLog(`⏱️ Malédiction : timer ÷${div} au prochain tour !`);
-      announce(set, get, '⏱️', `Timer ÷${div}`, '#8745d4');
+      get().addLog(tg('log.fx.curseTimer', { n: div }));
+      announce(set, get, '⏱️', tg('log.fx.curseTimer.toast', { n: div }), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -661,8 +665,8 @@ function stepHead(set, get, action, ctx) {
         nt[idx] = { ...tm, doubleActive: true, doubleExtra: Math.min((tm.doubleExtra || 0) + add, 4) };
       }
       set({ teams: nt });
-      get().addLog(`❓ Malédiction : +${add} question${add > 1 ? 's' : ''} au prochain tour !`);
-      announce(set, get, '❓', `+${add} question${add > 1 ? 's' : ''}`, '#8745d4');
+      get().addLog(tgPlural('log.fx.curseExtra', add, { n: add }));
+      announce(set, get, '❓', tgPlural('log.fx.curseExtra.toast', add, { n: add }), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -676,7 +680,7 @@ function stepHead(set, get, action, ctx) {
       if (ctx.rollResult == null) { rollEngineDice(set, get); return 'suspend'; }
       const v = ctx.rollResult;
       const branch = d6Branch(action.table, v);
-      get().addLog(`🎲 L'objet fait ${v} !`);
+      get().addLog(tg('log.fx.objectRolls', { n: v }));
       // injecte la branche en tête (après avoir dépilé __rollD6 par runQueue)
       const pa = get().pendingActions;
       set({ pendingActions: { ...pa, queue: [pa.queue[0], ...branch, ...pa.queue.slice(1)] } });
@@ -716,8 +720,8 @@ function consumeFumigene(set, get, targetIdx, action) {
   const nt = [...get().teams];
   nt[targetIdx] = { ...t, itemFumigene: false, itemFumigeneTurns: undefined };
   set({ teams: nt });
-  get().addLog(`💨 ${t.emoji} ${t.name} esquive l'effet (bombe fumigène) !`);
-  announce(set, get, '💨', `${t.emoji} Contré par le fumigène !`, '#7a8a99');
+  get().addLog(tg('log.fx.fumigeneDodge', { emoji: t.emoji, name: t.name }));
+  announce(set, get, '💨', tg('log.fx.fumigeneDodge.toast', { emoji: t.emoji }), '#7a8a99');
   return true;
 }
 
@@ -725,11 +729,12 @@ function placeTrapAt(set, get, nodeId, trap, ownerTeam) {
   const { board, addLog, teams } = get();
   const node = board[nodeId];
   if (!node) return;
-  if (node.trap) { addLog(`🪤 Cette case a déjà un piège.`); return; }
+  if (node.trap) { addLog(tg('log.fx.trapAlready')); return; }
   const newBoard = { ...board, [nodeId]: { ...node, trap: { label: trap?.label, icon: trap?.icon || '🪤', do: trap?.do || [], ownerTeam } } };
   set({ board: newBoard });
-  addLog(`🪤 ${teams[ownerTeam]?.emoji ?? ''} pose un piège (${trap?.label || 'piège'}) !`);
-  announce(set, get, trap?.icon || '🪤', `Piège posé : ${trap?.label || 'piège'}`, '#c9472f');
+  const trapLabel = trap?.label || tg('log.fx.trapDefault');
+  addLog(tg('log.fx.trapPlaced', { emoji: teams[ownerTeam]?.emoji ?? '', label: trapLabel }));
+  announce(set, get, trap?.icon || '🪤', tg('log.fx.trapPlaced.toast', { label: trapLabel }), '#c9472f');
 }
 
 // Lance un d6 « d'objet » avec animation, puis reprend la file.

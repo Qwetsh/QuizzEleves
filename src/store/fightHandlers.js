@@ -7,15 +7,17 @@ import { pickLootItem, placeItem, normalizeBag, cellKey, cellN, mkCell } from '.
 import { equipTriggerActions, runEffects } from './effectEngine.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
+import { tg, tgPlural } from '../i18n';
+import { locName } from '../i18n/content';
 
 // Transfere un objet vers une equipe (cascade unique placeItem) et formate
 // la note de butin. Retourne { team: updatedTeam, note: string }.
 function receiveItem(team, itemKey) {
   const r = placeItem(team, itemKey);
   const note = r.outcome === 'equipped'
-    ? ' (équipé)'
+    ? tg('log.ft.note.equipped')
     : r.outcome === 'refunded'
-      ? ` (sac plein : revendu +${r.refund} \u{1F4B0})`
+      ? tg('log.ft.note.refunded', { refund: r.refund })
       : '';
   return { team: r.team, note };
 }
@@ -31,7 +33,7 @@ export function startFight(set, get, defenderIndex, subject) {
   const { teams, currentTeam, addLog } = get();
   const att = teams[currentTeam];
   const def = teams[defenderIndex];
-  addLog(`⚔️ ${att.emoji} ${att.name} défie ${def.emoji} ${def.name} en duel !`);
+  addLog(tg('log.ft.challenge', { att: `${att.emoji} ${att.name}`, def: `${def.emoji} ${def.name}` }));
   set({
     showFight: {
       attackerIndex: currentTeam,
@@ -58,7 +60,7 @@ export const BOSS_PROF = { emoji: '👨‍🏫', name: 'Le Prof', color: '#8a1f2
 export function startBossFight(set, get, subject) {
   const { currentTeam, teams, addLog } = get();
   const att = teams[currentTeam];
-  addLog(`👨‍🏫 ${att.emoji} ${att.name} défie LE PROF dans un combat de boss !`);
+  addLog(tg('log.ft.bossChallenge', { att: `${att.emoji} ${att.name}` }));
   set({
     showFight: {
       attackerIndex: currentTeam,
@@ -92,15 +94,16 @@ function resolveBossOutcome(set, get, f) {
     let note = '';
     if (lootKey) { const r = receiveItem(placed, lootKey); placed = r.team; note = r.note; }
     newTeams[idx] = placed;
-    message = `🏆 ${team.emoji} ${team.name} terrasse le Prof ! +${gold} \u{1F4B0}${lootKey ? ` et ${ITEMS[lootKey].icon} ${ITEMS[lootKey].name}${note}` : ''} !`;
+    const loot = lootKey ? tg('log.ft.bossWin.loot', { icon: ITEMS[lootKey].icon, item: locName(ITEMS[lootKey]), note }) : '';
+    message = tg('log.ft.bossWin', { team: `${team.emoji} ${team.name}`, gold, loot });
   } else {
     const dv = Math.floor(Math.random() * 10) + 1;
     const rec = applyRecul(team, board, dv, extOn(get().extensions, 'mastery')); // bouclier + équipement protègent du recul
     newTeams[idx] = { ...team, ...rec.patch };
     if (rec.path) moves = [{ teamIndex: idx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     message = rec.applied > 0
-      ? `👨‍🏫 Le Prof l'emporte ! ${team.emoji} ${team.name} recule de ${rec.applied} case${rec.applied > 1 ? 's' : ''}${rec.absorbedBy ? ' (réduit)' : ''}.`
-      : `👨‍🏫 Le Prof l'emporte ! \u{1F6E1}️ ${team.emoji} ${team.name} encaisse mais le recul est absorbé !`;
+      ? tg('log.ft.bossLose', { team: `${team.emoji} ${team.name}`, n: rec.applied, s: rec.applied > 1 ? 's' : '', reduced: rec.absorbedBy ? tg('log.ft.reduced') : '' })
+      : tg('log.ft.bossLose.absorbed', { team: `${team.emoji} ${team.name}` });
   }
   addLog(message);
   set({ teams: newTeams, showFight: { ...f, phase: 'result', resultMessage: message }, ...(moves ? { movePath: moves } : {}) });
@@ -128,10 +131,10 @@ export function fightRoundWin(set, get, side) {
   const { teams, addLog } = get();
   const teamIdx = side === 'attacker' ? f.attackerIndex : f.defenderIndex;
   const t = teams[teamIdx] || f.boss; // côté boss : non-équipe
-  addLog(`⚔️ Manche ${f.round} pour ${t.emoji} ${t.name} !`);
+  addLog(tg('log.ft.round', { round: f.round, team: `${t.emoji} ${t.name}` }));
 
   if (wins[side] >= FIGHT_ROUNDS_TO_WIN) {
-    addLog(`\u{1F3C5} ${t.emoji} ${t.name} remporte le duel !`);
+    addLog(tg('log.ft.duelWin', { team: `${t.emoji} ${t.name}` }));
     if (f.bossFight) { resolveBossOutcome(set, get, { ...f, wins, winnerSide: side }); return; }
     set({ showFight: { ...f, wins, winnerSide: side, phase: 'reward' } });
   } else {
@@ -149,7 +152,7 @@ export function fightMatchWin(set, get, side) {
   const { teams, addLog } = get();
   const idx = side === 'attacker' ? f.attackerIndex : f.defenderIndex;
   const winner = teams[idx] || f.boss;
-  addLog(`\u{1F3C5} ${winner.emoji} ${winner.name} remporte le duel !`);
+  addLog(tg('log.ft.duelWin', { team: `${winner.emoji} ${winner.name}` }));
   if (f.bossFight) { resolveBossOutcome(set, get, { ...f, wins: { ...f.wins, [side]: FIGHT_ROUNDS_TO_WIN }, winnerSide: side }); return; }
   set({ showFight: { ...f, wins: { ...f.wins, [side]: FIGHT_ROUNDS_TO_WIN }, winnerSide: side, phase: 'reward' } });
 }
@@ -217,12 +220,12 @@ function applyFightReward(set, get) {
       if (!foundKey) {
         // Aucun objet active dans la partie : lot de consolation en pieces
         newTeams[winnerIdx] = { ...winner, money: winner.money + 10 };
-        message = `\u{1F9F0} ${loser.emoji} ${loser.name} n'a aucun objet... ${winner.emoji} ${winner.name} ramasse 10 \u{1F4B0} sur le champ de bataille !`;
+        message = tg('log.ft.loot.none', { loser: `${loser.emoji} ${loser.name}`, winner: `${winner.emoji} ${winner.name}` });
       } else {
         const item = ITEMS[foundKey];
         const r = receiveItem(winner, foundKey);
         newTeams[winnerIdx] = r.team;
-        message = `\u{1F9F0} ${loser.emoji} ${loser.name} n'a aucun objet... ${winner.emoji} ${winner.name} fouille le champ de bataille et trouve ${item.icon} ${item.name} !${r.note}`;
+        message = tg('log.ft.loot.found', { loser: `${loser.emoji} ${loser.name}`, winner: `${winner.emoji} ${winner.name}`, icon: item.icon, item: locName(item), note: r.note });
       }
     } else {
       const picked = pool[Math.floor(Math.random() * pool.length)];
@@ -238,7 +241,7 @@ function applyFightReward(set, get) {
       }
       const r = receiveItem(winner, picked.key);
       newTeams[winnerIdx] = r.team;
-      message = `\u{1F392} ${winner.emoji} ${winner.name} pille ${item.icon} ${item.name} à ${loser.emoji} ${loser.name} !${r.note}`;
+      message = tg('log.ft.loot.steal', { winner: `${winner.emoji} ${winner.name}`, icon: item.icon, item: locName(item), loser: `${loser.emoji} ${loser.name}`, note: r.note });
     }
   } else if (f.reward.choice === 'steal') {
     // Equipement du vainqueur (fightStealBonus) puis protection du perdant (stealProtection)
@@ -247,8 +250,8 @@ function applyFightReward(set, get) {
     newTeams[winnerIdx] = { ...winner, money: winner.money + stolen };
     newTeams[loserIdx] = { ...loser, money: loser.money - stolen };
     message = stolen > 0
-      ? `\u{1F4B0} ${winner.emoji} ${winner.name} pille ${stolen} pièce${stolen > 1 ? 's' : ''} à ${loser.emoji} ${loser.name} !`
-      : `\u{1F9B9} ${loser.emoji} ${loser.name} protège ses pièces : rien à piller !`;
+      ? tgPlural('log.ft.steal.gold', stolen, { winner: `${winner.emoji} ${winner.name}`, loser: `${loser.emoji} ${loser.name}` })
+      : tg('log.ft.steal.protected', { loser: `${loser.emoji} ${loser.name}` });
   } else {
     // Bouclier (bois + pouvoir) puis équipement du perdant : recul atténué.
     const rec = applyRecul(loser, board, f.reward.dice[0], extOn(get().extensions, 'mastery'));
@@ -257,17 +260,17 @@ function applyFightReward(set, get) {
       moves = [{ teamIndex: loserIdx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
     }
     message = rec.applied > 0
-      ? `⬅️ ${loser.emoji} ${loser.name} est repoussé de ${rec.applied} case${rec.applied > 1 ? 's' : ''}${rec.absorbedBy ? ' (réduit)' : ''} !`
+      ? tgPlural('log.ft.knockback', rec.applied, { loser: `${loser.emoji} ${loser.name}`, reduced: rec.absorbedBy ? tg('log.ft.reduced') : '' })
       : (rec.absorbedBy === 'equip'
-          ? `\u{1F392} L'équipement de ${loser.emoji} ${loser.name} absorbe le recul !`
-          : `\u{1F6E1}️ ${loser.emoji} ${loser.name} absorbe le recul avec son bouclier !`);
+          ? tg('log.ft.knockback.equip', { loser: `${loser.emoji} ${loser.name}` })
+          : tg('log.ft.knockback.shield', { loser: `${loser.emoji} ${loser.name}` }));
     // Réflexion (Bouclier L10 du perdant) : une partie du recul revient au vainqueur.
     if (rec.reflect > 0 && winnerIdx >= 0) {
       const w = newTeams[winnerIdx];
       const r2 = moveBack(board, w.pos, reducedRecul(w, rec.reflect));
       newTeams[winnerIdx] = { ...w, pos: r2.finalPos };
       if (r2.path.length > 1) moves = [...(moves || []), { teamIndex: winnerIdx, waypoints: r2.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
-      message += ` ↩️ Réflexion : ${winner.emoji} recule aussi !`;
+      message += tg('log.ft.reflect', { winner: winner.emoji });
     }
   }
 

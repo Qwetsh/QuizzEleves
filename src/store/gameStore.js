@@ -23,6 +23,8 @@ import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides } from '../logic/itemEffects.js';
+import { tg, tgPlural } from '../i18n';
+import { loc } from '../i18n/content';
 
 const INITIAL_CHARGES = 2;
 
@@ -447,12 +449,15 @@ export const useGameStore = create((set, get) => ({
     const names = [];
     for (const k of chosenKeys) {
       placed = itemH.placeItem(placed, k).team; // équipe (slot libre) ou met au sac
-      names.push(`${ITEMS[k].icon} ${ITEMS[k].name}`);
+      names.push(`${ITEMS[k].icon} ${loc(ITEMS[k], 'name')}`);
     }
     const nt = [...teams];
     nt[currentTeam] = placed;
     set({ teams: nt, showStarterChest: false, lastStarterReward: null });
-    addLog(`\u{1F9F0} ${t.emoji} ${t.name} ouvre son coffre de départ : +${gold} 🪙${names.length ? ` et ${names.join(', ')} !` : ' !'}`);
+    addLog(tg('log.store.starterChest', {
+      emoji: t.emoji, name: t.name, gold,
+      items: names.length ? tg('log.store.starterChest.items', { names: names.join(', ') }) : tg('log.store.starterChest.empty'),
+    }));
     get().checkMoneyMilestone(currentTeam); // les pièces volent (FlyingCoins) au changement d'or
     if (get().phase === 'game') saveGame(get());
   },
@@ -471,13 +476,9 @@ export const useGameStore = create((set, get) => ({
     const nt = [...teams];
     nt[teamIdx] = { ...t, moneyMilestone: th };
     set({ teams: nt });
-    const MSG = {
-      20: 'Déjà 20 pièces ! File à la boutique t’offrir un objet.',
-      40: '40 pièces en poche — de quoi t’équiper sérieusement !',
-      60: 'Le magot enfle : 60 pièces ! Un objet rare t’attend à la boutique.',
-    };
-    effectH.announce(set, get, '💰', `${t.emoji} ${MSG[th]}`, '#c8911f');
-    get().addLog(`💰 ${t.emoji} ${t.name} : ${MSG[th]}`);
+    const msg = tg(`log.store.milestone.${th}`);
+    effectH.announce(set, get, '💰', `${t.emoji} ${msg}`, '#c8911f');
+    get().addLog(tg('log.store.milestone', { emoji: t.emoji, name: t.name, msg }));
   },
 
   showLoot: (itemKey, opts = {}) => set({ lootReveal: { itemKey, ...opts } }),
@@ -582,7 +583,7 @@ export const useGameStore = create((set, get) => ({
       if (t.powerOff && !powers[t.powerOff]) powers[t.powerOff] = { charges: INITIAL_CHARGES, level: 1 };
       return { ...t, powers };
     });
-    addLog(`\u{1F3B2} Début de la partie ! ${finalTeams.length} équipes en lice.`);
+    addLog(tgPlural('log.store.gameStart', finalTeams.length, { n: finalTeams.length }));
     const starterGold = resolveStarterGold(get().starterChestConfig || defaultStarterChestConfig());
     set({ teams: finalTeams, phase: 'game', starterGold });
     get().triggerStarterChest();
@@ -615,7 +616,7 @@ export const useGameStore = create((set, get) => ({
       const nt = [...teams];
       nt[currentTeam] = { ...t, skipNextRoll: false };
       set({ teams: nt });
-      get().addLog(`🧊 ${t.emoji} ${t.name} est gelé : tour sauté !`);
+      get().addLog(tg('log.store.frozen', { emoji: t.emoji, name: t.name }));
       get().nextTurn();
       return;
     }
@@ -640,8 +641,8 @@ export const useGameStore = create((set, get) => ({
     const eff = value + bonus;
     set({ preRollPos: team.pos, preRollValue: eff, freeActivation: false });
     addLog(bonus > 0
-      ? `${team.emoji} ${team.name} lance le d\u00E9 : ${value} (+${bonus} bonus) \u2192 avance de ${eff} !`
-      : `${team.emoji} ${team.name} lance le d\u00E9 : ${value}`);
+      ? tg('log.store.roll.bonus', { emoji: team.emoji, name: team.name, value, bonus, eff })
+      : tg('log.store.roll', { emoji: team.emoji, name: team.name, value }));
 
     const result = moveForward(board, team.pos, eff);
     const newTeams = [...teams];
@@ -681,7 +682,7 @@ export const useGameStore = create((set, get) => ({
         const nt = [...teams];
         nt[currentTeam] = { ...team, pilotNext: false };
         set({ teams: nt, awaitingChoice: true, pendingMove: { remaining: postRoll.remaining } });
-        addLog(`🧭 Pilote : choisis ta voie !`);
+        addLog(tg('log.store.pilote'));
         return;
       }
       if (hasBuff(team, 'randomPath') || getEffectValue(team, 'randomPath') > 0 || team.randomPathNext) {
@@ -694,13 +695,13 @@ export const useGameStore = create((set, get) => ({
           } else {
             set({ pendingMove: { remaining: postRoll.remaining } });
           }
-          addLog(`\u{1F3B2} Voie choisie au hasard !`);
+          addLog(tg('log.store.randomPath'));
           setTimeout(() => get().chooseJunction(opts[Math.floor(Math.random() * opts.length)]), 450);
           return;
         }
       }
       set({ awaitingChoice: true, pendingMove: { remaining: postRoll.remaining } });
-      addLog(`\u2194\uFE0F Choisis une voie !`);
+      addLog(tg('log.store.choosePath'));
       return;
     }
     // (Le d\u00e9 de 1 ne recharge plus de pouvoir : cet effet passe d\u00e9sormais par
@@ -744,7 +745,7 @@ export const useGameStore = create((set, get) => ({
       // Seule l'arrivee compte pour un deplacement d'objet
       const pos = get().teams[currentTeam].pos;
       if (board[pos]?.type === 'arrivee') {
-        get().addLog(`\u{1F3C6} ${get().teams[currentTeam].emoji} ${get().teams[currentTeam].name} atteint l'arrivée !`);
+        get().addLog(tg('log.store.finish', { emoji: get().teams[currentTeam].emoji, name: get().teams[currentTeam].name }));
         set({ finished: true });
       }
       // Move issu du moteur d'effets : reprendre la file (l'action move est terminee)
@@ -781,7 +782,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     if (node.type === 'arrivee') {
-      addLog(`\u{1F3C6} ${team.emoji} ${team.name} atteint l'arriv\u00e9e !`);
+      addLog(tg('log.store.finish', { emoji: team.emoji, name: team.name }));
       set({ finished: true });
       saveGame(get());
       return;
@@ -796,7 +797,7 @@ export const useGameStore = create((set, get) => ({
       nb[team.pos] = { ...node }; delete nb[team.pos].trap; // nettoyage avant execution (idempotence)
       set({ board: nb, trapDepth: depth + 1 });
       soundTrap();
-      addLog(`\u{1FAA4} ${team.emoji} ${team.name} declenche un piege${trap.label ? ` : ${trap.label}` : ''} !`);
+      addLog(tg('log.store.trap', { emoji: team.emoji, name: team.name, label: trap.label ? tg('log.store.trap.label', { label: trap.label }) : '' }));
       if (depth < 3) {
         // ownerTeam = le POSEUR : l'or volé par le piège lui revient (cf. applyMoney).
         effectH.runEffects(set, get, trap.do, { source: 'trap', ownerTeam: trap.ownerTeam });
@@ -812,7 +813,7 @@ export const useGameStore = create((set, get) => ({
         // Immunité (passif/buff) : l'arrivant immunisé ne duelle pas ; un défenseur
         // immunisé est exclu de la liste des cibles possibles.
         if (isDuelImmune(team)) {
-          addLog(`\u{1F6E1}\u{FE0F} Duel évité : ${team.emoji} ${team.name} est immunisé(e) aux duels.`);
+          addLog(tg('log.store.duelImmune', { emoji: team.emoji, name: team.name }));
         } else {
           const presentIdx = teams.map((_, i) => i).filter((i) => i !== currentTeam && teams[i].pos === team.pos);
           // Cibles possibles vs cibles bloquées (immunisées) : ces dernières sont
@@ -820,7 +821,7 @@ export const useGameStore = create((set, get) => ({
           const defenders = presentIdx.filter((i) => !isDuelImmune(teams[i]));
           const blocked = presentIdx.filter((i) => isDuelImmune(teams[i]));
           if (defenders.length === 0) {
-            addLog(`\u{1F6E1}\u{FE0F} Duel évité : adversaire(s) immunisé(s).`);
+            addLog(tg('log.store.duelImmuneFoes'));
           } else if (get().forcedDuels) {
             // Duel forcé (historique) : duel automatique avec le 1er adversaire.
             fightH.startFight(set, get, defenders[0], subj);
@@ -850,7 +851,7 @@ export const useGameStore = create((set, get) => ({
     if (node.type === 'event') {
       const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled() });
       if (picked) {
-        addLog(`\u{1F381} ${team.emoji} ${team.name} tombe sur : ${picked.event.icon} ${picked.event.name}`);
+        addLog(tg('log.store.landEvent', { emoji: team.emoji, name: team.name, eicon: picked.event.icon, ename: loc(picked.event, 'name') }));
         set({ pendingEventQuestion: { subject: node.subject || get().randomBoardSubject() } });
         eventH.triggerEvent(set, get, picked);
         return;
@@ -886,7 +887,7 @@ export const useGameStore = create((set, get) => ({
   declineDuel: () => {
     if (!get().showDuelChoice) return;
     const t = get().teams[get().currentTeam];
-    get().addLog(`\u{1F91D} ${t.emoji} ${t.name} préfère ne pas défier et joue la case.`);
+    get().addLog(tg('log.store.declineDuel', { emoji: t.emoji, name: t.name }));
     set({ showDuelChoice: null });
     get().resolveLandingCase();
   },
@@ -918,7 +919,7 @@ export const useGameStore = create((set, get) => ({
       const hc = getEffectValue(t0, 'hardcoreChance');
       if (hc > 0 && (get().questions.hardcore || []).length && Math.random() * 100 < hc) {
         subject = 'hardcore';
-        get().addLog(`💀 ${t0.emoji} ${t0.name} : question Hardcore ! (${hc}%)`);
+        get().addLog(tg('log.store.hardcore', { emoji: t0.emoji, name: t0.name, pct: hc }));
       }
     }
     const { questions, askedQuestions, teams, currentTeam, addLog } = get();
@@ -928,14 +929,14 @@ export const useGameStore = create((set, get) => ({
     const result = pickQuestion(pool, asked);
 
     if (!result) {
-      addLog(`\u26A0\uFE0F Pas de question disponible en ${SUBJECTS[subject]?.name || subject}.`);
+      addLog(tg('log.store.noQuestion', { subject: SUBJECTS[subject] ? loc(SUBJECTS[subject], 'name') : subject }));
       get().nextTurn();
       return;
     }
 
     const { question: q, newAsked } = result;
     const subjectInfo = SUBJECTS[subject];
-    addLog(`${subjectInfo?.icon || ''} Question en ${subjectInfo?.name || subject}`);
+    addLog(tg('log.store.question', { icon: subjectInfo?.icon || '', subject: subjectInfo ? loc(subjectInfo, 'name') : subject }));
 
     // Sablier (one-shot : consomme a la 1re question) et Double niv.3
     // (doubleTimerDivisor : persiste sur la rafale, nettoye avec BURST_RESET)
@@ -949,7 +950,7 @@ export const useGameStore = create((set, get) => ({
       set({ teams: nt });
     }
     if (timerHalved) {
-      addLog(`\u23F1\uFE0F Sablier actif ! Timer divis\u00e9 par ${timerDivisor}.`);
+      addLog(tg('log.store.sablier', { div: timerDivisor }));
     }
 
     // Bonus de temps : equipement (permanent) + consommable Sablier de poche (one-shot)
@@ -1007,7 +1008,7 @@ export const useGameStore = create((set, get) => ({
       indiceHidden = wrong.slice(0, Math.min(indiceBoost, wrong.length));
       if (indiceHidden.length) {
         const n = indiceHidden.length;
-        addLog(`\u{1F4A1} Équipement : ${n} mauvaise${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''} éliminée${n > 1 ? 's' : ''} d'office !`);
+        addLog(tgPlural('log.store.equipHide', n, { n }));
       }
     }
 
@@ -1075,7 +1076,7 @@ export const useGameStore = create((set, get) => ({
       let aonPatch = {};
       if (team.doubleActive && team.doubleAllOrNothing) {
         const bank = (team.doubleBank || 0) + gain;
-        if (turnComplete) { payNow = bank * 2; addLog(`🎰 Tout-ou-rien réussi ! Gains doublés : +${payNow} 💰`); }
+        if (turnComplete) { payNow = bank * 2; addLog(tg('log.store.allOrNothing', { n: payNow })); }
         else { payNow = 0; aonPatch = { doubleBank: bank }; }
       }
       // Chrono partagé : on reporte le temps restant à la prochaine question de la rafale.
@@ -1085,21 +1086,21 @@ export const useGameStore = create((set, get) => ({
       let gainDetail;
       if (bonusBreak.parts.length > 0) {
         gainDetail = [];
-        if (base > 0) gainDetail.push({ label: 'Rapidit\u00e9 de r\u00e9ponse', amount: base });
+        if (base > 0) gainDetail.push({ label: tg('log.store.detail.speed'), amount: base });
         for (const p of bonusBreak.parts) gainDetail.push({ label: p.label, note: `(${p.formula})`, amount: p.amount });
       }
       addLog({
-        text: `\u2705 Bonne r\u00e9ponse !${gain > 0 ? ` +${gain} \u{1F4B0}` : (noBonus ? ' (pas de bonus)' : '')}`,
+        text: tg('log.store.correct', { gain: gain > 0 ? tg('log.store.correct.gain', { n: gain }) : (noBonus ? tg('log.store.correct.noBonus') : '') }),
         detail: gainDetail,
       });
-      if (team.wager) addLog(`\u{1F3B2} D\u00e9fi r\u00e9ussi ! R\u00e9compense \u00e0 la cl\u00e9.`);
+      if (team.wager) addLog(tg('log.store.wagerWin'));
     } else {
       // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-      const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Mauvaise r\u00e9ponse', get().preRollValue || 2, extOn(get().extensions, 'mastery'));
+      const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue || 2, extOn(get().extensions, 'mastery'));
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
       addLog({ text: logMessage, detail });
-      if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
+      if (team.wager) addLog(tg('log.store.wagerLose'));
       if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
       if ((team.powers?.bouclier?.charges ?? 0) > (updatedTeam.powers?.bouclier?.charges ?? 0))
         get().recordStat('powerUses', { teamIdx: currentTeam, powerKey: 'bouclier', targetIdx: null });
@@ -1108,7 +1109,7 @@ export const useGameStore = create((set, get) => ({
       const bEff = resolvePowerEffect(team, 'bouclier', extOn(get().extensions, 'mastery'));
       if (bEff.rerollQuestionOnAbsorb && bouclierAbsorbed(team, updatedTeam) && !team.doubleActive) {
         set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
-        addLog(`🔁 ${team.emoji} ${team.name} : Contre ! Nouvelle question.`);
+        addLog(tg('log.store.contre', { emoji: team.emoji, name: team.name }));
         get().askQuestion(get().randomBoardSubject());
         return;
       }
@@ -1116,7 +1117,7 @@ export const useGameStore = create((set, get) => ({
       // Double/triple: wrong answer stops immediately, clear double state
       if (team.doubleActive) {
         newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };
-        addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
+        addLog(tg('log.store.doubleFailed'));
       }
 
       const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
@@ -1164,7 +1165,7 @@ export const useGameStore = create((set, get) => ({
         if (refl != null && nt[refl] && refl !== currentTeam) {
           const r = nt[refl];
           nt[refl] = { ...r, doubleActive: true, doubleExtra: Math.min((r.doubleExtra || 0) + 1, 4), doubleNoBonus: true };
-          addLog(`🏫 Interro générale ! ${r.emoji} ${r.name} subit aussi la Double au prochain tour.`);
+          addLog(tg('log.store.interroGenerale', { emoji: r.emoji, name: r.name }));
         }
         set({ teams: nt });
       }
@@ -1215,9 +1216,9 @@ export const useGameStore = create((set, get) => ({
           const r = itemH.placeItem(nt[currentTeam], k);
           nt[currentTeam] = r.team;
           if (r.outcome === 'refunded') {
-            addLog(`✨ ${team.emoji} ${team.name} trouve ${ITEMS[k].icon} ${ITEMS[k].name}... sac plein, revendu +${r.refund} \u{1F4B0} !`);
+            addLog(tg('log.store.lootRefunded', { emoji: team.emoji, name: team.name, icon: ITEMS[k].icon, iname: loc(ITEMS[k], 'name'), refund: r.refund }));
           } else {
-            addLog(`✨ ${team.emoji} ${team.name} trouve un objet : ${ITEMS[k].icon} ${ITEMS[k].name} !`);
+            addLog(tg('log.store.lootFound', { emoji: team.emoji, name: team.name, icon: ITEMS[k].icon, iname: loc(ITEMS[k], 'name') }));
             revealQueue.push(k);
           }
         }
@@ -1271,7 +1272,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-    const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, 'Temps \u00e9coul\u00e9', get().preRollValue || 2, extOn(get().extensions, 'mastery'));
+    const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue || 2, extOn(get().extensions, 'mastery'));
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
     addLog({ text: logMessage, detail });
@@ -1279,16 +1280,16 @@ export const useGameStore = create((set, get) => ({
     if (team.timeoutPenalty) {
       const pen = Math.min(team.timeoutPenalty, newTeams[currentTeam].money || 0);
       newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) - pen, timeoutPenalty: undefined };
-      if (pen > 0) addLog(`\u{1F4B8} ${team.emoji} ${team.name} d\u00e9passe le temps : \u2212${pen} or (Taxe du temps).`);
+      if (pen > 0) addLog(tg('log.store.timeoutPenalty', { emoji: team.emoji, name: team.name, n: pen }));
     }
-    if (team.wager) addLog(`\u{1F3B2} D\u00e9fi perdu...`);
+    if (team.wager) addLog(tg('log.store.wagerLose'));
     if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
     if ((team.powers?.bouclier?.charges ?? 0) > (updatedTeam.powers?.bouclier?.charges ?? 0))
       get().recordStat('powerUses', { teamIdx: currentTeam, powerKey: 'bouclier', targetIdx: null });
 
     if (team.doubleActive) {
       newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };
-      addLog(`\u2753 Double question \u00e9chou\u00e9e ! Fin du tour.`);
+      addLog(tg('log.store.doubleFailed'));
     }
 
     const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
@@ -1376,7 +1377,7 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
     const newTeams = [...teams];
     newTeams[currentTeam] = { ...team, money: (team.money ?? 0) + amount };
-    addLog(`\u{1F6E0}️ [dev] ${team.emoji} ${team.name} reçoit ${amount} pièces.`);
+    addLog(tg('log.store.devMoney', { emoji: team.emoji, name: team.name, n: amount }));
     set({ teams: newTeams });
   },
 
@@ -1423,7 +1424,7 @@ export const useGameStore = create((set, get) => ({
       if (g > 0) {
         nt[idx] = { ...team, money: Math.max(0, (team.money || 0) - g) };
         set({ teams: nt });
-        get().addLog(`💸 ${team.emoji} ${team.name} n'a aucun objet : perd ${g} 🪙.`);
+        get().addLog(tg('log.store.loseItemGold', { emoji: team.emoji, name: team.name, n: g }));
         get().checkMoneyMilestone(idx);
       }
       return;
@@ -1439,7 +1440,7 @@ export const useGameStore = create((set, get) => ({
       nt[idx] = { ...team, bag };
     }
     set({ teams: nt });
-    get().addLog(`💔 ${team.emoji} ${team.name} perd ${it.icon} ${it.name} !`);
+    get().addLog(tg('log.store.loseItem', { emoji: team.emoji, name: team.name, icon: it.icon, iname: loc(it, 'name') }));
   },
 
   // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---
@@ -1681,7 +1682,7 @@ export const useGameStore = create((set, get) => ({
     const nt = [...st.teams];
     nt[A] = ta; nt[B] = tb;
     set({ teams: nt });
-    get().addLog(`🤝 ${st.teams[A].emoji} ${st.teams[A].name} et ${st.teams[B].emoji} ${st.teams[B].name} ont fait affaire !`);
+    get().addLog(tg('log.store.trade', { emojiA: st.teams[A].emoji, nameA: st.teams[A].name, emojiB: st.teams[B].emoji, nameB: st.teams[B].name }));
     get().checkMoneyMilestone(A); get().checkMoneyMilestone(B);
     if (get().phase === 'game') saveGame(get());
     return { ok: true };
@@ -1702,7 +1703,7 @@ export const useGameStore = create((set, get) => ({
       const nt = [...st.teams];
       nt[idx] = { ...team, money: Math.max(0, (team.money ?? 0) + delta) };
       set({ teams: nt });
-      get().addLog(`🛠️ ${team.emoji} ${team.name} : ${delta >= 0 ? '+' : ''}${delta} 🪙 (admin)`);
+      get().addLog(tg('log.store.adminMoney', { emoji: team.emoji, name: team.name, sign: delta >= 0 ? '+' : '', n: delta }));
       get().checkMoneyMilestone(idx);
     } else if (type === 'adminGiveItem') {
       if (ITEMS[payload.key]) itemH.grantItem(set, get, idx, payload.key);
@@ -1713,7 +1714,7 @@ export const useGameStore = create((set, get) => ({
         const nt = [...st.teams];
         nt[idx] = { ...team, equipment: { ...team.equipment, [payload.slot]: null } };
         set({ teams: nt });
-        get().addLog(`🛠️ ${team.emoji} ${team.name} perd ${it?.icon || ''} ${it?.name || payload.slot} (admin)`);
+        get().addLog(tg('log.store.adminRemoveItem', { emoji: team.emoji, name: team.name, icon: it?.icon || '', iname: (it ? loc(it, 'name') : '') || payload.slot }));
       }
     } else if (type === 'adminRemoveBag') {
       const bag = itemH.normalizeBag(team.bag);
@@ -1725,7 +1726,7 @@ export const useGameStore = create((set, get) => ({
         nt[idx] = { ...team, bag };
         set({ teams: nt });
         const it = ITEMS[payload.key];
-        get().addLog(`🛠️ ${team.emoji} ${team.name} perd ${it?.icon || ''} ${it?.name || payload.key} (admin)`);
+        get().addLog(tg('log.store.adminRemoveItem', { emoji: team.emoji, name: team.name, icon: it?.icon || '', iname: (it ? loc(it, 'name') : '') || payload.key }));
       }
     }
     if (get().phase === 'game') saveGame(get());
@@ -1825,7 +1826,7 @@ export const useGameStore = create((set, get) => ({
       nt[newCurrent] = left > 0
         ? { ...ct, itemFumigeneTurns: left }
         : { ...ct, itemFumigene: false, itemFumigeneTurns: undefined };
-      if (left <= 0) addLog(`💨 Le fumigène de ${ct.emoji} ${ct.name} s'est dissipé.`);
+      if (left <= 0) addLog(tg('log.store.fumigene', { emoji: ct.emoji, name: ct.name }));
     }
 
     // Buffs temporisés (effets de durée des consommables) : 1 tour de moins quand
@@ -1835,7 +1836,7 @@ export const useGameStore = create((set, get) => ({
       const buffs = cb.buffs.map((b) => ({ ...b, turns: (b.turns ?? 1) - 1 })).filter((b) => b.turns > 0);
       if (nt === get().teams) nt = [...nt];
       nt[newCurrent] = { ...cb, buffs };
-      if (buffs.length < cb.buffs.length) addLog(`⏳ Un effet de durée de ${cb.emoji} ${cb.name} s'est dissipé.`);
+      if (buffs.length < cb.buffs.length) addLog(tg('log.store.buffExpired', { emoji: cb.emoji, name: cb.name }));
     }
 
     // Compteur du prompt boutique : +1 quand l'équipe REGAGNE la main.

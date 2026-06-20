@@ -35,3 +35,21 @@ describe('tFor()', () => {
     expect(tFor(false)('common.cancel')).toBe('Annuler');
   });
 });
+
+describe('journal (log.*)', () => {
+  it('toutes les clés log.* sont bilingues (fr ET en non vides)', () => {
+    const logKeys = Object.keys(DICT).filter((k) => k.startsWith('log.'));
+    expect(logKeys.length).toBeGreaterThan(200);
+    const incomplete = logKeys.filter((k) => {
+      const e = DICT[k];
+      const fr = Array.isArray(e.fr) ? e.fr.every(Boolean) : e.fr;
+      const en = Array.isArray(e.en) ? e.en.every(Boolean) : e.en;
+      return !fr || !en;
+    });
+    expect(incomplete).toEqual([]);
+  });
+  it('rend un message de recul en anglais', () => {
+    expect(t('log.turn.wrong.normal', { reason: 'Wrong answer', cases: '2 spaces' }, 'en'))
+      .toBe('❌ Wrong answer! Setback of 2 spaces.');
+  });
+});

@@ -5,6 +5,8 @@ import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 import { runEffects, consumableActions, announce } from './effectEngine.js';
+import { tg } from '../i18n';
+import { locName } from '../i18n/content';
 
 export const BAG_SIZE = 12;
 // Vitrine de la boutique : N consommables + N équipements affichés en même temps.
@@ -240,12 +242,12 @@ export function buyItem(set, get, itemKey, teamIndex) {
   if (item.slot !== 'consumable' && !equipment[item.slot]) {
     equipment[item.slot] = itemKey;
     newTeams[idx] = { ...team, money: team.money - price, equipment };
-    addLog(`🛒 ${team.emoji} ${team.name} équipe ${item.icon} ${item.name} ! (-${price} 💰)`);
+    addLog(tg('log.it.buyEquip', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), price }));
   } else {
     const bag = bagWith(team.bag, itemKey);
     if (!bag) return; // sac plein
     newTeams[idx] = { ...team, money: team.money - price, bag };
-    addLog(`🛒 ${team.emoji} ${team.name} achète ${item.icon} ${item.name} ! (-${price} 💰)`);
+    addLog(tg('log.it.buy', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), price }));
   }
 
   const restStock = stock.filter((k) => k !== itemKey);
@@ -277,7 +279,7 @@ export function sellEquipment(set, get, slot, teamIndex) {
     money: team.money + refund,
     equipment: { ...team.equipment, [slot]: null },
   };
-  addLog(`♻️ ${team.emoji} ${team.name} revend ${item.icon} ${item.name} (+${refund} 💰).`);
+  addLog(tg('log.it.sell', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), refund }));
   set({ teams: newTeams });
   saveGame(get());
 }
@@ -297,7 +299,7 @@ export function sellBagItem(set, get, bagIndex, teamIndex) {
   bag[bagIndex] = cellN(cell) > 1 ? mkCell(key, cellN(cell) - 1) : null;
   const newTeams = [...teams];
   newTeams[idx] = { ...team, money: team.money + refund, bag };
-  addLog(`♻️ ${team.emoji} ${team.name} revend ${item.icon} ${item.name} (+${refund} 💰).`);
+  addLog(tg('log.it.sell', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), refund }));
   set({ teams: newTeams });
   saveGame(get());
 }
@@ -358,9 +360,9 @@ export function moveInventoryItem(set, get, fromKey, toKey, teamIndex) {
   set({ teams: newTeams });
   const movedItem = ITEMS[cellKey(a)];
   if (toKey.startsWith('equip:')) {
-    addLog(`\u{1F392} ${team.emoji} ${team.name} équipe ${movedItem.icon} ${movedItem.name} !`);
+    addLog(tg('log.it.equip', { emoji: team.emoji, name: team.name, icon: movedItem.icon, item: locName(movedItem) }));
   } else if (fromKey.startsWith('equip:')) {
-    addLog(`\u{1F392} ${team.emoji} ${team.name} range ${movedItem.icon} ${movedItem.name} dans le sac.`);
+    addLog(tg('log.it.stow', { emoji: team.emoji, name: team.name, icon: movedItem.icon, item: locName(movedItem) }));
   }
   saveGame(get());
 }
@@ -404,11 +406,11 @@ export function grantItem(set, get, teamIndex, itemKey) {
   newTeams[teamIndex] = r.team;
 
   if (r.outcome === 'equipped') {
-    addLog(`🎁 ${team.emoji} ${team.name} équipe ${item.icon} ${item.name} (${SLOTS[item.slot].name}) !`);
+    addLog(tg('log.it.grantEquip', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), slot: SLOTS[item.slot].name }));
   } else if (r.outcome === 'refunded') {
-    addLog(`🎒 Sac plein ! ${item.icon} ${item.name} est revendu (+${r.refund} 💰).`);
+    addLog(tg('log.it.grantRefunded', { icon: item.icon, item: locName(item), refund: r.refund }));
   } else {
-    addLog(`🎁 ${team.emoji} ${team.name} obtient ${item.icon} ${item.name} !`);
+    addLog(tg('log.it.grantBag', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item) }));
   }
 
   set({ teams: newTeams });
@@ -432,7 +434,7 @@ export function useConsumable(set, get, bagIndex) {
   // une PIÈCE équipée à enchanter (sélecteur). Voir enchantWith.
   if (item.family === 'parchment') {
     const slots = ['head', 'body', 'feet'].filter((s) => itemKeyOf(team.equipment?.[s]));
-    if (!slots.length) { addLog(`📜 ${team.emoji} ${team.name} : aucune pièce équipée à enchanter !`); return; }
+    if (!slots.length) { addLog(tg('log.it.noPieceToEnchant', { emoji: team.emoji, name: team.name })); return; }
     set({ showEnchantPicker: { bagIndex, slots }, showInventory: false });
     return;
   }
@@ -448,7 +450,7 @@ export function useConsumable(set, get, bagIndex) {
   }
   newTeams[currentTeam] = { ...team, ...teamPatch };
   set({ teams: newTeams, showInventory: false });
-  addLog(`${item.icon} ${team.emoji} ${team.name} utilise ${item.name} !`);
+  addLog(tg('log.it.use', { icon: item.icon, emoji: team.emoji, name: team.name, item: locName(item) }));
   get().recordStat?.('itemUses', { teamIdx: currentTeam, key: itemKey });
 
   // Tout (legacy {type,value} + composable {kind:'trigger'}) passe par le moteur.
@@ -459,11 +461,11 @@ export function useConsumable(set, get, bagIndex) {
     // (sinon l'objet disparaît sans aucun retour).
     const wasGamble = (item.effects || []).some((fx) => typeof fx.chance === 'number'); // legacy ET triggers portent `chance`
     if (wasGamble) {
-      addLog(`💨 ${item.name} : raté, aucun effet cette fois…`);
-      announce(set, get, '💨', `Raté ! ${item.name} n'a rien fait`, '#9a8c7a');
+      addLog(tg('log.it.gambleFail', { item: locName(item) }));
+      announce(set, get, '💨', tg('log.it.gambleFail.toast', { item: locName(item) }), '#9a8c7a');
     } else {
-      addLog(`💨 ${item.name} n'a eu aucun effet.`);
-      announce(set, get, '🤷', `${item.name} : aucun effet`, '#9a8c7a');
+      addLog(tg('log.it.noEffect', { item: locName(item) }));
+      announce(set, get, '🤷', tg('log.it.noEffect.toast', { item: locName(item) }), '#9a8c7a');
     }
     if (get().phase === 'game') saveGame(get());
     return;
@@ -494,7 +496,7 @@ export function enchantWith(set, get, teamIdx, bagIndex, slot) {
   const nt = [...teams];
   nt[teamIdx] = { ...team, equipment, bag: nbag };
   set({ teams: nt });
-  get().addLog(`📜 ${team.emoji} ${team.name} enchante ${ITEMS[curKey].icon} ${ITEMS[curKey].name} (${SLOTS[slot].name}) avec ${parch.name} !`);
+  get().addLog(tg('log.it.enchant', { emoji: team.emoji, name: team.name, icon: ITEMS[curKey].icon, item: locName(ITEMS[curKey]), slot: SLOTS[slot].name, parch: locName(parch) }));
   if (get().phase === 'game') saveGame(get());
   return { ok: true };
 }
@@ -525,12 +527,12 @@ export function craftPotion(set, get, teamIdx, indices) {
     const discovered = !known.includes(recipe.id);
     if (discovered) t = { ...t, knownRecipes: [...known, recipe.id] };
     nt[teamIdx] = t; set({ teams: nt });
-    addLog(`⚗️ ${team.emoji} ${team.name} distille ${ITEMS[recipe.potion].icon} ${ITEMS[recipe.potion].name} !${discovered ? ' ✨ Recette découverte !' : ''}`);
+    addLog(tg('log.it.craft', { emoji: team.emoji, name: team.name, icon: ITEMS[recipe.potion].icon, potion: locName(ITEMS[recipe.potion]) }) + (discovered ? tg('log.it.craft.discovered') : ''));
     if (get().phase === 'game') saveGame(get());
     return { ok: true, potion: recipe.potion, discovered };
   }
   nt[teamIdx] = t; set({ teams: nt });
-  addLog(`💨 ${team.emoji} ${team.name} : distillation ratée (eau trouble).`);
+  addLog(tg('log.it.craftFail', { emoji: team.emoji, name: team.name }));
   if (get().phase === 'game') saveGame(get());
   return { ok: false, reason: 'aucune recette' };
 }

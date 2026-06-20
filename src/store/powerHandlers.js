@@ -7,6 +7,8 @@ import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
 import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
 import { resumeQueue as resumeEngineQueue, announce, runEffects } from './effectEngine.js';
+import { tg, tgPlural } from '../i18n';
+import { locName } from '../i18n/content.js';
 
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
@@ -27,7 +29,7 @@ export function usePower(set, get, powerKey) {
   const team = teams[currentTeam];
   // Silence (Sablier L5) : aucun pouvoir ce tour-ci.
   if (team.silencedNextTurn) {
-    get().addLog(`🔇 ${team.emoji} ${team.name} est réduit au silence : aucun pouvoir ce tour-ci.`);
+    get().addLog(tg('log.pw.silenced', { emoji: team.emoji, name: team.name }));
     return;
   }
   const charges = team.powers?.[powerKey]?.charges ?? 0;
@@ -96,7 +98,7 @@ export function useIndice(set, get) {
   // Rien \u00e0 \u00e9liminer en plus (\u00e9quipement a d\u00e9j\u00e0 tout masqu\u00e9) ET pas de bonus de
   // temps : on NE consomme PAS la charge (sinon perte s\u00e8che).
   if (hideMore === 0 && bonusTime <= 0 && !effect.bonusMoneyOnCorrect) {
-    addLog(`\u{1F4A1} ${team.emoji} ${team.name} : toutes les mauvaises r\u00e9ponses sont d\u00e9j\u00e0 \u00e9limin\u00e9es.`);
+    addLog(tg('log.pw.indiceAllGone', { emoji: team.emoji, name: team.name }));
     return;
   }
 
@@ -111,10 +113,12 @@ export function useIndice(set, get) {
     if (extra) newTeams[currentTeam] = extra.updatedTeam;
   }
 
-  addLog(`\u{1F4A1} ${team.emoji} ${team.name} utilise Indice (niv.${level}) ! ${hideMore} r\u00e9ponse${hideMore > 1 ? 's' : ''} \u00e9limin\u00e9e${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}.`);
+  const indiceBonus = effect.bonusTime > 0 ? tg('log.pw.bonusTime', { n: effect.bonusTime }) : '';
+  const indicePower = locName(POWERS.indice);
+  addLog(tgPlural('log.pw.indiceUse', hideMore, { emoji: team.emoji, name: team.name, power: indicePower, level, n: hideMore, bonus: indiceBonus }));
   set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
   get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey: 'indice', targetIdx: null });
-  announce(set, get, '💡', `Indice — ${hideMore} réponse${hideMore > 1 ? 's' : ''} éliminée${hideMore > 1 ? 's' : ''}${effect.bonusTime > 0 ? ` (+${effect.bonusTime}s)` : ''}`, POWERS.indice?.color || '#e8b117');
+  announce(set, get, '💡', tgPlural('log.pw.indiceToast', hideMore, { power: indicePower, n: hideMore, bonus: indiceBonus }), POWERS.indice?.color || '#e8b117');
 
   // Bonus de temps (palier + Sérénité + Maître du temps) et Antisèche (or si bonne réponse).
   const patchQ = {};
@@ -137,10 +141,10 @@ export function useRelance(set, get) {
   // Pilote (L5) : autorise le choix de voie même si l'équipe aurait avancé au hasard.
   newTeams[currentTeam] = { ...result.updatedTeam, pos: preRollPos || team.pos, ...(rEff0.choosePathAfter ? { pilotNext: true } : {}) };
 
-  addLog(`\u{1F3B2} ${team.emoji} ${team.name} utilise Relance (niv.${level}) !`);
+  addLog(tg('log.pw.relanceUse', { emoji: team.emoji, name: team.name, power: locName(POWERS.relance), level }));
   get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey: 'relance', targetIdx: null });
   soundDice();
-  announce(set, get, '🎲', `${team.emoji} ${team.name} relance le dé !`, POWERS.relance?.color || '#e8b117');
+  announce(set, get, '🎲', tg('log.pw.relanceToast', { emoji: team.emoji, name: team.name }), POWERS.relance?.color || '#e8b117');
   // Nettoie aussi un éventuel choix de jonction en cours (on relance depuis le départ du lancer).
   set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false, awaitingChoice: false, pendingMove: null });
 
@@ -178,7 +182,7 @@ export function useRelance(set, get) {
         }
       }
 
-      addLog(`\u{1F3B2} Relance : ${finalValue} !${mode !== 'replace' ? ` (effectif: ${effectiveValue})` : ''}`);
+      addLog(tg('log.pw.relanceResult', { power: locName(POWERS.relance), value: finalValue, effective: mode !== 'replace' ? tg('log.pw.relanceEffective', { value: effectiveValue }) : '' }));
       // Surcharge (L10) : recharge un pouvoir au hasard parmi ceux possédés.
       if (rEff.rechargeRandom) {
         const t = get().teams[currentTeam];
@@ -188,7 +192,7 @@ export function useRelance(set, get) {
           const nt = [...get().teams];
           nt[currentTeam] = { ...t, powers: { ...t.powers, [pick]: { ...t.powers[pick], charges: (t.powers[pick].charges ?? 0) + 1 } } };
           set({ teams: nt });
-          addLog(`✨ Surcharge : +1 charge de ${POWERS[pick].name} !`);
+          addLog(tg('log.pw.surcharge', { power: locName(POWERS[pick]) }));
         }
       }
       // skipOnRoll : ne pas re-déclencher le bonus on:roll de l'équipement (déjà
@@ -217,9 +221,9 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   // (la charge de l'attaquant est quand meme consommee — le coup est esquive)
   if (target.itemFumigene) {
     newTeams[targetTeamIndex] = { ...target, itemFumigene: false, itemFumigeneTurns: undefined };
-    addLog(`\u{1F4A8} La bombe fumigène de ${target.emoji} ${target.name} annule ${POWERS[powerKey].name} !`);
+    addLog(tg('log.pw.fumigeneBlock', { emoji: target.emoji, name: target.name, power: locName(POWERS[powerKey]) }));
     set({ teams: newTeams, showTargetPicker: null });
-    announce(set, get, '💨', `${target.emoji} Contré par le fumigène !`, '#7a8a99');
+    announce(set, get, '💨', tg('log.pw.fumigeneToast', { emoji: target.emoji }), '#7a8a99');
     return;
   }
 
@@ -231,7 +235,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   if (powerKey === 'foudre' && effect.placeTrap) {
     // Orage (L10) : pose un piège-foudre sur une case (réutilise le moteur de pièges).
     set({ teams: newTeams, showTargetPicker: null });
-    addLog(`🌩️ ${team.emoji} ${team.name} prépare un Orage : choisis une case piégée !`);
+    addLog(tg('log.pw.orage', { emoji: team.emoji, name: team.name }));
     runEffects(set, get, [{
       action: 'placeTrap',
       trap: { label: 'Orage', icon: '⚡', do: [{ action: 'move', target: 'self', dir: 'back', n: effect.amount || 'd10' }] },
@@ -299,8 +303,15 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     lightning = true;
     soundThunder();
     const nT = targets.size;
-    addLog(`\u26A1 ${team.emoji} ${team.name} utilise Foudre (niv.${level}, ${dieLabel})${nT > 1 ? ` sur ${nT} \u00E9quipes` : ` sur ${target.emoji} ${target.name}`} !${stolenTotal ? ` Vol de ${stolenTotal} or.` : ''}${reflectTotal ? ' \u21A9\uFE0F Recul r\u00E9fl\u00E9chi !' : ''}`);
-    announce(set, get, '⚡', `Foudre ${dieLabel}${nT > 1 ? ` ×${nT}` : ` sur ${target.emoji} ${target.name}`}`, POWERS[powerKey].color);
+    const foudreName = locName(POWERS[powerKey]);
+    const foudreSteal = stolenTotal ? tg('log.pw.foudreSteal', { n: stolenTotal }) : '';
+    const foudreReflect = reflectTotal ? tg('log.pw.foudreReflect') : '';
+    addLog(nT > 1
+      ? tg('log.pw.foudreUseMany', { emoji: team.emoji, name: team.name, power: foudreName, level, die: dieLabel, nT, steal: foudreSteal, reflect: foudreReflect })
+      : tg('log.pw.foudreUseOne', { emoji: team.emoji, name: team.name, power: foudreName, level, die: dieLabel, vemoji: target.emoji, vname: target.name, steal: foudreSteal, reflect: foudreReflect }));
+    announce(set, get, '⚡', nT > 1
+      ? tg('log.pw.foudreToastMany', { power: foudreName, die: dieLabel, nT })
+      : tg('log.pw.foudreToastOne', { power: foudreName, die: dieLabel, vemoji: target.emoji, vname: target.name }), POWERS[powerKey].color);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
     // Tempête de sable (L10) : toutes les autres équipes ; sinon la cible choisie.
@@ -323,9 +334,14 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     }
     const nS = sablierTargets.size;
     soundPower();
-    const extrasS = `${effect.silenceNextTurn ? ' \u00B7 \uD83D\uDD07 Silence' : ''}${effect.skipNextRoll ? ' \u00B7 \uD83E\uDDCA Gel du lancer' : ''}${effect.goldPenaltyOnTimeout ? ` \u00B7 \uD83D\uDCB8 Taxe ${effect.goldPenaltyOnTimeout}` : ''}`;
-    addLog(`\u23F1\uFE0F ${team.emoji} ${team.name} utilise Sablier (niv.${level})${nS > 1 ? ` sur ${nS} \u00E9quipes` : ` sur ${target.emoji} ${target.name}`} ! Timer /${divisor}${extrasS}.`);
-    announce(set, get, '⏱️', `Sablier /${divisor}${nS > 1 ? ` ×${nS}` : ` sur ${target.emoji} ${target.name}`}`, POWERS[powerKey].color);
+    const sablierName = locName(POWERS[powerKey]);
+    const extrasS = `${effect.silenceNextTurn ? tg('log.pw.sablierSilence') : ''}${effect.skipNextRoll ? tg('log.pw.sablierFreeze') : ''}${effect.goldPenaltyOnTimeout ? tg('log.pw.sablierTax', { n: effect.goldPenaltyOnTimeout }) : ''}`;
+    addLog(nS > 1
+      ? tg('log.pw.sablierUseMany', { emoji: team.emoji, name: team.name, power: sablierName, level, nS, divisor, extras: extrasS })
+      : tg('log.pw.sablierUseOne', { emoji: team.emoji, name: team.name, power: sablierName, level, vemoji: target.emoji, vname: target.name, divisor, extras: extrasS }));
+    announce(set, get, '⏱️', nS > 1
+      ? tg('log.pw.sablierToastMany', { power: sablierName, divisor, nS })
+      : tg('log.pw.sablierToastOne', { power: sablierName, divisor, vemoji: target.emoji, vname: target.name }), POWERS[powerKey].color);
   } else if (powerKey === 'double') {
     // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
     // extraAdd : questions supplémentaires des voies (Rafale tranquille / Marathon+).
@@ -352,8 +368,10 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     const stFx = effect.sharedTimer ? { doubleSharedTimer: true } : {};
     newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx, ...reflFx, ...stFx };
     soundPower();
-    addLog(`\u2753 ${team.emoji} ${team.name} utilise Double (niv.${level}) sur ${target.emoji} ${target.name} ! +${add} question${add > 1 ? 's' : ''} (${1 + newExtra} au total).${noBonus ? ' (sans bonus)' : ''}${newDiv > 1 ? ` Timer /${newDiv} !` : ''}`);
-    announce(set, get, '❓', `Double sur ${target.emoji} ${target.name} — ${1 + newExtra} questions`, POWERS[powerKey].color);
+    const doubleName = locName(POWERS[powerKey]);
+    const doubleTotal = 1 + newExtra;
+    addLog(tgPlural('log.pw.doubleUse', add, { emoji: team.emoji, name: team.name, power: doubleName, level, vemoji: target.emoji, vname: target.name, add, total: doubleTotal, noBonus: noBonus ? tg('log.pw.doubleNoBonus') : '', timer: newDiv > 1 ? tg('log.pw.doubleTimer', { n: newDiv }) : '' }));
+    announce(set, get, '❓', tgPlural('log.pw.doubleToast', doubleTotal, { power: doubleName, vemoji: target.emoji, vname: target.name, total: doubleTotal }), POWERS[powerKey].color);
   }
 
   set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
@@ -377,8 +395,8 @@ export function chargePickerChoice(set, get, powerKey) {
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
   newTeams[currentTeam] = { ...team, powers: newPowers };
-  const pName = POWERS[powerKey]?.name || powerKey;
-  addLog(`\u2728 ${team.emoji} ${team.name} gagne 1 charge de ${pName} !`);
+  const pName = locName(POWERS[powerKey]) || powerKey;
+  addLog(tg('log.pw.gainCharge', { emoji: team.emoji, name: team.name, power: pName }));
   soundCharge();
   set({ teams: newTeams, showChargePicker: false });
 
@@ -412,7 +430,7 @@ export function buyNewPower(set, get, powerKey, teamIndex) {
   const newTeams = [...teams];
   const newPowers = { ...team.powers, [powerKey]: { charges: 1, level: 1 } };
   newTeams[idx] = { ...team, money: team.money - price, powers: newPowers };
-  addLog(`\u{1F6D2} ${team.emoji} ${team.name} d\u00e9bloque ${power.name} ! (-${price} \u{1F4B0})`);
+  addLog(tg('log.pw.unlock', { emoji: team.emoji, name: team.name, power: locName(power), price }));
   set({ teams: newTeams });
   saveGame(get());
 }
@@ -431,8 +449,8 @@ export function buyPowerCharge(set, get, powerKey, teamIndex) {
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
   newTeams[idx] = { ...team, money: team.money - price, powers: newPowers };
 
-  const pName = POWERS[powerKey]?.name || powerKey;
-  addLog(`\u{1F6D2} ${team.emoji} ${team.name} ach\u00e8te 1 charge de ${pName} (${price} \u{1F4B0})`);
+  const pName = locName(POWERS[powerKey]) || powerKey;
+  addLog(tg('log.pw.buyCharge', { emoji: team.emoji, name: team.name, power: pName, price }));
   set({ teams: newTeams });
   if (get().phase === 'game') saveGame(get());
 }
@@ -453,7 +471,7 @@ export function upgradePowerLevel(set, get, powerKey, teamIndex) {
   const newTeams = [...teams];
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], level: newLevel } };
   newTeams[idx] = { ...team, powers: newPowers, money: team.money - cost };
-  addLog(`\u2B06\uFE0F ${team.emoji} ${team.name} am\u00e9liore ${power.name} au niveau ${newLevel} ! (-${cost} \u{1F4B0})`);
+  addLog(tg('log.pw.upgrade', { emoji: team.emoji, name: team.name, power: locName(power), level: newLevel, cost }));
 
   // Niveaux 5 et 10 (Ma\u00EEtrise) : ouvrir le choix de voie. Le picker modal du TBI
   // n'est ouvert que pour l'\u00e9quipe ACTIVE ; un achat \u00E0 distance (t\u00e9l\u00e9phone d'une
@@ -479,7 +497,7 @@ export function chooseSpecFor(set, get, teamIndex, powerKey, slot, specKey) {
   if (!opt) return;
   const newTeams = [...teams];
   newTeams[teamIndex] = { ...team, powers: { ...team.powers, [powerKey]: { ...entry, [slot]: specKey } } };
-  get().addLog(`${opt.icon || '\u2728'} ${team.emoji} ${team.name} \u2014 ${POWERS[powerKey].name} : voie \u00AB ${opt.name} \u00BB choisie !`);
+  get().addLog(tg('log.pw.specChosen', { icon: opt.icon || '✨', emoji: team.emoji, name: team.name, power: locName(POWERS[powerKey]), spec: opt.name }));
   set({ teams: newTeams });
   saveGame(get());
 }
@@ -496,7 +514,7 @@ export function chooseSpec(set, get, specKey) {
   if (!opt) return;
   const newTeams = [...teams];
   newTeams[teamIdx] = { ...team, powers: { ...team.powers, [powerKey]: { ...team.powers[powerKey], [slot]: specKey } } };
-  get().addLog(`${opt.icon || '\u2728'} ${team.emoji} ${team.name} \u2014 ${POWERS[powerKey].name} : voie \u00AB ${opt.name} \u00BB choisie !`);
+  get().addLog(tg('log.pw.specChosen', { icon: opt.icon || '✨', emoji: team.emoji, name: team.name, power: locName(POWERS[powerKey]), spec: opt.name }));
   set({ teams: newTeams, showSpecPicker: null });
   saveGame(get());
 }

@@ -9,6 +9,8 @@ import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, 
 import { LOOT } from '../logic/balanceConfig.js';
 import { extOn } from '../extensions/registry.js';
 import { runEffects } from './effectEngine.js';
+import { tg, tgPlural } from '../i18n';
+import { loc, locName } from '../i18n/content';
 
 // Etal du marchand ambulant : 3 objets distincts parmi les objets actives,
 // ponderes par rarete (les legendaires sont rares mais possibles — contrairement
@@ -103,7 +105,7 @@ export function acceptEvent(set, get) {
     const merchandise = generateMerchantStock(3, get().enabledItems || Object.keys(ITEMS));
     if (merchandise.length === 0) {
       // Aucun objet active : le marchand n'a rien a vendre
-      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `\u{1F9D9} Le marchand n'a rien à vendre aujourd'hui...` } }, eventApplied: true });
+      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.merchantEmpty') } }, eventApplied: true });
       return;
     }
     set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, merchandise } } });
@@ -113,7 +115,7 @@ export function acceptEvent(set, get) {
   if (key === 'troisCoffres') {
     const gifts = generateMerchantStock(3, get().enabledItems || Object.keys(ITEMS));
     if (gifts.length === 0) {
-      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Les coffres sont vides aujourd'hui...` } }, eventApplied: true });
+      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.chestsEmpty') } }, eventApplied: true });
       return;
     }
     set({ showEvent: { ...showEvent, phase: 'choice', data: { ...showEvent.data, gifts } } });
@@ -135,7 +137,7 @@ export function acceptEvent(set, get) {
     const hasItems = Object.values(t?.equipment || {}).some((k) => ITEMS[cellKey(k)])
       || (t?.bag || []).some((c) => ITEMS[cellKey(c)]);
     if (!hasItems) {
-      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Tu n'as aucun objet à troquer !` } }, eventApplied: true });
+      set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.nothingToTrade') } }, eventApplied: true });
       return;
     }
     set({ showEvent: { ...showEvent, phase: 'choice' } });
@@ -171,7 +173,7 @@ export function acceptEvent(set, get) {
 export function declineEvent(set, get) {
   const { addLog, teams, currentTeam } = get();
   const team = teams[currentTeam];
-  addLog(`${team.emoji} ${team.name} décline l'événement.`);
+  addLog(tg('log.ev.decline', { emoji: team.emoji, name: team.name }));
   set({ showEvent: null });
   get().finishEventTurn();
 }
@@ -263,7 +265,7 @@ export function eventAskQuestion(set, get) {
   const result = pickQuestion(pool, asked);
 
   if (!result) {
-    addLog(`⚠️ Pas de question disponible.`);
+    addLog(tg('log.ev.noQuestion'));
     set({ showEvent: null });
     get().finishEventTurn();
     return;
@@ -299,8 +301,8 @@ export function eventVaToutCashOut(set, get) {
   const pot = showEvent.data?.vaToutPot || 0;
   const nt = [...teams];
   nt[currentTeam] = { ...nt[currentTeam], money: (nt[currentTeam].money || 0) + pot };
-  addLog(`\u{1F3B0} ${nt[currentTeam].emoji} ${nt[currentTeam].name} encaisse ${pot} \u{1FA99} !`);
-  set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `\u{1F3B0} Encaissé : +${pot} \u{1FA99} !` } } });
+  addLog(tg('log.ev.vaToutCashOut', { emoji: nt[currentTeam].emoji, name: nt[currentTeam].name, pot }));
+  set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.vaToutResult', { pot }) } } });
   get().checkMoneyMilestone(currentTeam);
 }
 
@@ -311,8 +313,8 @@ export function eventRechargeChoice(set, get, powerKey) {
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
   const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: currentCharges + 1 } };
   newTeams[currentTeam] = { ...team, powers: newPowers };
-  const pName = POWERS[powerKey]?.name || powerKey;
-  addLog(`\u{1F50B} ${team.emoji} ${team.name} recharge ${pName} ! (+1 charge)`);
+  const pName = locName(POWERS[powerKey]) || powerKey;
+  addLog(tg('log.ev.recharge', { emoji: team.emoji, name: team.name, power: pName }));
   set({ teams: newTeams, showEvent: null });
   get().finishEventTurn();
 }
@@ -333,7 +335,7 @@ export function eventVolApply(set, get, stealKey, giveKey) {
   const newTeams = [...teams];
   newTeams[targetIndex] = { ...target, powers: { ...target.powers, [stealKey]: { ...targetEntry, charges: targetEntry.charges - 1 } } };
   newTeams[currentTeam] = { ...team, powers: { ...team.powers, [giveKey]: { ...myEntry, charges: myEntry.charges + 1 } } };
-  addLog(`\u{1FA99} ${team.emoji} ${team.name} vole 1 charge de ${POWERS[stealKey].name} à ${target.emoji} ${target.name} et recharge ${POWERS[giveKey].name} !`);
+  addLog(tg('log.ev.volCharge', { emoji: team.emoji, name: team.name, stolen: locName(POWERS[stealKey]), vemoji: target.emoji, vname: target.name, given: locName(POWERS[giveKey]) }));
   set({ teams: newTeams, showEvent: null });
   get().finishEventTurn();
 }
@@ -354,7 +356,7 @@ export function eventMarcheNoirBuy(set, get, powerKey) {
     money: team.money - price,
     powers: { ...team.powers, [powerKey]: { ...entry, charges: entry.charges + 1 } },
   };
-  addLog(`\u{1F3AA} ${team.emoji} ${team.name} achète 1 charge de ${power.name} au marché noir ! (-${price} \u{1F4B0})`);
+  addLog(tg('log.ev.marcheNoirBuy', { emoji: team.emoji, name: team.name, power: locName(power), price }));
   set({ teams: newTeams, showEvent: null });
   get().finishEventTurn();
 }
@@ -374,7 +376,7 @@ export function eventMerchantBuy(set, get, itemKey) {
   const newTeams = [...teams];
   newTeams[currentTeam] = { ...team, money: team.money - price };
   set({ teams: newTeams });
-  addLog(`\u{1F9D9} ${team.emoji} ${team.name} achète ${item.icon} ${item.name} au marchand ambulant ! (-${price} \u{1F4B0})`);
+  addLog(tg('log.ev.merchantBuy', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), price }));
   grantItem(set, get, currentTeam, itemKey);
   set({ showEvent: null });
   get().finishEventTurn();
@@ -394,11 +396,11 @@ export function eventChooseGift(set, get, itemKey) {
 
   if (r.outcome === 'refunded') {
     // Sac plein : l'objet est revendu, pas de cerémonie de gain
-    addLog(`\u{1F9F0} Sac plein ! ${item.icon} ${item.name} est revendu (+${r.refund} \u{1F4B0}).`);
-    set({ teams: newTeams, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Sac plein ! ${item.icon} ${item.name} revendu (+${r.refund} \u{1F4B0}).` } } });
+    addLog(tg('log.ev.giftBagFullLog', { icon: item.icon, item: locName(item), refund: r.refund }));
+    set({ teams: newTeams, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.giftBagFullMsg', { icon: item.icon, item: locName(item), refund: r.refund }) } } });
     return;
   }
-  addLog(`\u{1F48E} ${team.emoji} ${team.name} ${r.outcome === 'equipped' ? 'équipe' : 'obtient'} ${item.icon} ${item.name} (coffre choisi) !`);
+  addLog(tg(r.outcome === 'equipped' ? 'log.ev.giftEquip' : 'log.ev.giftGet', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item) }));
   set({ teams: newTeams, showEvent: null, eventApplied: false });
   get().showLoot(itemKey, { title: '\u{1F48E} Ton choix !', thenClose: true });
 }
@@ -427,16 +429,16 @@ export function eventTrade(set, get, pick) {
   const newKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS));
   if (!newKey) {
     const nt = [...teams]; nt[currentTeam] = afterSacrifice;
-    addLog(`\u{1F504} ${team.emoji} sacrifie ${given.icon} ${given.name}... mais ne reçoit rien !`);
-    set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Troc raté : rien en échange...` } } });
+    addLog(tg('log.ev.tradeNothing', { emoji: team.emoji, icon: given.icon, item: locName(given) }));
+    set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.tradeNothingMsg') } } });
     return;
   }
   const newItem = ITEMS[newKey];
   const r = placeItem(afterSacrifice, newKey);
   const nt = [...teams]; nt[currentTeam] = r.team;
-  addLog(`\u{1F504} ${team.emoji} ${team.name} troque ${given.icon} ${given.name} contre ${newItem.icon} ${newItem.name} !`);
+  addLog(tg('log.ev.trade', { emoji: team.emoji, name: team.name, gicon: given.icon, given: locName(given), nicon: newItem.icon, newitem: locName(newItem) }));
   if (r.outcome === 'refunded') {
-    set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: `Sac plein ! ${newItem.icon} ${newItem.name} revendu (+${r.refund} \u{1F4B0}).` } } });
+    set({ teams: nt, showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.tradeBagFull', { icon: newItem.icon, item: locName(newItem), refund: r.refund }) } } });
     return;
   }
   set({ teams: nt, showEvent: null, eventApplied: false });
@@ -471,7 +473,7 @@ export function eventPillageApply(set, get, pick) {
 
   const item = ITEMS[itemKey];
   set({ teams: newTeams });
-  addLog(`\u{1F3F4}‍☠️ ${team.emoji} ${team.name} pille ${item.icon} ${item.name} à ${target.emoji} ${target.name} !`);
+  addLog(tg('log.ev.pillageApply', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), vemoji: target.emoji, vname: target.name }));
   grantItem(set, get, currentTeam, itemKey);
   set({ showEvent: null });
   get().finishEventTurn();
@@ -508,8 +510,8 @@ export function applyEventEffect(set, get) {
   };
   // Clause de message : « recul de N case(s) » ou « recul absorbé 🛡️ ».
   const reculTxt = (applied) => applied > 0
-    ? `recul de ${applied} case${applied > 1 ? 's' : ''}`
-    : 'recul absorbé 🛡️';
+    ? tgPlural('log.ev.recul', applied)
+    : tg('log.ev.reculAbsorbed');
 
   switch (key) {
     case 'vaTout': {
@@ -534,21 +536,22 @@ export function applyEventEffect(set, get) {
       // Raté : mise perdue (jamais ajoutée à l'or) + recul 1D10.
       const dv = Math.floor(Math.random() * 10) + 1;
       const { applied } = reculInto(currentTeam, dv);
+      const rt = reculTxt(applied);
       message = pot > 0
-        ? `\u{1F3B0} Raté ! Mise de ${pot} \u{1FA99} perdue et ${reculTxt(applied)} !`
-        : `\u{1F3B0} Raté ! ${reculTxt(applied).charAt(0).toUpperCase()}${reculTxt(applied).slice(1)} !`;
+        ? tg('log.ev.vaToutFailPot', { pot, recul: rt })
+        : tg('log.ev.vaToutFail', { recul: `${rt.charAt(0).toUpperCase()}${rt.slice(1)}` });
       break;
     }
     case 'recul': {
       const { applied } = reculInto(currentTeam, 2);
-      message = `${team.emoji} ${team.name} ${reculTxt(applied)} !`;
+      message = tg('log.ev.recul.msg', { emoji: team.emoji, name: team.name, recul: reculTxt(applied) });
       break;
     }
     case 'coupDePouce': {
       const result = moveForward(board, team.pos, 3, { throughJunctions: true });
       newTeams[currentTeam] = { ...team, pos: result.finalPos };
       pushMove(currentTeam, result.path, 'forward');
-      message = `${team.emoji} ${team.name} avance de 3 cases !`;
+      message = tg('log.ev.coupDePouce', { emoji: team.emoji, name: team.name });
       break;
     }
     case 'teleport': {
@@ -556,9 +559,9 @@ export function applyEventEffect(set, get) {
       if (path) {
         newTeams[currentTeam] = { ...team, pos: path[path.length - 1] };
         pushMove(currentTeam, path, 'forward');
-        message = `${team.emoji} ${team.name} se téléporte à la prochaine jonction !`;
+        message = tg('log.ev.teleport', { emoji: team.emoji, name: team.name });
       } else {
-        message = `Pas de jonction devant — rien ne se passe.`;
+        message = tg('log.ev.teleportNone');
       }
       break;
     }
@@ -566,13 +569,13 @@ export function applyEventEffect(set, get) {
       // Equipement (oubliProtect) : simple recul de 3 au lieu du retour au depart
       if (hasEffect(team, 'oubliProtect')) {
         const { applied } = reculInto(currentTeam, 3);
-        message = `\u{1FA9D} Le grappin retient ${team.emoji} ${team.name} : ${reculTxt(applied)} seulement !`;
+        message = tg('log.ev.oubliGrapple', { emoji: team.emoji, name: team.name, recul: reculTxt(applied) });
         break;
       }
       const { applied } = reculInto(currentTeam, 9999);
       message = applied > 0
-        ? `\u{1F573}️ ${team.emoji} ${team.name} retourne au DÉPART !`
-        : `\u{1F6E1}️ ${team.emoji} ${team.name} évite le retour au départ grâce à son bouclier !`;
+        ? tg('log.ev.oubliStart', { emoji: team.emoji, name: team.name })
+        : tg('log.ev.oubliShield', { emoji: team.emoji, name: team.name });
       break;
     }
     case 'embuscade': {
@@ -580,9 +583,9 @@ export function applyEventEffect(set, get) {
       if (prevJ && prevJ !== team.pos) {
         newTeams[currentTeam] = { ...team, pos: prevJ };
         pushMove(currentTeam, backPathTo(board, team.pos, prevJ), 'back');
-        message = `${team.emoji} ${team.name} recule à la dernière jonction !`;
+        message = tg('log.ev.embuscade', { emoji: team.emoji, name: team.name });
       } else {
-        message = `Pas de jonction derrière — rien ne se passe.`;
+        message = tg('log.ev.embuscadeNone');
       }
       break;
     }
@@ -597,8 +600,8 @@ export function applyEventEffect(set, get) {
         }
         reculInto(i, dv);
       }
-      message = `\u{1F32A}️ Tempête ! TOUTES les équipes reculent de ${dv} case${dv > 1 ? 's' : ''}.`;
-      if (immune.length) message += ` ⚓ ${immune.join(', ')} tient${immune.length > 1 ? 'nent' : ''} bon !`;
+      message = tgPlural('log.ev.tempete', dv, { n: dv });
+      if (immune.length) message += tgPlural('log.ev.tempeteImmune', immune.length, { list: immune.join(', ') });
       break;
     }
     case 'rejouer': {
@@ -606,7 +609,7 @@ export function applyEventEffect(set, get) {
       const result = moveForward(board, team.pos, dv, { throughJunctions: true });
       newTeams[currentTeam] = { ...team, pos: result.finalPos };
       pushMove(currentTeam, result.path, 'forward');
-      message = `${team.emoji} ${team.name} rejoue et avance de ${dv} !`;
+      message = tg('log.ev.rejouer', { emoji: team.emoji, name: team.name, n: dv });
       break;
     }
     case 'quitteDouble': {
@@ -619,10 +622,11 @@ export function applyEventEffect(set, get) {
         const result = moveForward(board, team.pos, gain, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
-        message = `\u{1F3B0} ${dv} ! Ton lancer de ${moveRoll} est doublé : avance de ${gain} cases !`;
+        message = tg('log.ev.quitteDoubleWin', { dv, roll: moveRoll, gain });
       } else {
         const { applied } = reculInto(currentTeam, moveRoll);
-        message = `\u{1F3B0} ${dv}... Perdu ! ${reculTxt(applied).charAt(0).toUpperCase()}${reculTxt(applied).slice(1)}.`;
+        const rt = reculTxt(applied);
+        message = tg('log.ev.quitteDoubleLose', { dv, recul: `${rt.charAt(0).toUpperCase()}${rt.slice(1)}` });
       }
       break;
     }
@@ -632,7 +636,7 @@ export function applyEventEffect(set, get) {
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
         const { applied } = reculInto(ti, dv);
-        message = `⚡ ${target.emoji} ${target.name} prend la décharge et ${reculTxt(applied)} !`;
+        message = tg('log.ev.decharge', { emoji: target.emoji, name: target.name, recul: reculTxt(applied) });
       }
       break;
     }
@@ -641,8 +645,8 @@ export function applyEventEffect(set, get) {
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
         const me = reculInto(currentTeam, 2);
-        const tg = reculInto(ti, 4);
-        message = `\u{1F91D} ${team.emoji} ${reculTxt(me.applied)}, ${target.emoji} ${reculTxt(tg.applied)} !`;
+        const tgt = reculInto(ti, 4);
+        message = tg('log.ev.sacrifice', { emoji: team.emoji, recul1: reculTxt(me.applied), vemoji: target.emoji, recul2: reculTxt(tgt.applied) });
       }
       break;
     }
@@ -653,7 +657,7 @@ export function applyEventEffect(set, get) {
         const result = moveForward(board, target.pos, 3, { throughJunctions: true });
         newTeams[ti] = { ...target, pos: result.finalPos };
         pushMove(ti, result.path, 'forward');
-        message = `\u{1F381} ${target.emoji} ${target.name} avance de 3 cases !`;
+        message = tg('log.ev.don', { emoji: target.emoji, name: target.name });
       }
       break;
     }
@@ -666,7 +670,7 @@ export function applyEventEffect(set, get) {
         // Vol direct croise (pas de chemin case par case pour un echange)
         pushMove(currentTeam, [team.pos, target.pos], 'forward');
         pushMove(ti, [target.pos, team.pos], 'forward');
-        message = `\u{1F500} ${team.emoji} et ${target.emoji} échangent leurs positions !`;
+        message = tg('log.ev.echange', { emoji: team.emoji, vemoji: target.emoji });
       }
       break;
     }
@@ -674,7 +678,7 @@ export function applyEventEffect(set, get) {
       // Cas "rien a voler" uniquement — le vol effectif passe par eventVolApply
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
-        message = `\u{1FA99} ${newTeams[ti].emoji} n'a aucune charge à voler !`;
+        message = tg('log.ev.volNothing', { emoji: newTeams[ti].emoji });
       }
       break;
     }
@@ -685,10 +689,10 @@ export function applyEventEffect(set, get) {
         const target = newTeams[ti];
         if (correct) {
           const { applied } = reculInto(currentTeam, 2);
-          message = `⚔️ ${target.emoji} réussit le duel ! ${team.emoji} ${reculTxt(applied)}.`;
+          message = tg('log.ev.duelWin', { vemoji: target.emoji, emoji: team.emoji, recul: reculTxt(applied) });
         } else {
           const { applied } = reculInto(ti, 2);
-          message = `⚔️ ${target.emoji} échoue ! ${target.emoji} ${reculTxt(applied)}.`;
+          message = tg('log.ev.duelLose', { vemoji: target.emoji, vemoji2: target.emoji, recul: reculTxt(applied) });
         }
       }
       break;
@@ -699,10 +703,10 @@ export function applyEventEffect(set, get) {
         const result = moveForward(board, team.pos, 3, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
-        message = `\u{1F4B0} Pari gagné ! ${team.emoji} avance de 3 cases !`;
+        message = tg('log.ev.pariWin', { emoji: team.emoji });
       } else {
         const { applied } = reculInto(currentTeam, 3);
-        message = `\u{1F4B0} Pari perdu ! ${team.emoji} ${reculTxt(applied)}.`;
+        message = tg('log.ev.pariLose', { emoji: team.emoji, recul: reculTxt(applied) });
       }
       break;
     }
@@ -712,16 +716,16 @@ export function applyEventEffect(set, get) {
         const result = moveForward(board, team.pos, 3, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
-        message = `\u{1F3AF} Question bonus réussie ! ${team.emoji} avance de 3 !`;
+        message = tg('log.ev.bonusWin', { emoji: team.emoji });
       } else {
-        message = `\u{1F3AF} Raté... Pas de pénalité.`;
+        message = tg('log.ev.bonusLose');
       }
       break;
     }
     case 'tresor': {
       const gain = 15 + Math.floor(Math.random() * 11);
       newTeams[currentTeam] = { ...team, money: team.money + gain };
-      message = `\u{1F4B0} ${team.emoji} ${team.name} trouve un trésor de ${gain} pièces !`;
+      message = tg('log.ev.tresor', { emoji: team.emoji, name: team.name, gain });
       break;
     }
     case 'impot': {
@@ -729,8 +733,8 @@ export function applyEventEffect(set, get) {
       const loss = reducedTax(team, Math.floor(team.money * 0.3));
       newTeams[currentTeam] = { ...team, money: team.money - loss };
       message = loss > 0
-        ? `\u{1F451} ${team.emoji} ${team.name} paie ${loss} pièces d'impôt !`
-        : `\u{1F9FF} ${team.emoji} ${team.name} est exempté d'impôt grâce à son équipement !`;
+        ? tg('log.ev.impotPay', { emoji: team.emoji, name: team.name, loss })
+        : tg('log.ev.impotExempt', { emoji: team.emoji, name: team.name });
       break;
     }
     case 'volArgent': {
@@ -742,8 +746,8 @@ export function applyEventEffect(set, get) {
         newTeams[targetIndex] = { ...target, money: target.money - stolen };
         newTeams[currentTeam] = { ...team, money: team.money + stolen };
         message = stolen > 0
-          ? `\u{1F977} ${team.emoji} ${team.name} vole ${stolen} pièces à ${target.emoji} ${target.name} !`
-          : `\u{1F9B9} ${target.emoji} ${target.name} protège ses pièces : rien à voler !`;
+          ? tg('log.ev.volArgent', { emoji: team.emoji, name: team.name, stolen, vemoji: target.emoji, vname: target.name })
+          : tg('log.ev.volArgentProt', { vemoji: target.emoji, vname: target.name });
       }
       break;
     }
@@ -757,19 +761,19 @@ export function applyEventEffect(set, get) {
         else if (tax < 5) reduced.push(`${newTeams[i].emoji} ${newTeams[i].name} (-${tax})`);
         newTeams[i] = { ...newTeams[i], money: Math.max(0, newTeams[i].money - tax) };
       }
-      message = `\u{1F3E6} Taxe commune ! Toutes les équipes perdent 5 pièces.`;
-      if (reduced.length) message += ` \u{1F9FF} Taxe réduite pour ${reduced.join(', ')}.`;
-      if (exempt.length) message += ` \u{1F9FF} ${exempt.join(', ')} : exempté !`;
+      message = tg('log.ev.taxeCommune');
+      if (reduced.length) message += tg('log.ev.taxeReduced', { list: reduced.join(', ') });
+      if (exempt.length) message += tg('log.ev.taxeExempt', { list: exempt.join(', ') });
       break;
     }
     case 'jackpot': {
       const qResult = data?.questionResult;
       if (qResult === true) {
         newTeams[currentTeam] = { ...team, money: team.money + 30 };
-        message = `\u{1F3C6} Jackpot ! ${team.emoji} ${team.name} gagne 30 pièces !`;
+        message = tg('log.ev.jackpotWin', { emoji: team.emoji, name: team.name });
       } else {
         newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 10) };
-        message = `\u{1F3C6} Raté ! ${team.emoji} ${team.name} perd 10 pièces.`;
+        message = tg('log.ev.jackpotLose', { emoji: team.emoji, name: team.name });
       }
       break;
     }
@@ -777,10 +781,10 @@ export function applyEventEffect(set, get) {
       // Pile ou face : 50% gros gain, sinon perte d'une mise.
       if (Math.random() < 0.5) {
         newTeams[currentTeam] = { ...team, money: team.money + 40 };
-        message = `\u{1F39F}️ Gagné ! ${team.emoji} ${team.name} remporte 40 pièces !`;
+        message = tg('log.ev.loterieWin', { emoji: team.emoji, name: team.name });
       } else {
         newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 15) };
-        message = `\u{1F39F}️ Perdu... ${team.emoji} ${team.name} perd 15 pièces.`;
+        message = tg('log.ev.loterieLose', { emoji: team.emoji, name: team.name });
       }
       break;
     }
@@ -788,10 +792,10 @@ export function applyEventEffect(set, get) {
       // Question HARDCORE forcée (cf. eventAskQuestion) : gros enjeu.
       if (data?.questionResult === true) {
         newTeams[currentTeam] = { ...team, money: team.money + 50 };
-        message = `\u{1F5FF} Le Sphinx s'incline ! ${team.emoji} ${team.name} gagne 50 pièces !`;
+        message = tg('log.ev.sphinxWin', { emoji: team.emoji, name: team.name });
       } else {
         newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 20) };
-        message = `\u{1F5FF} Réponse fausse... ${team.emoji} ${team.name} perd 20 pièces.`;
+        message = tg('log.ev.sphinxLose', { emoji: team.emoji, name: team.name });
       }
       break;
     }
@@ -801,7 +805,7 @@ export function applyEventEffect(set, get) {
       const consumSlots = [];
       bag.forEach((c, i) => { if (cellKey(c) && ITEMS[cellKey(c)]?.slot === 'consumable') consumSlots.push(i); });
       const totalUnits = consumSlots.reduce((s, i) => s + cellN(bag[i]), 0);
-      if (totalUnits < 2) { message = `🔨 Il te faut au moins 2 consommables à fondre...`; break; }
+      if (totalUnits < 2) { message = tg('log.ev.forgeNeed'); break; }
       const burnedIcons = [];
       let toBurn = 2;
       for (const i of consumSlots) {
@@ -814,14 +818,14 @@ export function applyEventEffect(set, get) {
       }
       const eqKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS), { category: 'equipment' });
       const afterBurn = { ...team, bag };
-      if (!eqKey) { newTeams[currentTeam] = afterBurn; message = `🔨 La forge s'éteint : aucun équipement à forger.`; break; }
+      if (!eqKey) { newTeams[currentTeam] = afterBurn; message = tg('log.ev.forgeEmpty'); break; }
       const eq = ITEMS[eqKey];
       const r = placeItem(afterBurn, eqKey);
       newTeams[currentTeam] = r.team;
       if (r.outcome === 'refunded') {
-        message = `🔨 ${eq.icon} ${eq.name} forgé... mais sac plein ! Revendu +${r.refund} \u{1F4B0}.`;
+        message = tg('log.ev.forgeRefund', { icon: eq.icon, item: locName(eq), refund: r.refund });
       } else {
-        message = `🔨 ${team.emoji} fond ${burnedIcons[0]}+${burnedIcons[1]} et forge ${eq.icon} ${eq.name} !`;
+        message = tg('log.ev.forge', { emoji: team.emoji, a: burnedIcons[0], b: burnedIcons[1], icon: eq.icon, item: locName(eq) });
         lootKey = eqKey;
       }
       break;
@@ -838,15 +842,15 @@ export function applyEventEffect(set, get) {
           })
         : [];
       if (candidates.length === 0) candidates = enabled.filter((k) => ITEMS[k]?.set && ITEMS[k].slot !== 'consumable');
-      if (candidates.length === 0) { message = `🏺 Le reliquaire est vide...`; break; }
+      if (candidates.length === 0) { message = tg('log.ev.reliquaireEmpty'); break; }
       const relicKey = candidates[Math.floor(Math.random() * candidates.length)];
       const relic = ITEMS[relicKey];
       const r = placeItem(team, relicKey);
       newTeams[currentTeam] = r.team;
       if (r.outcome === 'refunded') {
-        message = `🏺 ${relic.icon} ${relic.name}... mais sac plein ! Revendu +${r.refund} \u{1F4B0}.`;
+        message = tg('log.ev.reliquaireRefund', { icon: relic.icon, item: locName(relic), refund: r.refund });
       } else {
-        message = `🏺 ${team.emoji} reçoit la relique ${relic.icon} ${relic.name} (${SETS[relic.set]?.name || 'set'}) !`;
+        message = tg('log.ev.reliquaire', { emoji: team.emoji, icon: relic.icon, item: locName(relic), set: locName(SETS[relic.set]) || 'set' });
         lootKey = relicKey;
       }
       break;
@@ -854,46 +858,46 @@ export function applyEventEffect(set, get) {
     case 'tournoi': {
       // Question : gagnant = l'équipe active loote un conso ; perdant = un adversaire le rafle.
       const prizeKey = pickLootItem(0, get().enabledItems || Object.keys(ITEMS), { category: 'consumable' });
-      if (!prizeKey) { message = `🏅 Aucun consommable en jeu...`; break; }
+      if (!prizeKey) { message = tg('log.ev.tournoiEmpty'); break; }
       const prize = ITEMS[prizeKey];
       if (data?.questionResult === true) {
         const r = placeItem(team, prizeKey);
         newTeams[currentTeam] = r.team;
         message = r.outcome === 'refunded'
-          ? `🏅 ${team.emoji} gagne ${prize.icon} ${prize.name}... sac plein, revendu +${r.refund} \u{1F4B0} !`
-          : `🏅 ${team.emoji} remporte le tournoi et gagne ${prize.icon} ${prize.name} !`;
+          ? tg('log.ev.tournoiWinRefund', { emoji: team.emoji, icon: prize.icon, item: locName(prize), refund: r.refund })
+          : tg('log.ev.tournoiWin', { emoji: team.emoji, icon: prize.icon, item: locName(prize) });
       } else {
         const opps = teams.map((_, i) => i).filter((i) => i !== currentTeam);
         if (opps.length) {
           const oi = opps[Math.floor(Math.random() * opps.length)];
           const r = placeItem(teams[oi], prizeKey);
           newTeams[oi] = r.team;
-          message = `🏅 Raté ! ${teams[oi].emoji} ${teams[oi].name} rafle ${prize.icon} ${prize.name} !`;
-        } else { message = `🏅 Personne d'autre pour rafler le lot.`; }
+          message = tg('log.ev.tournoiLose', { vemoji: teams[oi].emoji, vname: teams[oi].name, icon: prize.icon, item: locName(prize) });
+        } else { message = tg('log.ev.tournoiNoOpp'); }
       }
       break;
     }
     case 'banquier': {
       const bonusAmount = team.correct * 3;
       newTeams[currentTeam] = { ...team, money: team.money + bonusAmount };
-      message = `\u{1F3E6} Le banquier récompense ${team.emoji} ${team.name} : +${bonusAmount} pièces (${team.correct} bonnes réponses x3) !`;
+      message = tg('log.ev.banquier', { emoji: team.emoji, name: team.name, amount: bonusAmount, correct: team.correct });
       break;
     }
     case 'coffre': {
       lootKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS));
       const item = ITEMS[lootKey];
-      if (!item) { message = `Le coffre est vide...`; break; }
-      const rarityName = RARITIES[item.rarity]?.name || '';
+      if (!item) { message = tg('log.ev.coffreEmpty'); break; }
+      const rarityName = loc(RARITIES[item.rarity], 'name') || '';
 
       const r = placeItem(team, lootKey);
       newTeams[currentTeam] = r.team;
       if (r.outcome === 'equipped') {
-        message = `\u{1F9F0} ${team.emoji} ${team.name} trouve et équipe ${item.icon} ${item.name} (${rarityName} — ${SLOTS[item.slot].name}) !`;
+        message = tg('log.ev.coffreEquip', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), rarity: rarityName, slot: loc(SLOTS[item.slot], 'name') });
       } else if (r.outcome === 'refunded') {
-        message = `\u{1F9F0} ${item.icon} ${item.name} (${rarityName})... mais le sac est plein ! Revendu +${r.refund} \u{1F4B0}.`;
+        message = tg('log.ev.coffreRefund', { icon: item.icon, item: locName(item), rarity: rarityName, refund: r.refund });
         lootKey = null; // objet revendu : pas de révélation visuelle
       } else {
-        message = `\u{1F9F0} ${team.emoji} ${team.name} trouve ${item.icon} ${item.name} (${rarityName}) !`;
+        message = tg('log.ev.coffreFind', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), rarity: rarityName });
       }
       break;
     }
@@ -901,7 +905,7 @@ export function applyEventEffect(set, get) {
       // Cas "rien a piller" uniquement — le pillage effectif passe par eventPillageApply
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
-        message = `\u{1F3F4}‍☠️ ${newTeams[ti].emoji} ${newTeams[ti].name} n'a aucun objet à piller !`;
+        message = tg('log.ev.pillageNothing', { emoji: newTeams[ti].emoji, name: newTeams[ti].name });
       }
       break;
     }
@@ -915,7 +919,7 @@ export function applyEventEffect(set, get) {
       const bag = normalizeBag(team.bag);
       bag.forEach((c, i) => { const k = cellKey(c); if (k && ITEMS[k]) picks.push({ kind: 'bag', index: i, key: k }); });
       if (picks.length === 0) {
-        message = `\u{1F99D} Le voleur fouille... mais ${team.emoji} ${team.name} n'a aucun objet à perdre !`;
+        message = tg('log.ev.pickpocketNothing', { emoji: team.emoji, name: team.name });
         break;
       }
       const lost = picks[Math.floor(Math.random() * picks.length)];
@@ -927,11 +931,11 @@ export function applyEventEffect(set, get) {
         bag[lost.index] = cellN(cell) > 1 ? mkCell(lost.key, cellN(cell) - 1) : null; // perd 1 unité
         newTeams[currentTeam] = { ...team, bag };
       }
-      message = `\u{1F99D} Pickpocket ! ${team.emoji} ${team.name} perd ${item.icon} ${item.name} !`;
+      message = tg('log.ev.pickpocket', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item) });
       break;
     }
     default:
-      message = `Événement appliqué.`;
+      message = tg('log.ev.default');
   }
 
   addLog(message);
@@ -941,7 +945,7 @@ export function applyEventEffect(set, get) {
   if (winnerIdx !== -1) {
     set({ teams: newTeams, ...(moves.length ? { movePath: moves } : {}) });
     const winner = newTeams[winnerIdx];
-    addLog(`\u{1F3C6} ${winner.emoji} ${winner.name} atteint l'arrivée !`);
+    addLog(tg('log.ev.winner', { emoji: winner.emoji, name: winner.name }));
     set({ finished: true, showEvent: null, eventApplied: false });
     return;
   }

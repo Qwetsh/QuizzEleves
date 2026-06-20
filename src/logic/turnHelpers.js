@@ -3,8 +3,13 @@ import { SUBJECT_KEYS } from '../data/subjects.js';
 import { moveBack } from './pathfinding.js';
 import { getEffectValue, hasBuff } from './itemEffects.js';
 import { resolvePowerEffect } from './powerEffects.js';
+import { tg, tgPlural } from '../i18n';
+import { getLang } from '../i18n/lang.js';
+import { locName } from '../i18n/content.js';
 
-const cases = (n) => `${n} case${Math.abs(n) > 1 ? 's' : ''}`;
+const cases = (n) => (getLang() === 'en'
+  ? `${n} space${Math.abs(n) > 1 ? 's' : ''}`
+  : `${n} case${Math.abs(n) > 1 ? 's' : ''}`);
 
 /**
  * Pick a random subject key.
@@ -34,7 +39,7 @@ export function randomSubject() {
  *  - bonusMoney  : or gagn\u00e9 via le Bouclier niv.3
  */
 export function applyRecul(team, board, base, masteryOn = false) {
-  const detail = [{ label: 'Recul pr\u00e9vu', note: cases(base) }];
+  const detail = [{ label: tg('log.turn.detail.reculPrevu'), note: cases(base) }];
   const patch = {};
   let recul = base;
   let shield = null; // 'wooden' | 'power'
@@ -43,8 +48,8 @@ export function applyRecul(team, board, base, masteryOn = false) {
 
   // 0. Buff \u00ab pas de recul \u00bb (effet de dur\u00e9e d'un consommable) \u2014 priorit\u00e9 absolue.
   if (recul > 0 && hasBuff(team, 'noRecul')) {
-    detail.push({ label: 'Effet de dur\u00e9e', note: 'pas de recul' });
-    detail.push({ label: 'Recul subi', note: cases(0) });
+    detail.push({ label: tg('log.turn.detail.effetDuree'), note: tg('log.turn.detail.pasDeRecul') });
+    detail.push({ label: tg('log.turn.detail.reculSubi'), note: cases(0) });
     return { patch, applied: 0, path: null, detail, absorbedBy: 'buff', bonusMoney: 0 };
   }
 
@@ -54,7 +59,7 @@ export function applyRecul(team, board, base, masteryOn = false) {
     const used = Math.min(wooden, recul);
     recul -= used;
     patch.itemShield = wooden - used;
-    detail.push({ label: 'Bouclier de bois', note: `\u2212${cases(used)}` });
+    detail.push({ label: tg('log.turn.detail.bouclierBois'), note: `\u2212${cases(used)}` });
     shield = 'wooden';
   }
 
@@ -67,10 +72,10 @@ export function applyRecul(team, board, base, masteryOn = false) {
     const absorbed = Math.min(recul, reduction); // cases r\u00e9ellement absorb\u00e9es par le pouvoir
     recul = Math.max(0, recul - reduction);
     patch.powers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: charges - 1 } };
-    detail.push({ label: `Bouclier niv.${level}`, note: `\u2212${cases(reduction)}` });
+    detail.push({ label: tg('log.turn.detail.bouclierNiv', { level }), note: `\u2212${cases(reduction)}` });
     // Or : bonus de palier + Rempart dor\u00e9 (or/case absorb\u00e9e) + Tr\u00e9sor de guerre (forfait).
     bonusMoney = (effect.bonusMoney ?? 0) + (effect.goldPerCaseAbsorbed || 0) * absorbed + (effect.absorbBonusMoney || 0);
-    if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: 'Bonus du bouclier', amount: bonusMoney }); }
+    if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: tg('log.turn.detail.bonusBouclier'), amount: bonusMoney }); }
     // Trésor de guerre (L10) : +1 charge d'un pouvoir au hasard à chaque absorption.
     if (effect.absorbBonusCharge) {
       const baseP = patch.powers;
@@ -78,7 +83,7 @@ export function applyRecul(team, board, base, masteryOn = false) {
       if (keys.length) {
         const pick = keys[Math.floor(Math.random() * keys.length)];
         patch.powers = { ...baseP, [pick]: { ...baseP[pick], charges: (baseP[pick].charges ?? 0) + 1 } };
-        detail.push({ label: 'Trésor de guerre', note: `+1 charge ${POWERS[pick].name}` });
+        detail.push({ label: tg('log.turn.detail.tresorGuerre'), note: tg('log.turn.detail.chargePlus', { power: locName(POWERS[pick]) }) });
       }
     }
     // Réflexion (L10) : une fraction du recul prévu est renvoyée à l'attaquant (géré par l'appelant, ex. duel).
@@ -91,10 +96,10 @@ export function applyRecul(team, board, base, masteryOn = false) {
   const flat = getEffectValue(team, 'reculReduction');
   if (recul > 0 && (pct > 0 || flat > 0)) {
     recul = Math.max(0, Math.round(pct > 0 ? recul * (1 - pct / 100) : recul) - flat);
-    if (pct > 0) detail.push({ label: '\u00c9quipement', note: `\u2212${pct}%` });
-    if (flat > 0) detail.push({ label: '\u00c9quipement', note: `\u2212${cases(flat)}` });
+    if (pct > 0) detail.push({ label: tg('log.turn.detail.equipement'), note: `\u2212${pct}%` });
+    if (flat > 0) detail.push({ label: tg('log.turn.detail.equipement'), note: `\u2212${cases(flat)}` });
   }
-  detail.push({ label: 'Recul subi', note: cases(recul) });
+  detail.push({ label: tg('log.turn.detail.reculSubi'), note: cases(recul) });
 
   const reduced = shield || recul !== base; // un d\u00e9tail n'a d'int\u00e9r\u00eat que si on a r\u00e9duit
   const out = { patch, detail: reduced ? detail : undefined, bonusMoney, reflect: reflectOut };
@@ -108,21 +113,21 @@ export function applyRecul(team, board, base, masteryOn = false) {
  * Resolve a wrong answer: applique la cha\u00eene de bouclier (applyRecul) et compose
  * le message de journal. Returns { updatedTeam, logMessage, detail, path }.
  */
-export function resolveWrongAnswer(team, board, reason = 'Mauvaise r\u00e9ponse', reculBase = 2, masteryOn = false) {
+export function resolveWrongAnswer(team, board, reason = tg('log.turn.reasonWrong'), reculBase = 2, masteryOn = false) {
   const r = applyRecul(team, board, reculBase, masteryOn);
   const updatedTeam = { ...team, ...r.patch, wrong: team.wrong + 1 };
   const coins = r.bonusMoney ? ` +${r.bonusMoney} \u{1F4B0}` : '';
   let logMessage;
   if (r.absorbedBy === 'buff') {
-    logMessage = `\u274C ${reason} ! \u{1F6DF} Prot\u00e9g\u00e9 (effet de dur\u00e9e) : pas de recul !`;
+    logMessage = tg('log.turn.wrong.buff', { reason });
   } else if (r.applied <= 0 && (r.absorbedBy === 'wooden' || r.absorbedBy === 'power')) {
-    logMessage = `\u274C ${reason} ! \u{1F6E1}\uFE0F Recul totalement absorb\u00e9 !${coins}`;
+    logMessage = tg('log.turn.wrong.absorbed', { reason, coins });
   } else if (r.applied <= 0) {
-    logMessage = `\u274C ${reason} ! \u{1F392} L'\u00e9quipement absorbe le recul !`;
+    logMessage = tg('log.turn.wrong.equip', { reason });
   } else if (r.absorbedBy === 'wooden' || r.absorbedBy === 'power') {
-    logMessage = `\u274C ${reason} ! \u{1F6E1}\uFE0F Recul r\u00e9duit \u00E0 ${cases(r.applied)}.${coins}`;
+    logMessage = tg('log.turn.wrong.reduced', { reason, cases: cases(r.applied), coins });
   } else {
-    logMessage = `\u274C ${reason} ! Recul de ${cases(r.applied)}.`;
+    logMessage = tg('log.turn.wrong.normal', { reason, cases: cases(r.applied) });
   }
   return { updatedTeam, logMessage, detail: r.detail, path: r.path };
 }
@@ -164,7 +169,7 @@ export function resolveDoubleQuestion(team) {
     return {
       shouldContinue: true,
       updatedTeam: { ...team, doubleExtra: remainingExtra - 1 },
-      logMessage: `\u2753 Question multiple ! Encore ${remainingExtra} question(s)...`,
+      logMessage: tgPlural('log.turn.multiQuestion', remainingExtra, { n: remainingExtra }),
     };
   }
   return {
