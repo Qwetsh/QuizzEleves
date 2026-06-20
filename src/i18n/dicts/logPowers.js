@@ -19,6 +19,19 @@ export default {
   'log.pw.relanceResult':   { fr: '🎲 {power} : {value} !{effective}', en: '🎲 {power}: {value}!{effective}' },
   'log.pw.relanceEffective':{ fr: ' (effectif: {value})', en: ' (effective: {value})' },
   'log.pw.surcharge':       { fr: '✨ Surcharge : +1 charge de {power} !', en: '✨ Overload: +1 charge of {power}!' },
+  // Arbre de Maîtrise « Relance »
+  'log.pw.relanceRefund':   { fr: '↩️ Remboursement : charge de {power} récupérée !', en: '↩️ Refund: {power} charge recovered!' },
+  'log.pw.relanceGold':     { fr: '🪙 Relance lucrative : +{n} or !', en: '🪙 Lucrative reroll: +{n} gold!' },
+  'log.pw.relanceOpportune':{ fr: '⏱️ Relance opportune : ta prochaine question est avantagée.', en: '⏱️ Timely reroll: your next question is boosted.' },
+  'log.pw.relanceVengeful': { fr: '⚔️ Relance vengeresse : {emoji} {name} recule de {n} !', en: '⚔️ Vengeful reroll: {emoji} {name} pushed back {n}!' },
+  'log.pw.relanceLate':     { fr: '🐢 Élan du retardataire : {emoji} {name} gagne 1 charge de relance.', en: '🐢 Underdog’s surge: {emoji} {name} gains 1 reroll charge.' },
+  'log.pw.relanceSwap':     { fr: '🔄 {emoji} {name} échange sa place avec {vemoji} {vname} !', en: '🔄 {emoji} {name} swaps places with {vemoji} {vname}!' },
+  // Arbre de Maîtrise « Bouclier »
+  'log.pw.immuneBlock':     { fr: '🛡️ {emoji} {name} est immunisé : {power} n’a aucun effet !', en: '🛡️ {emoji} {name} is immune: {power} has no effect!' },
+  'log.pw.immuneToast':     { fr: '{emoji} Immunité totale !', en: '{emoji} Total immunity!' },
+  'log.pw.immuneCast':      { fr: '🛡️ {emoji} {name} active l’Immunité totale ({turns} tours) !', en: '🛡️ {emoji} {name} activates Total Immunity ({turns} turns)!' },
+  'log.pw.surgePush':       { fr: '⏩ Sur-réduction : {vemoji} {vname} recule de {n} !', en: '⏩ Overcharge: {vemoji} {vname} pushed back {n}!' },
+  'log.pw.goldVault':       { fr: '🏦 Banque fortifiée : l’or de {emoji} {name} est protégé.', en: '🏦 Fortified vault: {emoji} {name}’s gold is protected.' },
 
   // --- Offensif : fumigène ---
   'log.pw.fumigeneBlock':   { fr: '💨 La bombe fumigène de {emoji} {name} annule {power} !',

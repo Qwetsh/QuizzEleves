@@ -53,10 +53,13 @@ export default {
 
   // — Pouvoirs / arbre de talents —
   'mobile.talentTree': { fr: '⚡ Arbre de talents', en: '⚡ Talent tree' },
-  'mobile.powersHint': { fr: '🪙 {money} — recharge, améliore et débloque tes pouvoirs ici', en: '🪙 {money} — recharge, upgrade and unlock your powers here' },
   'mobile.powersReadonly': { fr: "Achats depuis le téléphone de l'équipe", en: "Purchases from the team's phone" },
   'mobile.noPowerYet': { fr: "Aucun pouvoir pour l'instant…", en: 'No powers yet…' },
+  'mobile.buyNewPower': { fr: '✨ Acheter un nouveau pouvoir', en: '✨ Buy a new power' },
   'mobile.unlockPower': { fr: 'Débloquer un pouvoir', en: 'Unlock a power' },
+  'mobile.allPowersOwned': { fr: 'Tu possèdes déjà tous les pouvoirs.', en: 'You already own every power.' },
+  'mobile.relanceSwap': { fr: 'Échange de place ({cost} charges)', en: 'Place swap ({cost} charges)' },
+  'mobile.shieldImmunity': { fr: 'Immunité totale ({cost} charges)', en: 'Total immunity ({cost} charges)' },
   'mobile.attack': { fr: '⚔️ Attaque', en: '⚔️ Attack' },
   'mobile.defense': { fr: '🛡️ Défense', en: '🛡️ Defense' },
   'mobile.activeTag': { fr: '✦ actif', en: '✦ active' },
@@ -138,6 +141,8 @@ export default {
 
   // — Historique —
   'mobile.history': { fr: '📜 Historique', en: '📜 History' },
+  'mobile.histLog': { fr: "📋 Journal d'info", en: '📋 Activity log' },
+  'mobile.histQuestions': { fr: '📚 Questions', en: '📚 Questions' },
   'mobile.nothingYet': { fr: "Rien pour l'instant…", en: 'Nothing yet…' },
 
   // — Anciennes questions —

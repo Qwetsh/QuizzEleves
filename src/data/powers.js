@@ -30,28 +30,79 @@ export const POWERS = {
     ],
     // Extension « Maîtrise » (niveaux 1→10 + embranchements).
     tree: {
-      // Cœur : cases retirées au recul (amount). L1-3 = identique aux `levels`.
+      // Cœur : cases retirées au recul EN DÉPENSANT 1 charge (amount). L1-3 = comme
+      // les `levels`. `passiveReduce` (dès L3) = réduction PERMANENTE sans charge
+      // (non cumulative avec l'active : l'active s'applique à la place quand on a
+      // une charge). `bonusMoney` = forfait d'or baked dans le palier.
       scale: [
         { type: 'reduceRecul', amount: 2 },
         { type: 'reduceRecul', amount: 4 },
-        { type: 'reduceRecul', amount: 6, bonusMoney: 5 },
-        { type: 'reduceRecul', amount: 7, bonusMoney: 5 },
-        { type: 'reduceRecul', amount: 8, bonusMoney: 5 },
-        { type: 'reduceRecul', amount: 9, bonusMoney: 8 },
-        { type: 'reduceRecul', amount: 10, bonusMoney: 8 },
-        { type: 'reduceRecul', amount: 11, bonusMoney: 10 },
-        { type: 'reduceRecul', amount: 12, bonusMoney: 10 },
-        { type: 'reduceRecul', amount: 14, bonusMoney: 15 },
+        { type: 'reduceRecul', amount: 6, bonusMoney: 5, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 7, bonusMoney: 5, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 8, bonusMoney: 5, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 9, bonusMoney: 8, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 10, bonusMoney: 8, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 11, bonusMoney: 10, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 12, bonusMoney: 10, passiveReduce: 1 },
+        { type: 'reduceRecul', amount: 14, bonusMoney: 15, passiveReduce: 1 },
       ],
+      // Voies L5. `effect` = base ; `tiers` = renforts L7 (tiers[0]) puis L9 (tiers[1]).
       branch5: [
-        { key: 'gold', name: 'Rempart doré', name_en: 'Golden Rampart', icon: '🪙', desc: '+1 or par case de recul absorbée.', desc_en: '+1 gold per square of setback absorbed.', effect: { goldPerCaseAbsorbed: 1 } },
-        { key: 'counter', name: 'Contre', name_en: 'Counter', icon: '🔁', desc: 'Quand le recul est absorbé, relance gratuitement la question.', desc_en: 'When the setback is absorbed, reroll the question for free.', effect: { rerollQuestionOnAbsorb: true } },
-        { key: 'aegis', name: 'Égide', name_en: 'Aegis', icon: '🛡️', desc: 'Protège aussi contre la Foudre adverse.', desc_en: 'Also protects against enemy Lightning.', effect: { protectFoudre: true } },
+        { key: 'gold', name: 'Rempart doré', name_en: 'Golden Rampart', icon: '🪙',
+          desc: 'À l’usage du bouclier, gagne 5 or.', desc_en: 'When the shield is used, gain 5 gold.',
+          effect: { goldOnUse: 5 }, tiers: [{ goldOnUse: 10 }, { goldOnUse: 15 }],
+          tierDesc: ['Niv.7 : 10 or à l’usage.', 'Niv.9 : 15 or à l’usage.'],
+          tierDesc_en: ['Lvl.7: 10 gold on use.', 'Lvl.9: 15 gold on use.'] },
+        { key: 'surge', name: 'Sur-réduction', name_en: 'Overcharge', icon: '⏩',
+          desc: 'Le surplus de réduction (au-delà du recul) te fait avancer d’autant.',
+          desc_en: 'Reduction beyond the setback (the surplus) moves you forward instead.',
+          effect: { surplusAdvance: true }, tiers: [{ surplusPush: 'one' }, { surplusPush: 'all' }],
+          tierDesc: ['Niv.7 : recule aussi une équipe (au choix) du surplus.', 'Niv.9 : recule TOUTES les équipes adverses du surplus.'],
+          tierDesc_en: ['Lvl.7: also push one team (your choice) back by the surplus.', 'Lvl.9: push ALL rival teams back by the surplus.'] },
+        { key: 'antifoudre', name: 'Anti-Foudre', name_en: 'Anti-Lightning', icon: '⚡',
+          desc: 'Réduit aussi de moitié le recul infligé par la Foudre.',
+          desc_en: 'Also halves the setback dealt by Lightning.',
+          effect: { foudreReduceFraction: 0.5 }, tiers: [{ foudreReflectFraction: 0.5 }, { foudreReflectGold: true }],
+          tierDesc: ['Niv.7 : renvoie la moitié du recul de Foudre à l’attaquant.', 'Niv.9 : et tu gagnes cette valeur en or.'],
+          tierDesc_en: ['Lvl.7: reflect half the Lightning setback back at the attacker.', 'Lvl.9: and you gain that value in gold.'] },
       ],
       branch10: [
-        { key: 'fortress', name: 'Forteresse', name_en: 'Fortress', icon: '🏰', desc: 'Recul totalement annulé en permanence.', desc_en: 'Setback permanently cancelled entirely.', effect: { amount: 99 } },
-        { key: 'reflect', name: 'Réflexion', name_en: 'Reflection', icon: '↩️', desc: 'L’attaquant subit la moitié du recul qu’il voulait infliger.', desc_en: 'The attacker suffers half the setback they meant to inflict.', effect: { reflectFraction: 0.5 } },
-        { key: 'warchest', name: 'Trésor de guerre', name_en: 'War Chest', icon: '💰', desc: 'Chaque absorption : +10 or et 1 charge aléatoire.', desc_en: 'Each absorption: +10 gold and 1 random charge.', effect: { absorbBonusMoney: 10, absorbBonusCharge: true } },
+        { key: 'fortress', name: 'Forteresse', name_en: 'Fortress', icon: '🏰',
+          desc: 'Le recul devient impossible : tu avances du montant évité (sauf Foudre).',
+          desc_en: 'Setbacks become impossible: you move forward by the avoided amount (except Lightning).',
+          effect: { fortressAdvance: true } },
+        { key: 'aegisTotal', name: 'Immunité totale', name_en: 'Total Immunity', icon: '🛡️',
+          desc: 'Actif : dépense toutes tes charges → immunité aux attaques adverses pendant 2 tours.',
+          desc_en: 'Active: spend all your charges → immunity to enemy attacks for 2 turns.',
+          effect: { totalImmune: true, immuneCost: 5, immuneTurns: 2 } },
+        { key: 'goldVault', name: 'Banque fortifiée', name_en: 'Fortified Vault', icon: '🏦',
+          desc: 'Ton or devient impossible à voler.', desc_en: 'Your gold can no longer be stolen.',
+          effect: { goldUnstealable: true } },
+      ],
+      // Description « élève » par niveau (ce que le niveau apporte, sans répétition).
+      scaleDesc: [
+        'Dépense une charge pour reculer 2 cases de moins.',
+        'La réduction passe à 4 cases (avec une charge).',
+        'Réduction de 6 cases et +5 or (avec charge). En plus : −1 case en permanence, sans charge.',
+        'La réduction passe à 7 cases.',
+        'Réduction de 8 cases. Tu choisis une spécialité (3 voies au choix).',
+        'La réduction passe à 9 cases.',
+        'Réduction de 10 cases. Ta spécialité gagne un premier renfort.',
+        'La réduction passe à 11 cases.',
+        'Réduction de 12 cases. Ta spécialité atteint son plein effet.',
+        'Réduction de 14 cases. Tu choisis un pouvoir ultime (3 au choix).',
+      ],
+      scaleDesc_en: [
+        'Spend a charge to move back 2 fewer squares.',
+        'Reduction raised to 4 squares (with a charge).',
+        'Reduction of 6 squares and +5 gold (with a charge). Plus: −1 square permanently, no charge.',
+        'Reduction raised to 7 squares.',
+        'Reduction of 8 squares. Pick a specialty (3 paths to choose from).',
+        'Reduction raised to 9 squares.',
+        'Reduction of 10 squares. Your specialty gains a first boost.',
+        'Reduction raised to 11 squares.',
+        'Reduction of 12 squares. Your specialty reaches full power.',
+        'Reduction of 14 squares. Pick an ultimate power (3 to choose from).',
       ],
       upgradeCosts: TREE_COSTS,
     },
@@ -118,28 +169,84 @@ export const POWERS = {
       { desc: 'Relance + avance du total des 2 des', desc_en: 'Reroll + move by the total of both dice', effect: { type: 'reroll', mode: 'sum' } },
     ],
     tree: {
-      // Cœur : mode de relance. L1-3 = identique aux `levels` (replace/best/sum).
+      // Cœur de la relance : MODE de résolution (replace → best → sum, le plus haut
+      // palier gagne), REMBOURSEMENT de charge (L2/L4) et GROS DÉ (L8 : D10).
+      // Toutes ces valeurs sont calibrables via balanceConfig (tree.scale).
       scale: [
-        { type: 'reroll', mode: 'replace' },
-        { type: 'reroll', mode: 'best' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
-        { type: 'reroll', mode: 'sum' },
+        { type: 'reroll', mode: 'replace' },                              // L1 Relance
+        { type: 'reroll', mode: 'replace', refundChance: 0.10 },          // L2 Remboursement 10%
+        { type: 'reroll', mode: 'best', refundChance: 0.10 },             // L3 Garde le meilleur
+        { type: 'reroll', mode: 'best', refundChance: 0.25 },             // L4 Remboursement 25%
+        { type: 'reroll', mode: 'best', refundChance: 0.25 },             // L5 (embranchement)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25 },              // L6 Somme
+        { type: 'reroll', mode: 'sum', refundChance: 0.25 },              // L7 (renfort voie palier 1)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25, dieSides: 10 },// L8 Gros dé (D10)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25, dieSides: 10 },// L9 (renfort voie palier 2)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25, dieSides: 10 },// L10 (ultime)
       ],
+      // Description « élève » par niveau : on n'écrit QUE ce que le niveau apporte
+      // de nouveau (pas de répétition des acquis précédents). Affichée dans l'arbre
+      // de talent et la boutique.
+      scaleDesc: [
+        'Tu peux relancer le dé : ta nouvelle valeur remplace l’ancienne.',
+        'Bonus : 1 chance sur 10 de récupérer la charge dépensée.',
+        'La relance garde le meilleur des deux dés (ancien ou nouveau).',
+        'La chance de récupérer la charge passe à 1 sur 4.',
+        'Tu choisis une spécialité de Relance (3 voies au choix).',
+        'La relance additionne les deux dés au lieu d’en garder un seul.',
+        'Ta spécialité de Relance gagne un premier renfort.',
+        'La relance se lance avec un gros dé (D10).',
+        'Ta spécialité de Relance atteint son plein effet.',
+        'Tu choisis un pouvoir ultime de Relance (3 au choix).',
+      ],
+      scaleDesc_en: [
+        'You can reroll the die: your new value replaces the old one.',
+        'Bonus: 1-in-10 chance to recover the charge you spent.',
+        'The reroll keeps the better of the two dice (old or new).',
+        'The chance to recover the charge rises to 1-in-4.',
+        'Pick a Reroll specialty (3 paths to choose from).',
+        'The reroll adds both dice together instead of keeping one.',
+        'Your Reroll specialty gains a first boost.',
+        'The reroll uses a big die (D10).',
+        'Your Reroll specialty reaches full power.',
+        'Pick an ultimate Reroll power (3 to choose from).',
+      ],
+      // Voies L5. `effect` = effet de base ; `tiers` = renforts appliqués en L7
+      // (tiers[0]) puis L9 (tiers[1]). Le résolveur fusionne base → tier1 → tier2.
       branch5: [
-        { key: 'dbldice', name: 'Double dé', name_en: 'Double Dice', icon: '🎲', desc: 'Avance de la somme de 2 dés.', desc_en: 'Move by the sum of 2 dice.', effect: { mode: 'sum' } },
-        { key: 'lucky', name: 'Dé chanceux', name_en: 'Lucky Die', icon: '🍀', desc: 'Relance jusqu’à obtenir au moins 4.', desc_en: 'Rerolls until you get at least 4.', effect: { minRoll: 4 } },
-        { key: 'pilot', name: 'Pilote', name_en: 'Pilot', icon: '🧭', desc: 'Après la relance, choisis ta voie aux jonctions.', desc_en: 'After the reroll, choose your path at junctions.', effect: { choosePathAfter: true } },
+        { key: 'lucrative', name: 'Relance lucrative', name_en: 'Lucrative Reroll', icon: '🪙',
+          desc: 'À chaque relance, gagne de l’or égal à la valeur du dé.',
+          desc_en: 'Each reroll grants gold equal to the die value.',
+          effect: { goldPerRoll: 1 }, tiers: [{ goldPerRoll: 2 }, { goldPerRoll: 3 }],
+          tierDesc: ['Niv.7 : or ×2 la valeur du dé.', 'Niv.9 : or ×3 la valeur du dé.'],
+          tierDesc_en: ['Lvl.7: gold ×2 the die value.', 'Lvl.9: gold ×3 the die value.'] },
+        { key: 'opportune', name: 'Relance opportune', name_en: 'Timely Reroll', icon: '⏱️',
+          desc: 'À la relance : +10 s au timer et tu peux rechoisir le thème de la case.',
+          desc_en: 'On reroll: +10s timer and you may re-pick the square’s theme.',
+          effect: { reqTimeBonus: 10, reChooseSubject: true },
+          tiers: [{ reqTimeBonus: 20 }, { reqTimeBonus: 30, replaceQuestion: true }],
+          tierDesc: ['Niv.7 : bonus de temps porté à +20 s.', 'Niv.9 : +30 s et remplacement de la question.'],
+          tierDesc_en: ['Lvl.7: time bonus raised to +20s.', 'Lvl.9: +30s and question replacement.'] },
+        { key: 'chanceuse', name: 'Relance chanceuse', name_en: 'Lucky Reroll', icon: '🍀',
+          desc: 'Sur un résultat de 6+, recharge un autre pouvoir.',
+          desc_en: 'On a 6+ result, recharge another power.',
+          effect: { rechargeOnHigh: 6 }, tiers: [{ lootBonusOnHigh: 0.5 }, { doubleLootOnHigh: 0.5 }],
+          tierDesc: ['Niv.7 : sur un 6+, +50 % de chance de loot.', 'Niv.9 : 50 % de chance d’un 2ᵉ loot.'],
+          tierDesc_en: ['Lvl.7: on a 6+, +50% loot chance.', 'Lvl.9: 50% chance of a 2nd loot.'] },
       ],
       branch10: [
-        { key: 'triple', name: 'Triple chance', name_en: 'Triple Chance', icon: '🎯', desc: 'Garde le meilleur de 3 dés.', desc_en: 'Keep the best of 3 dice.', effect: { rerollCount: 3, mode: 'best' } },
-        { key: 'leap', name: 'Bond', name_en: 'Leap', icon: '🦘', desc: 'Avance jusqu’à la prochaine case avantageuse.', desc_en: 'Move to the next advantageous square.', effect: { leapToAdvantage: true } },
-        { key: 'overload', name: 'Surcharge', name_en: 'Overload', icon: '✨', desc: 'La relance recharge aussi un pouvoir au hasard.', desc_en: 'The reroll also recharges a random power.', effect: { rechargeRandom: true } },
+        { key: 'swap', name: 'Échange de place', name_en: 'Place Swap', icon: '🔄',
+          desc: 'Actif : dépense 5 charges pour échanger ta place avec le groupe le plus avancé.',
+          desc_en: 'Active: spend 5 charges to swap places with the most advanced team.',
+          effect: { swapWithLeader: true, swapCost: 5 } },
+        { key: 'lateStarter', name: 'Élan du retardataire', name_en: 'Underdog’s Surge', icon: '🐢',
+          desc: 'En début de tour, si tu es la moins avancée, gagne 1 charge de relance.',
+          desc_en: 'At the start of your turn, if you are last, gain 1 reroll charge.',
+          effect: { lateStarterCharge: 1 } },
+        { key: 'vengeful', name: 'Relance vengeresse', name_en: 'Vengeful Reroll', icon: '⚔️',
+          desc: 'En plus d’avancer, fait reculer le 1ᵉʳ groupe de la valeur du dé.',
+          desc_en: 'In addition to moving, pushes the leading team back by the die value.',
+          effect: { vengefulPushLeader: true } },
       ],
       upgradeCosts: TREE_COSTS,
     },

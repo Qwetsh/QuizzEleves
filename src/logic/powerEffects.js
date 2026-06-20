@@ -32,7 +32,15 @@ export function resolvePowerEffect(team, key, masteryOn = false) {
   let eff = { ...(tree.scale[lvl - 1] || {}) };
   if (lvl >= 5 && entry?.spec5) {
     const b = tree.branch5.find((o) => o.key === entry.spec5);
-    if (b) eff = { ...eff, ...b.effect };
+    if (b) {
+      eff = { ...eff, ...b.effect };
+      // Renforts de voie : un palier `tiers[i]` s'ajoute au niveau SPEC5_TIER_LEVELS[i]
+      // (L7 = palier 1, L9 = palier 2). Chaque palier fusionne par-dessus (écrase le
+      // même champ : ex. goldPerRoll 1 → 2 → 3 ; ajoute un champ nouveau sinon).
+      if (Array.isArray(b.tiers)) {
+        b.tiers.forEach((tier, i) => { if (tier && lvl >= SPEC5_TIER_LEVELS[i]) eff = { ...eff, ...tier }; });
+      }
+    }
   }
   if (lvl >= 10 && entry?.spec10) {
     const b = tree.branch10.find((o) => o.key === entry.spec10);
@@ -40,6 +48,9 @@ export function resolvePowerEffect(team, key, masteryOn = false) {
   }
   return eff;
 }
+
+// Niveaux auxquels s'appliquent les renforts de voie L5 (tiers[0]=L7, tiers[1]=L9).
+export const SPEC5_TIER_LEVELS = [7, 9];
 
 // Niveau maximum selon le mode (10 avec Maîtrise + arbre, sinon 3).
 export function maxPowerLevel(key, masteryOn = false) {
@@ -82,7 +93,18 @@ export function describePowerScale(key, level, masteryOn = false) {
   switch (eff.type) {
     case 'reduceRecul': return `Recul −${eff.amount} case${eff.amount > 1 ? 's' : ''}${eff.bonusMoney ? ` +${eff.bonusMoney} or` : ''}`;
     case 'hideAnswers': return `${eff.count} réponse${eff.count > 1 ? 's' : ''} éliminée${eff.count > 1 ? 's' : ''}${eff.bonusTime ? ` +${eff.bonusTime}s` : ''}`;
-    case 'reroll': return eff.mode === 'sum' ? 'Somme de 2 dés' : eff.mode === 'best' ? 'Garde le meilleur' : 'Relance le dé';
+    case 'reroll': {
+      const baseTxt = eff.mode === 'sum' ? 'Somme de 2 dés' : eff.mode === 'best' ? 'Garde le meilleur' : 'Relance le dé';
+      const parts = [baseTxt];
+      if (eff.dieSides > 6) parts.push('D10');
+      if (eff.refundChance) parts.push(`remb. ${Math.round(eff.refundChance * 100)}%`);
+      // Niveaux dont le CŒUR ne change pas : on précise ce qui se passe vraiment
+      // (embranchement, renfort de la voie choisie, ou ultime) pour les distinguer.
+      if (level === 5) parts.push('embranchement');
+      else if (level === 10) parts.push('ultime');
+      else if (level === 7 || level === 9) parts.push('renfort de voie');
+      return parts.join(' · ');
+    }
     case 'reculTarget': return `Recul ${dl(eff.amount)}${eff.flat ? ` +${eff.flat}` : ''}`;
     case 'timerReduce': return `Timer ÷${eff.divisor}`;
     case 'multiQuestion': return `+${eff.add} question${eff.add > 1 ? 's' : ''}${eff.timerDivisor ? ` · timer ÷${eff.timerDivisor}` : ''}`;

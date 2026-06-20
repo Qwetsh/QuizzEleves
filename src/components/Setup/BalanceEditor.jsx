@@ -89,6 +89,11 @@ const FX_LABELS = {
   minRoll: 'Relance jusqu’à ≥', rerollCount: 'Nb de dés (meilleur)',
   amountMult: 'Recul (×)', extraChargeCost: 'Charges en plus', stealGold: 'Or volé', goldPenaltyOnTimeout: 'Taxe (or)',
   goldMult: 'Or rafale (×)', goldDiv: 'Or rafale (÷)', extraAdd: 'Questions en plus',
+  // Arbre Maîtrise — Relance
+  refundChance: 'Chance de remboursement', dieSides: 'Faces du dé', goldPerRoll: 'Or / valeur du dé',
+  reqTimeBonus: 'Bonus de temps (s)', rechargeOnHigh: 'Seuil recharge (6+)',
+  lootBonusOnHigh: 'Bonus de loot (×)', doubleLootOnHigh: 'Chance 2ᵉ loot (×)',
+  swapCost: 'Coût en charges', lateStarterCharge: 'Charge retardataire',
 };
 const LOOT_FIELDS = [
   { k: 'chestLegendaryChance', label: 'Chance légendaire — coffre', pct: true },
@@ -327,6 +332,9 @@ export default function BalanceEditor({ onClose }) {
   const treeCost = (key, i) => ov.powers?.[key]?.tree?.upgradeCosts?.[i] ?? DEFAULTS.powers[key].tree.upgradeCosts[i];
   const treeScale = (key, lvl, fxKey) => ov.powers?.[key]?.tree?.scale?.[lvl]?.[fxKey] ?? DEFAULTS.powers[key].tree.scale[lvl][fxKey];
   const treeBranch = (key, slot, j, fxKey) => ov.powers?.[key]?.tree?.[slot]?.[j]?.effect?.[fxKey] ?? DEFAULTS.powers[key].tree[slot][j].effect[fxKey];
+  const treeTier = (key, slot, j, t, fxKey) => ov.powers?.[key]?.tree?.[slot]?.[j]?.tiers?.[t]?.[fxKey] ?? DEFAULTS.powers[key].tree[slot][j].tiers[t][fxKey];
+  // Copie une branche en préservant les renforts de voie (tiers L7/L9) en profondeur.
+  const cloneBranch = (b) => ({ ...b, effect: { ...b.effect }, ...(b.tiers ? { tiers: b.tiers.map((x) => ({ ...x })) } : {}) });
   const mutTree = (key, fn) => {
     setStatus(null);
     setOv((prev) => {
@@ -336,8 +344,8 @@ export default function BalanceEditor({ onClose }) {
       const tree = {
         upgradeCosts: cur.tree?.upgradeCosts ? [...cur.tree.upgradeCosts] : [...dTree.upgradeCosts],
         scale: cur.tree?.scale ? cur.tree.scale.map((s) => ({ ...s })) : dTree.scale.map((s) => ({ ...s })),
-        branch5: cur.tree?.branch5 ? cur.tree.branch5.map((b) => ({ ...b, effect: { ...b.effect } })) : dTree.branch5.map((b) => ({ ...b, effect: { ...b.effect } })),
-        branch10: cur.tree?.branch10 ? cur.tree.branch10.map((b) => ({ ...b, effect: { ...b.effect } })) : dTree.branch10.map((b) => ({ ...b, effect: { ...b.effect } })),
+        branch5: (cur.tree?.branch5 || dTree.branch5).map(cloneBranch),
+        branch10: (cur.tree?.branch10 || dTree.branch10).map(cloneBranch),
       };
       fn(tree);
       cur.tree = tree; powers[key] = cur;
@@ -347,6 +355,7 @@ export default function BalanceEditor({ onClose }) {
   const setTreeCost = (key, i, v) => mutTree(key, (t) => { t.upgradeCosts[i] = v; });
   const setTreeScale = (key, lvl, fxKey, v) => mutTree(key, (t) => { t.scale[lvl] = { ...t.scale[lvl], [fxKey]: v }; });
   const setTreeBranch = (key, slot, j, fxKey, v) => mutTree(key, (t) => { t[slot][j] = { ...t[slot][j], effect: { ...t[slot][j].effect, [fxKey]: v } }; });
+  const setTreeTier = (key, slot, j, ti, fxKey, v) => mutTree(key, (t) => { const tiers = [...(t[slot][j].tiers || [])]; tiers[ti] = { ...tiers[ti], [fxKey]: v }; t[slot][j] = { ...t[slot][j], tiers }; });
 
   const resetPower = (key) => { setStatus(null); setOv((prev) => { const powers = { ...(prev.powers || {}) }; delete powers[key]; return { ...prev, powers }; }); };
 
@@ -628,6 +637,16 @@ export default function BalanceEditor({ onClose }) {
                                         : <input className="qed-input" style={{ width: 64 }} type="number" step="any" value={treeBranch(k, slot, j, fxKey)} onChange={(e) => setTreeBranch(k, slot, j, fxKey, e.target.value === '' ? dv : Number(e.target.value))} />}
                                       <span className="bal-default">déf. {String(dv)}</span>
                                     </div>
+                                  ))}
+                                  {/* Renforts de voie (paliers L7/L9) : valeurs réglables par palier. */}
+                                  {Array.isArray(br.tiers) && br.tiers.map((tier, ti) => (
+                                    Object.entries(tier).filter(([, v]) => typeof v === 'number').map(([fxKey, dv]) => (
+                                      <div key={`t${ti}-${fxKey}`} className="bal-row">
+                                        <span className="bal-label">↳ niv.{ti === 0 ? 7 : 9} · {FX_LABELS[fxKey] || fxKey}</span>
+                                        <input className="qed-input" style={{ width: 64 }} type="number" step="any" value={treeTier(k, slot, j, ti, fxKey)} onChange={(e) => setTreeTier(k, slot, j, ti, fxKey, e.target.value === '' ? dv : Number(e.target.value))} />
+                                        <span className="bal-default">déf. {String(dv)}</span>
+                                      </div>
+                                    ))
                                   ))}
                                 </div>
                               );

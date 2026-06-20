@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
-import { locName, locDesc } from '../../i18n/content';
+import { locName, locDesc, loc } from '../../i18n/content';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
@@ -172,9 +172,15 @@ function UpgradeStall({ ownedPowers, money, onUpgrade, masteryOn }) {
         const level = teamPower?.level || 1;
         const cost = powerUpgradeCost(key, level, masteryOn);
         const canUpgrade = cost != null && money >= cost;
-        // Mode Maîtrise : résumés générés (10 niveaux) ; sinon descriptions des `levels`.
-        const currentDesc = masteryOn ? describePowerScale(key, level, true) : locDesc(power.levels[level - 1]);
-        const nextDesc = masteryOn ? describePowerScale(key, level + 1, true) : locDesc(power.levels[level]);
+        // Mode Maîtrise : description « élève » par niveau si la data en fournit une
+        // (incrémentale), sinon résumé d'effet générique ; hors Maîtrise = `levels`.
+        const treeScaleDesc = masteryOn ? loc(power.tree, 'scaleDesc') : null;
+        const lvlDesc = (lv) => {
+          if (!masteryOn) return locDesc(power.levels[lv - 1]);
+          return (Array.isArray(treeScaleDesc) && treeScaleDesc[lv - 1]) || describePowerScale(key, lv, true);
+        };
+        const currentDesc = lvlDesc(level);
+        const nextDesc = lvlDesc(level + 1);
         const branchNext = masteryOn ? specSlotForLevel(level + 1) : null; // 5 ou 10 = embranchement
 
         return (

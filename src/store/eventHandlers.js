@@ -507,7 +507,10 @@ export function applyEventEffect(set, get) {
   const reculInto = (idx, base) => {
     const rec = applyRecul(newTeams[idx], board, base, _masteryOn);
     newTeams[idx] = { ...newTeams[idx], ...rec.patch };
-    pushMove(idx, rec.path, 'back');
+    // Forteresse (Bouclier L10) : le recul devient une avance → animation vers
+    // l'avant + ligne de journal dédiée (en plus du message propre à l'événement).
+    pushMove(idx, rec.path, rec.forward ? 'forward' : 'back');
+    if (rec.forward) addLog(tg('log.turn.fortressAdvance', { team: `${newTeams[idx].emoji} ${newTeams[idx].name}`, cases: rec.advance }));
     return { applied: rec.applied, reduced: !!rec.absorbedBy };
   };
   // Clause de message : « recul de N case(s) » ou « recul absorbé 🛡️ ».
@@ -743,8 +746,10 @@ export function applyEventEffect(set, get) {
       const targetIndex = data?.targetIndex;
       if (targetIndex != null && targetIndex >= 0 && targetIndex < teams.length) {
         const target = teams[targetIndex];
+        // Banque fortifiée (Bouclier L10) : or impossible à voler.
+        const vaulted = target.powers?.bouclier?.spec10 === 'goldVault';
         // Equipement de la cible (stealProtection) : vol attenue voire annule
-        const stolen = reducedSteal(target, Math.min(10, target.money ?? 0));
+        const stolen = vaulted ? 0 : reducedSteal(target, Math.min(10, target.money ?? 0));
         newTeams[targetIndex] = { ...target, money: target.money - stolen };
         newTeams[currentTeam] = { ...team, money: team.money + stolen };
         message = stolen > 0

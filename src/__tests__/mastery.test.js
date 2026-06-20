@@ -39,13 +39,15 @@ describe('résolveur resolvePowerEffect', () => {
   it('branche L5 fusionne (champ NOUVEAU) sans écraser le cœur', () => {
     const t = teamWith('bouclier', { level: 6, spec5: 'gold' });
     const eff = resolvePowerEffect(t, 'bouclier', true);
-    expect(eff.goldPerCaseAbsorbed).toBe(1); // ajout de la voie « Rempart doré »
+    expect(eff.goldOnUse).toBe(5); // ajout de la voie « Rempart doré » (forfait base)
     expect(eff.amount).toBe(9); // cœur du niveau 6 conservé
   });
 
-  it('branche L10 ÉCRASE le cœur (Forteresse amount:99)', () => {
+  it('branche L10 ajoute un champ de drapeau (Forteresse) sans casser le cœur', () => {
     const t = teamWith('bouclier', { level: 10, spec10: 'fortress' });
-    expect(resolvePowerEffect(t, 'bouclier', true).amount).toBe(99);
+    const eff = resolvePowerEffect(t, 'bouclier', true);
+    expect(eff.fortressAdvance).toBe(true);
+    expect(eff.amount).toBe(14); // cœur du niveau 10 conservé
   });
 
   it('une branche non débloquée (niveau < 5) est ignorée', () => {
@@ -147,14 +149,14 @@ describe('branches Foudre câblées', () => {
     after();
   });
 
-  it('Égide (L5) : la cible protège son recul avec son Bouclier (charge consommée)', () => {
+  it('Anti-Foudre (L5) : la cible réduit de moitié le recul de Foudre (charge consommée)', () => {
     base([
       teamWith('foudre', { level: 1 }), // d4 → recul 3 (mock 0.5)
-      { ...teamWith('bouclier', { level: 5, spec5: 'aegis', charges: 1 }), pos: 'n10' },
+      { ...teamWith('bouclier', { level: 5, spec5: 'antifoudre', charges: 1 }), pos: 'n10' },
     ]);
     S().applyOffensivePower(1);
-    // bouclier niv.5 retire 6 ≥ 3 → recul absorbé, charge consommée
-    expect(S().teams[1].pos).toBe('n10');
+    // recul 3 réduit de moitié → ~2 → n10 reculé de 2, charge consommée
+    expect(S().teams[1].pos).toBe('n8');
     expect(S().teams[1].powers.bouclier.charges).toBe(0);
     after();
   });
@@ -212,12 +214,96 @@ describe('branches Indice câblées', () => {
 });
 
 describe('branches Bouclier câblées (or)', () => {
-  it('Rempart doré (L5) : +1 or par case de recul absorbée', () => {
+  it('Rempart doré (L5) : forfait d’or à l’usage du bouclier', () => {
     const t = teamWith('bouclier', { level: 5, spec5: 'gold', charges: 1 });
     t.money = 0;
-    const r = applyRecul(t, BOARD, 3, true); // niv.5 : +5 or de palier + 3 (1/case absorbée)
-    expect(r.bonusMoney).toBe(8);
-    expect(r.patch.money).toBe(8);
+    const r = applyRecul(t, BOARD, 3, true); // niv.5 : +5 or de palier + 5 or Rempart
+    expect(r.bonusMoney).toBe(10);
+    expect(r.patch.money).toBe(10);
+  });
+});
+
+describe('Bouclier — passif, Forteresse, Sur-réduction (applyRecul)', () => {
+  it('Passif L3 (−1) : réduit le recul SANS charge', () => {
+    const t = teamWith('bouclier', { level: 3, charges: 0 }); // pas de charge → passif seul
+    t.pos = 'n10';
+    const r = applyRecul(t, BOARD, 3, true); // 3 − 1 (passif) = 2
+    expect(r.applied).toBe(2);
+    expect(r.patch.pos).toBe('n8');
+  });
+
+  it('Passif non cumulatif : avec charge, c’est la réduction active qui s’applique', () => {
+    const t = teamWith('bouclier', { level: 4, charges: 1 }); // active 7, passif 1
+    t.pos = 'n10';
+    const r = applyRecul(t, BOARD, 3, true); // 3 − 7 → 0 (pas 3−7−1)
+    expect(r.applied).toBe(0);
+    expect(r.patch.powers.bouclier.charges).toBe(0); // charge consommée
+  });
+
+  it('Forteresse (L10) : le recul devient une AVANCE du montant évité', () => {
+    const t = teamWith('bouclier', { level: 10, spec10: 'fortress', charges: 0 });
+    t.pos = 'n3';
+    const r = applyRecul(t, BOARD, 3, true);
+    expect(r.forward).toBe(true);
+    expect(r.advance).toBe(3);
+    expect(r.patch.pos).toBe('n6'); // n3 + 3
+  });
+
+  it('Sur-réduction (L5) : le surplus de réduction fait avancer', () => {
+    const t = teamWith('bouclier', { level: 5, spec5: 'surge', charges: 1 }); // réduction 8
+    t.pos = 'n5';
+    const r = applyRecul(t, BOARD, 3, true); // surplus 8−3 = 5 → avance 5
+    expect(r.forward).toBe(true);
+    expect(r.advance).toBe(5);
+    expect(r.patch.pos).toBe('n10');
+  });
+
+  it('Sur-réduction L9 : signale un push « toutes » du surplus', () => {
+    const t = teamWith('bouclier', { level: 9, spec5: 'surge', charges: 1 });
+    t.pos = 'n5';
+    const r = applyRecul(t, BOARD, 3, true);
+    expect(r.surplusPush).toBe('all');
+    expect(r.pushAmount).toBeGreaterThan(0);
+  });
+});
+
+describe('Bouclier — ultimes actifs (store)', () => {
+  const S = () => useGameStore.getState();
+  const base = (teams) => useGameStore.setState({
+    phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+    extensions: { equipment: true, mastery: true }, teams, showTargetPicker: { powerKey: 'foudre' },
+    emitVfx: () => {},
+  });
+  beforeEach(() => vi.spyOn(Math, 'random').mockReturnValue(0.5));
+  afterEach(() => vi.restoreAllMocks());
+
+  it('Immunité totale (L10) : dépense 5 charges, pose l’immunité 2 tours', () => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true },
+      teams: [teamWith('bouclier', { level: 10, spec10: 'aegisTotal', charges: 5 })],
+    });
+    S().useShieldImmunity();
+    expect(S().teams[0].totalImmuneTurns).toBe(2);
+    expect(S().teams[0].powers.bouclier.charges).toBe(0);
+  });
+
+  it('Immunité : une Foudre adverse n’a aucun effet sur la cible immunisée', () => {
+    base([
+      teamWith('foudre', { level: 3 }),
+      { ...teamWith('bouclier'), pos: 'n10', totalImmuneTurns: 2, powers: {} },
+    ]);
+    S().applyOffensivePower(1);
+    expect(S().teams[1].pos).toBe('n10'); // recul bloqué
+  });
+
+  it('Banque fortifiée (L10) : Tempête de Foudre ne vole pas l’or', () => {
+    base([
+      teamWith('foudre', { level: 5, spec5: 'storm' }), // stealGold
+      { ...teamWith('bouclier', { level: 10, spec10: 'goldVault' }), pos: 'n8', money: 100 },
+    ]);
+    S().applyOffensivePower(1);
+    expect(S().teams[1].money).toBe(100); // or protégé
   });
 });
 
@@ -238,6 +324,99 @@ describe('éditeur d’équilibrage : overrides de l’arbre Maîtrise', () => {
   it('override d’un effet de branche (L5)', () => {
     applyBalance({ powers: { foudre: { tree: { branch5: [{}, {}, { effect: { stealGold: 25 } }] } } } });
     expect(resolvePowerEffect({ powers: { foudre: { level: 5, spec5: 'storm' } } }, 'foudre', true).stealGold).toBe(25);
+  });
+});
+
+describe('Relance — arbre de Maîtrise (résolveur, paliers, calibrage)', () => {
+  const rl = (over) => resolvePowerEffect(teamWith('relance', over), 'relance', true);
+
+  it('cœur : modes replace(L1)/best(L3)/sum(L6) + remboursement + Gros dé (L8)', () => {
+    expect(rl({ level: 1 }).mode).toBe('replace');
+    expect(rl({ level: 3 }).mode).toBe('best');
+    expect(rl({ level: 6 }).mode).toBe('sum');
+    expect(rl({ level: 2 }).refundChance).toBe(0.10);
+    expect(rl({ level: 4 }).refundChance).toBe(0.25);
+    expect(rl({ level: 8 }).dieSides).toBe(10);
+  });
+
+  it('Lucrative : or ×1 (L5) → ×2 (L7, palier 1) → ×3 (L9, palier 2)', () => {
+    expect(rl({ level: 5, spec5: 'lucrative' }).goldPerRoll).toBe(1);
+    expect(rl({ level: 7, spec5: 'lucrative' }).goldPerRoll).toBe(2);
+    expect(rl({ level: 9, spec5: 'lucrative' }).goldPerRoll).toBe(3);
+  });
+
+  it('renfort de voie : un palier non atteint n’est pas appliqué', () => {
+    // Opportune : remplacement de question seulement au palier 2 (L9), pas avant.
+    expect(rl({ level: 7, spec5: 'opportune' }).replaceQuestion).toBeUndefined();
+    expect(rl({ level: 9, spec5: 'opportune' }).replaceQuestion).toBe(true);
+    expect(rl({ level: 9, spec5: 'opportune' }).reqTimeBonus).toBe(30);
+  });
+
+  it('ultimes L10 (flat) : swap / lateStarter / vengeful', () => {
+    expect(rl({ level: 10, spec10: 'swap' }).swapWithLeader).toBe(true);
+    expect(rl({ level: 10, spec10: 'swap' }).swapCost).toBe(5);
+    expect(rl({ level: 10, spec10: 'lateStarter' }).lateStarterCharge).toBe(1);
+    expect(rl({ level: 10, spec10: 'vengeful' }).vengefulPushLeader).toBe(true);
+  });
+
+  it('override d’un palier de voie (tier L7/L9) via balanceConfig', () => {
+    applyBalance({ powers: { relance: { tree: { branch5: [{ tiers: [{ goldPerRoll: 9 }] }] } } } });
+    expect(rl({ level: 7, spec5: 'lucrative' }).goldPerRoll).toBe(9);
+    applyBalance({}); // restaure
+  });
+});
+
+describe('Relance — effets en jeu (store)', () => {
+  const S = () => useGameStore.getState();
+  const base = (teams) => useGameStore.setState({
+    phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+    extensions: { equipment: true, mastery: true }, teams,
+    preRollPos: 'n2', preRollValue: 2,
+  });
+
+  it('Échange de place (L10) : permute la position avec le leader et coûte 5 charges', () => {
+    base([
+      { ...teamWith('relance', { level: 10, spec10: 'swap', charges: 5 }), pos: 'n2' },
+      { ...teamWith('relance'), pos: 'n10', powers: {} },
+    ]);
+    S().useRelanceSwap();
+    expect(S().teams[0].pos).toBe('n10');
+    expect(S().teams[1].pos).toBe('n2');
+    expect(S().teams[0].powers.relance.charges).toBe(0);
+  });
+
+  it('Échange : sans leader devant (déjà 1ᵉʳ), aucun effet', () => {
+    base([
+      { ...teamWith('relance', { level: 10, spec10: 'swap', charges: 5 }), pos: 'n10' },
+      { ...teamWith('relance'), pos: 'n2', powers: {} },
+    ]);
+    S().useRelanceSwap();
+    expect(S().teams[0].pos).toBe('n10'); // inchangé
+    expect(S().teams[0].powers.relance.charges).toBe(5);
+  });
+
+  it('Élan du retardataire (L10) : +1 charge de relance en début de tour si dernier', () => {
+    base([
+      { ...teamWith('relance'), pos: 'n10', powers: {} },
+      { ...teamWith('relance', { level: 10, spec10: 'lateStarter', charges: 1 }), pos: 'n2' },
+    ]);
+    S().nextTurn(); // la main passe à l'équipe 1 (la moins avancée)
+    expect(S().teams[1].powers.relance.charges).toBe(2);
+  });
+
+  it('vengeresse (L10) : la relance recule le leader de la valeur du dé', () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // dé D10 → 6 ; refund 0.5<0.25 = non
+    base([
+      { ...teamWith('relance', { level: 10, spec10: 'vengeful', charges: 2 }), pos: 'n1' },
+      { ...teamWith('relance'), pos: 'n10', powers: {} },
+    ]);
+    useGameStore.setState({ preRollPos: 'n1', preRollValue: 2 });
+    S().useRelance();
+    vi.advanceTimersByTime(1000);
+    expect(S().teams[1].pos).toBe('n4'); // n10 reculé de 6
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 });
 

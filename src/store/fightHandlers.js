@@ -100,10 +100,12 @@ function resolveBossOutcome(set, get, f) {
     const dv = Math.floor(Math.random() * 10) + 1;
     const rec = applyRecul(team, board, dv, extOn(get().extensions, 'mastery')); // bouclier + équipement protègent du recul
     newTeams[idx] = { ...team, ...rec.patch };
-    if (rec.path) moves = [{ teamIndex: idx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
-    message = rec.applied > 0
-      ? tg('log.ft.bossLose', { team: `${team.emoji} ${team.name}`, n: rec.applied, s: rec.applied > 1 ? 's' : '', reduced: rec.absorbedBy ? tg('log.ft.reduced') : '' })
-      : tg('log.ft.bossLose.absorbed', { team: `${team.emoji} ${team.name}` });
+    if (rec.path) moves = [{ teamIndex: idx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: rec.forward ? 'forward' : 'back' }];
+    message = rec.forward
+      ? tg('log.turn.fortressAdvance', { team: `${team.emoji} ${team.name}`, cases: rec.advance })
+      : rec.applied > 0
+        ? tg('log.ft.bossLose', { team: `${team.emoji} ${team.name}`, n: rec.applied, s: rec.applied > 1 ? 's' : '', reduced: rec.absorbedBy ? tg('log.ft.reduced') : '' })
+        : tg('log.ft.bossLose.absorbed', { team: `${team.emoji} ${team.name}` });
   }
   addLog(message);
   set({ teams: newTeams, showFight: { ...f, phase: 'result', resultMessage: message }, ...(moves ? { movePath: moves } : {}) });
@@ -257,13 +259,15 @@ function applyFightReward(set, get) {
     const rec = applyRecul(loser, board, f.reward.dice[0], extOn(get().extensions, 'mastery'));
     newTeams[loserIdx] = { ...loser, ...rec.patch };
     if (rec.path) {
-      moves = [{ teamIndex: loserIdx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
+      moves = [{ teamIndex: loserIdx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: rec.forward ? 'forward' : 'back' }];
     }
-    message = rec.applied > 0
-      ? tgPlural('log.ft.knockback', rec.applied, { loser: `${loser.emoji} ${loser.name}`, reduced: rec.absorbedBy ? tg('log.ft.reduced') : '' })
-      : (rec.absorbedBy === 'equip'
-          ? tg('log.ft.knockback.equip', { loser: `${loser.emoji} ${loser.name}` })
-          : tg('log.ft.knockback.shield', { loser: `${loser.emoji} ${loser.name}` }));
+    message = rec.forward
+      ? tg('log.turn.fortressAdvance', { team: `${loser.emoji} ${loser.name}`, cases: rec.advance })
+      : rec.applied > 0
+        ? tgPlural('log.ft.knockback', rec.applied, { loser: `${loser.emoji} ${loser.name}`, reduced: rec.absorbedBy ? tg('log.ft.reduced') : '' })
+        : (rec.absorbedBy === 'equip'
+            ? tg('log.ft.knockback.equip', { loser: `${loser.emoji} ${loser.name}` })
+            : tg('log.ft.knockback.shield', { loser: `${loser.emoji} ${loser.name}` }));
     // Réflexion (Bouclier L10 du perdant) : une partie du recul revient au vainqueur.
     if (rec.reflect > 0 && winnerIdx >= 0) {
       const w = newTeams[winnerIdx];

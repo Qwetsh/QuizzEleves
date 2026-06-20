@@ -1,5 +1,7 @@
 import { useGameStore } from '../../../store/gameStore';
 import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
+import { relanceSwapInfo, shieldImmunityInfo } from '../../../store/powerHandlers';
+import { POWERS } from '../../../data/powers';
 import { useT } from '../../../i18n';
 import { locName } from '../../../i18n/content';
 import '../../../styles/power-cast.css';
@@ -35,8 +37,40 @@ export default function PowerButtons() {
   // Show "Continuer" when waiting for player action after dice roll
   const showContinue = pendingLanding && !rolling && !showChargePicker && !showTargetPicker && !showQuestion && !showEvent;
 
+  // Ultime « Échange de place » (Relance L10) : bouton actif, dispo à son tour hors
+  // modale/lancer, si l'équipe a la voie et assez de charges, et qu'un leader existe.
+  const swap = relanceSwapInfo(useGameStore.getState, currentTeam);
+  const showSwap = swap?.canUse && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
+  const relColor = POWERS.relance?.color || '#8745d4';
+  // Ultime « Immunité totale » (Bouclier L10) : bouton actif, mêmes conditions de fenêtre.
+  const immune = shieldImmunityInfo(useGameStore.getState, currentTeam);
+  const showImmune = immune?.canUse && (team.totalImmuneTurns ?? 0) <= 0 && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
+  const shieldColor = POWERS.bouclier?.color || '#3b6cb3';
+
   return (
     <div className="flex flex-col items-center gap-3 mt-3">
+      {showSwap && (
+        <button onClick={() => useGameStore.getState().useRelanceSwap()}
+          className="power-cast-btn" style={{ '--cast-color': relColor }}
+          title={T('game.relanceSwapHint', { cost: swap.cost })}>
+          <span className="power-cast-disc">
+            <span className="power-cast-icon">🔄</span>
+            <span className="power-cast-count">{swap.cost}</span>
+          </span>
+          <span className="power-cast-name">{T('game.relanceSwap')}</span>
+        </button>
+      )}
+      {showImmune && (
+        <button onClick={() => useGameStore.getState().useShieldImmunity()}
+          className="power-cast-btn" style={{ '--cast-color': shieldColor }}
+          title={T('game.shieldImmunityHint', { cost: immune.cost, turns: immune.turns })}>
+          <span className="power-cast-disc">
+            <span className="power-cast-icon">🛡️</span>
+            <span className="power-cast-count">{immune.cost}</span>
+          </span>
+          <span className="power-cast-name">{T('game.shieldImmunity')}</span>
+        </button>
+      )}
       {castable.length > 0 && (
         <div className="power-cast-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', width: '100%' }}>
           {castable.map((p) => {

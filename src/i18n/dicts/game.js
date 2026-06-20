@@ -41,6 +41,10 @@ export default {
 
   // --- PowerButtons ---
   'game.powerCharges': { fr: '{name} ({charges})', en: '{name} ({charges})' },
+  'game.relanceSwap': { fr: 'Échange de place', en: 'Place swap' },
+  'game.relanceSwapHint': { fr: 'Échange ta place avec le 1ᵉʳ ({cost} charges)', en: 'Swap places with the leader ({cost} charges)' },
+  'game.shieldImmunity': { fr: 'Immunité totale', en: 'Total immunity' },
+  'game.shieldImmunityHint': { fr: 'Dépense {cost} charges → immunité {turns} tours', en: 'Spend {cost} charges → immunity for {turns} turns' },
 
   // --- ConsumableBar ---
   'game.itemsToUse': { fr: 'Objets à utiliser', en: 'Items to use' },

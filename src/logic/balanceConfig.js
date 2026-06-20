@@ -111,7 +111,14 @@ export function applyBalance(overrides) {
       if (Array.isArray(o.tree.upgradeCosts)) p.tree.upgradeCosts = o.tree.upgradeCosts.slice();
       if (Array.isArray(o.tree.scale)) o.tree.scale.forEach((s, i) => { if (s && p.tree.scale[i]) deepAssign(p.tree.scale[i], s); });
       for (const b of ['branch5', 'branch10']) {
-        if (Array.isArray(o.tree[b])) o.tree[b].forEach((br, j) => { if (br?.effect && p.tree[b][j]) deepAssign(p.tree[b][j].effect, br.effect); });
+        if (Array.isArray(o.tree[b])) o.tree[b].forEach((br, j) => {
+          if (!br || !p.tree[b][j]) return;
+          if (br.effect) deepAssign(p.tree[b][j].effect, br.effect);
+          // Renforts de voie (tiers L7/L9) : override par palier.
+          if (Array.isArray(br.tiers) && Array.isArray(p.tree[b][j].tiers)) {
+            br.tiers.forEach((tier, t) => { if (tier && p.tree[b][j].tiers[t]) deepAssign(p.tree[b][j].tiers[t], tier); });
+          }
+        });
       }
     }
   }

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { EVENTS } from '../data/events.js';
 import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES } from '../data/subjects.js';
-import { POWERS } from '../data/powers.js';
+import { POWERS, addCharge, MAX_CHARGES } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
 import { moveForward } from '../logic/pathfinding.js';
@@ -13,7 +13,7 @@ import { defaultExtensions, extOn } from '../extensions/registry.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
-import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET } from '../logic/turnHelpers.js';
+import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul } from '../logic/turnHelpers.js';
 import { resolvePowerEffect } from '../logic/powerEffects.js';
 import { soundShield, soundTrap } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
@@ -1004,11 +1004,13 @@ export const useGameStore = create((set, get) => ({
     }
 
     // Bonus de temps : equipement (permanent) + consommable Sablier de poche (one-shot)
-    // + crédit « Vol de temps » (Sablier L10, one-shot).
-    const itemBonusTime = getEffectValue(team, 'timerBonus') + (team.itemTimerBonus || 0) + (team.timeCredit || 0);
-    if (team.itemTimerBonus || team.timeCredit) {
+    // + crédit « Vol de temps » (Sablier L10, one-shot) + Relance opportune (L5, one-shot).
+    const opportune = team.relanceQ || null;
+    const itemBonusTime = getEffectValue(team, 'timerBonus') + (team.itemTimerBonus || 0) + (team.timeCredit || 0) + (opportune?.bonusTime || 0);
+    if (team.itemTimerBonus || team.timeCredit || opportune) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...nt[currentTeam], itemTimerBonus: 0, timeCredit: 0 };
+      // relanceQ consommé ici (le bonus de temps s'applique à CETTE question).
+      nt[currentTeam] = { ...nt[currentTeam], itemTimerBonus: 0, timeCredit: 0, relanceQ: undefined };
       set({ teams: nt });
     }
 
@@ -1146,9 +1148,20 @@ export const useGameStore = create((set, get) => ({
       if (team.wager) addLog(tg('log.store.wagerWin'));
     } else {
       // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-      const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue || 2, extOn(get().extensions, 'mastery'));
+      const masteryOnW = extOn(get().extensions, 'mastery');
+      const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue || 2, masteryOnW);
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
+      // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes les \u00e9quipes \u00bb du surplus (auto).
+      if (surplusPush === 'all' && pushAmount > 0) {
+        const board = get().board;
+        newTeams.forEach((tm, i) => {
+          if (i === currentTeam) return;
+          const rr = applyRecul(tm, board, pushAmount, masteryOnW);
+          newTeams[i] = { ...tm, ...rr.patch };
+          addLog(tg('log.pw.surgePush', { vemoji: tm.emoji, vname: tm.name, n: rr.applied ?? pushAmount }));
+        });
+      }
       addLog({ text: logMessage, detail });
       if (team.wager) addLog(tg('log.store.wagerLose'));
       if (bouclierAbsorbed(team, updatedTeam)) { soundShield(); get().emitVfx('shield', currentTeam); }
@@ -1170,12 +1183,22 @@ export const useGameStore = create((set, get) => ({
         addLog(tg('log.store.doubleFailed'));
       }
 
-      const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
+      // Sur-réduction / Forteresse : le « recul » peut être devenu une AVANCE.
+      const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: forward ? 'forward' : 'back' }] : null;
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
       // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (ex. perdre 5 PO).
       // Si l'effet ouvre un s\u00e9lecteur (interactif), on DIFF\u00c8RE nextTurn jusqu'\u00e0 la
       // fin de la file (sinon TURN_RESET \u00e9craserait la file + le picker).
-      const finishWrong = () => { if (!get().finished) get().nextTurn(); };
+      const finishWrong = () => {
+        if (get().finished) return;
+        // Sur-réduction « au choix » (Bouclier L7) : ouvrir le sélecteur de cible
+        // (recule l'équipe choisie du surplus), qui enchaînera nextTurn.
+        if (surplusPush === 'one' && pushAmount > 0 && get().teams.length > 1) {
+          set({ showTargetPicker: { source: 'surge', amount: pushAmount } });
+          return;
+        }
+        get().nextTurn();
+      };
       const lwBuff = findBuff(team, 'loseOnWrong');
       const buffWrong = lwBuff ? [{ action: 'money', mode: 'lose', target: 'self', n: lwBuff.n ?? 5, unit: 'flat' }] : [];
       const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', showQuestion.subject), ...buffWrong, ...(team.wager?.else || [])];
@@ -1228,8 +1251,17 @@ export const useGameStore = create((set, get) => ({
       const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
       const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
       const lootTeam = get().teams[currentTeam];
-      const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100;
-      const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100;
+      // Relance chanceuse (L5) : bonus de loot one-shot armé par la relance (sur 6+).
+      // Palier 1 = +chance de loot ; palier 2 = chance d'un 2ᵉ drop. Consommé ici.
+      const relLootBonus = lootTeam.relanceLootBonus || 0;
+      const relDoubleLoot = lootTeam.relanceDoubleLoot || 0;
+      if (relLootBonus || relDoubleLoot) {
+        const nt = [...get().teams];
+        nt[currentTeam] = { ...nt[currentTeam], relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+        set({ teams: nt });
+      }
+      const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100 + relLootBonus;
+      const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100 + relLootBonus;
       const drops = [];
       if (Math.random() < consumRate) {
         const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
@@ -1237,6 +1269,11 @@ export const useGameStore = create((set, get) => ({
       }
       if (Math.random() < equipRate) {
         const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
+        if (k) drops.push(k);
+      }
+      // Double loot (palier 2) : un 2ᵉ tirage (consommable) à la probabilité donnée.
+      if (relDoubleLoot && Math.random() < relDoubleLoot) {
+        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
         if (k) drops.push(k);
       }
       // Canal INGRÉDIENTS (extension Alchimie) : taux séparé + affinité de matière
@@ -1555,6 +1592,8 @@ export const useGameStore = create((set, get) => ({
   usePower: (pk) => powerH.usePower(set, get, pk),
   useIndice: () => powerH.useIndice(set, get),
   useRelance: () => powerH.useRelance(set, get),
+  useRelanceSwap: () => powerH.useRelanceSwap(set, get),
+  useShieldImmunity: () => powerH.useShieldImmunity(set, get),
   applyOffensivePower: (ti) => powerH.applyOffensivePower(set, get, ti),
   cancelTargetPicker: () => powerH.cancelTargetPicker(set, get),
 
@@ -1662,6 +1701,12 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'chooseSpec') {
       // Choix d'une voie (Maîtrise, niv. 5/10) à distance.
       powerH.chooseSpecFor(set, get, idx, payload.key, payload.slot, payload.specKey);
+    } else if (type === 'relanceSwap') {
+      // Ultime « Échange de place » (Relance L10) déclenché depuis le téléphone.
+      powerH.useRelanceSwap(set, get, idx);
+    } else if (type === 'shieldImmunity') {
+      // Ultime « Immunité totale » (Bouclier L10) déclenché depuis le téléphone.
+      powerH.useShieldImmunity(set, get, idx);
     }
   },
 
@@ -1793,10 +1838,30 @@ export const useGameStore = create((set, get) => ({
       effectH.resumeQueue(set, get, { targetTeam: i });
       return;
     }
+    if (stp?.source === 'surge') {
+      // Sur-réduction (Bouclier L7) : recule l'équipe choisie du surplus, puis fin de tour.
+      set({ showTargetPicker: null });
+      const masteryOn = extOn(get().extensions, 'mastery');
+      const board = get().board;
+      const nt = [...get().teams];
+      const rr = applyRecul(nt[i], board, stp.amount, masteryOn);
+      nt[i] = { ...nt[i], ...rr.patch };
+      const mv = rr.path && rr.path.length > 1 ? [{ teamIndex: i, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }] : null;
+      set({ teams: nt, movePath: mv });
+      get().addLog(tg('log.pw.surgePush', { vemoji: nt[i].emoji, vname: nt[i].name, n: rr.applied ?? stp.amount }));
+      if (!get().finished) get().nextTurn();
+      return;
+    }
     powerH.applyOffensivePower(set, get, i);
   },
   cancelTargetPicker: () => {
     const stp = get().showTargetPicker;
+    if (stp?.source === 'surge') {
+      // Annuler le ciblage du surplus : on passe simplement au tour suivant.
+      set({ showTargetPicker: null });
+      if (!get().finished) get().nextTurn();
+      return;
+    }
     if (stp?.source === 'engine') {
       // Annuler = sauter l'action ciblée et continuer le reste de la file
       set({ showTargetPicker: null });
@@ -1880,6 +1945,14 @@ export const useGameStore = create((set, get) => ({
       if (left <= 0) addLog(tg('log.store.fumigene', { emoji: ct.emoji, name: ct.name }));
     }
 
+    // Immunité totale (Bouclier L10) : 1 tour de moins quand l'équipe REGAGNE la main.
+    const ci = nt[newCurrent];
+    if (ci?.totalImmuneTurns > 0) {
+      const left = ci.totalImmuneTurns - 1;
+      if (nt === get().teams) nt = [...nt];
+      nt[newCurrent] = left > 0 ? { ...ci, totalImmuneTurns: left } : { ...ci, totalImmuneTurns: undefined };
+    }
+
     // Buffs temporisés (effets de durée des consommables) : 1 tour de moins quand
     // l'équipe REGAGNE la main ; expiration à 0.
     const cb = nt[newCurrent];
@@ -1895,6 +1968,25 @@ export const useGameStore = create((set, get) => ({
     const sinceShop = (reTeam?.turnsSinceShop ?? 0) + 1;
     if (nt === get().teams) nt = [...nt];
     nt[newCurrent] = { ...reTeam, turnsSinceShop: sinceShop };
+
+    // Élan du retardataire (Relance L10) : en début de tour, si l'équipe est la
+    // MOINS avancée (ou ex æquo au dernier rang), elle gagne 1 charge de relance.
+    if (extOn(get().extensions, 'mastery')) {
+      const lt = nt[newCurrent];
+      const rl = lt?.powers?.relance;
+      const eff = rl ? resolvePowerEffect(lt, 'relance', true) : null;
+      if (eff?.lateStarterCharge) {
+        const board = get().board;
+        const xOf = (t) => (t?.pos && board[t.pos] ? board[t.pos].x : Infinity);
+        const myX = xOf(lt);
+        const isLast = nt.every((t, i) => i === newCurrent || xOf(t) >= myX);
+        const soloLeader = nt.length > 1 && nt.every((t, i) => i === newCurrent || xOf(t) < myX);
+        if (isLast && !soloLeader && rl.charges < MAX_CHARGES) {
+          nt[newCurrent] = { ...lt, powers: { ...lt.powers, relance: { ...rl, charges: addCharge(rl.charges) } } };
+          addLog(tg('log.pw.relanceLate', { emoji: lt.emoji, name: lt.name }));
+        }
+      }
+    }
 
     // Proposer « Visiter la boutique ? » si l'équipe ne l'a pas vue depuis assez
     // de tours ET peut s'offrir au moins un objet de l'arrivage.

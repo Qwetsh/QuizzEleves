@@ -1,6 +1,6 @@
 import { POWERS, addCharge } from '../data/powers.js';
 import { SUBJECT_KEYS } from '../data/subjects.js';
-import { moveBack } from './pathfinding.js';
+import { moveBack, moveForward } from './pathfinding.js';
 import { getEffectValue, hasBuff } from './itemEffects.js';
 import { resolvePowerEffect } from './powerEffects.js';
 import { tg, tgPlural } from '../i18n';
@@ -64,30 +64,37 @@ export function applyRecul(team, board, base, masteryOn = false) {
   }
 
   // 2. Pouvoir Bouclier \u2014 RETIRE `amount` cases (1 charge), SEULEMENT si recul restant.
+  const bEff = team.powers?.bouclier ? resolvePowerEffect(team, 'bouclier', masteryOn) : {};
   const charges = team.powers?.bouclier?.charges ?? 0;
-  if (charges > 0 && recul > 0) {
+  let advance = 0;      // cases gagnees (Sur-reduction / Forteresse)
+  let pushAmount = 0;   // surplus a infliger aux adversaires (Sur-reduction)
+  let pushMode = null;  // 'one' | 'all'
+  if (recul > 0 && bEff.fortressAdvance) {
+    // Forteresse (L10) : le recul devient une avance du montant evite (sans charge).
+    advance += recul;
+    detail.push({ label: tg('log.turn.detail.bouclierNiv', { level: team.powers.bouclier.level ?? 10 }), note: tg('log.turn.detail.forteresse') });
+    recul = 0;
+    shield = 'power';
+  } else if (charges > 0 && recul > 0) {
     const level = team.powers.bouclier.level ?? 1;
-    const effect = resolvePowerEffect(team, 'bouclier', masteryOn);
-    const reduction = effect.amount ?? 0;
-    const absorbed = Math.min(recul, reduction); // cases r\u00e9ellement absorb\u00e9es par le pouvoir
+    const reduction = bEff.amount ?? 0;
+    const surplus = Math.max(0, reduction - recul); // reduction non utilisee
     recul = Math.max(0, recul - reduction);
     patch.powers = { ...team.powers, bouclier: { ...team.powers.bouclier, charges: charges - 1 } };
     detail.push({ label: tg('log.turn.detail.bouclierNiv', { level }), note: `\u2212${cases(reduction)}` });
     // Or : bonus de palier + Rempart dor\u00e9 (or/case absorb\u00e9e) + Tr\u00e9sor de guerre (forfait).
-    bonusMoney = (effect.bonusMoney ?? 0) + (effect.goldPerCaseAbsorbed || 0) * absorbed + (effect.absorbBonusMoney || 0);
+    bonusMoney = (bEff.bonusMoney ?? 0) + (bEff.goldOnUse || 0);
     if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: tg('log.turn.detail.bonusBouclier'), amount: bonusMoney }); }
-    // Trésor de guerre (L10) : +1 charge d'un pouvoir au hasard à chaque absorption.
-    if (effect.absorbBonusCharge) {
-      const baseP = patch.powers;
-      const keys = Object.keys(baseP).filter((k) => POWERS[k]);
-      if (keys.length) {
-        const pick = keys[Math.floor(Math.random() * keys.length)];
-        patch.powers = { ...baseP, [pick]: { ...baseP[pick], charges: addCharge(baseP[pick].charges) } };
-        detail.push({ label: tg('log.turn.detail.tresorGuerre'), note: tg('log.turn.detail.chargePlus', { power: locName(POWERS[pick]) }) });
-      }
+    // Sur-reduction : le surplus de reduction fait avancer (et peut pousser des adversaires).
+    if (bEff.surplusAdvance && surplus > 0) {
+      advance += surplus;
+      if (bEff.surplusPush) { pushAmount = surplus; pushMode = bEff.surplusPush; }
     }
-    // Réflexion (L10) : une fraction du recul prévu est renvoyée à l'attaquant (géré par l'appelant, ex. duel).
-    if (effect.reflectFraction) reflectOut = Math.round(base * effect.reflectFraction);
+    shield = 'power';
+  } else if (recul > 0 && bEff.passiveReduce) {
+    // Passif (L3+) : reduction permanente SANS charge (non cumulative avec l'active).
+    recul = Math.max(0, recul - bEff.passiveReduce);
+    detail.push({ label: tg('log.turn.detail.bouclierPassif'), note: `−${cases(bEff.passiveReduce)}` });
     shield = 'power';
   }
 
@@ -101,12 +108,19 @@ export function applyRecul(team, board, base, masteryOn = false) {
   }
   detail.push({ label: tg('log.turn.detail.reculSubi'), note: cases(recul) });
 
-  const reduced = shield || recul !== base; // un d\u00e9tail n'a d'int\u00e9r\u00eat que si on a r\u00e9duit
-  const out = { patch, detail: reduced ? detail : undefined, bonusMoney, reflect: reflectOut };
-  if (recul <= 0) return { ...out, applied: 0, path: null, absorbedBy: shield || 'equip' };
+  const reduced = shield || recul !== base || advance > 0; // d\u00e9tail utile si on a r\u00e9duit/avanc\u00e9
+  const out = { patch, detail: reduced ? detail : undefined, bonusMoney, reflect: reflectOut, surplusPush: pushMode, pushAmount };
+  // Sur-r\u00e9duction / Forteresse : le recul est nul ET on gagne des cases \u2192 on AVANCE.
+  if (recul <= 0 && advance > 0) {
+    const fwd = moveForward(board, team.pos, advance, { throughJunctions: true });
+    patch.pos = fwd.finalPos;
+    detail.push({ label: tg('log.turn.detail.avance'), note: `+${cases(advance)}` });
+    return { ...out, applied: 0, advance, path: fwd.path, forward: true, absorbedBy: shield || 'power' };
+  }
+  if (recul <= 0) return { ...out, applied: 0, advance: 0, path: null, absorbedBy: shield || 'equip' };
   const { finalPos, path } = moveBack(board, team.pos, recul);
   patch.pos = finalPos;
-  return { ...out, applied: recul, path, absorbedBy: shield };
+  return { ...out, applied: recul, advance: 0, path, absorbedBy: shield };
 }
 
 /**
@@ -122,6 +136,9 @@ export function resolveWrongAnswer(team, board, reason = tg('log.turn.reasonWron
     logMessage = tg('log.turn.wrong.buff', { reason });
   } else if (r.applied <= 0 && (r.absorbedBy === 'wooden' || r.absorbedBy === 'power')) {
     logMessage = tg('log.turn.wrong.absorbed', { reason, coins });
+  } else if (r.forward) {
+    // Sur-réduction / Forteresse : le recul est devenu une avance.
+    logMessage = tg('log.turn.wrong.forward', { reason, cases: cases(r.advance), coins });
   } else if (r.applied <= 0) {
     logMessage = tg('log.turn.wrong.equip', { reason });
   } else if (r.absorbedBy === 'wooden' || r.absorbedBy === 'power') {
@@ -129,7 +146,7 @@ export function resolveWrongAnswer(team, board, reason = tg('log.turn.reasonWron
   } else {
     logMessage = tg('log.turn.wrong.normal', { reason, cases: cases(r.applied) });
   }
-  return { updatedTeam, logMessage, detail: r.detail, path: r.path };
+  return { updatedTeam, logMessage, detail: r.detail, path: r.path, forward: r.forward, advance: r.advance, surplusPush: r.surplusPush, pushAmount: r.pushAmount };
 }
 
 /**

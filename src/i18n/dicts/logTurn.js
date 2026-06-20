@@ -25,6 +25,15 @@ export default {
     fr: '❌ {reason} ! Recul de {cases}.',
     en: '❌ {reason}! Setback of {cases}.',
   },
+  'log.turn.wrong.forward': {
+    fr: '❌ {reason} ! \u{1F6E1}️ Mais ton bouclier te fait AVANCER de {cases} !{coins}',
+    en: '❌ {reason}! \u{1F6E1}️ But your shield makes you MOVE FORWARD {cases}!{coins}',
+  },
+  // Forteresse (Bouclier L10) hors mauvaise réponse (duel, boss, événement) : le recul devient une avance.
+  'log.turn.fortressAdvance': {
+    fr: '🏰 Forteresse ! {team} avance de {cases} au lieu de reculer.',
+    en: '🏰 Fortress! {team} moves forward {cases} instead of back.',
+  },
 
   // Question multiple (Double cumulable).
   'log.turn.multiQuestion': {
@@ -43,4 +52,7 @@ export default {
   'log.turn.detail.tresorGuerre': { fr: 'Trésor de guerre', en: 'War treasure' },
   'log.turn.detail.chargePlus': { fr: '+1 charge {power}', en: '+1 charge {power}' },
   'log.turn.detail.equipement': { fr: 'Équipement', en: 'Equipment' },
+  'log.turn.detail.bouclierPassif': { fr: 'Bouclier (passif)', en: 'Shield (passive)' },
+  'log.turn.detail.forteresse': { fr: 'Forteresse : recul annulé → avance', en: 'Fortress: setback cancelled → advance' },
+  'log.turn.detail.avance': { fr: 'Avance', en: 'Advance' },
 };

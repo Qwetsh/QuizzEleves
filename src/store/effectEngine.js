@@ -207,10 +207,12 @@ function applyMoveOne(set, get, idx, dir, n, allowJunction) {
     const r = applyRecul(team, board, n, extOn(get().extensions, 'mastery'));
     const nt = [...teams];
     nt[idx] = { ...team, ...r.patch };
-    const movePath = r.path ? [{ teamIndex: idx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }] : null;
+    // Forteresse (Bouclier L10) : le recul devient une avance (animation + journal).
+    const movePath = r.path ? [{ teamIndex: idx, waypoints: r.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: r.forward ? 'forward' : 'back' }] : null;
     set({ teams: nt, ...(movePath ? { movePath } : {}) });
     if (r.absorbedBy && r.absorbedBy !== 'equip') { soundShield(); get().emitVfx?.('shield', idx); }
-    return { moved: true, finalPos: r.patch.pos, applied: r.applied, base: n, detail: r.detail, absorbedBy: r.absorbedBy };
+    if (r.forward) get().addLog?.(tg('log.turn.fortressAdvance', { team: `${nt[idx].emoji} ${nt[idx].name}`, cases: r.advance }));
+    return { moved: true, finalPos: r.patch.pos, applied: r.applied, advance: r.advance, forward: r.forward, base: n, detail: r.detail, absorbedBy: r.absorbedBy };
   }
 
   const res = moveForward(board, team.pos, n, { throughJunctions: !allowJunction });

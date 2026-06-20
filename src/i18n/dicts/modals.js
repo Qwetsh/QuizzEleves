@@ -112,6 +112,8 @@ export default {
   'modal.target.stealName': { fr: 'Cible du vol/effet', en: 'Target of the steal/effect' },
   'modal.target.moveName': { fr: 'Cible du déplacement', en: 'Target of the move' },
   'modal.target.desc': { fr: 'Choisis une équipe à viser.', en: 'Choose a team to target.' },
+  'modal.target.surgeName': { fr: 'Sur-réduction', en: 'Overcharge' },
+  'modal.target.surgeDesc': { fr: 'Choisis une équipe à reculer de {n} cases.', en: 'Choose a team to push back {n} squares.' },
   'modal.target.chooseTeam': { fr: 'Choisir une équipe cible :', en: 'Choose a target team:' },
 
   // ---- ChargePickerModal ----

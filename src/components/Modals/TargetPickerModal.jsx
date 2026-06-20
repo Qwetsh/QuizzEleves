@@ -19,6 +19,10 @@ function pickerInfo(stp, T) {
       desc: T('modal.target.desc'),
     };
   }
+  if (stp.source === 'surge') {
+    // Sur-réduction (Bouclier L7) : choisir l'équipe à reculer du surplus.
+    return { icon: '⏩', color: POWERS.bouclier?.color || '#3b6cb3', name: T('modal.target.surgeName'), desc: T('modal.target.surgeDesc', { n: stp.amount }) };
+  }
   const p = POWERS[stp.powerKey];
   return p ? { icon: p.icon, color: p.color, name: locName(p), desc: locDesc(p) } : null;
 }

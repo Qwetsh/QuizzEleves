@@ -1,6 +1,6 @@
 import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
 import { moveBack, findPrevJunction } from '../logic/pathfinding.js';
-import { consumePowerCharge } from '../logic/turnHelpers.js';
+import { consumePowerCharge, applyRecul } from '../logic/turnHelpers.js';
 import { reducedRecul, resolveAmount, diceLabel, moveDieSides } from '../logic/itemEffects.js';
 import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
 import { extOn } from '../extensions/registry.js';
@@ -138,8 +138,15 @@ export function useRelance(set, get) {
 
   const rEff0 = powerEffectOf(get, team, 'relance');
   const newTeams = [...teams];
+  // Remboursement (L2/L4) : chance de récupérer la charge dépensée (plafond 5).
+  let updated = result.updatedTeam;
+  if (rEff0.refundChance && Math.random() < rEff0.refundChance) {
+    const rl = updated.powers.relance;
+    updated = { ...updated, powers: { ...updated.powers, relance: { ...rl, charges: addCharge(rl.charges) } } };
+    addLog(tg('log.pw.relanceRefund', { power: locName(POWERS.relance) }));
+  }
   // Pilote (L5) : autorise le choix de voie même si l'équipe aurait avancé au hasard.
-  newTeams[currentTeam] = { ...result.updatedTeam, pos: preRollPos || team.pos, ...(rEff0.choosePathAfter ? { pilotNext: true } : {}) };
+  newTeams[currentTeam] = { ...updated, pos: preRollPos || team.pos, ...(rEff0.choosePathAfter ? { pilotNext: true } : {}) };
 
   addLog(tg('log.pw.relanceUse', { emoji: team.emoji, name: team.name, power: locName(POWERS.relance), level }));
   get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey: 'relance', targetIdx: null });
@@ -148,9 +155,9 @@ export function useRelance(set, get) {
   // Nettoie aussi un éventuel choix de jonction en cours (on relance depuis le départ du lancer).
   set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false, awaitingChoice: false, pendingMove: null });
 
-  // Mêmes faces que le dé de mouvement de l'équipe (D4/D6/D10).
-  const sides = moveDieSides(team);
   const rEff = powerEffectOf(get, team, 'relance');
+  // Faces du dé de relance : Gros dé (L8) impose un D10, sinon le dé de mouvement (D4/D6/D10).
+  const sides = rEff.dieSides || moveDieSides(team);
   // Triple chance : meilleur de N dés. Dé chanceux : relance jusqu'à atteindre minRoll.
   let roll = Math.floor(Math.random() * sides) + 1;
   for (let k = 1; k < (rEff.rerollCount || 1); k++) roll = Math.max(roll, Math.floor(Math.random() * sides) + 1);
@@ -183,23 +190,134 @@ export function useRelance(set, get) {
       }
 
       addLog(tg('log.pw.relanceResult', { power: locName(POWERS.relance), value: finalValue, effective: mode !== 'replace' ? tg('log.pw.relanceEffective', { value: effectiveValue }) : '' }));
-      // Surcharge (L10) : recharge un pouvoir au hasard parmi ceux possédés.
-      if (rEff.rechargeRandom) {
-        const t = get().teams[currentTeam];
-        const keys = Object.keys(t.powers || {}).filter((k) => POWERS[k]);
-        if (keys.length) {
-          const pick = keys[Math.floor(Math.random() * keys.length)];
-          const nt = [...get().teams];
-          nt[currentTeam] = { ...t, powers: { ...t.powers, [pick]: { ...t.powers[pick], charges: addCharge(t.powers[pick].charges) } } };
-          set({ teams: nt });
+
+      // --- Voies L5 / ultimes L10 de l'arbre de Maîtrise « Relance » ---
+      let nt = [...get().teams];
+      let dirty = false;
+      const patchTeam = (i, patch) => { nt[i] = { ...nt[i], ...patch }; dirty = true; };
+      const me = () => nt[currentTeam];
+
+      // Relance lucrative (L5) : or = valeur du dé × multiplicateur (1 → 2 → 3).
+      if (rEff.goldPerRoll) {
+        const gain = finalValue * rEff.goldPerRoll;
+        patchTeam(currentTeam, { money: (me().money || 0) + gain });
+        addLog(tg('log.pw.relanceGold', { n: gain }));
+      }
+
+      // Relance chanceuse (L5) : sur un 6+ (seuil paramétrable), recharge un AUTRE
+      // pouvoir, et arme un bonus de loot (palier 1) / double loot (palier 2).
+      if (rEff.rechargeOnHigh && finalValue >= rEff.rechargeOnHigh) {
+        const keys = Object.keys(me().powers || {}).filter((k) => POWERS[k] && k !== 'relance');
+        const pool = keys.length ? keys : Object.keys(me().powers || {}).filter((k) => POWERS[k]);
+        if (pool.length) {
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          patchTeam(currentTeam, { powers: { ...me().powers, [pick]: { ...me().powers[pick], charges: addCharge(me().powers[pick].charges) } } });
           addLog(tg('log.pw.surcharge', { power: locName(POWERS[pick]) }));
         }
+        if (rEff.lootBonusOnHigh) patchTeam(currentTeam, { relanceLootBonus: rEff.lootBonusOnHigh });
+        if (rEff.doubleLootOnHigh) patchTeam(currentTeam, { relanceDoubleLoot: rEff.doubleLootOnHigh });
       }
+
+      // Relance opportune (L5) : arme un bonus pour la PROCHAINE question du tour
+      // (+temps, choix du thème, et — palier 2 — remplacement de la question).
+      if (rEff.reqTimeBonus || rEff.reChooseSubject || rEff.replaceQuestion) {
+        patchTeam(currentTeam, { relanceQ: { bonusTime: rEff.reqTimeBonus || 0, chooseSubject: !!rEff.reChooseSubject, replace: !!rEff.replaceQuestion } });
+        addLog(tg('log.pw.relanceOpportune'));
+      }
+
+      // Relance vengeresse (L10) : recule le 1ᵉʳ groupe (le plus avancé, hors soi)
+      // de la valeur du dé. Le bouclier de la cible peut l'atténuer (applyRecul).
+      if (rEff.vengefulPushLeader) {
+        const board = get().board;
+        const xOf = (t) => (t?.pos && board[t.pos] ? board[t.pos].x : -Infinity);
+        let lead = -1, leadX = -Infinity;
+        nt.forEach((t, i) => { if (i !== currentTeam && xOf(t) > leadX) { leadX = xOf(t); lead = i; } });
+        if (lead >= 0) {
+          const r = applyRecul(nt[lead], board, finalValue, masteryActive(get));
+          patchTeam(lead, r.patch);
+          addLog(tg('log.pw.relanceVengeful', { emoji: nt[lead].emoji, name: nt[lead].name, n: r.applied ?? finalValue }));
+        }
+      }
+
+      if (dirty) set({ teams: nt });
+
       // skipOnRoll : ne pas re-déclencher le bonus on:roll de l'équipement (déjà
       // accordé au lancer initial) → pas de double bonus via la Relance.
       get().handleDiceResult(effectiveValue, { skipOnRoll: true });
     }
   }, 80);
+}
+
+// Renvoie l'effet effectif de Relance d'une équipe SI l'ultime « Échange de place »
+// est disponible (niv.10 + voie swap), avec sa cible et son coût. Sinon null.
+// Sert au garde de useRelanceSwap ET à l'affichage du bouton (TBI + mobile).
+export function relanceSwapInfo(get, teamIndex) {
+  if (!masteryActive(get)) return null;
+  const { teams, board } = get();
+  const team = teams[teamIndex];
+  const rl = team?.powers?.relance;
+  if (!rl) return null;
+  const eff = resolvePowerEffect(team, 'relance', true);
+  if (!eff.swapWithLeader) return null;
+  const cost = eff.swapCost || 5;
+  const xOf = (t) => (t?.pos && board[t.pos] ? board[t.pos].x : -Infinity);
+  const myX = xOf(team);
+  let lead = -1, leadX = myX;
+  teams.forEach((t, i) => { if (i !== teamIndex && xOf(t) > leadX) { leadX = xOf(t); lead = i; } });
+  return { cost, charges: rl.charges ?? 0, leaderIdx: lead, canUse: lead >= 0 && (rl.charges ?? 0) >= cost };
+}
+
+// Ultime « Échange de place » (Relance L10) : dépense `cost` charges pour échanger
+// sa position avec l'équipe la plus avancée. Réservé au tour de l'équipe.
+export function useRelanceSwap(set, get, teamIndex) {
+  const { teams, currentTeam, board, addLog } = get();
+  const i = teamIndex == null ? currentTeam : teamIndex;
+  if (i !== currentTeam || get().finished) return; // uniquement à son tour
+  const info = relanceSwapInfo(get, i);
+  if (!info || !info.canUse) return;
+  const me = teams[i], leader = teams[info.leaderIdx];
+  const nt = [...teams];
+  const myPos = me.pos, leadPos = leader.pos;
+  const grow = (t, pos) => (t.maxPos && board[t.maxPos] && board[t.maxPos].x >= board[pos].x ? t.maxPos : pos);
+  nt[i] = { ...me, pos: leadPos, maxPos: grow(me, leadPos), powers: { ...me.powers, relance: { ...me.powers.relance, charges: me.powers.relance.charges - info.cost } } };
+  nt[info.leaderIdx] = { ...leader, pos: myPos, maxPos: grow(leader, myPos) };
+  set({ teams: nt });
+  soundDice();
+  addLog(tg('log.pw.relanceSwap', { emoji: me.emoji, name: me.name, vemoji: leader.emoji, vname: leader.name }));
+  get().recordStat?.('powerUses', { teamIdx: i, powerKey: 'relance', targetIdx: info.leaderIdx });
+  if (get().phase === 'game') saveGame(get());
+}
+
+// Renvoie {cost, turns, charges, canUse} si l'ultime « Immunité totale » (Bouclier
+// L10) est disponible pour l'équipe, sinon null. Sert au garde + à l'affichage.
+export function shieldImmunityInfo(get, teamIndex) {
+  if (!masteryActive(get)) return null;
+  const team = get().teams[teamIndex];
+  const bl = team?.powers?.bouclier;
+  if (!bl) return null;
+  const eff = resolvePowerEffect(team, 'bouclier', true);
+  if (!eff.totalImmune) return null;
+  const cost = eff.immuneCost || 5;
+  return { cost, turns: eff.immuneTurns || 2, charges: bl.charges ?? 0, canUse: (bl.charges ?? 0) >= cost };
+}
+
+// Ultime actif « Immunité totale » : dépense `cost` charges → immunité aux attaques
+// adverses pendant `turns` tours (décrémenté dans nextTurn).
+export function useShieldImmunity(set, get, teamIndex) {
+  const { teams, currentTeam, addLog } = get();
+  const i = teamIndex == null ? currentTeam : teamIndex;
+  if (i !== currentTeam || get().finished) return; // à son tour uniquement
+  const info = shieldImmunityInfo(get, i);
+  if (!info || !info.canUse) return;
+  const me = teams[i];
+  const nt = [...teams];
+  nt[i] = { ...me, powers: { ...me.powers, bouclier: { ...me.powers.bouclier, charges: me.powers.bouclier.charges - info.cost } }, totalImmuneTurns: info.turns };
+  set({ teams: nt });
+  soundPower();
+  addLog(tg('log.pw.immuneCast', { emoji: me.emoji, name: me.name, turns: info.turns }));
+  announce(set, get, '🛡️', tg('log.pw.immuneToast', { emoji: me.emoji }), POWERS.bouclier?.color || '#3b6cb3');
+  get().recordStat?.('powerUses', { teamIdx: i, powerKey: 'bouclier', targetIdx: null });
+  if (get().phase === 'game') saveGame(get());
 }
 
 export function applyOffensivePower(set, get, targetTeamIndex) {
@@ -216,6 +334,15 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   newTeams[currentTeam] = result.updatedTeam;
   // Analytics : usage de pouvoir offensif (charge consommée, quelle que soit l'issue).
   get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey, targetIdx: targetTeamIndex });
+
+  // Immunité totale (Bouclier L10) : la cible est immunisée aux attaques adverses
+  // pendant N tours → le pouvoir offensif n'a aucun effet (charge tout de même dépensée).
+  if ((target.totalImmuneTurns ?? 0) > 0) {
+    addLog(tg('log.pw.immuneBlock', { emoji: target.emoji, name: target.name, power: locName(POWERS[powerKey]) }));
+    set({ teams: newTeams, showTargetPicker: null });
+    announce(set, get, '🛡️', tg('log.pw.immuneToast', { emoji: target.emoji }), POWERS.bouclier?.color || '#3b6cb3');
+    return;
+  }
 
   // Consommable Bombe fumigene : la cible annule le pouvoir offensif
   // (la charge de l'attaquant est quand meme consommee — le coup est esquive)
@@ -271,15 +398,21 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       let rolled = baseRoll;
       const vEff = resolvePowerEffect(v, 'bouclier', masteryOn);
       const vCharges = v.powers?.bouclier?.charges ?? 0;
-      // \u00C9gide (cible) : le bouclier prot\u00E8ge de la Foudre (consomme 1 charge).
-      if (vEff.protectFoudre && vCharges > 0) {
-        rolled = Math.max(0, rolled - (vEff.amount ?? 0));
+      // Anti-Foudre (cible) : r\u00E9duit de moiti\u00E9 le recul de Foudre (consomme 1 charge),
+      // puis (palier L7) renvoie la moiti\u00E9 du recul pr\u00E9vu \u00E0 l'attaquant et (L9) la
+      // convertit en or pour la cible.
+      if (vEff.foudreReduceFraction && vCharges > 0) {
+        const before = rolled;
+        rolled = Math.max(0, Math.round(rolled * (1 - vEff.foudreReduceFraction)));
         v = { ...v, powers: { ...v.powers, bouclier: { ...v.powers.bouclier, charges: vCharges - 1 } } };
+        if (vEff.foudreReflectFraction) {
+          const refl = Math.round(before * vEff.foudreReflectFraction);
+          reflectTotal += refl;
+          if (vEff.foudreReflectGold && refl > 0) v = { ...v, money: (v.money || 0) + refl };
+        }
       }
-      // R\u00E9flexion (cible) : une fraction du recul pr\u00E9vu revient \u00E0 l'attaquant.
-      if (vEff.reflectFraction && vCharges > 0) reflectTotal += Math.round(rolled * vEff.reflectFraction);
-      // Temp\u00EAte cibl\u00E9e : vol d'or.
-      if (effect.stealGold) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      // Temp\u00EAte cibl\u00E9e : vol d'or \u2014 bloqu\u00E9 par Banque fortifi\u00E9e (goldUnstealable).
+      if (effect.stealGold && !vEff.goldUnstealable) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
       const amt = reducedRecul(v, rolled);
       // Bannissement (L10) : renvoie à la dernière jonction ; sinon recul classique.
       let rr;

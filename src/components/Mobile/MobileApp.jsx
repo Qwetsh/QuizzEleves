@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent, createTrade, fetchTrades, setTradeStatus, deleteTrade, subscribeTrades } from '../../logic/sessionConfig';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
-import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost } from '../../logic/powerEffects';
+import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost, resolvePowerEffect } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
 import { RECIPES } from '../../data/recipes';
@@ -14,7 +14,7 @@ import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { extOn } from '../../extensions/registry';
 import { tFor, setLang } from '../../i18n';
-import { locName, locDesc } from '../../i18n/content';
+import { locName, locDesc, loc } from '../../i18n/content';
 import SetBonusInfo from '../Modals/SetBonusInfo';
 import '../../styles/mobile.css';
 
@@ -351,15 +351,19 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = t
 }
 
 // Bloc d'embranchement (L5/L10) : les 3 voies, la voie choisie mise en avant.
-function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose, T = tFor(false) }) {
+// `level` sert à afficher les renforts de voie (paliers L7/L9) atteints pour la
+// voie choisie (slot spec5 uniquement).
+function BranchBlock({ powerKey, slot, chosen, reached, level = 1, owned, locked, onChoose, T = tFor(false) }) {
   const options = specOptionsFor(powerKey, slot);
   if (!options.length) return null;
   const canPick = reached && !chosen && owned && !locked;
+  const tierLevels = [7, 9];
   return (
     <div className="mob-tt-branch">
       <div className="mob-tt-branch-label">{reached ? (chosen ? T('mobile.pathChosen') : T('mobile.choosePath')) : T('mobile.branching')}</div>
       {options.map((o) => {
         const picked = chosen === o.key;
+        const tiers = picked && slot === 'spec5' && o.tierDesc ? loc(o, 'tierDesc') : null;
         return (
           <div key={o.key} role={canPick ? 'button' : undefined}
             onClick={canPick ? () => onChoose(o.key) : undefined}
@@ -373,6 +377,11 @@ function BranchBlock({ powerKey, slot, chosen, reached, owned, locked, onChoose,
                 {canPick && <span className="mob-tt-tag mob-tt-tag--cur">{T('mobile.chooseTag')}</span>}
               </div>
               <div className="mob-tt-opt-desc">{locDesc(o)}</div>
+              {tiers && tiers.map((td, i) => (
+                <div key={i} className={'mob-tt-tier' + (level >= tierLevels[i] ? ' is-on' : '')}>
+                  {level >= tierLevels[i] ? '✓ ' : '🔒 '}{td}
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -433,7 +442,12 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
           const n = i + 1;
           const state = n < level ? 'done' : n === level ? 'current' : n === level + 1 ? 'next' : 'locked';
           const cost = n >= 2 ? (costs?.[n - 2] ?? null) : null;
-          const desc = useTree ? describePowerScale(powerKey, n, true) : locDesc(info.levels[i]);
+          // Description « élève » par niveau si la data en fournit une (incrémentale,
+          // sans répéter les acquis), sinon repli sur le résumé d'effet générique.
+          const scaleDesc = useTree ? loc(info.tree, 'scaleDesc') : null;
+          const desc = useTree
+            ? (Array.isArray(scaleDesc) && scaleDesc[i] ? scaleDesc[i] : describePowerScale(powerKey, n, true))
+            : locDesc(info.levels[i]);
           const slot = useTree ? specSlotForLevel(n) : null;
           return (
             <div key={n} className={'mob-tt-node is-' + state}>
@@ -459,7 +473,7 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
                     {T('mobile.upgradeHere', { cost: nextCost })}
                   </button>
                 )}
-                {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n}
+                {slot && <BranchBlock powerKey={powerKey} slot={slot} chosen={entry?.[slot]} reached={level >= n} level={level}
                   owned={owned} locked={locked} T={T}
                   onChoose={(specKey) => onAction('chooseSpec', { key: powerKey, slot, specKey })} />}
               </div>
@@ -483,46 +497,127 @@ function PowersView({ session, teamIdx, owned, code, token }) {
   const act = (type, payload) => { if (owned && code && token) sendIntent(code, token, type, payload).catch(() => {}); };
   // Pouvoirs non encore possédés (déblocables en boutique).
   const lockedPowers = Object.keys(POWERS).filter((k) => POWERS[k] && !t.powers?.[k]);
+  // Onglet de pouvoir sélectionné : un onglet par pouvoir possédé, on n'affiche que
+  // la branche choisie (plus lisible que la liste à la suite).
+  const [selKey, setSelKey] = useState(pKeys[0] || null);
+  const activeKey = pKeys.includes(selKey) ? selKey : pKeys[0] || null;
+  // Modale « Acheter un nouveau pouvoir » (sélection + achat).
+  const [buyOpen, setBuyOpen] = useState(false);
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{T('mobile.talentTree')}</div>
       <div className="mob-tt-bank">
-        <span className="mob-tt-hint">
-          {owned ? T('mobile.powersHint', { money: t.money }) : T('mobile.powersReadonly')}
-        </span>
+        {owned ? (
+          <button className="mob-newpow-btn" disabled={lockedPowers.length === 0}
+            onClick={() => setBuyOpen(true)}>
+            {T('mobile.buyNewPower')}
+          </button>
+        ) : (
+          <span className="mob-tt-hint">{T('mobile.powersReadonly')}</span>
+        )}
       </div>
       {pKeys.length === 0 ? (
         <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.noPowerYet')}</div>
       ) : (
-        <div className="mob-tt">
-          {pKeys.map((k) => (
-            <TalentBranch key={k} powerKey={k} entry={t.powers[k]} active={activeKeys.has(k)} masteryOn={masteryOn}
-              owned={owned} money={t.money} locked={locked} onAction={act} T={T} />
-          ))}
-        </div>
+        <>
+          {pKeys.length > 1 && (
+            <div className="mob-ptabs" role="tablist">
+              {pKeys.map((k) => {
+                const p = POWERS[k];
+                if (!p) return null;
+                const on = k === activeKey;
+                return (
+                  <button key={k} role="tab" aria-selected={on}
+                    className={'mob-ptab' + (on ? ' is-on' : '')}
+                    style={{ '--accent': p.color }} onClick={() => setSelKey(k)}>
+                    <span className="mob-ptab-ic">{p.icon}</span>
+                    <span className="mob-ptab-name">{locName(p)}</span>
+                    {activeKeys.has(k) && <span className="mob-ptab-dot" title={T('mobile.activeTag')} />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="mob-tt">
+            {activeKey && (
+              <TalentBranch key={activeKey} powerKey={activeKey} entry={t.powers[activeKey]} active={activeKeys.has(activeKey)} masteryOn={masteryOn}
+                owned={owned} money={t.money} locked={locked} onAction={act} T={T} />
+            )}
+            {/* Ultime actif « Échange de place » (Relance L10) : bouton d'intent,
+                visible à son tour si la voie est prise et les charges suffisent. */}
+            {activeKey === 'relance' && masteryOn && owned && (() => {
+              const eff = resolvePowerEffect(t, 'relance', true);
+              const cost = eff.swapCost || 5;
+              if (!eff.swapWithLeader) return null;
+              const myTurn = session.currentTeam === teamIdx;
+              const enough = (t.powers.relance?.charges ?? 0) >= cost;
+              return (
+                <button className="mob-newpow-btn" style={{ marginTop: 4 }}
+                  disabled={locked || !myTurn || !enough}
+                  onClick={() => act('relanceSwap', {})}>
+                  🔄 {T('mobile.relanceSwap', { cost })}
+                </button>
+              );
+            })()}
+            {/* Ultime actif « Immunité totale » (Bouclier L10). */}
+            {activeKey === 'bouclier' && masteryOn && owned && (() => {
+              const eff = resolvePowerEffect(t, 'bouclier', true);
+              if (!eff.totalImmune) return null;
+              const cost = eff.immuneCost || 5;
+              const myTurn = session.currentTeam === teamIdx;
+              const enough = (t.powers.bouclier?.charges ?? 0) >= cost;
+              const already = (t.totalImmuneTurns ?? 0) > 0;
+              return (
+                <button className="mob-newpow-btn" style={{ marginTop: 4 }}
+                  disabled={locked || !myTurn || !enough || already}
+                  onClick={() => act('shieldImmunity', {})}>
+                  🛡️ {T('mobile.shieldImmunity', { cost })}
+                </button>
+              );
+            })()}
+          </div>
+        </>
       )}
-      {owned && lockedPowers.length > 0 && (
-        <section className="mob-section" style={{ marginTop: 8 }}>
-          <h2 className="mob-section-title">{T('mobile.unlockPower')}</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 14px' }}>
-            {lockedPowers.map((k) => {
+      {owned && buyOpen && (
+        <BuyPowerSheet powers={lockedPowers} money={t.money ?? 0} locked={locked}
+          onBuy={(k) => act('buyPower', { key: k })} onClose={() => setBuyOpen(false)} T={T} />
+      )}
+    </div>
+  );
+}
+
+// Modale « Acheter un nouveau pouvoir » : liste les pouvoirs non possédés + achat.
+function BuyPowerSheet({ powers, money, locked, onBuy, onClose, T = tFor(false) }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 22, padding: '18px 18px 20px', boxShadow: '0 16px 44px rgba(0,0,0,0.45)', border: '1px solid rgba(122,94,58,0.25)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--ink-900)' }}>{T('mobile.unlockPower')}</div>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#8a6418', whiteSpace: 'nowrap' }}>{money} {'\u{1FA99}'}</span>
+        </div>
+        {powers.length === 0 ? (
+          <div className="mob-empty" style={{ margin: '8px 0' }}>{T('mobile.allPowersOwned')}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {powers.map((k) => {
               const p = POWERS[k];
-              const broke = (t.money ?? 0) < p.price;
+              const broke = money < p.price;
               return (
                 <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fffefb', border: '1px solid rgba(122,94,58,0.25)', borderRadius: 12, padding: '8px 10px' }}>
-                  <span style={{ fontSize: 22 }}>{p.icon}</span>
+                  <span style={{ fontSize: 24 }}>{p.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{locName(p)}</div>
                     <div style={{ fontSize: 11.5, opacity: 0.7 }}>{p.category === 'off' ? T('mobile.attack') : T('mobile.defense')}</div>
                   </div>
                   <button className="mob-btn mob-btn--gold" style={{ minWidth: 0 }} disabled={locked || broke}
-                    onClick={() => act('buyPower', { key: k })}>{p.price} {'\u{1FA99}'}</button>
+                    onClick={() => onBuy(k)}>{p.price} {'\u{1FA99}'}</button>
                 </div>
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+        <button className="mob-btn mob-btn--ghost" style={{ width: '100%', marginTop: 14 }} onClick={onClose}>{T('common.close')}</button>
+      </div>
     </div>
   );
 }
@@ -968,42 +1063,52 @@ function AlchemyView({ session, teamIdx, code, token }) {
 }
 
 // Onglet Historique : le journal publié par le TBI, du plus récent au plus ancien.
-function HistoryView({ session }) {
+// Onglet « Historique » : deux sous-onglets — « Journal d'info » (le log de partie)
+// et « Questions » (mes anciennes questions). Réunit ce qui était deux onglets.
+function HistoryView({ session, teamIdx }) {
   const T = tFor(session?.englishMode);
-  const log = session.log || [];
+  const [sub, setSub] = useState('log');
   return (
     <div className="mob-root" style={{ paddingBottom: 76 }}>
       <div className="mob-pick-head">{T('mobile.history')}</div>
-      {log.length === 0 ? (
-        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.nothingYet')}</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px' }}>
-          {log.slice().reverse().map((line, i) => (
-            <div key={i} style={{
-              padding: '9px 12px', borderRadius: 10, fontSize: 13.5, lineHeight: 1.4,
-              background: i === 0 ? 'rgba(232,177,23,0.14)' : 'rgba(122,94,58,0.06)',
-              border: '1px solid rgba(122,94,58,0.14)', color: 'var(--ink-800, #4a3a1e)',
-            }}>{line}</div>
-          ))}
-        </div>
-      )}
+      <div className="mob-subtabs" role="tablist">
+        <button role="tab" aria-selected={sub === 'log'} onClick={() => setSub('log')}
+          className={'mob-subtab' + (sub === 'log' ? ' is-on' : '')}>{T('mobile.histLog')}</button>
+        <button role="tab" aria-selected={sub === 'questions'} onClick={() => setSub('questions')}
+          className={'mob-subtab' + (sub === 'questions' ? ' is-on' : '')}>{T('mobile.histQuestions')}</button>
+      </div>
+      {sub === 'log'
+        ? <LogList session={session} T={T} />
+        : <OldQuestionsList session={session} teamIdx={teamIdx} T={T} />}
     </div>
   );
 }
 
-// Onglet « Questions » : les questions passées de MON équipe (publiées par le
+// Sous-onglet « Journal d'info » : le log de partie publié par le TBI.
+function LogList({ session, T = tFor(false) }) {
+  const log = session.log || [];
+  if (log.length === 0) return <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.nothingYet')}</div>;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 14px' }}>
+      {log.slice().reverse().map((line, i) => (
+        <div key={i} style={{
+          padding: '9px 12px', borderRadius: 10, fontSize: 13.5, lineHeight: 1.4,
+          background: i === 0 ? 'rgba(232,177,23,0.14)' : 'rgba(122,94,58,0.06)',
+          border: '1px solid rgba(122,94,58,0.14)', color: 'var(--ink-800, #4a3a1e)',
+        }}>{line}</div>
+      ))}
+    </div>
+  );
+}
+
+// Sous-onglet « Questions » : les questions passées de MON équipe (publiées par le
 // TBI dans session.questionLog), avec ma réponse, la bonne réponse et l'explication.
-function OldQuestionsView({ session, teamIdx }) {
-  const T = tFor(session?.englishMode);
+function OldQuestionsList({ session, teamIdx, T = tFor(false) }) {
   const all = (session.questionLog && session.questionLog[teamIdx]) || [];
   const list = all.slice().reverse(); // plus récente d'abord
+  if (list.length === 0) return <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.noQuestionYet')}</div>;
   return (
-    <div className="mob-root" style={{ paddingBottom: 76 }}>
-      <div className="mob-pick-head">{T('mobile.myOldQuestions')}</div>
-      {list.length === 0 ? (
-        <div className="mob-empty" style={{ margin: 14 }}>{T('mobile.noQuestionYet')}</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 14px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 14px' }}>
           {list.map((q, i) => {
             const subj = SUBJECTS[q.subject] || {};
             const result = q.timedOut ? { txt: T('mobile.timedOut'), col: '#8a6418' }
@@ -1055,8 +1160,6 @@ function OldQuestionsView({ session, teamIdx }) {
               </div>
             );
           })}
-        </div>
-      )}
     </div>
   );
 }
@@ -1204,7 +1307,6 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T 
       {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label={T('mobile.tabShop')} />}
       {hasTrade && <Tab id="trade" icon={'🤝'} label={T('mobile.tabTrade')} badge={tradeAlert} />}
       {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label={T('mobile.tabAlchemy')} />}
-      <Tab id="questions" icon={'\u{1F4DA}'} label={T('mobile.tabQuestions')} />
       <Tab id="history" icon={'\u{1F4DC}'} label={T('mobile.tabHistory')} />
     </nav>
   );
@@ -1373,8 +1475,7 @@ export default function MobileApp() {
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
-      : tab === 'questions' ? <OldQuestionsView session={session} teamIdx={teamIdx} />
-      : tab === 'history' ? <HistoryView session={session} />
+      : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     content = (
       <>
