@@ -72,6 +72,24 @@ export interface Subject {
   biome_en?: string;
 }
 
+// Refonte « modules de thèmes » (DESIGN_MODULES.md).
+// Un MODULE = un thème (Collège, Jeux vidéo, Sport…) regroupant des catégories.
+export interface Module {
+  key: string;
+  name: string;
+  name_en?: string;
+  icon?: string;
+  kind?: 'school' | 'themed';   // 'school' → axe de niveau ; 'themed' → optionnel
+  description?: string;
+}
+
+// Une CATÉGORIE = une « matière »/sous-thème jouable, rattachée à un module.
+// (= la valeur de SUBJECTS, qui devient un catalogue dynamique.)
+export interface Category extends Subject {
+  module?: string;              // clé du module parent (ex. 'college')
+  board?: boolean;              // apparaît sur le plateau (vs forcé-only)
+}
+
 export interface GameEvent {
   name: string;
   name_en?: string;

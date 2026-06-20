@@ -1,8 +1,57 @@
 # Design — Système de modules de questions (taxonomie dynamique)
 
 > **Statut : PRÉPARATION (pas d'implémentation).** Document de cadrage technique.
-> Le **gameplay ne change pas** (plateau, combat, pouvoirs, objets, économie) :
-> on ne touche qu'à *ce qui remplit une case/voie* et *quel défi se lance*.
+> Le moteur de jeu (plateau, combat, pouvoirs, économie) ne change pas ; on touche
+> à *ce qui remplit une case/voie*, *quel défi se lance*, et — ajout du 20/06 —
+> *quels objets sont disponibles selon les thèmes* (voir §0 et §14).
+
+---
+
+## 0. Modèle affiné — 2026-06-20 (FAIT FOI)
+
+> Session de cadrage avec l'utilisateur. **En cas de divergence avec les sections
+> rédigées le 18/06, CETTE section prime.** Le reste du doc reste valable pour le
+> détail technique (tables, registre, migration, éditeurs, contenu, roadmap).
+
+**Taxonomie ramenée à 2 niveaux :**
+```
+THÈME        (Collège · Jeux vidéo · Sport · Séries · Warhammer · Menuiserie …)
+  └─ SOUS-THÈME   (Collège → Maths/Français/SVT …  ·  Jeux vidéo → RPG/Simulation/Indé …)
+```
+On abandonne les 4 niveaux du 18/06 (module/matière/sous-matière/thème). Correspondance :
+l'ancien **« module » = le THÈME** ; l'ancienne **« matière/filière » = le SOUS-THÈME**.
+Les matières du collège deviennent les sous-thèmes d'**un** thème « Collège » — l'école
+n'est plus un cas spécial, juste le premier thème.
+
+**Granularité de plateau AUTOMATIQUE (remplace le toggle mono/multi du §7) :**
+- **≥ 2 thèmes cochés** → 1 voie = 1 **THÈME**. Tomber sur « Jeux vidéo » tire une
+  question d'**un sous-thème JV au hasard**. *Pas de mixage fin* : en multi, ce sont
+  des thèmes entiers (on n'injecte pas un sous-thème isolé).
+- **1 seul thème coché** → 1 voie = 1 **SOUS-THÈME** ; chaque voie tire dans son sous-thème.
+
+→ Une « voie/case » = une **catégorie jouable** `{ key, label, color, icon, pool:[sousThèmes] }`.
+Multi : `pool` = tous les sous-thèmes du thème. Mono : `pool` = [un sous-thème].
+**C'est `resolveSubjectFor` (déjà utilisé par le mode LV2) généralisé** — LV2 est le
+prototype d'une catégorie qui pioche parmi plusieurs options. On généralise ce résolveur
+au lieu d'en inventer un.
+
+**Difficulté = axe OPTIONNEL par thème (décision ouverte §12.3 TRANCHÉE) :**
+on ne ferme pas la porte. Un thème *peut* déclarer un axe de difficulté
+(Collège/Lycée → niveaux scolaires ; autres → facile/moyen/difficile, ou aucun).
+La colonne `level` devient un **filtre optionnel défini par le thème** (pas supprimée).
+
+**Visuel : générique d'abord, mixage par case.** Phase 1 = rendu **générique**
+(disque coloré + emoji/icône du sous-thème) ; assets dédiés ajoutés au fil de l'eau.
+Le **mixage marche nativement** : chaque case étant stylée par SA catégorie, un plateau
+Jeux vidéo + Sport montre les deux thèmes case par case. Terrain global neutre ; biomes
+et décor sur-mesure (qui « se fondent ») plus tard, thème par thème.
+
+**Contenu = IA + revue humaine.** Questions générées par workflow multi-agents (cf. §9),
+écrites en base, puis **contre-vérification/correction humaine** dans l'éditeur.
+
+**Objets = UN pool + tags de thème, affinité généralisée (nouveau chantier, voir §14).**
+
+---
 
 ## 1. Objectif
 
@@ -291,8 +340,9 @@ Séparé du moteur. Une fois la taxonomie en place :
    pour l'identité visuelle des voies en mode mono-matière.
 2. **`subject`/`t` : renommer en `category`/`theme` ou garder en alias ?** →
    garder en alias le temps de la transition (moins de risque).
-3. **Niveaux pour modules thématiques** : ignorés (`kind='themed'`) — mais on
-   pourrait vouloir des « difficultés » (débutant/expert) génériques plus tard.
+3. **Niveaux pour modules thématiques** : ~~ignorés~~ → **TRANCHÉ (20/06)** : la
+   difficulté est un **axe optionnel par thème** (school → niveaux ; thématique →
+   facile/moyen/difficile, ou aucun). `level` = filtre optionnel défini par le thème.
 4. **Mini-jeux dédiés = gros effort récurrent** : prioriser quels modules en ont
    besoin en premier.
 5. **Volume base** : un pool immense → penser pagination/index DB
@@ -312,6 +362,45 @@ Séparé du moteur. Une fois la taxonomie en place :
 - `src/components/Setup/` : `LevelSelect` → `ModuleSelect` + mode plateau ;
   nouveaux `ModulesEditor`/`ThemesEditor` ; `QuestionsEditor` étendu.
 - `scripts/snapshot-offline.mjs` : capture des nouvelles tables.
+
+---
+
+## 14. Objets & thèmes (ajout 2026-06-20)
+
+Décision : **un seul catalogue d'objets** (`quete_items` actuelle), PAS d'onglets-
+catalogues séparés par thème (qui dupliqueraient la mécanique et exploseraient
+l'équilibrage). La quasi-totalité des objets sont **mécaniques** (bouclier, +or,
+dé, loot, piège…) donc **thème-agnostiques**.
+
+**Modèle : pool unique + tag de thème.**
+- Nouveau champ **`themes text[]`** sur `quete_items` :
+  - `[]` / « universel » → l'objet drop/s'achète **dans toutes les parties** (le socle
+    mécanique = la majorité des ~130 objets faits main).
+  - `['jeuxVideo', …]` → objet **de saveur**, n'apparaît que si ce(s) thème(s) actif(s).
+- **Loot + boutique** filtrent déjà sur `enabledItems` → ajouter le prédicat
+  « ET (universel OU `themes` ∩ thèmes actifs) ». Changement minime.
+- **Éditeur** : des onglets/filtre par thème = simple *vue d'organisation* (confort de
+  l'« option B ») ; le modèle dessous reste le pool unique taggé (robustesse de l'« option A »).
+
+**Affinité généralisée** (remplace les affinités scolaires en dur) :
+- Aujourd'hui en dur : objets `oc*` (« quand je réponds bien en Français »), `favSubject`
+  des ingrédients (alchimie), déclencheurs `on:'correct'` filtrés par `subjects[]`,
+  `lootBonusSubject` (`itemEffects.getSubjectLootBonus`).
+- Cible : l'affinité pointe vers une **catégorie ACTIVE**, pas une clé scolaire figée —
+  soit **« la catégorie de la case »** (l'affinité joue sur le sous-thème courant), soit
+  une **« catégorie de prédilection »** affectée à l'équipe. → marche avec n'importe quel thème.
+- `getSubjectLootBonus`/déclencheurs `subjects[]`/`favSubject` se résolvent contre les
+  catégories en jeu (résolution dynamique, comme `resolveSubjectFor`).
+
+**Migration objets :**
+- Tous les objets existants → `themes=[]` (universels) — aucun changement de comportement.
+- Les objets/ingrédients à affinité scolaire → soit rattachés au thème **Collège**
+  (`themes=['college']`), soit bascule vers l'**affinité générique** (recommandé : « catégorie
+  de la case / de prédilection »), ce qui les rend jouables avec tout thème.
+
+> Effort : **moyen** côté moteur (champ + filtre loot/boutique + résolveur d'affinité),
+> **récurrent** côté contenu (créer des objets de saveur par thème, au fil de l'eau).
+> À typer en TS dès le départ (champ `themes` sur le type `Item`, déjà dans `src/types`).
 
 ---
 
