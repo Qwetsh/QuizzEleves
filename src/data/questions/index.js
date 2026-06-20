@@ -1,6 +1,15 @@
 import { CYCLE4_QUESTIONS } from './_cycle4.js';
 import { BREVET_QUESTIONS } from './_brevet.js';
-import { SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../subjects.js';
+import { SUBJECT_KEYS, FORCED_SUBJECT_KEYS, SUBJECTS, MODULES } from '../subjects.js';
+
+// Un sous-thème est filtré par NIVEAU seulement si son thème (module) est
+// scolaire ('school' → niveaux 6e/5e/…). Les thèmes 'themed' (Film, Sport…)
+// sont TRANSVERSES (pas de niveau), comme cultureG/hardcore. Défaut = school
+// (rétro-compat : les matières historiques sont 'college'/school).
+function isLevelled(key) {
+  const mod = SUBJECTS[key]?.module;
+  return !mod || (MODULES[mod]?.kind ?? 'school') === 'school';
+}
 
 // Store mutable des questions. Initialisé avec les fichiers JS embarqués (donc
 // dispo immédiatement et hors-ligne), il peut être REMPLACÉ par les données
@@ -44,7 +53,9 @@ function filterByLevel(questions, level) {
 export function getQuestions(level = 'cycle4', opts = {}) {
   const result = {};
   for (const key of SUBJECT_KEYS) {
-    const base = filterByLevel(STORE.cycle4[key] || [], level);
+    const all = STORE.cycle4[key] || [];
+    // Thème scolaire → filtre par niveau ; thème non scolaire → transverse.
+    const base = isLevelled(key) ? filterByLevel(all, level) : all;
     // Pool Brevet ajoute tel quel (déjà ciblé 3e/DNB, hors filtrage par niveau)
     result[key] = opts.brevet ? base.concat(STORE.brevet[key] || []) : base;
   }
@@ -61,9 +72,9 @@ export function getQuestions(level = 'cycle4', opts = {}) {
  */
 export function countQuestions(level = 'cycle4', opts = {}) {
   const qs = getQuestions(level, opts);
-  // Compte par niveau = matières du plateau seulement (les forcé-only sont
-  // transverses et fausseraient le compteur affiché au setup).
-  return SUBJECT_KEYS.reduce((sum, key) => sum + (qs[key]?.length || 0), 0);
+  // Compte par niveau = matières SCOLAIRES du plateau seulement (forcé-only et
+  // thèmes non scolaires sont transverses et fausseraient le compteur du setup).
+  return SUBJECT_KEYS.filter(isLevelled).reduce((sum, key) => sum + (qs[key]?.length || 0), 0);
 }
 
 // Accès direct aux pools courants (lecture seule) — utile aux éditeurs.
