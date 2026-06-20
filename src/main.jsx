@@ -24,6 +24,7 @@ import { applyCachedItems, refreshItems } from './logic/itemsConfig';
 import { applyCachedEvents, refreshEvents } from './logic/eventsConfig';
 import { applyCachedQuestions, refreshQuestions } from './logic/questionsConfig';
 import { applyCachedRecipes, refreshRecipes } from './logic/recipesConfig';
+import { applyCachedCategories, refreshCategories } from './logic/categoriesConfig';
 import { useGameStore } from './store/gameStore';
 
 // Le companion mobile s'ouvre via l'URL d'appairage (?join=CODE) : c'est une
@@ -47,6 +48,8 @@ if (import.meta.env.VITE_OFFLINE === '1') {
 } else if (joinMode || analyseMode) {
   // Mobile / dashboard : catalogue d'objets (noms/images) + recettes + équilibrage
   // (noms de pouvoirs) pour résoudre ITEMS/POWERS dans les libellés.
+  applyCachedCategories();
+  refreshCategories().catch(() => {});
   applyCachedItems();
   refreshItems().catch(() => {});
   applyCachedRecipes();
@@ -59,6 +62,12 @@ if (import.meta.env.VITE_OFFLINE === '1') {
 } else {
   // TBI complet — applique les caches (synchrone, offline-safe) AVANT le 1er rendu,
   // puis rafraîchit depuis Supabase en arrière-plan.
+  // Catégories/modules d'abord (le plateau et la sélection des matières en dépendent).
+  applyCachedCategories();
+  refreshCategories()
+    .then((n) => { if (n) useGameStore.getState().bumpQuestionsVersion(); })
+    .catch(() => {});
+
   applyCachedBalance();
   refreshBalance().catch(() => {});
 
