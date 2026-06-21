@@ -63,10 +63,14 @@ export default function TargetPickerModal() {
             <div className="space-y-2">
               {teams.map((team, i) => {
                 if (i === currentTeam) return null;
+                // Une équipe sous Immunité totale ne peut pas être ciblée par une attaque.
+                const immune = (team.totalImmuneTurns ?? 0) > 0;
                 return (
                   <TeamTargetButton
                     key={i}
                     team={team}
+                    disabled={immune}
+                    disabledNote={immune ? `(${T('modal.target.immune')})` : undefined}
                     onClick={() => selectTarget(i)}
                   />
                 );

@@ -44,7 +44,6 @@ export function applyRecul(team, board, base, masteryOn = false) {
   let recul = base;
   let shield = null; // 'wooden' | 'power'
   let bonusMoney = 0;
-  let reflectOut = 0; // Réflexion (Bouclier L10) : cases renvoyées à l'attaquant (duel)
 
   // 0. Buff \u00ab pas de recul \u00bb (effet de dur\u00e9e d'un consommable) \u2014 priorit\u00e9 absolue.
   if (recul > 0 && hasBuff(team, 'noRecul')) {
@@ -53,9 +52,14 @@ export function applyRecul(team, board, base, masteryOn = false) {
     return { patch, applied: 0, path: null, detail, absorbedBy: 'buff', bonusMoney: 0 };
   }
 
+  // Effet de bouclier (Maitrise) resolu en amont : la Forteresse court-circuite le
+  // bouclier de bois (sinon le bois rognerait l'avance et serait gaspille pour rien).
+  const bEff = team.powers?.bouclier ? resolvePowerEffect(team, 'bouclier', masteryOn) : {};
+
   // 1. Bouclier de bois (consommable) \u2014 RETIRE 1 case par charge, EN PREMIER.
+  //    Saute sous Forteresse (qui annule deja tout recul et fait avancer).
   const wooden = team.itemShield || 0;
-  if (wooden > 0 && recul > 0) {
+  if (wooden > 0 && recul > 0 && !bEff.fortressAdvance) {
     const used = Math.min(wooden, recul);
     recul -= used;
     patch.itemShield = wooden - used;
@@ -64,7 +68,6 @@ export function applyRecul(team, board, base, masteryOn = false) {
   }
 
   // 2. Pouvoir Bouclier \u2014 RETIRE `amount` cases (1 charge), SEULEMENT si recul restant.
-  const bEff = team.powers?.bouclier ? resolvePowerEffect(team, 'bouclier', masteryOn) : {};
   const charges = team.powers?.bouclier?.charges ?? 0;
   let advance = 0;      // cases gagnees (Sur-reduction / Forteresse)
   let pushAmount = 0;   // surplus a infliger aux adversaires (Sur-reduction)
@@ -73,6 +76,9 @@ export function applyRecul(team, board, base, masteryOn = false) {
     // Forteresse (L10) : le recul devient une avance du montant evite (sans charge).
     advance += recul;
     detail.push({ label: tg('log.turn.detail.bouclierNiv', { level: team.powers.bouclier.level ?? 10 }), note: tg('log.turn.detail.forteresse') });
+    // Le bouclier \u00ab est utilise \u00bb (il absorbe tout) \u2192 verse l'or du palier + Rempart dore.
+    bonusMoney = (bEff.bonusMoney ?? 0) + (bEff.goldOnUse || 0);
+    if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: tg('log.turn.detail.bonusBouclier'), amount: bonusMoney }); }
     recul = 0;
     shield = 'power';
   } else if (charges > 0 && recul > 0) {
@@ -109,7 +115,7 @@ export function applyRecul(team, board, base, masteryOn = false) {
   detail.push({ label: tg('log.turn.detail.reculSubi'), note: cases(recul) });
 
   const reduced = shield || recul !== base || advance > 0; // d\u00e9tail utile si on a r\u00e9duit/avanc\u00e9
-  const out = { patch, detail: reduced ? detail : undefined, bonusMoney, reflect: reflectOut, surplusPush: pushMode, pushAmount };
+  const out = { patch, detail: reduced ? detail : undefined, bonusMoney, surplusPush: pushMode, pushAmount };
   // Sur-r\u00e9duction / Forteresse : le recul est nul ET on gagne des cases \u2192 on AVANCE.
   if (recul <= 0 && advance > 0) {
     const fwd = moveForward(board, team.pos, advance, { throughJunctions: true });

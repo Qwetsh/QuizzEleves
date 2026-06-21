@@ -204,9 +204,13 @@ export function useRelance(set, get) {
         addLog(tg('log.pw.relanceGold', { n: gain }));
       }
 
-      // Relance chanceuse (L5) : sur un 6+ (seuil paramétrable), recharge un AUTRE
-      // pouvoir, et arme un bonus de loot (palier 1) / double loot (palier 2).
-      if (rEff.rechargeOnHigh && finalValue >= rEff.rechargeOnHigh) {
+      // Relance chanceuse (L5) : sur un « haut » résultat, recharge un AUTRE pouvoir
+      // et arme un bonus de loot (palier L7) / double loot (palier L9). Le seuil est
+      // mis à l'échelle du dé : « 6+ » sur un D6 = 1 face gagnante → on garde le MÊME
+      // nombre de faces gagnantes sur le D10 du Gros dé (L8), sinon « 6+ » deviendrait
+      // 50 % au lieu de ~17 %.
+      const highThreshold = rEff.rechargeOnHigh ? (sides - 6 + rEff.rechargeOnHigh) : 0;
+      if (rEff.rechargeOnHigh && finalValue >= highThreshold) {
         const keys = Object.keys(me().powers || {}).filter((k) => POWERS[k] && k !== 'relance');
         const pool = keys.length ? keys : Object.keys(me().powers || {}).filter((k) => POWERS[k]);
         if (pool.length) {
@@ -219,9 +223,9 @@ export function useRelance(set, get) {
       }
 
       // Relance opportune (L5) : arme un bonus pour la PROCHAINE question du tour
-      // (+temps, choix du thème, et — palier 2 — remplacement de la question).
-      if (rEff.reqTimeBonus || rEff.reChooseSubject || rEff.replaceQuestion) {
-        patchTeam(currentTeam, { relanceQ: { bonusTime: rEff.reqTimeBonus || 0, chooseSubject: !!rEff.reChooseSubject, replace: !!rEff.replaceQuestion } });
+      // (+temps et choix du thème).
+      if (rEff.reqTimeBonus || rEff.reChooseSubject) {
+        patchTeam(currentTeam, { relanceQ: { bonusTime: rEff.reqTimeBonus || 0, chooseSubject: !!rEff.reChooseSubject } });
         addLog(tg('log.pw.relanceOpportune'));
       }
 
@@ -233,9 +237,19 @@ export function useRelance(set, get) {
         let lead = -1, leadX = -Infinity;
         nt.forEach((t, i) => { if (i !== currentTeam && xOf(t) > leadX) { leadX = xOf(t); lead = i; } });
         if (lead >= 0) {
-          const r = applyRecul(nt[lead], board, finalValue, masteryActive(get));
-          patchTeam(lead, r.patch);
-          addLog(tg('log.pw.relanceVengeful', { emoji: nt[lead].emoji, name: nt[lead].name, n: r.applied ?? finalValue }));
+          const L = nt[lead];
+          if ((L.totalImmuneTurns ?? 0) > 0) {
+            // Le leader est immunisé : le recul vengeur n'a aucun effet.
+            addLog(tg('log.pw.immuneBlock', { emoji: L.emoji, name: L.name, power: locName(POWERS.relance) }));
+          } else if (L.itemFumigene) {
+            // Bombe fumigène : le coup est esquivé (et la fumigène se consomme).
+            patchTeam(lead, { itemFumigene: false, itemFumigeneTurns: undefined });
+            addLog(tg('log.pw.fumigeneBlock', { emoji: L.emoji, name: L.name, power: locName(POWERS.relance) }));
+          } else {
+            const r = applyRecul(L, board, finalValue, masteryActive(get));
+            patchTeam(lead, r.patch);
+            addLog(tg('log.pw.relanceVengeful', { emoji: L.emoji, name: L.name, n: r.applied ?? finalValue }));
+          }
         }
       }
 
@@ -273,6 +287,7 @@ export function useRelanceSwap(set, get, teamIndex) {
   const { teams, currentTeam, board, addLog } = get();
   const i = teamIndex == null ? currentTeam : teamIndex;
   if (i !== currentTeam || get().finished) return; // uniquement à son tour
+  if (teams[i]?.silencedNextTurn) { addLog(tg('log.pw.silenced', { emoji: teams[i].emoji, name: teams[i].name })); return; }
   const info = relanceSwapInfo(get, i);
   if (!info || !info.canUse) return;
   const me = teams[i], leader = teams[info.leaderIdx];
@@ -307,6 +322,8 @@ export function useShieldImmunity(set, get, teamIndex) {
   const { teams, currentTeam, addLog } = get();
   const i = teamIndex == null ? currentTeam : teamIndex;
   if (i !== currentTeam || get().finished) return; // à son tour uniquement
+  if (teams[i]?.silencedNextTurn) { addLog(tg('log.pw.silenced', { emoji: teams[i].emoji, name: teams[i].name })); return; }
+  if ((teams[i]?.totalImmuneTurns ?? 0) > 0) return; // déjà immunisé : pas de re-cast (anti double-dépense)
   const info = shieldImmunityInfo(get, i);
   if (!info || !info.canUse) return;
   const me = teams[i];
@@ -335,29 +352,28 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   // Analytics : usage de pouvoir offensif (charge consommée, quelle que soit l'issue).
   get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey, targetIdx: targetTeamIndex });
 
-  // Immunité totale (Bouclier L10) : la cible est immunisée aux attaques adverses
-  // pendant N tours → le pouvoir offensif n'a aucun effet (charge tout de même dépensée).
-  if ((target.totalImmuneTurns ?? 0) > 0) {
-    addLog(tg('log.pw.immuneBlock', { emoji: target.emoji, name: target.name, power: locName(POWERS[powerKey]) }));
-    set({ teams: newTeams, showTargetPicker: null });
-    announce(set, get, '🛡️', tg('log.pw.immuneToast', { emoji: target.emoji }), POWERS.bouclier?.color || '#3b6cb3');
-    return;
-  }
-
-  // Consommable Bombe fumigene : la cible annule le pouvoir offensif
-  // (la charge de l'attaquant est quand meme consommee — le coup est esquive)
-  if (target.itemFumigene) {
-    newTeams[targetTeamIndex] = { ...target, itemFumigene: false, itemFumigeneTurns: undefined };
-    addLog(tg('log.pw.fumigeneBlock', { emoji: target.emoji, name: target.name, power: locName(POWERS[powerKey]) }));
-    set({ teams: newTeams, showTargetPicker: null });
-    announce(set, get, '💨', tg('log.pw.fumigeneToast', { emoji: target.emoji }), '#7a8a99');
-    return;
-  }
-
   const level = team.powers?.[powerKey]?.level ?? 1;
   const effect = powerEffectOf(get, team, powerKey);
   let foudreMove = null;
   let lightning = false;
+
+  // Garde unifié, applique PAR CIBLE : une équipe immunisée (Immunité totale)
+  // annule l'effet sur elle ; une Bombe fumigène l'esquive (et se consomme).
+  // Gère le multi-cibles (Cataclysme/Chaîne/Tempête de sable), pas seulement la
+  // cible choisie. Renvoie true si la cible `ti` est protégée (à sauter).
+  const offBlocked = (ti) => {
+    const v = newTeams[ti];
+    if ((v.totalImmuneTurns ?? 0) > 0) {
+      addLog(tg('log.pw.immuneBlock', { emoji: v.emoji, name: v.name, power: locName(POWERS[powerKey]) }));
+      return true;
+    }
+    if (v.itemFumigene) {
+      newTeams[ti] = { ...v, itemFumigene: false, itemFumigeneTurns: undefined };
+      addLog(tg('log.pw.fumigeneBlock', { emoji: v.emoji, name: v.name, power: locName(POWERS[powerKey]) }));
+      return true;
+    }
+    return false;
+  };
 
   if (powerKey === 'foudre' && effect.placeTrap) {
     // Orage (L10) : pose un piège-foudre sur une case (réutilise le moteur de pièges).
@@ -394,6 +410,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     const moves = [];
     let reflectTotal = 0, stolenTotal = 0;
     for (const ti of targets) {
+      if (offBlocked(ti)) continue; // immunité / fumigène (par cible, multi inclus)
       let v = newTeams[ti];
       let rolled = baseRoll;
       const vEff = resolvePowerEffect(v, 'bouclier', masteryOn);
@@ -451,6 +468,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     const sablierOpp = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
     const sablierTargets = effect.allOthers ? new Set(sablierOpp) : new Set([targetTeamIndex]);
     for (const ti of sablierTargets) {
+      if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
       newTeams[ti] = {
         ...newTeams[ti],
         sablierActif: true, sablierDivisor: divisor,
@@ -476,6 +494,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       ? tg('log.pw.sablierToastMany', { power: sablierName, divisor, nS })
       : tg('log.pw.sablierToastOne', { power: sablierName, divisor, vemoji: target.emoji, vname: target.name }), POWERS[powerKey].color);
   } else if (powerKey === 'double') {
+    // Double cible une seule equipe : immunite/fumigene la protegent (charge depensee).
+    if (offBlocked(targetTeamIndex)) {
+      set({ teams: newTeams, showTargetPicker: null });
+      return;
+    }
     // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
     // extraAdd : questions supplémentaires des voies (Rafale tranquille / Marathon+).
     const add = (effect.add ?? 1) + (effect.extraAdd || 0);
@@ -633,7 +656,11 @@ export function chooseSpecFor(set, get, teamIndex, powerKey, slot, specKey) {
   const newTeams = [...teams];
   newTeams[teamIndex] = { ...team, powers: { ...team.powers, [powerKey]: { ...entry, [slot]: specKey } } };
   get().addLog(tg('log.pw.specChosen', { icon: opt.icon || '✨', emoji: team.emoji, name: team.name, power: locName(POWERS[powerKey]), spec: opt.name }));
-  set({ teams: newTeams });
+  // Ferme le picker du TBI s'il portait sur CE même choix (évite que le prof
+  // ré-écrase ensuite le choix fait au téléphone — la voie est verrouillée).
+  const pk = get().showSpecPicker;
+  const closePicker = pk && pk.powerKey === powerKey && pk.slot === slot && pk.teamIdx === teamIndex;
+  set({ teams: newTeams, ...(closePicker ? { showSpecPicker: null } : {}) });
   saveGame(get());
 }
 
@@ -645,6 +672,8 @@ export function chooseSpec(set, get, specKey) {
   const teams = get().teams;
   const team = teams[teamIdx];
   if (!team?.powers?.[powerKey]) { set({ showSpecPicker: null }); return; }
+  // Voie déjà choisie (ex. pick fait au téléphone entre-temps) : verrou, on ferme.
+  if (team.powers[powerKey][slot]) { set({ showSpecPicker: null }); return; }
   const opt = specOptionsFor(powerKey, slot).find((o) => o.key === specKey);
   if (!opt) return;
   const newTeams = [...teams];

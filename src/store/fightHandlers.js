@@ -254,6 +254,9 @@ function applyFightReward(set, get) {
     message = stolen > 0
       ? tgPlural('log.ft.steal.gold', stolen, { winner: `${winner.emoji} ${winner.name}`, loser: `${loser.emoji} ${loser.name}` })
       : tg('log.ft.steal.protected', { loser: `${loser.emoji} ${loser.name}` });
+  } else if ((loser.totalImmuneTurns ?? 0) > 0) {
+    // Immunité totale (Bouclier L10) : le perdant ne subit aucun recul de duel.
+    message = tg('log.ft.immune', { loser: `${loser.emoji} ${loser.name}` });
   } else {
     // Bouclier (bois + pouvoir) puis équipement du perdant : recul atténué.
     const rec = applyRecul(loser, board, f.reward.dice[0], extOn(get().extensions, 'mastery'));
@@ -268,14 +271,6 @@ function applyFightReward(set, get) {
         : (rec.absorbedBy === 'equip'
             ? tg('log.ft.knockback.equip', { loser: `${loser.emoji} ${loser.name}` })
             : tg('log.ft.knockback.shield', { loser: `${loser.emoji} ${loser.name}` }));
-    // Réflexion (Bouclier L10 du perdant) : une partie du recul revient au vainqueur.
-    if (rec.reflect > 0 && winnerIdx >= 0) {
-      const w = newTeams[winnerIdx];
-      const r2 = moveBack(board, w.pos, reducedRecul(w, rec.reflect));
-      newTeams[winnerIdx] = { ...w, pos: r2.finalPos };
-      if (r2.path.length > 1) moves = [...(moves || []), { teamIndex: winnerIdx, waypoints: r2.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }];
-      message += tg('log.ft.reflect', { winner: winner.emoji });
-    }
   }
 
   addLog(message);

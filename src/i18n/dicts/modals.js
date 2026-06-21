@@ -114,6 +114,7 @@ export default {
   'modal.target.desc': { fr: 'Choisis une équipe à viser.', en: 'Choose a team to target.' },
   'modal.target.surgeName': { fr: 'Sur-réduction', en: 'Overcharge' },
   'modal.target.surgeDesc': { fr: 'Choisis une équipe à reculer de {n} cases.', en: 'Choose a team to push back {n} squares.' },
+  'modal.target.immune': { fr: 'immunisé', en: 'immune' },
   'modal.target.chooseTeam': { fr: 'Choisir une équipe cible :', en: 'Choose a target team:' },
 
   // ---- ChargePickerModal ----

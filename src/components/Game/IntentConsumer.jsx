@@ -15,8 +15,13 @@ export default function IntentConsumer() {
   useEffect(() => {
     if (!sessionCode) return;
     let alive = true;
+    // Déduplication par id : le rattrapage (fetchIntents) et le temps réel
+    // (subscribeIntents) peuvent livrer la MÊME ligne avant que la suppression ne
+    // soit confirmée → on n'applique chaque intent qu'une seule fois.
+    const seen = new Set();
     const handle = (row) => {
-      if (!row) return;
+      if (!row || (row.id != null && seen.has(row.id))) return;
+      if (row.id != null) seen.add(row.id);
       try {
         if (row.type === 'claimTeam') applyClaimIntent(row.token, row.payload || {});
         else if (typeof row.type === 'string' && row.type.startsWith('admin')) applyAdminIntent(row.type, row.payload || {});

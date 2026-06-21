@@ -80,6 +80,10 @@ export default {
     fr: '\u{1F6E1}️ {loser} absorbe le recul avec son bouclier !',
     en: '\u{1F6E1}️ {loser} absorbs the knockback with their shield!',
   },
+  'log.ft.immune': {
+    fr: '\u{1F6E1}️ {loser} est immunisé : aucun recul de duel !',
+    en: '\u{1F6E1}️ {loser} is immune: no duel knockback!',
+  },
   'log.ft.reflect': {
     fr: ' ↩️ Réflexion : {winner} recule aussi !',
     en: ' ↩️ Reflection: {winner} moves back too!',

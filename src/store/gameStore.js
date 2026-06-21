@@ -947,6 +947,17 @@ export const useGameStore = create((set, get) => ({
     // équipe) prioritaire, sinon le forçage global historique. Consommé ici, et
     // s'applique à la PROCHAINE question de l'équipe concernée.
     const cur = get().currentTeam;
+    // Relance opportune (Bouclier… non, Relance L5) : « tu choisis le thème ». On
+    // ouvre le sélecteur de thème AVANT de tirer la question, puis on rejoue
+    // askQuestion avec le thème choisi (le flag chooseSubject est consommé ici, le
+    // bonus de temps restant l'est plus bas).
+    const oppQ = get().teams[cur]?.relanceQ;
+    if (oppQ?.chooseSubject && !get().showSubjectPicker) {
+      const nt = [...get().teams];
+      nt[cur] = { ...nt[cur], relanceQ: { ...oppQ, chooseSubject: false } };
+      set({ teams: nt, showSubjectPicker: { source: 'opportune' } });
+      return;
+    }
     // Résout la catégorie de voie → sous-thème concret : thème multi → un de ses
     // sous-thèmes ; 'lv2' → langue de l'équipe ; sinon identité (mono = historique).
     subject = get().resolveSubjectFor(subject, cur);
@@ -1150,16 +1161,24 @@ export const useGameStore = create((set, get) => ({
       // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
       const masteryOnW = extOn(get().extensions, 'mastery');
       const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue || 2, masteryOnW);
-      // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu
-      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined };
+      // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu ;
+      // les bonus de loot arm\u00e9s par la Relance chanceuse sont consomm\u00e9s (pas de loot ici).
+      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
       // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes les \u00e9quipes \u00bb du surplus (auto).
+      // Une \u00e9quipe immunis\u00e9e est \u00e9pargn\u00e9e ; une Bombe fumig\u00e8ne esquive (et se consomme).
+      const surgeMoves = [];
       if (surplusPush === 'all' && pushAmount > 0) {
         const board = get().board;
         newTeams.forEach((tm, i) => {
           if (i === currentTeam) return;
+          if ((tm.totalImmuneTurns ?? 0) > 0) { addLog(tg('log.pw.immuneBlock', { emoji: tm.emoji, name: tm.name, power: loc(POWERS.bouclier, 'name') })); return; }
+          if (tm.itemFumigene) { newTeams[i] = { ...tm, itemFumigene: false, itemFumigeneTurns: undefined }; addLog(tg('log.pw.fumigeneBlock', { emoji: tm.emoji, name: tm.name, power: loc(POWERS.bouclier, 'name') })); return; }
           const rr = applyRecul(tm, board, pushAmount, masteryOnW);
           newTeams[i] = { ...tm, ...rr.patch };
-          addLog(tg('log.pw.surgePush', { vemoji: tm.emoji, vname: tm.name, n: rr.applied ?? pushAmount }));
+          if (rr.path && rr.path.length > 1) surgeMoves.push({ teamIndex: i, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: rr.forward ? 'forward' : 'back' });
+          addLog(rr.forward
+            ? tg('log.turn.fortressAdvance', { team: `${tm.emoji} ${tm.name}`, cases: rr.advance })
+            : tg('log.pw.surgePush', { vemoji: tm.emoji, vname: tm.name, n: rr.applied ?? pushAmount }));
         });
       }
       addLog({ text: logMessage, detail });
@@ -1168,15 +1187,6 @@ export const useGameStore = create((set, get) => ({
       if ((team.powers?.bouclier?.charges ?? 0) > (updatedTeam.powers?.bouclier?.charges ?? 0))
         get().recordStat('powerUses', { teamIdx: currentTeam, powerKey: 'bouclier', targetIdx: null });
 
-      // Contre (Bouclier L5) : recul absorbé → relance gratuitement la question (2e chance).
-      const bEff = resolvePowerEffect(team, 'bouclier', extOn(get().extensions, 'mastery'));
-      if (bEff.rerollQuestionOnAbsorb && bouclierAbsorbed(team, updatedTeam) && !team.doubleActive) {
-        set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
-        addLog(tg('log.store.contre', { emoji: team.emoji, name: team.name }));
-        get().askQuestion(get().randomBoardSubject());
-        return;
-      }
-
       // Double/triple: wrong answer stops immediately, clear double state
       if (team.doubleActive) {
         newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };
@@ -1184,8 +1194,11 @@ export const useGameStore = create((set, get) => ({
       }
 
       // Sur-réduction / Forteresse : le « recul » peut être devenu une AVANCE.
-      const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: forward ? 'forward' : 'back' }] : null;
+      const selfPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: forward ? 'forward' : 'back' }] : [];
+      const backPath = [...selfPath, ...surgeMoves].length ? [...selfPath, ...surgeMoves] : null;
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
+      // Avance (Forteresse/Sur-réduction) atteignant l'arrivée → victoire.
+      if (forward && get().checkArrival(currentTeam)) return;
       // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (ex. perdre 5 PO).
       // Si l'effet ouvre un s\u00e9lecteur (interactif), on DIFF\u00c8RE nextTurn jusqu'\u00e0 la
       // fin de la file (sinon TURN_RESET \u00e9craserait la file + le picker).
@@ -1359,9 +1372,25 @@ export const useGameStore = create((set, get) => ({
     }
 
     // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
-    const { updatedTeam, logMessage, detail, path } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue || 2, extOn(get().extensions, 'mastery'));
-    // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu
-    newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined };
+    const masteryOnT = extOn(get().extensions, 'mastery');
+    const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue || 2, masteryOnT);
+    // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu ;
+    // bonus de loot de la Relance chanceuse consomm\u00e9s (pas de loot au timeout).
+    newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+    // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes \u00bb du surplus (auto, immunit\u00e9/fumig\u00e8ne g\u00e9r\u00e9s).
+    if (surplusPush === 'all' && pushAmount > 0) {
+      const board = get().board;
+      newTeams.forEach((tm, i) => {
+        if (i === currentTeam) return;
+        if ((tm.totalImmuneTurns ?? 0) > 0) { addLog(tg('log.pw.immuneBlock', { emoji: tm.emoji, name: tm.name, power: loc(POWERS.bouclier, 'name') })); return; }
+        if (tm.itemFumigene) { newTeams[i] = { ...tm, itemFumigene: false, itemFumigeneTurns: undefined }; addLog(tg('log.pw.fumigeneBlock', { emoji: tm.emoji, name: tm.name, power: loc(POWERS.bouclier, 'name') })); return; }
+        const rr = applyRecul(tm, board, pushAmount, masteryOnT);
+        newTeams[i] = { ...tm, ...rr.patch };
+        addLog(rr.forward
+          ? tg('log.turn.fortressAdvance', { team: `${tm.emoji} ${tm.name}`, cases: rr.advance })
+          : tg('log.pw.surgePush', { vemoji: tm.emoji, vname: tm.name, n: rr.applied ?? pushAmount }));
+      });
+    }
     addLog({ text: logMessage, detail });
     // Taxe du temps (Sablier L5) : la cible perd de l'or en d\u00e9passant le temps.
     if (team.timeoutPenalty) {
@@ -1379,11 +1408,19 @@ export const useGameStore = create((set, get) => ({
       addLog(tg('log.store.doubleFailed'));
     }
 
-    const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: 'back' }] : null;
+    const backPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: forward ? 'forward' : 'back' }] : null;
     set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
+    if (forward && get().checkArrival(currentTeam)) return;
     // D\u00e9clencheurs d'\u00e9quipement \u00ab \u00e0 la mauvaise r\u00e9ponse \u00bb (timeout compris).
     // nextTurn diff\u00e9r\u00e9 si l'effet ouvre un s\u00e9lecteur (cf. answerQuestion).
-    const finishWrong = () => { if (!get().finished) get().nextTurn(); };
+    const finishWrong = () => {
+      if (get().finished) return;
+      if (surplusPush === 'one' && pushAmount > 0 && get().teams.length > 1) {
+        set({ showTargetPicker: { source: 'surge', amount: pushAmount } });
+        return;
+      }
+      get().nextTurn();
+    };
     const lwBuffT = findBuff(team, 'loseOnWrong');
     const buffWrongT = lwBuffT ? [{ action: 'money', mode: 'lose', target: 'self', n: lwBuffT.n ?? 5, unit: 'flat' }] : [];
     const onWrong = [...effectH.equipTriggerActions(get().teams[currentTeam], 'wrong', timedSubject), ...buffWrongT, ...(team.wager?.else || [])];
@@ -1844,11 +1881,22 @@ export const useGameStore = create((set, get) => ({
       const masteryOn = extOn(get().extensions, 'mastery');
       const board = get().board;
       const nt = [...get().teams];
-      const rr = applyRecul(nt[i], board, stp.amount, masteryOn);
-      nt[i] = { ...nt[i], ...rr.patch };
-      const mv = rr.path && rr.path.length > 1 ? [{ teamIndex: i, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' }] : null;
-      set({ teams: nt, movePath: mv });
-      get().addLog(tg('log.pw.surgePush', { vemoji: nt[i].emoji, vname: nt[i].name, n: rr.applied ?? stp.amount }));
+      const v = nt[i];
+      if ((v.totalImmuneTurns ?? 0) > 0) {
+        get().addLog(tg('log.pw.immuneBlock', { emoji: v.emoji, name: v.name, power: loc(POWERS.bouclier, 'name') }));
+      } else if (v.itemFumigene) {
+        nt[i] = { ...v, itemFumigene: false, itemFumigeneTurns: undefined };
+        set({ teams: nt });
+        get().addLog(tg('log.pw.fumigeneBlock', { emoji: v.emoji, name: v.name, power: loc(POWERS.bouclier, 'name') }));
+      } else {
+        const rr = applyRecul(v, board, stp.amount, masteryOn);
+        nt[i] = { ...v, ...rr.patch };
+        const mv = rr.path && rr.path.length > 1 ? [{ teamIndex: i, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: rr.forward ? 'forward' : 'back' }] : null;
+        set({ teams: nt, movePath: mv });
+        get().addLog(rr.forward
+          ? tg('log.turn.fortressAdvance', { team: `${v.emoji} ${v.name}`, cases: rr.advance })
+          : tg('log.pw.surgePush', { vemoji: v.emoji, vname: v.name, n: rr.applied ?? stp.amount }));
+      }
       if (!get().finished) get().nextTurn();
       return;
     }
@@ -1888,8 +1936,12 @@ export const useGameStore = create((set, get) => ({
   },
   // Sélecteur de thème (reroll de question « au choix »)
   selectSubject: (key) => {
-    if (!get().showSubjectPicker) return;
+    const sp = get().showSubjectPicker;
+    if (!sp) return;
     set({ showSubjectPicker: false });
+    // Relance opportune : on (re)lance la question avec le thème choisi par le joueur.
+    if (sp?.source === 'opportune') { get().askQuestion(key); return; }
+    // Sinon : reroll de question piloté par le moteur d'effets (file en attente).
     effectH.resumeQueue(set, get, { subject: key });
   },
   // Inspection d'un piège : ouvre une fiche listant ses effets (un piège peut en
@@ -1919,6 +1971,21 @@ export const useGameStore = create((set, get) => ({
   },
 
   // --- Turn management ---
+  // Déclenche la victoire si l'équipe `idx` se trouve sur la case d'arrivée.
+  // Utile quand une AVANCE (Forteresse/Sur-réduction sur mauvaise réponse, push,
+  // duel…) amène un pion à l'arrivée hors du chemin normal handleLanding.
+  checkArrival: (idx) => {
+    if (get().finished) return false;
+    const t = get().teams[idx];
+    if (t && get().board[t.pos]?.type === 'arrivee') {
+      get().addLog(tg('log.store.finish', { emoji: t.emoji, name: t.name }));
+      set({ finished: true });
+      saveGame(get());
+      return true;
+    }
+    return false;
+  },
+
   nextTurn: () => {
     const { teams, currentTeam, finished, addLog } = get();
     if (finished) return;

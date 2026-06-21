@@ -26,29 +26,31 @@ function locationLabel(board, pos) {
  * Bouton de selection d'equipe cible, enrichi : or possede + position.
  * Utilise par TargetPickerModal (pouvoirs) et EventModal (evenements).
  */
-export default function TeamTargetButton({ team, onClick, hoverColor = '#e85d6b', hoverBg = '#fef2f2' }) {
+export default function TeamTargetButton({ team, onClick, hoverColor = '#e85d6b', hoverBg = '#fef2f2', disabled = false, disabledNote }) {
   const board = useGameStore((s) => s.board);
   const loc = locationLabel(board, team.pos);
 
   return (
     <button
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       style={{
         width: '100%', display: 'flex', alignItems: 'center', gap: 12,
         padding: '10px 12px', borderRadius: 14,
         border: '2px solid rgba(122,94,58,0.22)',
         background: '#fffefb',
-        cursor: 'pointer', fontFamily: 'var(--font-ui)',
+        cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)',
         transition: 'all 100ms ease',
         textAlign: 'left',
+        opacity: disabled ? 0.5 : 1,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = hoverColor; e.currentTarget.style.background = hoverBg; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(122,94,58,0.22)'; e.currentTarget.style.background = '#fffefb'; }}
+      onMouseEnter={disabled ? undefined : (e) => { e.currentTarget.style.borderColor = hoverColor; e.currentTarget.style.background = hoverBg; }}
+      onMouseLeave={disabled ? undefined : (e) => { e.currentTarget.style.borderColor = 'rgba(122,94,58,0.22)'; e.currentTarget.style.background = '#fffefb'; }}
     >
       <span className="text-2xl" style={{ flexShrink: 0 }}>{team.emoji}</span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--font-display)', color: team.color, display: 'block' }}>
-          {team.name}
+          {team.name}{disabled && disabledNote ? ` ${disabledNote}` : ''}
         </span>
         {loc && (
           <span style={{ fontSize: 11, color: 'var(--ink-500)', display: 'block', marginTop: 1 }}>

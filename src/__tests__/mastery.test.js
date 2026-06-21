@@ -265,6 +265,23 @@ describe('Bouclier — passif, Forteresse, Sur-réduction (applyRecul)', () => {
     expect(r.surplusPush).toBe('all');
     expect(r.pushAmount).toBeGreaterThan(0);
   });
+
+  it('Forteresse + Rempart doré : l’or est versé même quand Forteresse absorbe tout', () => {
+    const t = teamWith('bouclier', { level: 10, spec5: 'gold', spec10: 'fortress', charges: 0 });
+    t.money = 0; t.pos = 'n3';
+    const r = applyRecul(t, BOARD, 3, true);
+    expect(r.forward).toBe(true);
+    expect(r.bonusMoney).toBe(30); // 15 (palier L10) + 15 (Rempart doré L9)
+    expect(r.patch.money).toBe(30);
+  });
+
+  it('Forteresse court-circuite le bouclier de bois (avance pleine, bois préservé)', () => {
+    const t = teamWith('bouclier', { level: 10, spec10: 'fortress', charges: 0 });
+    t.itemShield = 3; t.pos = 'n3';
+    const r = applyRecul(t, BOARD, 3, true);
+    expect(r.advance).toBe(3);             // pas amputé par le bois
+    expect(r.patch.itemShield).toBeUndefined(); // bois NON consommé
+  });
 });
 
 describe('Bouclier — ultimes actifs (store)', () => {
@@ -304,6 +321,58 @@ describe('Bouclier — ultimes actifs (store)', () => {
     ]);
     S().applyOffensivePower(1);
     expect(S().teams[1].money).toBe(100); // or protégé
+  });
+
+  it('Immunité : Cataclysme (Foudre L10) épargne une équipe immunisée non ciblée', () => {
+    base([
+      teamWith('foudre', { level: 10, spec10: 'cataclysm' }),
+      { ...teamWith('foudre'), pos: 'n6', powers: {} },
+      { ...teamWith('foudre'), pos: 'n10', totalImmuneTurns: 2, powers: {} },
+    ]);
+    S().applyOffensivePower(1); // cible choisie = équipe 1 ; allOthers ajoute l'équipe 2
+    expect(S().teams[2].pos).toBe('n10'); // immunisée épargnée malgré allOthers
+    expect(S().teams[1].pos).not.toBe('n6'); // l'autre est bien touchée
+  });
+
+  it('Immunité : Tempête de sable (Sablier L10) n’affecte pas l’équipe immunisée', () => {
+    base([
+      teamWith('sablier', { level: 10, spec10: 'sandstorm' }),
+      { ...teamWith('foudre'), pos: 'n8', totalImmuneTurns: 2, powers: {} },
+    ]);
+    S().applyOffensivePower(1);
+    expect(S().teams[1].sablierActif).toBeFalsy();
+  });
+
+  it('Silence : empêche d’activer l’Immunité totale (charges intactes)', () => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true },
+      teams: [{ ...teamWith('bouclier', { level: 10, spec10: 'aegisTotal', charges: 5 }), silencedNextTurn: true }],
+    });
+    S().useShieldImmunity();
+    expect(S().teams[0].totalImmuneTurns ?? 0).toBe(0);
+    expect(S().teams[0].powers.bouclier.charges).toBe(5);
+  });
+
+  it('Immunité : pas de re-cast tant qu’elle est active (anti double-dépense)', () => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true },
+      teams: [{ ...teamWith('bouclier', { level: 10, spec10: 'aegisTotal', charges: 5 }), totalImmuneTurns: 2 }],
+    });
+    S().useShieldImmunity();
+    expect(S().teams[0].powers.bouclier.charges).toBe(5); // pas re-dépensé
+  });
+
+  it('Sur-réduction « au choix » : ne recule pas une équipe immunisée', () => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true },
+      teams: [teamWith('bouclier', { level: 9, spec5: 'surge' }), { ...teamWith('foudre'), pos: 'n10', totalImmuneTurns: 2, powers: {} }],
+      showTargetPicker: { source: 'surge', amount: 3 },
+    });
+    S().selectTarget(1);
+    expect(S().teams[1].pos).toBe('n10'); // immunisée non reculée
   });
 });
 
@@ -345,11 +414,11 @@ describe('Relance — arbre de Maîtrise (résolveur, paliers, calibrage)', () =
     expect(rl({ level: 9, spec5: 'lucrative' }).goldPerRoll).toBe(3);
   });
 
-  it('renfort de voie : un palier non atteint n’est pas appliqué', () => {
-    // Opportune : remplacement de question seulement au palier 2 (L9), pas avant.
-    expect(rl({ level: 7, spec5: 'opportune' }).replaceQuestion).toBeUndefined();
-    expect(rl({ level: 9, spec5: 'opportune' }).replaceQuestion).toBe(true);
-    expect(rl({ level: 9, spec5: 'opportune' }).reqTimeBonus).toBe(30);
+  it('renfort de voie : le palier s’applique au bon niveau (Opportune +temps)', () => {
+    expect(rl({ level: 5, spec5: 'opportune' }).reqTimeBonus).toBe(10); // base
+    expect(rl({ level: 7, spec5: 'opportune' }).reqTimeBonus).toBe(20); // palier L7
+    expect(rl({ level: 9, spec5: 'opportune' }).reqTimeBonus).toBe(30); // palier L9
+    expect(rl({ level: 5, spec5: 'opportune' }).reChooseSubject).toBe(true);
   });
 
   it('ultimes L10 (flat) : swap / lateStarter / vengeful', () => {
