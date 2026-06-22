@@ -37,6 +37,14 @@ describe('boardCategoriesFor — granularité automatique', () => {
       jeuxVideo: ['rpg', 'simulation'],
     });
   });
+
+  it('fineMix → chaque sous-thème coché = sa propre voie, à travers les thèmes (RUSTINE)', () => {
+    const all = { college: ['maths', 'francais', 'svt'], jeuxVideo: ['rpg', 'simulation'] };
+    // Même avec subthemesOf fourni, fineMix ignore le collapse et respecte la sélection.
+    const r = boardCategoriesFor(['francais', 'rpg'], themeOf, (th) => all[th] || [], true);
+    expect(r.boardCats).toEqual(['francais', 'rpg']);
+    expect(r.categoryPools).toEqual({});
+  });
 });
 
 describe('resolveSubjectFor — catégorie de voie → sous-thème concret', () => {

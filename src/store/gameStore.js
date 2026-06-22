@@ -537,15 +537,18 @@ export const useGameStore = create((set, get) => ({
     // filière unique 'lv2' (chaque équipe répondra dans sa langue, cf. team.lv2).
     const lv2On = lv2Mode && LV2_SUBJECTS.every((k) => subjects.includes(k));
     if (lv2On) subjects = [...subjects.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
-    // Granularité automatique (DESIGN_MODULES §0) : si les sous-thèmes couvrent
-    // ≥2 THÈMES, les voies deviennent les thèmes (chacun poolant TOUS ses sous-thèmes
-    // = « pas de mixage fin ») ; sinon les voies = les sous-thèmes sélectionnés.
+    // RUSTINE (2026-06-22) : MIXAGE FIN demandé — chaque sous-thème coché devient sa
+    // propre voie (ex. Français + Harry Potter = 2 voies distinctes), au lieu de la
+    // granularité auto « 1 voie = 1 thème entier » de DESIGN_MODULES §0. C'est un
+    // override volontaire et temporaire (cf. flag `fineMix`) ; la vraie granularité
+    // (toggle / refonte) reste à concevoir.
+    const FINE_MIX = true;
     const themeOf = (k) => SUBJECTS[k]?.module || 'college';
     // Tous les sous-thèmes avec contenu (fusion lv2 appliquée comme à la sélection).
     let allWithContent = SUBJECT_KEYS.filter((k) => questions[k]?.length);
     if (lv2On) allWithContent = [...allWithContent.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
     const subthemesOf = (theme) => allWithContent.filter((k) => themeOf(k) === theme);
-    const { boardCats, categoryPools } = boardCategoriesFor(subjects, themeOf, subthemesOf);
+    const { boardCats, categoryPools } = boardCategoriesFor(subjects, themeOf, subthemesOf, FINE_MIX);
     // Mode multi : une voie = un THÈME (clé de module). On injecte une pseudo-
     // catégorie d'affichage dans le catalogue runtime pour que tout (disque coloré
     // du plateau, libellés) la rende comme une matière. Display-only (hors SUBJECT_KEYS).

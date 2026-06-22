@@ -20,7 +20,13 @@ export function boardCategoriesFor(
   subjects: string[],
   themeOf: (k: string) => string,
   subthemesOf?: (theme: string) => string[],
+  // RUSTINE (2026-06-22) : mixage fin — chaque sous-thème coché = sa propre voie,
+  // même à travers plusieurs thèmes (override volontaire du « pas de mixage fin »
+  // de DESIGN_MODULES §0). Demandé en urgence ; la vraie granularité (toggle /
+  // refonte) reste à concevoir. Repasser à `false` (ou retirer le flag) annule.
+  fineMix = false,
 ): BoardCategories {
+  if (fineMix) return { boardCats: [...subjects], categoryPools: {} };
   const themes = [...new Set(subjects.map(themeOf))];
   if (themes.length >= 2) {
     const categoryPools: Record<string, string[]> = {};
