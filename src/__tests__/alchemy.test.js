@@ -1,7 +1,7 @@
 // Extension « Alchimie » : recettes (multiset), distillation, découverte.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
-import { craftPotion, generateShopStock, generateBlackMarketStock, pickLootItem } from '../store/itemHandlers.js';
+import { craftPotion, generateShopStock, generateBlackMarketStock, pickLootItem, cellN } from '../store/itemHandlers.js';
 import { matchRecipe, RECIPES, setCustomRecipes } from '../data/recipes.js';
 import { ITEMS } from '../data/items.js';
 
@@ -78,6 +78,57 @@ describe('craftPotion', () => {
     const r = craftPotion(set, get, 0, [0, 1, 2]);
     expect(r.ok).toBe(false);
     expect(S().teams[0].bag.filter(Boolean).length).toBe(3); // rien consommé
+  });
+
+  it('sac plein : fusion annulée, ingrédients NON consommés, aucune potion perdue', () => {
+    // 9 cases « pleines » distinctes (ni ingrédient ni potion) + 3 ingrédients à
+    // 2 exemplaires (consommer n'en libère donc PAS la case) = sac de 12 saturé.
+    const fillers = Object.keys(ITEMS)
+      .filter((k) => ITEMS[k].family !== 'ingredient' && ITEMS[k].family !== 'potion')
+      .slice(0, 9);
+    expect(fillers.length).toBe(9); // garde-fou : assez d'objets pour saturer
+    setup([
+      { key: 'herbeDoree', n: 2 }, { key: 'fleurLune', n: 2 }, { key: 'champignonBleu', n: 2 },
+      ...fillers,
+    ]);
+    const r = craftPotion(set, get, 0, [0, 1, 2]);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('sac plein');
+    const bag = S().teams[0].bag;
+    const keyOf = (c) => (typeof c === 'string' ? c : c?.key);
+    expect(bag.some((c) => keyOf(c) === 'potionOr')).toBe(false);      // potion PAS perdue/refusée
+    expect(bag.filter((c) => keyOf(c) === 'herbeDoree' && cellN(c) === 2).length).toBe(1); // ingrédients intacts
+  });
+});
+
+// Régression : le mobile publie un sac COMPACTÉ (filter(Boolean)) tandis que le
+// TBI a un sac POSITIONNEL avec des trous. Envoyer des index décalait la sélection
+// dès qu'une case se libérait → distillation silencieuse sans consommer (le bug
+// « après 4 potions ça ne marche plus, composants pas utilisés »). On envoie
+// désormais les CLÉS et le TBI les résout sur son sac positionnel.
+describe('craft via intent mobile (clés sur sac positionnel fragmenté)', () => {
+  beforeEach(() => setCustomRecipes([TEST_RECIPE]));
+  afterEach(() => setCustomRecipes([]));
+
+  it('résout les clés même avec des trous/potions intercalés dans le sac', () => {
+    // Sac TBI fragmenté : potion en tête, deux trous, puis les 3 ingrédients.
+    // Avec des index, le mobile (sac compacté [potionOr, herbe, fleur, champ])
+    // aurait envoyé [1,2,3] → côté TBI = [null, null, herbeDoree] → échec muet.
+    const bag = ['potionOr', null, null, 'herbeDoree', 'fleurLune', 'champignonBleu'];
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, finished: false, currentTeam: 0, log: [],
+      showQuestion: false, showEvent: false, showFight: false, showDuelChoice: false,
+      rolling: false, showDiceModal: false, awaitingChoice: false, pendingActions: null, pendingLanding: null,
+      teams: [team(), team({ token: 'TK', bag, pos: 'n1' })],
+    });
+    get().applyTeamIntent('TK', 'craft', { keys: ['herbeDoree', 'fleurLune', 'champignonBleu'] });
+    const t = S().teams[1];
+    const keyOf = (c) => (typeof c === 'string' ? c : c?.key);
+    // Ingrédients consommés et potion bien créée (empilée sur la potionOr existante).
+    expect(t.bag.filter((c) => keyOf(c) === 'herbeDoree').length).toBe(0);
+    expect(t.bag.filter((c) => keyOf(c) === 'fleurLune').length).toBe(0);
+    expect(t.bag.some((c) => keyOf(c) === 'potionOr' && cellN(c) === 2)).toBe(true);
+    expect(t.knownRecipes).toContain('or');
   });
 });
 
