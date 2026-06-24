@@ -1012,7 +1012,11 @@ function AlchemyView({ session, teamIdx, code, token }) {
   const distill = () => {
     if (filled !== 3 || busy) return;
     setBusy(true);
-    sendIntent(code, token, 'craft', { bag: slots.filter((x) => x != null) }).catch(() => {});
+    // On envoie les CLÉS des ingrédients (pas les index) : le sac publié au mobile
+    // est compacté (filter(Boolean)) alors que le TBI a un sac positionnel — des
+    // index seraient décalés dès qu'une case se libère. Le TBI résout les clés.
+    const keys = slots.filter((x) => x != null).map((bi) => cellKey(t.bag[bi]));
+    sendIntent(code, token, 'craft', { keys }).catch(() => {});
     setTimeout(() => { setSlots([null, null, null]); setBusy(false); }, 1400);
   };
 

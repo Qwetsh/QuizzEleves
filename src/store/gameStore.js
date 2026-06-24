@@ -1791,8 +1791,19 @@ export const useGameStore = create((set, get) => ({
       const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
       if (i >= 0) itemH.sellBagItem(set, get, i, idx);
     } else if (type === 'craft') {
-      // Alchimie : distille 3 ingrédients du sac (positions dans payload.bag).
-      itemH.craftPotion(set, get, idx, payload.bag || []);
+      // Alchimie : le mobile envoie les CLÉS des 3 ingrédients (payload.keys) —
+      // PAS des index : son sac est compacté (filter(Boolean)) alors que le TBI a
+      // un sac positionnel (avec trous). On résout chaque clé vers une case
+      // DISTINCTE, comme equip/sellBag/enchant. (Rétro-compat : payload.bag = index.)
+      const bag = itemH.normalizeBag(team.bag);
+      const used = [];
+      const resolve = (k) => {
+        const i = bag.findIndex((c, j) => !used.includes(j) && itemH.cellKey(c) === k);
+        if (i >= 0) used.push(i);
+        return i;
+      };
+      const indices = Array.isArray(payload.keys) ? payload.keys.map(resolve) : (payload.bag || []);
+      itemH.craftPotion(set, get, idx, indices);
     } else if (type === 'enchant') {
       // Enchantement : applique le parchemin (payload.key) sur la pièce du slot.
       const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);

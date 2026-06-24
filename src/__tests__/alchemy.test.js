@@ -101,6 +101,37 @@ describe('craftPotion', () => {
   });
 });
 
+// Régression : le mobile publie un sac COMPACTÉ (filter(Boolean)) tandis que le
+// TBI a un sac POSITIONNEL avec des trous. Envoyer des index décalait la sélection
+// dès qu'une case se libérait → distillation silencieuse sans consommer (le bug
+// « après 4 potions ça ne marche plus, composants pas utilisés »). On envoie
+// désormais les CLÉS et le TBI les résout sur son sac positionnel.
+describe('craft via intent mobile (clés sur sac positionnel fragmenté)', () => {
+  beforeEach(() => setCustomRecipes([TEST_RECIPE]));
+  afterEach(() => setCustomRecipes([]));
+
+  it('résout les clés même avec des trous/potions intercalés dans le sac', () => {
+    // Sac TBI fragmenté : potion en tête, deux trous, puis les 3 ingrédients.
+    // Avec des index, le mobile (sac compacté [potionOr, herbe, fleur, champ])
+    // aurait envoyé [1,2,3] → côté TBI = [null, null, herbeDoree] → échec muet.
+    const bag = ['potionOr', null, null, 'herbeDoree', 'fleurLune', 'champignonBleu'];
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, finished: false, currentTeam: 0, log: [],
+      showQuestion: false, showEvent: false, showFight: false, showDuelChoice: false,
+      rolling: false, showDiceModal: false, awaitingChoice: false, pendingActions: null, pendingLanding: null,
+      teams: [team(), team({ token: 'TK', bag, pos: 'n1' })],
+    });
+    get().applyTeamIntent('TK', 'craft', { keys: ['herbeDoree', 'fleurLune', 'champignonBleu'] });
+    const t = S().teams[1];
+    const keyOf = (c) => (typeof c === 'string' ? c : c?.key);
+    // Ingrédients consommés et potion bien créée (empilée sur la potionOr existante).
+    expect(t.bag.filter((c) => keyOf(c) === 'herbeDoree').length).toBe(0);
+    expect(t.bag.filter((c) => keyOf(c) === 'fleurLune').length).toBe(0);
+    expect(t.bag.some((c) => keyOf(c) === 'potionOr' && cellN(c) === 2)).toBe(true);
+    expect(t.knownRecipes).toContain('or');
+  });
+});
+
 describe('extension OFF : aucune fuite des familles (ingrédient/potion/parchemin)', () => {
   const allKeys = Object.keys(ITEMS);
   const isFamily = (k) => !!ITEMS[k]?.family;
