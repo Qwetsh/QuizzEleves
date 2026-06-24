@@ -629,6 +629,43 @@ describe('pièges', () => {
     S().handleLanding();
     expect(team(0).money).toBe(50); // inchangé
   });
+
+  // --- Passage 50% / Arrêt 100% (déplacement au dé) ---
+  it('passage sur un piège : 50% qui DÉCLENCHE → stoppe le pion sur la case', () => {
+    useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'X', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }], ownerTeam: 1 } } } });
+    useGameStore.setState({ teams: [{ ...team(0), pos: 'n1' }, team(1)], currentTeam: 0 });
+    vi.spyOn(Math, 'random').mockReturnValue(0.1); // < 0.5 → le piège part au passage
+    S().handleDiceResult(4); // n1 → n5, mais TRAVERSE n3 (piégé)
+    expect(team(0).pos).toBe('n3');             // pion stoppé sur le piège
+    S().handleLanding();
+    expect(team(0).pos).toBe('n1');             // reculé de 2
+    expect(S().board.n3.trap).toBeUndefined();  // consommé
+    vi.restoreAllMocks();
+  });
+
+  it('passage sur un piège : 50% qui RATE → le pion continue, piège reste armé', () => {
+    useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'X', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }], ownerTeam: 1 } } } });
+    useGameStore.setState({ teams: [{ ...team(0), pos: 'n1' }, team(1)], currentTeam: 0 });
+    vi.spyOn(Math, 'random').mockReturnValue(0.9); // ≥ 0.5 → frôlé
+    S().handleDiceResult(4);
+    expect(team(0).pos).toBe('n5');             // arrive normalement (n3 traversé sans déclenchement)
+    S().handleLanding();                        // n5 sans piège → rien
+    expect(team(0).pos).toBe('n5');
+    expect(S().board.n3.trap).toBeTruthy();     // reste armé pour la prochaine fois
+    vi.restoreAllMocks();
+  });
+
+  it('arrêt EXACT sur un piège (au dé) : 100% même si le tirage « passage » aurait raté', () => {
+    useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'X', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }], ownerTeam: 1 } } } });
+    useGameStore.setState({ teams: [{ ...team(0), pos: 'n1' }, team(1)], currentTeam: 0 });
+    vi.spyOn(Math, 'random').mockReturnValue(0.9); // ≥ 0.5 : ne doit RIEN changer (arrêt = 100%)
+    S().handleDiceResult(2); // n1 → n3 PILE (n3 = case d'arrêt, pas un passage)
+    expect(team(0).pos).toBe('n3');
+    S().handleLanding();
+    expect(team(0).pos).toBe('n1');             // déclenché à 100% → reculé de 2
+    expect(S().board.n3.trap).toBeUndefined();  // consommé
+    vi.restoreAllMocks();
+  });
 });
 
 // --- on:roll équipement ------------------------------------------------

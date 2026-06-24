@@ -4,17 +4,20 @@ import { useGameStore } from '../../store/gameStore';
 // Overlay transitoire centré sur le pion d'une équipe :
 //  - vfx.type 'lightning' : éclair + flash blanc/bleu (Foudre)
 //  - vfx.type 'shield'    : flash bleu/cyan + onde (Bouclier qui absorbe un recul)
+//  - vfx.type 'trap'      : mâchoire 🪤 qui claque + onde rouge (Piège déclenché)
 // Déclenché par le champ store `vfx = { type, teamIndex, id }`, puis nettoyé.
+const VFX_TYPES = ['lightning', 'shield', 'trap'];
 export default function LightningStrike() {
   const vfx = useGameStore((s) => s.vfx);
   const clearVfx = useGameStore((s) => s.clearVfx);
   const [strike, setStrike] = useState(null);
 
   useEffect(() => {
-    if (!vfx || (vfx.type !== 'lightning' && vfx.type !== 'shield')) return;
+    if (!vfx || !VFX_TYPES.includes(vfx.type)) return;
 
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const isShield = vfx.type === 'shield';
+    const isTrap = vfx.type === 'trap';
 
     // Localise la cible : pion du plateau en priorité, sinon carte de la bande du bas.
     const el =
@@ -37,15 +40,76 @@ export default function LightningStrike() {
       pts.push(`${tx + jitter},${t * ty}`);
     }
 
-    setStrike({ id: vfx.id ?? 0, tx, ty, points: pts.join(' '), reduce, isShield });
+    setStrike({ id: vfx.id ?? 0, tx, ty, points: pts.join(' '), reduce, isShield, isTrap });
     const timer = setTimeout(() => {
       setStrike(null);
       clearVfx();
-    }, reduce ? 350 : (isShield ? 600 : 750));
+    }, reduce ? 380 : (isShield ? 600 : (isTrap ? 920 : 750)));
     return () => clearTimeout(timer);
   }, [vfx?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!strike) return null;
+
+  // Piège : claquement de mâchoire + secousse plein écran + vignette rouge.
+  if (strike.isTrap) {
+    return (
+      <div className="tp-shake" style={{ position: 'fixed', inset: 0, zIndex: 250, pointerEvents: 'none', overflow: 'hidden', animation: strike.reduce ? 'none' : 'tp-shake 460ms cubic-bezier(.36,.07,.19,.97)' }}>
+        <style>{`
+          @keyframes tp-flash { 0% { opacity: 0; } 8% { opacity: 0.9; } 30% { opacity: 0.2; } 46% { opacity: 0.55; } 100% { opacity: 0; } }
+          @keyframes tp-vignette { 0% { opacity: 0; } 12% { opacity: 1; } 55% { opacity: 0.4; } 100% { opacity: 0; } }
+          @keyframes tp-snap { 0% { transform: translate(-50%,-50%) scale(0.15) rotate(-22deg); opacity: 0; }
+                               16% { transform: translate(-50%,-50%) scale(1.7) rotate(10deg); opacity: 1; }
+                               32% { transform: translate(-50%,-50%) scale(0.86) rotate(-6deg); }
+                               48% { transform: translate(-50%,-50%) scale(1.18) rotate(3deg); }
+                               66% { transform: translate(-50%,-50%) scale(0.98) rotate(-1deg); opacity: 1; }
+                               100% { transform: translate(-50%,-50%) scale(1.06) rotate(0deg); opacity: 0; } }
+          @keyframes tp-ring { 0% { transform: translate(-50%,-50%) scale(0.2); opacity: 0.95; } 100% { transform: translate(-50%,-50%) scale(3.1); opacity: 0; } }
+          @keyframes tp-ring2 { 0% { transform: translate(-50%,-50%) scale(0.2); opacity: 0; } 22% { opacity: 0.8; } 100% { transform: translate(-50%,-50%) scale(4.4); opacity: 0; } }
+          @keyframes tp-shake { 0%,100% { transform: translate(0,0); } 12% { transform: translate(-9px,5px); } 24% { transform: translate(8px,-6px); } 38% { transform: translate(-7px,-4px); } 52% { transform: translate(6px,5px); } 68% { transform: translate(-4px,2px); } 84% { transform: translate(3px,-2px); } }
+          @media (prefers-reduced-motion: reduce) { .tp-shake { animation: none !important; } }
+        `}</style>
+
+        {/* Vignette rouge sur tout l'écran (bords) */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          boxShadow: 'inset 0 0 160px 40px rgba(190,25,15,0.85), inset 0 0 60px 10px rgba(255,70,40,0.5)',
+          animation: `tp-vignette ${strike.reduce ? 320 : 700}ms ease-out forwards`,
+        }} />
+
+        {/* Flash rouge localisé sur le pion */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(circle at ${strike.tx}px ${strike.ty}px, rgba(255,100,70,0.92), rgba(210,45,30,0.45) 24%, rgba(150,20,12,0.14) 52%, transparent 70%)`,
+          animation: `tp-flash ${strike.reduce ? 320 : 680}ms ease-out forwards`,
+        }} />
+
+        {/* Double onde d'impact rouge */}
+        <div style={{
+          position: 'absolute', left: strike.tx, top: strike.ty,
+          width: 100, height: 100, borderRadius: '50%',
+          border: '5px solid rgba(255,120,90,0.98)',
+          boxShadow: '0 0 38px rgba(225,65,45,0.9)',
+          animation: `tp-ring ${strike.reduce ? 360 : 640}ms ease-out forwards`,
+        }} />
+        {!strike.reduce && (
+          <div style={{
+            position: 'absolute', left: strike.tx, top: strike.ty,
+            width: 100, height: 100, borderRadius: '50%',
+            border: '3px solid rgba(255,170,120,0.7)',
+            animation: 'tp-ring2 760ms ease-out forwards',
+          }} />
+        )}
+
+        {/* Mâchoire du piège qui claque (centrée sur le pion) */}
+        <div style={{
+          position: 'absolute', left: strike.tx, top: strike.ty,
+          fontSize: 104, lineHeight: 1,
+          filter: 'drop-shadow(0 5px 12px rgba(120,8,0,0.8))',
+          animation: `tp-snap ${strike.reduce ? 350 : 860}ms cubic-bezier(.2,.9,.2,1) forwards`,
+        }}>🪤</div>
+      </div>
+    );
+  }
 
   const sh = strike.isShield;
   // Flash localisé : bleu/cyan pour le bouclier, blanc/bleu pour la foudre.
