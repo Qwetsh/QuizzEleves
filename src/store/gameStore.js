@@ -532,7 +532,7 @@ export const useGameStore = create((set, get) => ({
     // on enchaîne sur l'objet suivant au lieu de fermer.
     if (lr?.rest?.length) {
       const [next, ...rest] = lr.rest;
-      set({ lootReveal: { ...next, rest, thenClose: lr.thenClose } });
+      set({ lootReveal: { ...next, rest, thenClose: lr.thenClose, thenNextTurn: lr.thenNextTurn } });
       return;
     }
     set({ lootReveal: null });
@@ -541,6 +541,10 @@ export const useGameStore = create((set, get) => ({
     if (lr?.thenClose) {
       set({ showEvent: null, eventApplied: false });
       get().finishEventTurn();
+    } else if (lr?.thenNextTurn) {
+      // Loot de bonne réponse : la main passe seulement une fois le butin fermé,
+      // pour que le coffre de départ de l'équipe suivante ne le recouvre pas.
+      get().nextTurn();
     }
   },
 
@@ -1398,14 +1402,20 @@ export const useGameStore = create((set, get) => ({
         set({ teams: nt });
       }
 
-      get().nextTurn();
+      // Le butin appartient à l'équipe QUI VIENT DE RÉPONDRE : on le révèle AVANT
+      // de passer la main, puis on diffère `nextTurn` (et donc le coffre de départ
+      // de l'équipe suivante) jusqu'à la fermeture du butin — sinon le coffre de
+      // l'équipe d'après s'affiche par-dessus la révélation (thenNextTurn).
       if (revealQueue.length) {
         const [first, ...rest] = revealQueue;
         get().showLoot(first, {
           title: '✨ Bien joué !',
           subtitle: rest.length ? 'Double butin ! (1/2)' : 'Récompense de bonne réponse',
           rest: rest.map((k) => ({ itemKey: k, title: '✨ Et en plus…', subtitle: 'Double butin ! (2/2)' })),
+          thenNextTurn: true,
         });
+      } else {
+        get().nextTurn();
       }
     };
 

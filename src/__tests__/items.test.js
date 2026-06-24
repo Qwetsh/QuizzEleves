@@ -439,6 +439,22 @@ describe('loot de bonne réponse', () => {
     expect(S().lootReveal).toBeTruthy();
     expect(S().lootReveal.rest).toHaveLength(1);
   });
+
+  it('le butin est révélé AVANT de passer la main (tour différé jusqu’à fermeture)', () => {
+    freshGame([{ equipment: { head: null, body: null, feet: null }, bag: [] }, {}]);
+    vi.spyOn(Math, 'random').mockReturnValue(0); // garantit un drop
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 30);
+    // Le butin appartient à l'équipe 0 : il s'affiche pendant SON tour, la main
+    // n'a pas encore tourné (sinon le coffre de l'équipe 1 le recouvrirait).
+    expect(S().lootReveal).toBeTruthy();
+    expect(S().lootReveal.thenNextTurn).toBe(true);
+    expect(S().currentTeam).toBe(0);
+    // On enchaîne les révélations jusqu'au bout, puis la main passe.
+    S().dismissLoot();
+    while (S().lootReveal) S().dismissLoot();
+    expect(S().currentTeam).toBe(1);
+  });
 });
 
 // --- indiceBoost passif (élimine des mauvaises réponses à chaque question) ---
