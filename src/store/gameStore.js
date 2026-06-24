@@ -109,6 +109,25 @@ function bouclierAbsorbed(before, after) {
   );
 }
 
+// Pièges TRAVERSÉS pendant un déplacement (cases foulées SANS y finir le tour) :
+// chacun a 50% de se déclencher ; le PREMIER qui part stoppe le pion sur la case
+// (trajet tronqué) — il sera ensuite déclenché par handleLanding. La case où le
+// tour se TERMINE n'est PAS passée ici : un arrêt PILE dessus déclenche à 100%
+// (géré par handleLanding). `touched` = cases traversées, dans l'ordre. Retourne :
+//   { idx, missed } — idx = index dans `touched` de la case fatale (-1 si aucune),
+//   missed = ids des cases piégées frôlées (50% raté) AVANT la fatale (restent armées).
+function scanTraversedTraps(board, touched) {
+  const missed = [];
+  for (let i = 0; i < touched.length; i++) {
+    const id = touched[i];
+    if (board[id]?.trap) {
+      if (Math.random() < 0.5) return { idx: i, missed };
+      missed.push(id);
+    }
+  }
+  return { idx: -1, missed };
+}
+
 // UI state reset shared by nextTurn, resumeGame, reset.
 // NB: movePath n'est PAS reset ici — les animations de deplacement doivent
 // survivre au changement de tour (ex: recul apres mauvaise reponse) et sont
@@ -697,10 +716,36 @@ export const useGameStore = create((set, get) => ({
       : tg('log.store.roll', { emoji: team.emoji, name: team.name, value }));
 
     const result = moveForward(board, team.pos, eff);
+
+    // Pi\u00E8ges TRAVERS\u00C9S : 50% par case foul\u00E9e. On EXCLUT la case d'arr\u00EAt final
+    // (arr\u00EAt pile = 100%, g\u00E9r\u00E9 par handleLanding) \u2014 sauf si le d\u00E9 s'arr\u00EAte sur
+    // une JONCTION : on n'y finit pas le tour, donc c'est un passage (50%). Le
+    // 1er pi\u00E8ge qui part stoppe le pion dessus ; handleLanding le d\u00E9clenche.
+    const lastIdx = result.path.length - 1;
+    const traversedEnd = result.stoppedAtJunction ? lastIdx : lastIdx - 1;
+    const traversed = result.path.slice(1, traversedEnd + 1);
+    const scan = scanTraversedTraps(board, traversed);
+    let finalPos = result.finalPos;
+    let path = result.path;
+    let stoppedAtJunction = result.stoppedAtJunction;
+    let remaining = result.remaining;
+    if (scan.idx >= 0) {
+      const hitPathIdx = scan.idx + 1; // traversed[i] === path[i + 1]
+      path = result.path.slice(0, hitPathIdx + 1);
+      finalPos = path[path.length - 1];
+      stoppedAtJunction = false;
+      remaining = 0;
+    }
+    // Pi\u00E8ges fr\u00F4l\u00E9s (50% rat\u00E9) : ils restent arm\u00E9s, on le signale au joueur.
+    scan.missed.forEach((id) => {
+      const lbl = board[id].trap.label ? tg('log.store.trap.label', { label: board[id].trap.label }) : '';
+      addLog(tg('log.store.trapAvoided', { emoji: team.emoji, name: team.name, label: lbl }));
+    });
+
     const newTeams = [...teams];
-    newTeams[currentTeam] = { ...team, pos: result.finalPos };
+    newTeams[currentTeam] = { ...team, pos: finalPos };
     // Build animation waypoints from path
-    const waypoints = result.path.map((id) => ({ x: board[id].x, y: board[id].y }));
+    const waypoints = path.map((id) => ({ x: board[id].x, y: board[id].y }));
     set({ teams: newTeams, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
 
     // D\u00E9clencheurs on:roll de l'\u00E9quipement : ils d\u00E9pendent de la VALEUR du d\u00E9,
@@ -708,7 +753,7 @@ export const useGameStore = create((set, get) => ({
     // jonction/atterrissage ; finishQueue encha\u00EEne ensuite resolvePostRoll.
     // opts.skipOnRoll : une Relance ne re-d\u00E9clenche pas le bonus on:roll (d\u00E9j\u00E0
     // accord\u00E9 au 1er lancer) \u2192 \u00E9vite un double bonus.
-    const postRoll = { stoppedAtJunction: result.stoppedAtJunction, remaining: result.remaining, junctionPos: result.finalPos };
+    const postRoll = { stoppedAtJunction, remaining, junctionPos: finalPos };
     const onRoll = opts.skipOnRoll ? [] : effectH.equipOnRollActions(team, value);
     if (onRoll.length) {
       effectH.runEffects(set, get, onRoll, { source: 'roll', diceValue: value, postRoll });
@@ -778,17 +823,38 @@ export const useGameStore = create((set, get) => ({
 
     if (pendingMove && pendingMove.remaining > 1) {
       const result = moveForward(board, nextNodeId, pendingMove.remaining - 1);
+      // Pièges traversés sur la branche choisie (sauf déplacement d'objet) :
+      // result.path[0] === nextNodeId. On exclut l'arrêt final (100% via
+      // handleLanding), sauf si on s'arrête sur une jonction (= passage, 50%).
+      const lastIdx = result.path.length - 1;
+      const traversedEnd = result.stoppedAtJunction ? lastIdx : lastIdx - 1;
+      const traversed = noLanding ? [] : result.path.slice(0, traversedEnd + 1);
+      const scan = scanTraversedTraps(board, traversed);
+      let fpos = result.finalPos;
+      let cut = result.path;
+      let stoppedAtJunction = result.stoppedAtJunction;
+      if (scan.idx >= 0) {
+        cut = result.path.slice(0, scan.idx + 1); // traversed[i] === path[i] : stoppe sur la case piégée
+        fpos = cut[cut.length - 1];
+        stoppedAtJunction = false;
+      }
+      if (!noLanding) scan.missed.forEach((id) => {
+        const lbl = board[id].trap.label ? tg('log.store.trap.label', { label: board[id].trap.label }) : '';
+        get().addLog(tg('log.store.trapAvoided', { emoji: team.emoji, name: team.name, label: lbl }));
+      });
       const updatedTeams = [...get().teams];
-      updatedTeams[currentTeam] = { ...updatedTeams[currentTeam], pos: result.finalPos };
+      updatedTeams[currentTeam] = { ...updatedTeams[currentTeam], pos: fpos };
       // Animation depuis la jonction, en passant par la branche choisie
-      const waypoints = [junctionPos, ...result.path].map((id) => ({ x: board[id].x, y: board[id].y }));
+      const waypoints = [junctionPos, ...cut].map((id) => ({ x: board[id].x, y: board[id].y }));
       set({ teams: updatedTeams, pendingMove: null, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
 
-      if (result.stoppedAtJunction) {
+      if (stoppedAtJunction) {
         set({ awaitingChoice: true, pendingMove: { remaining: result.remaining, noLanding, resumeEngine } });
         return;
       }
     } else {
+      // Pas de cases traversées : le pion s'arrête PILE sur nextNodeId
+      // (arrêt = 100%, géré par handleLanding).
       const waypoints = [junctionPos, nextNodeId].map((id) => ({ x: board[id].x, y: board[id].y }));
       set({ pendingMove: null, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
     }
@@ -842,6 +908,8 @@ export const useGameStore = create((set, get) => ({
 
     // Piege sur la case : declenche pour TOUTE equipe (poseur compris), one-shot.
     // Resolu AVANT le combat (un recul peut sortir la victime de la case adverse).
+    // L'atterrissage PILE sur un piège le déclenche à 100% (le 50% « au passage »
+    // a déjà été résolu pendant le déplacement, qui aurait stoppé le pion plus tôt).
     if (node.trap) {
       const depth = get().trapDepth || 0;
       const trap = node.trap;
@@ -849,6 +917,7 @@ export const useGameStore = create((set, get) => ({
       nb[team.pos] = { ...node }; delete nb[team.pos].trap; // nettoyage avant execution (idempotence)
       set({ board: nb, trapDepth: depth + 1 });
       soundTrap();
+      get().emitVfx('trap', currentTeam); // visuel du déclenchement sur le pion
       addLog(tg('log.store.trap', { emoji: team.emoji, name: team.name, label: trap.label ? tg('log.store.trap.label', { label: trap.label }) : '' }));
       if (depth < 3) {
         // ownerTeam = le POSEUR : l'or volé par le piège lui revient (cf. applyMoney).

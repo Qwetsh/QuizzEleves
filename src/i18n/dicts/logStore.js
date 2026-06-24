@@ -35,6 +35,8 @@ export default {
   // --- Piège ---
   'log.store.trap':              { fr: '🪤 {emoji} {name} declenche un piege{label} !', en: '🪤 {emoji} {name} triggers a trap{label}!' },
   'log.store.trap.label':        { fr: ' : {label}', en: ': {label}' },
+  'log.store.trapAvoided':       { fr: '😅 {emoji} {name} frôle un piège{label} sans le déclencher.',
+                                   en: '😅 {emoji} {name} narrowly avoids a trap{label}.' },
 
   // --- Duels ---
   'log.store.duelImmune':        { fr: '🛡️ Duel évité : {emoji} {name} est immunisé(e) aux duels.',
