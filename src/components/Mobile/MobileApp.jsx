@@ -1403,20 +1403,32 @@ export default function MobileApp() {
 
   // Mode téléphone : une fois la partie lancée, retrouve SON équipe via le token
   // (l'index a été écrit dans le lobby au démarrage par le TBI).
+  //
+  // Ce token est persisté dans localStorage : il reste la SOURCE DE VÉRITÉ de la
+  // propriété de l'équipe après un rechargement de page. On NE sort donc PAS si
+  // `teamIdx` est déjà connu (restauré depuis localStorage au rechargement) :
+  // sinon `owned`, qui n'est jamais persisté, resterait à false et l'élève
+  // perdrait l'accès au troc et aux achats. On ne re-dérive que tant que la
+  // propriété n'est pas établie (`!owned`), et seulement si l'équipe affichée
+  // est bien la sienne — pas une autre équipe choisie en mode tableau.
   useEffect(() => {
-    if (!session || session.status === 'lobby' || teamIdx != null || !token || !code) return;
+    if (!session || session.status === 'lobby' || !token || !code || owned) return;
     let alive = true;
     fetchLobbyTeams(code).then((rows) => {
       if (!alive) return;
       const mine = rows.find((r) => r.token === token && r.idx != null);
-      if (mine && session.teams?.[mine.idx]) {
+      if (!mine || session.teams?.[mine.idx] == null) return;
+      // teamIdx == null  → première connexion : on adopte SON équipe.
+      // teamIdx === mine → rechargement de SA propre équipe : on restaure l'édition.
+      // teamIdx ≠ mine   → une AUTRE équipe est affichée (mode tableau) : on n'y touche pas.
+      if (teamIdx == null || teamIdx === mine.idx) {
         setTeamIdx(mine.idx);
         setOwned(true); // équipe créée par CE téléphone → édition autorisée
         try { localStorage.setItem(`quete_mobile_team_${code}`, String(mine.idx)); } catch { /* mode privé */ }
       }
     }).catch(() => {});
     return () => { alive = false; };
-  }, [session, teamIdx, token, code]);
+  }, [session, teamIdx, token, code, owned]);
 
   // Suivi des trocs : alimente le badge de l'onglet Troc ET la vue Troc
   // (abonnement unique partagé). RÉSERVÉ au propriétaire de l'équipe (`owned`) :
