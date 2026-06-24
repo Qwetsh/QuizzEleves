@@ -134,6 +134,7 @@ export default {
   'mobile.workshop': { fr: 'Atelier', en: 'Workshop' },
   'mobile.distilling': { fr: '✨ Distillation…', en: '✨ Distilling…' },
   'mobile.distill': { fr: 'Distiller', en: 'Distill' },
+  'mobile.bagFull': { fr: '🎒 Sac plein : libère une place avant de distiller.', en: '🎒 Bag full: free a slot before distilling.' },
   'mobile.noIngredient': { fr: 'Aucun ingrédient dans ton sac.', en: 'No ingredients in your bag.' },
   'mobile.grimoire': { fr: '📖 Grimoire', en: '📖 Grimoire' },
   'mobile.noRecipe': { fr: 'Aucune recette découverte. Distille 3 ingrédients pour en trouver !', en: 'No recipes discovered yet. Distill 3 ingredients to find some!' },

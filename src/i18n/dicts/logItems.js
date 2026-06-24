@@ -48,4 +48,6 @@ export default {
                                en: ' ✨ Recipe discovered!' },
   'log.it.craftFail':      { fr: '💨 {emoji} {name} : distillation ratée (eau trouble).',
                              en: '💨 {emoji} {name}: distillation failed (murky water).' },
+  'log.it.craftFull':      { fr: '🎒 {emoji} {name} : sac plein, fusion annulée (libère une place).',
+                             en: '🎒 {emoji} {name}: bag full, fusion cancelled (free a slot).' },
 };

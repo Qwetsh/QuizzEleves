@@ -1,7 +1,7 @@
 // Extension « Alchimie » : recettes (multiset), distillation, découverte.
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
-import { craftPotion, generateShopStock, generateBlackMarketStock, pickLootItem } from '../store/itemHandlers.js';
+import { craftPotion, generateShopStock, generateBlackMarketStock, pickLootItem, cellN } from '../store/itemHandlers.js';
 import { matchRecipe, RECIPES, setCustomRecipes } from '../data/recipes.js';
 import { ITEMS } from '../data/items.js';
 
@@ -78,6 +78,26 @@ describe('craftPotion', () => {
     const r = craftPotion(set, get, 0, [0, 1, 2]);
     expect(r.ok).toBe(false);
     expect(S().teams[0].bag.filter(Boolean).length).toBe(3); // rien consommé
+  });
+
+  it('sac plein : fusion annulée, ingrédients NON consommés, aucune potion perdue', () => {
+    // 9 cases « pleines » distinctes (ni ingrédient ni potion) + 3 ingrédients à
+    // 2 exemplaires (consommer n'en libère donc PAS la case) = sac de 12 saturé.
+    const fillers = Object.keys(ITEMS)
+      .filter((k) => ITEMS[k].family !== 'ingredient' && ITEMS[k].family !== 'potion')
+      .slice(0, 9);
+    expect(fillers.length).toBe(9); // garde-fou : assez d'objets pour saturer
+    setup([
+      { key: 'herbeDoree', n: 2 }, { key: 'fleurLune', n: 2 }, { key: 'champignonBleu', n: 2 },
+      ...fillers,
+    ]);
+    const r = craftPotion(set, get, 0, [0, 1, 2]);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('sac plein');
+    const bag = S().teams[0].bag;
+    const keyOf = (c) => (typeof c === 'string' ? c : c?.key);
+    expect(bag.some((c) => keyOf(c) === 'potionOr')).toBe(false);      // potion PAS perdue/refusée
+    expect(bag.filter((c) => keyOf(c) === 'herbeDoree' && cellN(c) === 2).length).toBe(1); // ingrédients intacts
   });
 });
 

@@ -522,7 +522,16 @@ export function craftPotion(set, get, teamIdx, indices) {
   const recipe = matchRecipe(keys);
   const nt = [...teams];
   if (recipe && ITEMS[recipe.potion]) {
-    t = placeItem(t, recipe.potion).team;
+    // La consommation des ingrédients ci-dessus a pu libérer une case ; on tente
+    // donc le placement APRÈS. Si le sac reste plein (outcome 'refunded'), on
+    // ANNULE la fusion : ne rien committer (set non appelé) préserve les
+    // ingrédients de l'équipe — sinon la potion serait perdue contre 0 pièce.
+    const placed = placeItem(t, recipe.potion);
+    if (placed.outcome === 'refunded') {
+      addLog(tg('log.it.craftFull', { emoji: team.emoji, name: team.name }));
+      return { ok: false, reason: 'sac plein' };
+    }
+    t = placed.team;
     const known = t.knownRecipes || [];
     const discovered = !known.includes(recipe.id);
     if (discovered) t = { ...t, knownRecipes: [...known, recipe.id] };

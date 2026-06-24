@@ -1002,6 +1002,13 @@ function AlchemyView({ session, teamIdx, code, token }) {
     });
   };
   const filled = slots.filter((x) => x != null).length;
+  // Avertissement « sac plein » : la potion distillée va dans le sac. Si le sac
+  // est plein ET qu'aucun ingrédient sélectionné n'est à 1 exemplaire (sa case
+  // ne se libérera donc pas en le consommant), la potion risque d'être perdue.
+  // Indicatif : le store reste l'autorité et annule proprement la fusion.
+  const bagFull = (t.bag || []).filter(Boolean).length >= 12;
+  const freesCell = slots.some((bi) => bi != null && cellN(t.bag[bi]) <= 1);
+  const noRoomRisk = filled === 3 && bagFull && !freesCell;
   const distill = () => {
     if (filled !== 3 || busy) return;
     setBusy(true);
@@ -1028,6 +1035,7 @@ function AlchemyView({ session, teamIdx, code, token }) {
         <button className="mob-btn mob-btn--gold" style={{ width: '100%', marginTop: 10 }} disabled={filled !== 3 || busy} onClick={distill}>
           {busy ? T('mobile.distilling') : T('mobile.distill')}
         </button>
+        {noRoomRisk && <div className="mob-alch-warn" style={{ marginTop: 8, fontSize: 13, color: '#c0392b', fontWeight: 600, textAlign: 'center' }}>{T('mobile.bagFull')}</div>}
 
         <div className="mob-alch-bag">
           {bagIngredients.length === 0
