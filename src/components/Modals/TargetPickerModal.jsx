@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { POWERS } from '../../data/powers';
+import { hasActivePromise } from '../../logic/pacts';
 import ModalOverlay from './ModalOverlay';
 import TeamTargetButton from './TeamTargetButton';
 
@@ -34,8 +36,12 @@ export default function TargetPickerModal() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const selectTarget = useGameStore((s) => s.selectTarget);
   const cancelTargetPicker = useGameStore((s) => s.cancelTargetPicker);
+  // Cible sous pacte cliquée : on demande confirmation avant de TRAHIR (et de
+  // déclencher la cérémonie publique). null = pas de confirmation en attente.
+  const [betrayIdx, setBetrayIdx] = useState(null);
 
   const info = pickerInfo(showTargetPicker, T);
+  const me = teams[currentTeam];
 
   return (
     <AnimatePresence>
@@ -58,6 +64,34 @@ export default function TargetPickerModal() {
             <p style={{ fontSize: 14, color: 'var(--ink-600)', marginTop: 4 }}>{info.desc}</p>
           </div>
 
+          {betrayIdx != null ? (
+            // Confirmation de TRAHISON : briser un pacte est public et coûteux.
+            <div style={{ padding: '10px 26px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: 40, marginBottom: 6 }}>🐍</div>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: '#a8341f' }}>
+                {T('modal.target.betrayTitle', { emoji: teams[betrayIdx].emoji, name: teams[betrayIdx].name })}
+              </p>
+              <p style={{ fontSize: 13.5, color: 'var(--ink-600)', marginTop: 6 }}>{T('modal.target.betrayWarn')}</p>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button
+                  onClick={() => { const i = betrayIdx; setBetrayIdx(null); selectTarget(i); }}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                    fontFamily: 'var(--font-display)', fontSize: 15, color: '#fff',
+                    background: 'linear-gradient(180deg,#c14a32,#9a2f1c)' }}
+                >
+                  {T('modal.target.betrayConfirm')}
+                </button>
+                <button
+                  onClick={() => setBetrayIdx(null)}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
+                    fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-700)',
+                    background: '#fffefb', border: '2px solid rgba(122,94,58,0.22)' }}
+                >
+                  {T('common.cancel')}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div style={{ padding: '10px 26px 24px' }}>
             <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{T('modal.target.chooseTeam')}</p>
             <div className="space-y-2">
@@ -65,13 +99,19 @@ export default function TargetPickerModal() {
                 if (i === currentTeam) return null;
                 // Une équipe sous Immunité totale ne peut pas être ciblée par une attaque.
                 const immune = (team.totalImmuneTurns ?? 0) > 0;
+                // Pacte de non-agression : on peut quand même attaquer (promesse
+                // brisable), mais on prévient et on confirme avant de trahir. Seuls
+                // les VRAIS pouvoirs offensifs déclenchent la trahison (la pénalité
+                // vit dans applyOffensivePower) — pas les ciblages du moteur d'effets.
+                const promised = !showTargetPicker.source && !immune && hasActivePromise(me, i);
                 return (
                   <TeamTargetButton
                     key={i}
                     team={team}
                     disabled={immune}
                     disabledNote={immune ? `(${T('modal.target.immune')})` : undefined}
-                    onClick={() => selectTarget(i)}
+                    note={promised ? `🐍 ${T('modal.target.pact')}` : undefined}
+                    onClick={() => (promised ? setBetrayIdx(i) : selectTarget(i))}
                   />
                 );
               })}
@@ -89,6 +129,7 @@ export default function TargetPickerModal() {
               {T('common.cancel')}
             </button>
           </div>
+          )}
         </ModalOverlay>
       )}
     </AnimatePresence>

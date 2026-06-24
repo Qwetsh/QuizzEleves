@@ -13,6 +13,7 @@ import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { extOn } from '../../extensions/registry';
+import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from '../../logic/pacts';
 import { tFor, setLang } from '../../i18n';
 import { locName, locDesc, loc } from '../../i18n/content';
 import SetBonusInfo from '../Modals/SetBonusInfo';
@@ -848,19 +849,36 @@ function TradeItemRow({ itemKey, on, worn, onToggle, onInfo, T = tFor(false) }) 
   );
 }
 
-// Compositeur de troc : cible + « je donne » (mon inventaire) / « je veux » (le sien).
-function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, title, sendLabel }) {
+// Compositeur unique de « deal » entre équipes (mode téléphone). Couvre les deux
+// mondes en un seul écran :
+//   • échange libre d'or et d'objets (= le troc, avec fiche objet ⓘ) ;
+//   • si l'extension Complots est active : manœuvres de PACTE de non-agression
+//     (rançon / cadeau / mutuel) et promesse de paix greffée sur un échange.
+// Produit { give, want } pour la table quete_trades. `initial` pré-remplit un
+// échange (contre-proposition). Remplace les anciens TradeComposer + SchemeComposer
+// (le « deal libre » du complot ÉTAIT déjà un troc).
+function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onClose, onSend }) {
   const T = tFor(session?.englishMode);
-  const titleText = title ?? T('mobile.proposeTrade');
-  const sendText = sendLabel ?? T('mobile.send');
   const me = session.teams[teamIdx];
   const others = session.teams.map((t, i) => ({ t, i })).filter((x) => x.i !== teamIdx);
   const norm = (s) => ({ gold: s?.gold || 0, bag: [...(s?.bag || [])], equip: [...(s?.equip || [])] });
   const [toIdx, setToIdx] = useState(initial?.toIdx ?? others[0]?.i ?? null);
+  // Manœuvre — pertinente seulement avec Complots. Défaut « free » = échange (troc).
+  const [kind, setKind] = useState('free');
+  const [turns, setTurns] = useState(PACT_DEFAULT_TURNS);
+  const [demand, setDemand] = useState(10); // or réclamé (rançon)
   const [give, setGive] = useState(norm(initial?.give));
   const [want, setWant] = useState(norm(initial?.want));
+  const [peace, setPeace] = useState(false); // échange libre : + promesse de paix
+  const [againstIdx, setAgainstIdx] = useState(null); // coalition : cible commune
   const [info, setInfo] = useState(null); // { itemKey, team } : fiche d'objet ouverte
   const target = toIdx != null ? session.teams[toIdx] : null;
+  const isFree = !hasDiplo || kind === 'free';
+  const isCounter = !!initial;
+  // Coalition : la cible commune est une 3ᵉ équipe (ni moi, ni l'allié `toIdx`).
+  const canCoalition = session.teams.length >= 3;
+  const victims = others.filter((x) => x.i !== toIdx);
+  const against = againstIdx != null && victims.some((v) => v.i === againstIdx) ? againstIdx : (victims[0]?.i ?? null);
 
   const bagKeys = (t) => (t?.bag || []).map((c) => cellKey(c)).filter((k) => ITEMS[k]);
   const equipSlots = (t) => Object.keys(SLOTS).filter((s) => t?.equipment?.[s] && ITEMS[t.equipment[s]]);
@@ -870,11 +888,57 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
     set({ ...spec, [field]: i >= 0 ? arr.filter((_, j) => j !== i) : [...arr, val] });
   };
 
-  const Panel = ({ title, team, spec, set }) => (
+  // Avec Complots : « Échange » d'abord (= le troc), puis les manœuvres de pacte,
+  // et l'attaque commune (coalition) s'il existe une 3ᵉ équipe à viser.
+  const KINDS = [
+    { key: 'free', label: T('mobile.freeDeal'), desc: T('mobile.freeDealDesc') },
+    { key: 'extort', label: T('mobile.extort'), desc: T('mobile.extortDesc') },
+    { key: 'gift', label: T('mobile.gift'), desc: T('mobile.giftDesc') },
+    { key: 'mutual', label: T('mobile.mutual'), desc: T('mobile.mutualDesc') },
+    ...(canCoalition ? [{ key: 'coalition', label: T('mobile.coalition'), desc: T('mobile.coalitionDesc') }] : []),
+  ];
+
+  const build = () => {
+    const pact = { turns };
+    if (hasDiplo && kind === 'extort') return { give: { pact }, want: { gold: Math.max(0, demand) } };
+    if (hasDiplo && kind === 'gift') return { give: { pact }, want: {} };
+    if (hasDiplo && kind === 'mutual') return { give: { pact }, want: { pact } };
+    // Attaque commune : les DEUX côtés s'engagent à viser `against` (objets neufs).
+    if (hasDiplo && kind === 'coalition') {
+      const mk = () => ({ coalition: { against, turns } });
+      return { give: mk(), want: mk() };
+    }
+    // Échange libre (= troc), + promesse de paix optionnelle (si Complots actif).
+    const g = {}; if (give.gold > 0) g.gold = give.gold; if (give.bag.length) g.bag = give.bag; if (give.equip.length) g.equip = give.equip; if (hasDiplo && peace) g.pact = pact;
+    const w = {}; if (want.gold > 0) w.gold = want.gold; if (want.bag.length) w.bag = want.bag; if (want.equip.length) w.equip = want.equip;
+    return { give: g, want: w };
+  };
+  const built = build();
+  const has = (s) => !!(s.pact || s.coalition || s.gold || s.bag?.length || s.equip?.length);
+  const valid = toIdx != null && (kind !== 'coalition' || against != null) && (has(built.give) || has(built.want));
+  const usesPact = hasDiplo && (kind !== 'free' || peace);
+
+  // `cap` = plafond DUR (l'or que JE donne : on ne peut pas donner ce qu'on n'a
+  // pas). `hint` = simple repère affiché (l'or de la cible). On ne borne PAS une
+  // demande au solde — mouvant — de la cible (sinon une cible sans or bloque le
+  // champ à 0). Si elle ne peut pas payer à l'acceptation, l'échange échoue
+  // proprement (applyTrade → 'failed').
+  const goldInput = (label, value, set, { cap = null, hint = null } = {}) => (
+    <label className="mob-trade-gold" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+      🪙 {label} <input type="number" min="0" max={cap ?? undefined} value={value}
+        onChange={(e) => { const v = Math.max(0, Number(e.target.value) || 0); set(cap != null ? Math.min(cap, v) : v); }}
+        style={{ width: 80 }} />{hint != null ? ` / ${hint}` : ''}
+    </label>
+  );
+
+  // Panneau d'un côté de l'échange. FONCTION (pas un composant inline) pour ne pas
+  // remonter les <input> à chaque frappe — ce qui leur ferait perdre le focus.
+  // `own` = c'est MON côté (je donne) → plafond dur à mon or ; sinon (la cible) =
+  // simple repère sans clamp.
+  const panel = (title, team, spec, set, own) => (
     <div className="mob-trade-panel">
       <div className="mob-trade-panel-title">{title}</div>
-      <label className="mob-trade-gold">🪙 <input type="number" min="0" max={team?.money ?? 0} value={spec.gold}
-        onChange={(e) => set({ ...spec, gold: Math.max(0, Math.min(team?.money ?? 0, Number(e.target.value) || 0)) })} /> / {team?.money ?? 0}</label>
+      {goldInput('', spec.gold, (v) => set({ ...spec, gold: v }), own ? { cap: team?.money ?? 0, hint: team?.money ?? 0 } : { hint: team?.money ?? 0 })}
       {bagKeys(team).map((k, n) => (
         <TradeItemRow key={`b${n}`} itemKey={k} on={spec.bag.includes(k)} T={T}
           onToggle={() => toggle(spec, set, 'bag', k)} onInfo={() => setInfo({ itemKey: k, team })} />
@@ -886,26 +950,84 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
     </div>
   );
 
-  const empty = (s) => !s.gold && !s.bag.length && !s.equip.length;
   return (
    <>
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, maxHeight: '86vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 20, padding: 16, border: '1px solid rgba(122,94,58,0.25)' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>{titleText}</div>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, maxHeight: '88vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 20, padding: 16, border: '1px solid rgba(122,94,58,0.25)' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, textAlign: 'center', marginBottom: 8 }}>{isCounter ? T('mobile.counterOffer') : T('mobile.newDeal')}</div>
+
+        <div style={{ fontSize: 13, fontWeight: 700, margin: '6px 0 4px' }}>{T('mobile.schemeTarget')}</div>
         <div className="mob-trade-targets">
           {others.map(({ t, i }) => (
-            <button key={i} className={'mob-trade-target' + (toIdx === i ? ' on' : '')} onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
+            <button key={i} className={'mob-trade-target' + (toIdx === i ? ' on' : '')}
+              onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
               {t.emoji} {t.name}
             </button>
           ))}
         </div>
-        {target && <Panel title={T('mobile.iGive')} team={me} spec={give} set={setGive} />}
-        {target && <Panel title={T('mobile.iWantFrom', { who: target.emoji })} team={target} spec={want} set={setWant} />}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} disabled={toIdx == null || (empty(give) && empty(want))}
-            onClick={() => onSend(toIdx, give, want)}>{sendText}</button>
+
+        {/* Manœuvre (or/objets ou pacte) — seulement si l'extension Complots est active. */}
+        {hasDiplo && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 700, margin: '10px 0 4px' }}>{T('mobile.schemeType')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {KINDS.map((k) => (
+                <button key={k.key} className={'mob-trade-target' + (kind === k.key ? ' on' : '')} onClick={() => setKind(k.key)} style={{ textAlign: 'left' }}>
+                  {k.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-600)', marginTop: 6, minHeight: 30 }}>{KINDS.find((k) => k.key === kind)?.desc}</div>
+          </>
+        )}
+
+        {hasDiplo && kind === 'extort' && target && goldInput(T('mobile.demandGold'), demand, setDemand, { hint: target.money ?? 0 })}
+
+        {/* Attaque commune : choix de la cible commune (3ᵉ équipe). */}
+        {hasDiplo && kind === 'coalition' && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, margin: '6px 0 4px' }}>{T('mobile.coalitionTarget')}</div>
+            <div className="mob-trade-targets">
+              {victims.map(({ t, i }) => (
+                <button key={i} className={'mob-trade-target' + (against === i ? ' on' : '')} onClick={() => setAgainstIdx(i)}>
+                  {t.emoji} {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isFree && (
+          <>
+            {target && panel(T('mobile.iGive'), me, give, setGive, true)}
+            {target && panel(T('mobile.iWantFrom', { who: target.emoji }), target, want, setWant, false)}
+            {hasDiplo && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 14, fontWeight: 600 }}>
+                <input type="checkbox" checked={peace} onChange={(e) => setPeace(e.target.checked)} /> {T('mobile.addPeace')}
+              </label>
+            )}
+          </>
+        )}
+
+        {usesPact && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{kind === 'coalition' ? T('mobile.coalitionDuration') : T('mobile.pactDuration')}</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {Array.from({ length: PACT_MAX_TURNS - PACT_MIN_TURNS + 1 }, (_, n) => PACT_MIN_TURNS + n).map((n) => (
+                <button key={n} className={'mob-trade-target' + (turns === n ? ' on' : '')} style={{ flex: 1, textAlign: 'center' }} onClick={() => setTurns(n)}>
+                  {T('mobile.turnsN', { n })}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} disabled={!valid}
+            onClick={() => onSend(toIdx, built.give, built.want)}>{isCounter ? T('mobile.sendCounterOffer') : T('mobile.send')}</button>
           <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={onClose}>{T('common.cancel')}</button>
         </div>
+        {hasDiplo && <div className="mob-foot" style={{ marginTop: 8 }}>{T('mobile.schemeFoot')}</div>}
       </div>
     </div>
     {info?.itemKey && (
@@ -916,16 +1038,25 @@ function TradeComposer({ session, teamIdx, onClose, onSend, initial = null, titl
   );
 }
 
-// Onglet « Troc » : offres reçues / envoyées + compositeur (mode téléphone).
+// Onglet « Troc » (mode téléphone) : guichet unique des échanges entre équipes.
+// Réunit les trocs OUVERTS et les complots SECRETS (pactes) — deux faces d'un même
+// flux d'offres (table quete_trades). On affiche chaque type seulement si son
+// extension est active : troc ouvert (`hasTrade`), complot/pacte (`hasDiplo`).
 // `trades` est alimenté par l'abonnement partagé de MobileApp (badge + vue).
-function TradeView({ session, teamIdx, code, token, trades = [] }) {
+function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true, hasDiplo = false }) {
   const T = tFor(session?.englishMode);
-  const [compose, setCompose] = useState(false);
+  const [deal, setDeal] = useState(false); // compositeur de deal (troc + pacte)
   const [counter, setCounter] = useState(null); // offre reçue qu'on contre (ou null)
   const me = session.teams[teamIdx];
 
-  const incoming = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending');
-  const outgoing = trades.filter((t) => t.from_idx === teamIdx && t.status === 'pending');
+  // Une offre n'est visible que si l'extension correspondante est active : les
+  // complots (offres secrètes : pacte OU coalition) sous `diplomacy`, les trocs
+  // ouverts sous `trade`.
+  const visible = (t) => (isDiploTrade(t) ? hasDiplo : hasTrade);
+  const incoming = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending' && visible(t));
+  const outgoing = trades.filter((t) => t.from_idx === teamIdx && t.status === 'pending' && visible(t));
+  const pacts = hasDiplo ? (me.promises || []).filter((p) => p && p.turns > 0) : [];
+  const coalitions = hasDiplo ? (me.coalitions || []).filter((c) => c && c.turns > 0) : [];
   const nameOf = (i) => session.teams[i] ? `${session.teams[i].emoji} ${session.teams[i].name}` : `#${i}`;
   const equipOfTeam = (i) => (slot) => session.teams[i]?.equipment?.[slot];
 
@@ -933,18 +1064,42 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
     <div className="mob-root" style={{ '--accent': me.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{T('mobile.trade')}</div>
 
+      {/* Engagements secrets en cours (complot) : pactes de non-agression et
+          coalitions (attaques communes). Mes engagements actifs uniquement. */}
+      {hasDiplo && (
+        <section className="mob-section">
+          <h2 className="mob-section-title">{T('mobile.diploActive')}</h2>
+          {pacts.length === 0 && coalitions.length === 0 ? (
+            <div className="mob-empty">{T('mobile.noDiploActive')}</div>
+          ) : (
+            <>
+              {pacts.map((p, n) => (
+                <div key={`p${n}`} className="mob-trade-line">{T('mobile.pactActive', { who: nameOf(p.to), n: p.turns })}</div>
+              ))}
+              {coalitions.map((c, n) => (
+                <div key={`c${n}`} className="mob-trade-line">{T('mobile.coalitionActive', { ally: nameOf(c.with), who: nameOf(c.against), n: c.turns })}</div>
+              ))}
+            </>
+          )}
+        </section>
+      )}
+
       <section className="mob-section">
         <h2 className="mob-section-title">{T('mobile.offersReceived')} {incoming.length > 0 && <span className="mob-count">{incoming.length}</span>}</h2>
         {incoming.length === 0 ? <div className="mob-empty">{T('mobile.noOffer')}</div> : incoming.map((tr) => (
           <div key={tr.id} className="mob-trade-card">
             <div className="mob-trade-from">{T('mobile.from', { who: nameOf(tr.from_idx) })}</div>
-            <div className="mob-trade-line"><b>{T('mobile.youReceiveLine')}</b> {tradeSideText(tr.give, equipOfTeam(tr.from_idx), T)}</div>
-            <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {tradeSideText(tr.want, equipOfTeam(teamIdx), T)}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youReceiveLine')}</b> {schemeText(tr.give, equipOfTeam(tr.from_idx), false, T, nameOf)}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {schemeText(tr.want, equipOfTeam(teamIdx), true, T, nameOf)}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'accepted').catch(() => {})}>{T('mobile.accept')}</button>
               <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'declined').catch(() => {})}>{T('mobile.decline')}</button>
             </div>
-            <button className="mob-btn mob-btn--ghost" style={{ width: '100%', marginTop: 6 }} onClick={() => { setCounter(tr); setCompose(true); }}>{T('mobile.counterOffer')}</button>
+            {/* Contre-proposition réservée aux trocs ouverts : on ne contre pas un
+                engagement secret (pacte / coalition). */}
+            {!isDiploTrade(tr) && (
+              <button className="mob-btn mob-btn--ghost" style={{ width: '100%', marginTop: 6 }} onClick={() => { setCounter(tr); setDeal(true); }}>{T('mobile.counterOffer')}</button>
+            )}
           </div>
         ))}
       </section>
@@ -954,33 +1109,49 @@ function TradeView({ session, teamIdx, code, token, trades = [] }) {
         {outgoing.length === 0 ? <div className="mob-empty">{T('mobile.none')}</div> : outgoing.map((tr) => (
           <div key={tr.id} className="mob-trade-card">
             <div className="mob-trade-from">{T('mobile.toWaiting', { who: nameOf(tr.to_idx) })}</div>
-            <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {tradeSideText(tr.give, equipOfTeam(teamIdx), T)}</div>
-            <div className="mob-trade-line"><b>{T('mobile.youWantLine')}</b> {tradeSideText(tr.want, equipOfTeam(tr.to_idx), T)}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {schemeText(tr.give, equipOfTeam(teamIdx), true, T, nameOf)}</div>
+            <div className="mob-trade-line"><b>{T('mobile.youWantLine')}</b> {schemeText(tr.want, equipOfTeam(tr.to_idx), false, T, nameOf)}</div>
             <button className="mob-btn mob-btn--ghost" style={{ marginTop: 8 }} onClick={() => deleteTrade(tr.id).catch(() => {})}>{T('common.cancel')}</button>
           </div>
         ))}
       </section>
 
       <div style={{ padding: '4px 14px 0' }}>
-        <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={() => setCompose(true)}>{T('mobile.proposeTradeBtn')}</button>
+        <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={() => { setCounter(null); setDeal(true); }}>{T('mobile.proposeDeal')}</button>
       </div>
-      <div className="mob-foot">{T('mobile.tradeFoot')}</div>
+      {hasTrade && <div className="mob-foot">{T('mobile.tradeFoot')}</div>}
+      {hasDiplo && <div className="mob-foot">{T('mobile.complotFoot')}</div>}
 
-      {compose && (
-        <TradeComposer session={session} teamIdx={teamIdx}
-          title={counter ? T('mobile.counterOffer') : T('mobile.proposeTrade')}
-          sendLabel={counter ? T('mobile.sendCounterOffer') : T('mobile.send')}
+      {deal && (
+        <DealComposer session={session} teamIdx={teamIdx} hasDiplo={hasDiplo}
           initial={counter ? { toIdx: counter.from_idx, give: counter.want, want: counter.give } : null}
-          onClose={() => { setCompose(false); setCounter(null); }}
+          onClose={() => { setDeal(false); setCounter(null); }}
           onSend={(toIdx, give, want) => {
             createTrade(code, token, teamIdx, toIdx, give, want).catch(() => {});
             // Contre-proposition : l'offre d'origine est remplacée (refusée).
             if (counter) setTradeStatus(counter.id, 'declined').catch(() => {});
-            setCompose(false); setCounter(null);
+            setDeal(false); setCounter(null);
           }} />
       )}
     </div>
   );
+}
+
+// Résumé lisible d'un côté d'offre diplomatique : or/objets (tradeSideText) +
+// éventuel terme de PACTE ou de COALITION. `mine` = l'obligation de pacte
+// m'incombe (je promets). `nameOf(idx)` résout le nom d'une équipe (cible de
+// coalition).
+function schemeText(spec, equipOf, mine, T = tFor(false), nameOf = null) {
+  const parts = [];
+  if (spec?.gold || spec?.bag?.length || spec?.equip?.length) parts.push(tradeSideText(spec, equipOf, T));
+  if (spec?.pact) parts.push(mine
+    ? T('mobile.pactLineGive', { n: spec.pact.turns ?? PACT_DEFAULT_TURNS })
+    : T('mobile.pactLineWant', { n: spec.pact.turns ?? PACT_DEFAULT_TURNS }));
+  if (spec?.coalition) parts.push(T('mobile.coalitionLine', {
+    who: nameOf ? nameOf(spec.coalition.against) : `#${spec.coalition.against}`,
+    n: spec.coalition.turns ?? PACT_DEFAULT_TURNS,
+  }));
+  return parts.length ? parts.join(' • ') : T('mobile.nothing');
 }
 
 // Onglet « Alchimie » : atelier (3 emplacements + distiller) + grimoire (recettes).
@@ -1283,6 +1454,8 @@ function AdminPanel({ code, session, onClose }) {
 }
 
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
+// L'onglet « Troc » réunit désormais trocs ouverts ET complots (cf. TradeView) :
+// il s'affiche dès que l'une OU l'autre extension est active (`hasTrade`).
 function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T = tFor(false) }) {
   const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
@@ -1448,14 +1621,19 @@ export default function MobileApp() {
   // action de jeu — un téléphone qui a juste « sélectionné » une autre équipe
   // (mode tableau, owned=false) ne doit pas pouvoir valider à sa place.
   const canTrade = !!(session && session.status !== 'lobby' && teamIdx != null && owned && token && extOn(session.extensions, 'trade'));
+  // « Complots » réutilise le même flux d'offres (quete_trades) ; l'abonnement doit
+  // donc aussi tourner quand seule la diplomatie est active (sans le Troc).
+  const canDiplo = !!(session && session.status !== 'lobby' && teamIdx != null && owned && token && extOn(session.extensions, 'diplomacy'));
   useEffect(() => {
-    if (!canTrade || !code) { setTrades([]); return; }
+    if ((!canTrade && !canDiplo) || !code) { setTrades([]); return; }
     let alive = true;
     const refresh = () => fetchTrades(code).then((r) => { if (alive) setTrades(r); }).catch(() => {});
     refresh();
     const unsub = subscribeTrades(code, refresh);
     return () => { alive = false; unsub(); };
-  }, [canTrade, code]);
+  }, [canTrade, canDiplo, code]);
+  // Badge de l'onglet « Troc » (qui réunit trocs ouverts et complots) : toutes les
+  // offres en attente qui me sont adressées, à pacte ou non.
   const tradeAlert = trades.filter((t) => t.to_idx === teamIdx && t.status === 'pending').length;
 
   // Confirmation visuelle : dès qu'un troc impliquant MON équipe passe « applied »,
@@ -1463,7 +1641,9 @@ export default function MobileApp() {
   // appliqués sans notifier (sinon on rejouerait l'historique à la connexion).
   useEffect(() => {
     if (teamIdx == null) return;
-    const mineApplied = trades.filter((t) => t.status === 'applied' && (t.to_idx === teamIdx || t.from_idx === teamIdx));
+    // Les engagements secrets (pacte / coalition) ne déclenchent pas de bandeau
+    // « affaire conclue » (il révélerait le complot).
+    const mineApplied = trades.filter((t) => t.status === 'applied' && !isDiploTrade(t) && (t.to_idx === teamIdx || t.from_idx === teamIdx));
     if (seenDeals.current === null) { seenDeals.current = new Set(mineApplied.map((t) => t.id)); return; }
     const fresh = mineApplied.find((t) => !seenDeals.current.has(t.id));
     if (fresh) { seenDeals.current.add(fresh.id); setDealToast(fresh); }
@@ -1494,17 +1674,21 @@ export default function MobileApp() {
     // seulement « sélectionné » une autre équipe (owned=false) ne peut pas
     // troquer à sa place (sinon il validerait le troc d'un autre groupe).
     const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
+    const hasDiplo = extOn(session.extensions, 'diplomacy') && owned && !!token;
     const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
+    // L'onglet « Troc » réunit trocs ouverts et complots : présent si l'une OU
+    // l'autre extension est active.
+    const hasExchange = hasTrade || hasDiplo;
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
-      : tab === 'trade' && hasTrade ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} />
+      : tab === 'trade' && hasExchange ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} hasTrade={hasTrade} hasDiplo={hasDiplo} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasTrade} hasAlchemy={hasAlchemy} tradeAlert={tradeAlert} T={T} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} tradeAlert={tradeAlert} T={T} />
       </>
     );
   }

@@ -40,6 +40,13 @@ export const EXTENSIONS = [
     needsItems: true,
   },
   {
+    id: 'diplomacy',
+    name: 'Complots & pactes',
+    icon: '🐍',
+    desc: 'Les équipes échangent en SECRET depuis leur téléphone : extorsion, cadeau de paix, pacte de non-agression mutuel, ou deal libre. Une promesse est brisable — trahir un pacte se paie au grand jour. Nécessite le mode téléphone.',
+    default: false,
+  },
+  {
     id: 'alchemy',
     name: 'Alchimie',
     icon: '⚗️',

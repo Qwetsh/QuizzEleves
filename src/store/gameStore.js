@@ -26,6 +26,7 @@ import { LOOT } from '../logic/balanceConfig.js';
 import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides } from '../logic/itemEffects.js';
 import { tg, tgPlural } from '../i18n';
 import { loc } from '../i18n/content';
+import { hasPactSpec, isDiploTrade, pactTurns, withPromise, tickPromises, hasCoalitionSpec, coalitionTurns, withCoalition, tickCoalitions } from '../logic/pacts.js';
 
 const INITIAL_CHARGES = 2;
 
@@ -1895,10 +1896,21 @@ export const useGameStore = create((set, get) => ({
     if (!ra || !rb) return { ok: false, reason: 'objets ou or indisponibles' };
     let ta = giveTo(ra.team, rb.items, rb.gold); // A reçoit ce que B donnait (want)
     let tb = giveTo(rb.team, ra.items, ra.gold); // B reçoit ce que A donnait (give)
+    // Diplomatie (« Complots ») : un terme `pact` engage le DONNEUR à ne pas
+    // attaquer le receveur pendant N tours (promesse BRISABLE — cf. trahison).
+    const secret = isDiploTrade(trade);
+    if (hasPactSpec(trade.give)) ta = { ...ta, promises: withPromise(ta.promises, B, pactTurns(trade.give)) };
+    if (hasPactSpec(trade.want)) tb = { ...tb, promises: withPromise(tb.promises, A, pactTurns(trade.want)) };
+    // Coalition (« attaque commune ») : chaque côté enregistre l'accord de viser
+    // la cible avec l'autre équipe. Pur marqueur partagé (aucun effet automatique).
+    if (hasCoalitionSpec(trade.give)) ta = { ...ta, coalitions: withCoalition(ta.coalitions, B, trade.give.coalition.against, coalitionTurns(trade.give)) };
+    if (hasCoalitionSpec(trade.want)) tb = { ...tb, coalitions: withCoalition(tb.coalitions, A, trade.want.coalition.against, coalitionTurns(trade.want)) };
     const nt = [...st.teams];
     nt[A] = ta; nt[B] = tb;
     set({ teams: nt });
-    get().addLog(tg('log.store.trade', { emojiA: st.teams[A].emoji, nameA: st.teams[A].name, emojiB: st.teams[B].emoji, nameB: st.teams[B].name }));
+    // Un pacte est SECRET : aucune trace publique sur le TBI (l'or bouge en
+    // silence). Un troc classique se journalise comme avant.
+    if (!secret) get().addLog(tg('log.store.trade', { emojiA: st.teams[A].emoji, nameA: st.teams[A].name, emojiB: st.teams[B].emoji, nameB: st.teams[B].name }));
     get().checkMoneyMilestone(A); get().checkMoneyMilestone(B);
     if (get().phase === 'game') saveGame(get());
     return { ok: true };
@@ -2111,6 +2123,24 @@ export const useGameStore = create((set, get) => ({
       if (nt === get().teams) nt = [...nt];
       nt[newCurrent] = { ...cb, buffs };
       if (buffs.length < cb.buffs.length) addLog(tg('log.store.buffExpired', { emoji: cb.emoji, name: cb.name }));
+    }
+
+    // Pactes & coalitions (« Complots ») : 1 tour de moins quand l'équipe REGAGNE
+    // la main, comme les buffs. Expiration discrète (engagements secrets).
+    const cp = nt[newCurrent];
+    if (cp?.promises?.length || cp?.coalitions?.length) {
+      if (nt === get().teams) nt = [...nt];
+      let np = cp;
+      if (cp.promises?.length) {
+        const { promises, expired } = tickPromises(cp.promises);
+        np = { ...np, promises };
+        if (expired > 0) addLog(tg('log.store.pactExpired', { emoji: cp.emoji, name: cp.name }));
+      }
+      if (cp.coalitions?.length) {
+        const { coalitions } = tickCoalitions(cp.coalitions); // expiration silencieuse (secret)
+        np = { ...np, coalitions };
+      }
+      nt[newCurrent] = np;
     }
 
     // Compteur du prompt boutique : +1 quand l'équipe REGAGNE la main.

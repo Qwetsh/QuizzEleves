@@ -86,6 +86,11 @@ export default {
   // --- Troc ---
   'log.store.trade':             { fr: '🤝 {emojiA} {nameA} et {emojiB} {nameB} ont fait affaire !', en: '🤝 {emojiA} {nameA} and {emojiB} {nameB} made a deal!' },
 
+  // --- Complots : trahison d'un pacte (public) & expiration (discret) ---
+  'log.store.betray':            { fr: '🐍 TRAHISON ! {emoji} {name} brise son pacte et attaque {vemoji} {vname} — il perd {penalty} or et sa série !', en: '🐍 BETRAYAL! {emoji} {name} breaks their pact and attacks {vemoji} {vname} — losing {penalty} gold and their streak!' },
+  'log.store.betrayToast':       { fr: '{emoji} trahit {vemoji} !', en: '{emoji} betrays {vemoji}!' },
+  'log.store.pactExpired':       { fr: '🕊️ Un pacte de {emoji} {name} a pris fin.', en: '🕊️ A pact of {emoji} {name} has ended.' },
+
   // --- Admin ---
   'log.store.adminMoney':        { fr: '🛠️ {emoji} {name} : {sign}{n} 🪙 (admin)', en: '🛠️ {emoji} {name}: {sign}{n} 🪙 (admin)' },
   'log.store.adminRemoveItem':   { fr: '🛠️ {emoji} {name} perd {icon} {iname} (admin)', en: '🛠️ {emoji} {name} loses {icon} {iname} (admin)' },

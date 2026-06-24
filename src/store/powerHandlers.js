@@ -9,6 +9,7 @@ import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sound
 import { resumeQueue as resumeEngineQueue, announce, runEffects } from './effectEngine.js';
 import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content.js';
+import { hasActivePromise, withoutPromise, PACT_BETRAY_PENALTY } from '../logic/pacts.js';
 
 // Plafond de questions extra accumulables par le Double (total rafale = 1 + MAX_EXTRA)
 const MAX_DOUBLE_EXTRA = 4;
@@ -356,6 +357,9 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   const effect = powerEffectOf(get, team, powerKey);
   let foudreMove = null;
   let lightning = false;
+  // Cibles RÉELLEMENT touchées (hors immunité/fumigène) → sert à détecter une
+  // trahison de pacte (« Complots ») au moment de l'attaque.
+  const hitSet = new Set();
 
   // Garde unifié, applique PAR CIBLE : une équipe immunisée (Immunité totale)
   // annule l'effet sur elle ; une Bombe fumigène l'esquive (et se consomme).
@@ -411,6 +415,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     let reflectTotal = 0, stolenTotal = 0;
     for (const ti of targets) {
       if (offBlocked(ti)) continue; // immunité / fumigène (par cible, multi inclus)
+      hitSet.add(ti);
       let v = newTeams[ti];
       let rolled = baseRoll;
       const vEff = resolvePowerEffect(v, 'bouclier', masteryOn);
@@ -469,6 +474,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     const sablierTargets = effect.allOthers ? new Set(sablierOpp) : new Set([targetTeamIndex]);
     for (const ti of sablierTargets) {
       if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
+      hitSet.add(ti);
       newTeams[ti] = {
         ...newTeams[ti],
         sablierActif: true, sablierDivisor: divisor,
@@ -499,6 +505,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       set({ teams: newTeams, showTargetPicker: null });
       return;
     }
+    hitSet.add(targetTeamIndex);
     // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
     // extraAdd : questions supplémentaires des voies (Rafale tranquille / Marathon+).
     const add = (effect.add ?? 1) + (effect.extraAdd || 0);
@@ -530,9 +537,45 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     announce(set, get, '❓', tgPlural('log.pw.doubleToast', doubleTotal, { power: doubleName, vemoji: target.emoji, vname: target.name, total: doubleTotal }), POWERS[powerKey].color);
   }
 
+  // Trahison de pacte : si l'attaquant avait promis d'épargner une cible touchée,
+  // le pacte est rompu publiquement (cérémonie + pénalité). MUTE newTeams.
+  resolveBetrayals(set, get, newTeams, currentTeam, hitSet);
+
   set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
   if (lightning) get().emitVfx('lightning', targetTeamIndex);
   // Stay in pendingLanding so player can use more powers before clicking "Continuer"
+}
+
+// Détecte et punit une TRAHISON : l'attaquant `attackerIdx` a touché des cibles
+// (`hitSet`) qu'il avait promis de ne pas attaquer. Promesse brisable → l'attaque
+// a déjà eu lieu ; ici on rompt le(s) pacte(s) au grand jour. Mute `newTeams`.
+function resolveBetrayals(set, get, newTeams, attackerIdx, hitSet) {
+  const attacker = newTeams[attackerIdx];
+  if (!attacker?.promises?.length || !hitSet?.size) return;
+  const betrayed = [...hitSet].filter((ti) => hasActivePromise(attacker, ti));
+  if (!betrayed.length) return;
+  const { addLog } = get();
+
+  // Le traître paie une pénalité et perd sa série. Les pactes rompus sont dissous
+  // dans LES DEUX SENS (la victime n'est plus tenue non plus).
+  let a = { ...attacker };
+  for (const ti of betrayed) {
+    a.promises = withoutPromise(a.promises, ti);
+    const v = newTeams[ti];
+    if (v?.promises?.length) newTeams[ti] = { ...v, promises: withoutPromise(v.promises, attackerIdx) };
+  }
+  a.money = Math.max(0, (a.money || 0) - PACT_BETRAY_PENALTY);
+  a.streak = 0;
+  newTeams[attackerIdx] = a;
+
+  // Cérémonie PUBLIQUE : le complot éclate au grand jour sur le TBI.
+  soundThunder();
+  for (const ti of betrayed) {
+    const v = newTeams[ti];
+    addLog(tg('log.store.betray', { emoji: attacker.emoji, name: attacker.name, vemoji: v.emoji, vname: v.name, penalty: PACT_BETRAY_PENALTY }));
+  }
+  const first = newTeams[betrayed[0]];
+  announce(set, get, '🐍', tg('log.store.betrayToast', { emoji: attacker.emoji, name: attacker.name, vemoji: first.emoji, vname: first.name }), '#7a1f1f');
 }
 
 export function cancelTargetPicker(set, get) {

@@ -26,7 +26,7 @@ function locationLabel(board, pos) {
  * Bouton de selection d'equipe cible, enrichi : or possede + position.
  * Utilise par TargetPickerModal (pouvoirs) et EventModal (evenements).
  */
-export default function TeamTargetButton({ team, onClick, hoverColor = '#e85d6b', hoverBg = '#fef2f2', disabled = false, disabledNote }) {
+export default function TeamTargetButton({ team, onClick, hoverColor = '#e85d6b', hoverBg = '#fef2f2', disabled = false, disabledNote, note }) {
   const board = useGameStore((s) => s.board);
   const loc = locationLabel(board, team.pos);
 
@@ -51,6 +51,7 @@ export default function TeamTargetButton({ team, onClick, hoverColor = '#e85d6b'
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--font-display)', color: team.color, display: 'block' }}>
           {team.name}{disabled && disabledNote ? ` ${disabledNote}` : ''}
+          {!disabled && note ? <span style={{ color: '#a8341f', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700 }}> {note}</span> : ''}
         </span>
         {loc && (
           <span style={{ fontSize: 11, color: 'var(--ink-500)', display: 'block', marginTop: 1 }}>

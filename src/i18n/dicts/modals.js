@@ -116,6 +116,11 @@ export default {
   'modal.target.surgeDesc': { fr: 'Choisis une équipe à reculer de {n} cases.', en: 'Choose a team to push back {n} squares.' },
   'modal.target.immune': { fr: 'immunisé', en: 'immune' },
   'modal.target.chooseTeam': { fr: 'Choisir une équipe cible :', en: 'Choose a target team:' },
+  // Pacte de non-agression (« Complots ») : avertissement + confirmation de trahison.
+  'modal.target.pact': { fr: 'pacte', en: 'pact' },
+  'modal.target.betrayTitle': { fr: 'Trahir {emoji} {name} ?', en: 'Betray {emoji} {name}?' },
+  'modal.target.betrayWarn': { fr: 'Tu avais promis de ne pas l\'attaquer. Briser le pacte sera annoncé à toute la classe et te coûtera de l\'or et ta série.', en: 'You promised not to attack them. Breaking the pact will be announced to the whole class and cost you gold and your streak.' },
+  'modal.target.betrayConfirm': { fr: '🐍 Trahir', en: '🐍 Betray' },
 
   // ---- ChargePickerModal ----
   'modal.charge.recharge': { fr: 'Recharge !', en: 'Recharge!' },

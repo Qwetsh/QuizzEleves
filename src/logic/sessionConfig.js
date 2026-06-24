@@ -82,6 +82,10 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       sablierActif: !!t.sablierActif,
       wager: t.wager ? true : null,
       buffs: (t.buffs || []).map((b) => ({ type: b.type, turns: b.turns, n: b.n, subject: b.subject })),
+      // Pactes de non-agression actifs (« Complots ») : promesses de NE PAS attaquer.
+      promises: (t.promises || []).map((p) => ({ to: p.to, turns: p.turns })),
+      // Coalitions (« attaques communes ») : on vise une même cible avec un allié.
+      coalitions: (t.coalitions || []).map((c) => ({ with: c.with, against: c.against, turns: c.turns })),
       // Équipement publié en CLÉS (le mobile lit des clés) + compteur d'enchants
       // par emplacement (Enchantement) pour un éventuel marqueur ✦.
       equipment: Object.fromEntries(['head', 'body', 'feet'].map((s) => {
