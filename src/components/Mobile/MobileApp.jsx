@@ -1347,28 +1347,124 @@ function OldQuestionsList({ session, teamIdx, T = tFor(false) }) {
   );
 }
 
-// Sélecteur d'objet (admin) : recherche + grille de tout le catalogue.
-function AdminItemPicker({ onPick, onClose, T = tFor(false) }) {
+// Catégorie d'un objet pour le filtre admin (composant/potion/consommable/équipement).
+// `slot !== 'consumable'` = pièce d'équipement (tête/torse/pieds). Sinon on
+// distingue par `family` ; les parchemins et consommables simples → « consommable ».
+function adminItemCat(item) {
+  if (item.slot !== 'consumable') return 'equipment';
+  if (item.family === 'ingredient') return 'ingredient';
+  if (item.family === 'potion') return 'potion';
+  return 'consumable';
+}
+
+// Sélecteur d'objet (admin) : catégories + recherche, puis sélection d'un objet
+// avec une QUANTITÉ (consommables empilables) et validation explicite — au lieu
+// d'envoyer dès le tap. Le sélecteur reste ouvert pour enchaîner plusieurs dons.
+function AdminItemPicker({ onGive, onClose, teamName, T = tFor(false) }) {
   const [q, setQ] = useState('');
-  const keys = Object.keys(ITEMS).filter((k) => !q || locName(ITEMS[k]).toLowerCase().includes(q.toLowerCase()) || ITEMS[k].name.toLowerCase().includes(q.toLowerCase()));
+  const [cat, setCat] = useState('all');
+  const [sel, setSel] = useState(null); // clé de l'objet sélectionné
+  const [qty, setQty] = useState(1);
+  const [done, setDone] = useState(null); // dernier don { key, n } pour le retour visuel
+
+  const CATS = [
+    ['all', T('mobile.catAll')],
+    ['ingredient', T('mobile.catIngredients')],
+    ['potion', T('mobile.catPotions')],
+    ['consumable', T('mobile.catConsumables')],
+    ['equipment', T('mobile.catEquipment')],
+  ];
+  const keys = Object.keys(ITEMS).filter((k) => {
+    const item = ITEMS[k];
+    if (cat !== 'all' && adminItemCat(item) !== cat) return false;
+    if (!q) return true;
+    const ql = q.toLowerCase();
+    return locName(item).toLowerCase().includes(ql) || item.name.toLowerCase().includes(ql);
+  });
+
+  const selItem = sel ? ITEMS[sel] : null;
+  const stackable = !!selItem && selItem.slot === 'consumable'; // seuls les consommables s'empilent
+  const pick = (k) => { setSel(k); setQty(1); setDone(null); };
+  const validate = () => {
+    if (!sel) return;
+    const n = stackable ? qty : 1;
+    onGive(sel, n);
+    setDone({ key: sel, n });
+    setSel(null);
+    setQty(1);
+  };
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'flex-end' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: '80vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: '14px 16px 24px' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: '#8a6418', marginBottom: 8 }}>{T('mobile.giveItem')}</div>
-        <input className="mob-text-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={T('mobile.searchPlaceholder')} style={{ marginBottom: 10 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {keys.map((k) => {
-            const item = ITEMS[k];
-            const color = RARITIES[item.rarity]?.color || '#888';
-            return (
-              <button key={k} onClick={() => onPick(k)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: `1.5px solid ${color}55`, background: '#fffefb', cursor: 'pointer', textAlign: 'left' }}>
-                <span style={{ width: 30, height: 30, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>{itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.icon}</span>
-                <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{locName(item)}</span>
-              </button>
-            );
-          })}
+      <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+        {/* En-tête fixe : titre + catégories + recherche */}
+        <div style={{ padding: '14px 16px 8px', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: '#8a6418', marginBottom: 8 }}>
+            {teamName ? T('mobile.giveToTeam', { name: teamName }) : T('mobile.giveItem')}
+          </div>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, marginBottom: 8 }}>
+            {CATS.map(([id, label]) => (
+              <button key={id} onClick={() => setCat(id)} style={{
+                flexShrink: 0, padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
+                fontSize: 12.5, fontWeight: cat === id ? 800 : 600, fontFamily: 'var(--font-ui)',
+                border: '1.5px solid ' + (cat === id ? '#8a6418' : 'rgba(122,94,58,0.3)'),
+                background: cat === id ? '#8a6418' : '#fffefb', color: cat === id ? '#fff' : '#7a5e3a',
+              }}>{label}</button>
+            ))}
+          </div>
+          <input className="mob-text-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={T('mobile.searchPlaceholder')} />
         </div>
-        <button className="mob-btn mob-btn--ghost" style={{ marginTop: 14 }} onClick={onClose}>{T('common.cancel')}</button>
+
+        {/* Grille défilante */}
+        <div style={{ flex: 1, minHeight: 80, overflowY: 'auto', padding: '4px 16px 8px' }}>
+          {keys.length === 0
+            ? <div className="mob-empty" style={{ margin: '14px 0' }}>{T('mobile.noItemInCat')}</div>
+            : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {keys.map((k) => {
+                  const item = ITEMS[k];
+                  const color = RARITIES[item.rarity]?.color || '#888';
+                  const on = sel === k;
+                  return (
+                    <button key={k} onClick={() => pick(k)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: on ? '2px solid #8a6418' : `1.5px solid ${color}55`, background: on ? '#fff7e0' : '#fffefb', cursor: 'pointer', textAlign: 'left' }}>
+                      <span style={{ width: 30, height: 30, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>{itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.icon}</span>
+                      <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{locName(item)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+        </div>
+
+        {/* Pied fixe : sélection + quantité + validation, ou fermeture */}
+        <div style={{ flexShrink: 0, padding: '10px 16px calc(16px + env(safe-area-inset-bottom))', borderTop: '1px solid rgba(122,94,58,0.2)', background: 'rgba(255,255,255,0.6)' }}>
+          {selItem ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>{itemImg(selItem) ? <img src={itemImg(selItem)} alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} /> : selItem.icon}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#5a4626', minWidth: 0 }}>{locName(selItem)}</span>
+                {stackable && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => setQty((n) => Math.max(1, n - 1))} disabled={qty <= 1} style={{ width: 34, height: 34, borderRadius: 8, border: '1.5px solid rgba(122,94,58,0.4)', background: '#fffefb', fontSize: 20, fontWeight: 800, color: '#7a5e3a', cursor: 'pointer', opacity: qty <= 1 ? 0.4 : 1 }}>−</button>
+                    <span style={{ minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-display)', color: '#5a4626' }}>{qty}</span>
+                    <button onClick={() => setQty((n) => Math.min(9, n + 1))} disabled={qty >= 9} style={{ width: 34, height: 34, borderRadius: 8, border: '1.5px solid rgba(122,94,58,0.4)', background: '#fffefb', fontSize: 20, fontWeight: 800, color: '#7a5e3a', cursor: 'pointer', opacity: qty >= 9 ? 0.4 : 1 }}>+</button>
+                  </div>
+                )}
+              </div>
+              <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={validate}>{T('mobile.giveCount', { n: stackable ? qty : 1 })}</button>
+            </>
+          ) : (
+            <>
+              {done && ITEMS[done.key] && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#2f5a18', textAlign: 'center', marginBottom: 8 }}>
+                  ✓ {T('mobile.gaveConfirm', { icon: ITEMS[done.key].icon, name: locName(ITEMS[done.key]), n: done.n })}
+                </div>
+              )}
+              {!done && <div style={{ fontSize: 12.5, color: 'var(--ink-400)', fontStyle: 'italic', textAlign: 'center', marginBottom: 8 }}>{T('mobile.givePick')}</div>}
+              <button className="mob-btn mob-btn--ghost" style={{ width: '100%' }} onClick={onClose}>{T('common.close')}</button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1447,7 +1543,12 @@ function AdminPanel({ code, session, onClose }) {
       })}
 
       {picker != null && (
-        <AdminItemPicker onPick={(key) => { send('adminGiveItem', { teamIdx: picker, key }); setPicker(null); }} onClose={() => setPicker(null)} T={T} />
+        <AdminItemPicker
+          teamName={teams.find((t) => t.idx === picker)?.name}
+          onGive={(key, n) => send('adminGiveItem', { teamIdx: picker, key, n })}
+          onClose={() => setPicker(null)}
+          T={T}
+        />
       )}
     </div>
   );

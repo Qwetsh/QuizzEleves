@@ -1928,7 +1928,7 @@ export const useGameStore = create((set, get) => ({
 
   // --- Intentions ADMIN (interface prof sur téléphone, code 54150) ---
   // Contrôle total : agit sur N'IMPORTE quelle équipe (par index), SANS verrou.
-  // Types : adminMoney {teamIdx, delta} · adminGiveItem {teamIdx, key} ·
+  // Types : adminMoney {teamIdx, delta} · adminGiveItem {teamIdx, key, n?} ·
   // adminRemoveEquip {teamIdx, slot} · adminRemoveBag {teamIdx, key}.
   applyAdminIntent: (type, payload = {}) => {
     const st = get();
@@ -1944,7 +1944,10 @@ export const useGameStore = create((set, get) => ({
       get().addLog(tg('log.store.adminMoney', { emoji: team.emoji, name: team.name, sign: delta >= 0 ? '+' : '', n: delta }));
       get().checkMoneyMilestone(idx);
     } else if (type === 'adminGiveItem') {
-      if (ITEMS[payload.key]) itemH.grantItem(set, get, idx, payload.key);
+      // n (quantité) : 1 par défaut, plafonné à 9 (plafond d'une pile de sac).
+      // Donner plusieurs empile les consommables via grantItem/placeItem.
+      const n = Math.max(1, Math.min(9, Math.trunc(Number(payload.n) || 1)));
+      if (ITEMS[payload.key]) for (let k = 0; k < n; k++) itemH.grantItem(set, get, idx, payload.key);
     } else if (type === 'adminRemoveEquip') {
       const cur = itemH.cellKey(team.equipment?.[payload.slot]);
       if (cur) {

@@ -2,7 +2,7 @@
 // par le TBI — mapping token→équipe, verrou de résolution, types d'actions.
 import { describe, it, expect } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
-import { normalizeBag, cellKey } from '../store/itemHandlers.js';
+import { normalizeBag, cellKey, cellN } from '../store/itemHandlers.js';
 
 const S = () => useGameStore.getState();
 const EQUIP = 'chapeauPaille'; // équipement tête
@@ -93,6 +93,25 @@ describe('applyAdminIntent (contrôle total)', () => {
     setup();
     S().applyAdminIntent('adminGiveItem', { teamIdx: 1, key: EQUIP });
     expect(S().teams[1].equipment.head).toBe(EQUIP);
+  });
+
+  it('adminGiveItem n>1 empile le consommable dans le sac', () => {
+    setup();
+    S().applyAdminIntent('adminGiveItem', { teamIdx: 1, key: 'painVoyageur', n: 3 });
+    const bag = normalizeBag(S().teams[1].bag);
+    const cell = bag.find((c) => cellKey(c) === 'painVoyageur');
+    expect(cell).toBeTruthy();
+    expect(cellN(cell)).toBe(3); // 3 unités empilées sur une seule case
+  });
+
+  it('adminGiveItem clampe n (0 → 1, 99 → 9)', () => {
+    setup();
+    S().applyAdminIntent('adminGiveItem', { teamIdx: 1, key: 'painVoyageur', n: 0 });
+    expect(cellN(normalizeBag(S().teams[1].bag).find((c) => cellKey(c) === 'painVoyageur'))).toBe(1);
+    setup();
+    S().applyAdminIntent('adminGiveItem', { teamIdx: 1, key: 'painVoyageur', n: 99 });
+    const total = normalizeBag(S().teams[1].bag).filter((c) => cellKey(c) === 'painVoyageur').reduce((s, c) => s + cellN(c), 0);
+    expect(total).toBe(9); // clamp à 9 (réparti sur une ou plusieurs cases selon le plafond de pile)
   });
 
   it('adminRemoveEquip retire sans rembourser', () => {
