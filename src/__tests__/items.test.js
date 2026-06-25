@@ -64,7 +64,8 @@ const equip = (i, slot, key) => {
 
 describe('catalogue items.js', () => {
   const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction',
-    'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus'];
+    'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus',
+    'itemStealImmune', 'goldStealImmune', 'reflectChance'];
   const CONSUMABLE_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime',
     'shieldNext', 'gainCharge', 'fumigene'];
 
@@ -82,6 +83,12 @@ describe('catalogue items.js', () => {
       expect(item.effects.length, key).toBeGreaterThan(0);
       const allowed = item.slot === 'consumable' ? CONSUMABLE_EFFECTS : EQUIP_EFFECTS;
       for (const fx of item.effects) {
+        // Effet composable (kind:'trigger') : validé par le moteur — on vérifie
+        // juste qu'il porte au moins une action.
+        if (fx.kind === 'trigger') {
+          expect(Array.isArray(fx.do) && fx.do.length > 0, `${key}: trigger sans action`).toBe(true);
+          continue;
+        }
         expect(allowed, `${key}: effet ${fx.type}`).toContain(fx.type);
         expect(fx.value, key).toBeGreaterThan(0);
       }

@@ -5,7 +5,7 @@ import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 import { runEffects, consumableActions, announce } from './effectEngine.js';
-import { tg } from '../i18n';
+import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 
 export const BAG_SIZE = 12;
@@ -424,6 +424,11 @@ export function useConsumable(set, get, bagIndex) {
   if (finished || rolling || showQuestion || showEvent || showFight) return;
   if (pendingActions) return; // une séquence d'effets est déjà en cours
   const team = teams[currentTeam];
+  // Blocage des consommables (objet/effet adverse) : aucun consommable pendant X tours.
+  if (team.consumablesBlockedTurns > 0) {
+    addLog(tgPlural('log.it.consumablesBlocked', team.consumablesBlockedTurns, { emoji: team.emoji, name: team.name, n: team.consumablesBlockedTurns }));
+    return;
+  }
   const bag = normalizeBag(team.bag);
   const cell = bag[bagIndex];
   const itemKey = cellKey(cell);

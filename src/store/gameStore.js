@@ -23,7 +23,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides, resolveAmount, isGoldStealImmune } from '../logic/itemEffects.js';
 import { tg, tgPlural } from '../i18n';
 import { loc } from '../i18n/content';
 import { hasPactSpec, isDiploTrade, pactTurns, withPromise, tickPromises, hasCoalitionSpec, coalitionTurns, withCoalition, tickCoalitions } from '../logic/pacts.js';
@@ -2128,6 +2128,30 @@ export const useGameStore = create((set, get) => ({
       nt[newCurrent] = left > 0 ? { ...ci, totalImmuneTurns: left } : { ...ci, totalImmuneTurns: undefined };
     }
 
+    // DoT « saignement d'or » (bleedGold) : à chaque fois que la victime REGAGNE
+    // la main, on lui retire (mode 'lose') ou on lui vole (mode 'steal', au profit
+    // de `from`) un montant (dé/échelle). Exécuté AVANT la décrémentation des buffs
+    // (un buff de 3 tours frappe donc 3 fois). Respecte l'immunité au vol d'or.
+    const cdot = nt[newCurrent];
+    if (cdot?.buffs?.some((b) => b.type === 'bleedGold')) {
+      if (nt === get().teams) nt = [...nt];
+      let victim = { ...cdot };
+      for (const b of cdot.buffs) {
+        if (b.type !== 'bleedGold') continue;
+        if (isGoldStealImmune(victim)) { addLog(tg('log.store.bleedImmune', { emoji: victim.emoji, name: victim.name })); continue; }
+        const amt = Math.min(resolveAmount(b.n, victim), victim.money ?? 0);
+        if (amt <= 0) continue;
+        victim = { ...victim, money: (victim.money ?? 0) - amt };
+        if (b.mode === 'steal' && b.from != null && b.from !== newCurrent && nt[b.from]) {
+          nt[b.from] = { ...nt[b.from], money: (nt[b.from].money ?? 0) + amt };
+          addLog(tgPlural('log.store.bleedSteal', amt, { emoji: victim.emoji, name: victim.name, n: amt, aemoji: nt[b.from].emoji, aname: nt[b.from].name }));
+        } else {
+          addLog(tgPlural('log.store.bleedLose', amt, { emoji: victim.emoji, name: victim.name, n: amt }));
+        }
+      }
+      nt[newCurrent] = victim;
+    }
+
     // Buffs temporisés (effets de durée des consommables) : 1 tour de moins quand
     // l'équipe REGAGNE la main ; expiration à 0.
     const cb = nt[newCurrent];
@@ -2136,6 +2160,24 @@ export const useGameStore = create((set, get) => ({
       if (nt === get().teams) nt = [...nt];
       nt[newCurrent] = { ...cb, buffs };
       if (buffs.length < cb.buffs.length) addLog(tg('log.store.buffExpired', { emoji: cb.emoji, name: cb.name }));
+    }
+
+    // Blocage des POUVOIRS : 1 tour de moins quand l'équipe regagne la main.
+    const cbp = nt[newCurrent];
+    if (cbp?.powersBlockedTurns > 0) {
+      const left = cbp.powersBlockedTurns - 1;
+      if (nt === get().teams) nt = [...nt];
+      nt[newCurrent] = left > 0 ? { ...cbp, powersBlockedTurns: left } : { ...cbp, powersBlockedTurns: undefined };
+      if (left <= 0) addLog(tg('log.store.powersUnblocked', { emoji: cbp.emoji, name: cbp.name }));
+    }
+
+    // Blocage des CONSOMMABLES : 1 tour de moins quand l'équipe regagne la main.
+    const cbc = nt[newCurrent];
+    if (cbc?.consumablesBlockedTurns > 0) {
+      const left = cbc.consumablesBlockedTurns - 1;
+      if (nt === get().teams) nt = [...nt];
+      nt[newCurrent] = left > 0 ? { ...cbc, consumablesBlockedTurns: left } : { ...cbc, consumablesBlockedTurns: undefined };
+      if (left <= 0) addLog(tg('log.store.consumablesUnblocked', { emoji: cbc.emoji, name: cbc.name }));
     }
 
     // Pactes & coalitions (« Complots ») : 1 tour de moins quand l'équipe REGAGNE

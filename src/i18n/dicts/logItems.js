@@ -28,6 +28,8 @@ export default {
                                en: '📜 {emoji} {name}: no equipped piece to enchant!' },
   'log.it.use':              { fr: '{icon} {emoji} {name} utilise {item} !',
                                en: '{icon} {emoji} {name} uses {item}!' },
+  'log.it.consumablesBlocked': { fr: ['🚫 {emoji} {name} : consommables bloqués ({n} tour) !', '🚫 {emoji} {name} : consommables bloqués ({n} tours) !'],
+                                 en: ['🚫 {emoji} {name}: consumables blocked ({n} turn)!', '🚫 {emoji} {name}: consumables blocked ({n} turns)!'] },
   'log.it.gambleFail':       { fr: '💨 {item} : raté, aucun effet cette fois…',
                                en: '💨 {item}: missed, no effect this time…' },
   'log.it.gambleFail.toast': { fr: 'Raté ! {item} n\'a rien fait',

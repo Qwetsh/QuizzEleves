@@ -5,7 +5,7 @@
 //   tone: 'buff' (positif/neutre) | 'malus' (négatif). L'aura du pion ne
 //   s'affiche que pour les malus.
 import { SUBJECTS } from '../data/subjects.js';
-import { activeSets } from './itemEffects.js';
+import { activeSets, getEffectValue, diceLabel } from './itemEffects.js';
 
 // Effets de durée (buffs des consommables) → libellé + ton pour l'affichage.
 const BUFF_INFO = {
@@ -18,6 +18,12 @@ const BUFF_INFO = {
   randomPath: { tone: 'buff', icon: '🎲', color: '#8745d4', label: () => 'Voie choisie au hasard' },
   duelImmune: { tone: 'buff', icon: '\u{1F6E1}\u{FE0F}', color: '#3b6cb3', label: () => 'Immunisé contre les duels' },
   loseOnWrong: { tone: 'malus', icon: '💸', color: '#b5341f', label: (b) => `Perd ${b.n ?? 5} or à l’erreur` },
+  // Saignement d'or (DoT) : vol vers le lanceur ou perte sèche, chaque tour.
+  bleedGold: { tone: 'malus', icon: '🩸', color: '#b5341f', label: (b) => `Saignement d'or : ${b.mode === 'steal' ? 'volé de' : 'perd'} ${diceLabel(b.n)}/tour` },
+  // Immunités / renvoi posés temporairement (buff).
+  itemStealImmune: { tone: 'buff', icon: '🔒', color: '#3b6cb3', label: () => "Immunisé au vol d'objet" },
+  goldStealImmune: { tone: 'buff', icon: '🔒', color: '#c8911f', label: () => "Immunisé au vol d'or" },
+  reflectChance: { tone: 'buff', icon: '↩️', color: '#8745d4', label: (b) => `Renvoi d'effet : ${b.n ?? 0}%` },
 };
 
 export function getTeamEffects(team) {
@@ -46,8 +52,31 @@ export function getTeamEffects(team) {
     out.push({ key: 'wager', tone: 'buff', icon: '\u{1F3B2}',
       label: 'Défi : récompense si tu réussis ta prochaine question', color: '#c8911f' });
   }
+  if (team.totalImmuneTurns > 0) {
+    out.push({ key: 'totalImmune', tone: 'buff', icon: '\u{1F6E1}️', n: team.totalImmuneTurns,
+      label: `Immunité totale (${team.totalImmuneTurns} tour${team.totalImmuneTurns > 1 ? 's' : ''})`, color: '#3b6cb3' });
+  }
+  // Immunités / renvoi PASSIFS (équipement/set) — affichés tant qu'actifs.
+  if (getEffectValue(team, 'itemStealImmune') > 0) {
+    out.push({ key: 'itemImmune', tone: 'buff', icon: '🔒', label: "Immunisé au vol d'objet", color: '#3b6cb3' });
+  }
+  if (getEffectValue(team, 'goldStealImmune') > 0 || getEffectValue(team, 'stealProtection') >= 100) {
+    out.push({ key: 'goldImmune', tone: 'buff', icon: '🔒', label: "Immunisé au vol d'or", color: '#c8911f' });
+  }
+  const reflectPct = getEffectValue(team, 'reflectChance');
+  if (reflectPct > 0) {
+    out.push({ key: 'reflect', tone: 'buff', icon: '↩️', label: `Renvoi d'effet : ${Math.min(100, reflectPct)}%`, color: '#8745d4' });
+  }
 
   // --- Malus (subis) ---
+  if (team.powersBlockedTurns > 0) {
+    out.push({ key: 'powBlock', tone: 'malus', icon: '🚫', n: team.powersBlockedTurns,
+      label: `Pouvoirs bloqués (${team.powersBlockedTurns} tour${team.powersBlockedTurns > 1 ? 's' : ''})`, color: '#8a1f2e' });
+  }
+  if (team.consumablesBlockedTurns > 0) {
+    out.push({ key: 'consBlock', tone: 'malus', icon: '🚫', n: team.consumablesBlockedTurns,
+      label: `Consommables bloqués (${team.consumablesBlockedTurns} tour${team.consumablesBlockedTurns > 1 ? 's' : ''})`, color: '#8a1f2e' });
+  }
   if (team.sablierActif) {
     out.push({ key: 'sablier', tone: 'malus', icon: '⏱️',
       label: 'Sablier : timer réduit à ta prochaine question', color: '#8745d4' });

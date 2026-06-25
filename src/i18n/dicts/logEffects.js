@@ -123,4 +123,18 @@ export default {
 
   // --- __rollD6 ---
   'log.fx.objectRolls': { fr: "🎲 L'objet fait {n} !", en: '🎲 The object rolls {n}!' },
+
+  // --- Renvoi / immunités / blocages ---
+  'log.fx.reflect':       { fr: "↩️ {vemoji} {vname} RENVOIE l'effet sur {aemoji} {aname} !", en: '↩️ {vemoji} {vname} REFLECTS the effect onto {aemoji} {aname}!' },
+  'log.fx.reflect.toast': { fr: '↩️ Renvoyé par {vname} sur {aname} !', en: '↩️ Reflected by {vname} onto {aname}!' },
+  'log.fx.goldImmune':       { fr: "🔒 {emoji} {name} est immunisé au vol d'or : rien n'est pris !", en: '🔒 {emoji} {name} is immune to gold theft: nothing taken!' },
+  'log.fx.goldImmune.toast': { fr: '🔒 {name} : or protégé !', en: '🔒 {name}: gold protected!' },
+  'log.fx.blockPowers':       { fr: ['🚫 Pouvoirs bloqués pendant {n} tour !', '🚫 Pouvoirs bloqués pendant {n} tours !'],
+                                en: ['🚫 Powers blocked for {n} turn!', '🚫 Powers blocked for {n} turns!'] },
+  'log.fx.blockPowers.toast': { fr: ['🚫 Pouvoirs bloqués ({n} tour)', '🚫 Pouvoirs bloqués ({n} tours)'],
+                                en: ['🚫 Powers blocked ({n} turn)', '🚫 Powers blocked ({n} turns)'] },
+  'log.fx.blockConsumables':       { fr: ['🚫 Consommables bloqués pendant {n} tour !', '🚫 Consommables bloqués pendant {n} tours !'],
+                                     en: ['🚫 Consumables blocked for {n} turn!', '🚫 Consumables blocked for {n} turns!'] },
+  'log.fx.blockConsumables.toast': { fr: ['🚫 Consommables bloqués ({n} tour)', '🚫 Consommables bloqués ({n} tours)'],
+                                     en: ['🚫 Consumables blocked ({n} turn)', '🚫 Consumables blocked ({n} turns)'] },
 };

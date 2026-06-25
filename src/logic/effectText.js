@@ -108,6 +108,10 @@ export function describeAction(a, lang = getLang()) {
         loseOnWrong: `lose ${amountLabel(b.n ?? 5, lang)} gold on each mistake`,
         randomPath: 'path chosen at random at junctions',
         duelImmune: 'immune to duels',
+        bleedGold: `${b.mode === 'steal' ? 'is bled of' : 'loses'} ${amountLabel(b.n ?? 'd10', lang)} gold each turn`,
+        itemStealImmune: 'immune to item theft',
+        goldStealImmune: 'immune to gold theft',
+        reflectChance: `${amountLabel(b.n ?? 0, lang)}% chance to reflect a negative effect`,
       } : {
         themeBonus: `+${amountLabel(b.n ?? 5, lang)} or par bonne réponse${b.subject ? ` en ${subjName(b.subject, lang)}` : ''}`,
         advanceOnCorrect: `avance de ${amountLabel(b.n ?? 'd4', lang)} à chaque bonne réponse`,
@@ -116,9 +120,15 @@ export function describeAction(a, lang = getLang()) {
         loseOnWrong: `perd ${amountLabel(b.n ?? 5, lang)} or à chaque erreur`,
         randomPath: 'voie choisie au hasard aux carrefours',
         duelImmune: 'immunisé contre les duels',
+        bleedGold: `${b.mode === 'steal' ? 'se fait voler' : 'perd'} ${amountLabel(b.n ?? 'd10', lang)} or chaque tour`,
+        itemStealImmune: "immunisé au vol d'objet",
+        goldStealImmune: "immunisé au vol d'or",
+        reflectChance: `${amountLabel(b.n ?? 0, lang)}% de chance de renvoyer un effet négatif`,
       };
       return `${dur}, ${tgt} : ${D[b.type] || b.type}`;
     }
+    case 'blockPowers': return en ? `blocks ${who}'s powers for ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}` : `bloque les pouvoirs de ${who} pendant ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}`;
+    case 'blockConsumables': return en ? `blocks ${who}'s consumables for ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}` : `bloque les consommables de ${who} pendant ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}`;
     case 'hideWrong': return en ? `removes ${amountLabel(a.n ?? 1, lang)} ${wrongAnsW(a.n ?? 1, lang)}` : `élimine ${amountLabel(a.n ?? 1, lang)} ${wrongAnsW(a.n ?? 1, lang)}`;
     case 'shieldNext': return en ? `shield (cancels ${amountLabel(a.n ?? 1, lang)} ${setbackW(a.n ?? 1, lang)})` : `bouclier (annule ${amountLabel(a.n ?? 1, lang)} ${setbackW(a.n ?? 1, lang)})`;
     case 'fumigene': return en
@@ -143,6 +153,9 @@ function describeLegacy(fx, lang) {
     case 'moneyPerCorrect': txt = en ? `+${v} ${coinW(fx.value, lang)} per correct answer` : `+${v} ${coinW(fx.value, lang)} par bonne réponse`; break;
     case 'taxReduction': txt = en ? `−${v}% on taxes and tolls` : `−${v}% sur les impôts et taxes`; break;
     case 'stealProtection': txt = en ? `−${v}% on the gold stolen from you` : `−${v}% sur l'or qu'on te vole`; break;
+    case 'itemStealImmune': txt = en ? 'immune to item theft' : "immunisé au vol d'objet"; break;
+    case 'goldStealImmune': txt = en ? 'immune to gold theft' : "immunisé au vol d'or"; break;
+    case 'reflectChance': txt = en ? `${v}% chance to reflect a negative effect onto the attacker` : `${v}% de chance de renvoyer un effet négatif sur l'attaquant`; break;
     case 'reculReduction': txt = en ? `setback reduced by ${v} ${spaceW(fx.value, lang)}` : `recul subi réduit de ${v} ${spaceW(fx.value, lang)}`; break;
     case 'reculReductionPct': txt = en ? `setback reduced by ${v}%` : `recul subi réduit de ${v}%`; break;
     case 'moveDieSides': txt = en ? `movement die turned into a D${fx.value}` : `dé de mouvement transformé en D${fx.value}`; break;

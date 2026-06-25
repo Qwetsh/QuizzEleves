@@ -7,7 +7,7 @@
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
 import { moveForward } from '../logic/pathfinding.js';
-import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem } from '../logic/itemEffects.js';
+import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect } from '../logic/itemEffects.js';
 import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
@@ -194,6 +194,41 @@ const OFFENSIVE = (action) =>
   (action.action === 'move' && action.dir === 'back' && (action.target === 'target')) ||
   (action.action === 'money' && (action.mode === 'steal' || action.mode === 'lose') && action.target === 'target');
 
+// Actions NÉGATIVES susceptibles d'être RENVOYÉES à l'attaquant (effet « miroir »).
+// Le renvoi ne s'applique qu'à une cible UNIQUE qui n'est pas la source.
+const REFLECTABLE = (action) => {
+  switch (action.action) {
+    case 'move': return action.dir === 'back';
+    case 'money': return action.mode === 'steal' || action.mode === 'lose';
+    case 'curseTimer':
+    case 'curseExtraQuestion':
+    case 'loseItem':
+    case 'blockPowers':
+    case 'blockConsumables':
+      return true;
+    case 'buff': return !!action.__dot; // DoT « saignement d'or » uniquement
+    default: return false;
+  }
+};
+
+// Renvoi (« miroir ») : si l'action négative vise UNE seule équipe adverse qui
+// possède une chance de renvoi (reflectChance) et que le tirage passe, l'effet
+// est redirigé sur la SOURCE. Renvoie { indices, reflected } (indices = cibles
+// effectives à appliquer ; reflected = true si redirigé). Émet log + VFX + son.
+function applyReflection(set, get, action, ctx, indices) {
+  const src = ctx.sourceTeam ?? 0;
+  if (!REFLECTABLE(action) || !indices || indices.length !== 1) return { indices, reflected: false };
+  const victimIdx = indices[0];
+  if (victimIdx === src) return { indices, reflected: false };
+  const victim = get().teams[victimIdx];
+  if (!victim || !rollsReflect(victim)) return { indices, reflected: false };
+  const attacker = get().teams[src];
+  get().addLog(tg('log.fx.reflect', { vemoji: victim.emoji, vname: victim.name, aemoji: attacker.emoji, aname: attacker.name }));
+  announce(set, get, '↩️', tg('log.fx.reflect.toast', { vname: victim.name, aname: attacker.name }), '#8745d4');
+  get().emitVfx?.('reflect', victimIdx);
+  return { indices: [src], reflected: true };
+}
+
 // --- Application des actions atomiques ---------------------------------
 
 function applyMoveOne(set, get, idx, dir, n, allowJunction) {
@@ -257,6 +292,12 @@ function applyMoney(set, get, action, ctx, indices) {
     for (const i of indices) {
       if (i === stealRecipient) continue;
       const victim = nt[i];
+      // Immunité au vol d'or : rien n'est pris (indication au journal/toast).
+      if (isGoldStealImmune(victim)) {
+        addLog(tg('log.fx.goldImmune', { emoji: victim.emoji, name: victim.name }));
+        announce(set, get, '🔒', tg('log.fx.goldImmune.toast', { name: victim.name }), '#c8911f');
+        continue;
+      }
       const raw = Math.min(amountFor(victim), victim.money ?? 0);
       const stolen = reducedSteal(victim, raw);
       nt[i] = { ...victim, money: Math.max(0, (victim.money ?? 0) - stolen) };
@@ -274,6 +315,11 @@ function applyMoney(set, get, action, ctx, indices) {
   } else if (action.mode === 'lose') {
     for (const i of indices) {
       const t = nt[i];
+      // Une perte SUBIE (pas une dépense de soi) est bloquée par l'immunité au vol d'or.
+      if (i !== src && isGoldStealImmune(t)) {
+        addLog(tg('log.fx.goldImmune', { emoji: t.emoji, name: t.name }));
+        continue;
+      }
       const raw = amountFor(t);
       const loss = i === src ? raw : reducedSteal(t, raw);
       nt[i] = { ...t, money: Math.max(0, (t.money ?? 0) - loss) };
@@ -407,11 +453,13 @@ function stepHead(set, get, action, ctx) {
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       if (OFFENSIVE(action) && consumeFumigene(set, get, t.indices[0], action)) return 'done';
+      // Renvoi possible (recul vers une seule cible adverse → redirigé sur la source).
+      const moveIndices = action.dir === 'back' ? applyReflection(set, get, action, ctx, t.indices).indices : t.indices;
       // jonction seulement pour un move 'self' vers l'avant
       const allowJunction = action.target === 'self' && action.dir === 'forward';
       const n = resolveAmount(action.n, srcTeam); // un seul tir partagé par toutes les cibles
       const formula = fxFormula(action.n);
-      for (const idx of t.indices) {
+      for (const idx of moveIndices) {
         const res = applyMoveOne(set, get, idx, action.dir, n, allowJunction);
         if (res.suspended) return 'suspend';
         // Journalise le déplacement (sinon seul un toast transitoire le montrait).
@@ -453,7 +501,13 @@ function stepHead(set, get, action, ctx) {
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       if (OFFENSIVE(action) && consumeFumigene(set, get, t.indices[0], action)) { clearCtxResolution(set, get, 'targetTeam'); return 'done'; }
       const mn = resolveAmount(action.n, srcTeam);
-      applyMoney(set, get, { ...action, n: mn, formula: fxFormula(action.n) }, ctx, t.indices);
+      // Renvoi : un vol/perte sur une seule cible adverse peut être retourné à la
+      // source. Un VOL renvoyé devient une PERTE pour l'attaquant (il ne se vole
+      // pas lui-même).
+      const moneyRefl = applyReflection(set, get, action, ctx, t.indices);
+      const moneyAct = { ...action, n: mn, formula: fxFormula(action.n) };
+      if (moneyRefl.reflected && moneyAct.mode === 'steal') moneyAct.mode = 'lose';
+      applyMoney(set, get, moneyAct, ctx, moneyRefl.indices);
       if (typeof action.n === 'string' || (action.n && typeof action.n === 'object')) {
         announce(set, get, '🎲', tg('log.fx.money.toast', { formula: diceLabel(action.n), n: mn, unit: action.unit === 'percent' ? tg('log.fx.unit.percent') : tg('log.fx.unit.gold') }), '#e8b117');
       }
@@ -620,10 +674,18 @@ function stepHead(set, get, action, ctx) {
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       const src = action.buff || {};
       const turns = src.turns ?? 3;
+      // Le DoT « saignement d'or » (bleedGold) est NÉGATIF : il peut être renvoyé
+      // à l'attaquant s'il vise une seule équipe adverse qui a une chance de renvoi.
+      const buffIndices = src.type === 'bleedGold'
+        ? applyReflection(set, get, { action: 'buff', __dot: true }, ctx, t.indices).indices
+        : t.indices;
+      // `from` = source de l'effet (bénéficiaire d'un éventuel vol par tour) ;
+      // `mode` ('steal'|'lose') ne sert qu'aux DoT d'or.
+      const from = ctx.sourceTeam ?? get().currentTeam;
       const nt = [...get().teams];
-      for (const idx of t.indices) {
+      for (const idx of buffIndices) {
         const cur = nt[idx];
-        nt[idx] = { ...cur, buffs: [...(cur.buffs || []), { type: src.type, turns, n: src.n, subject: src.subject }] };
+        nt[idx] = { ...cur, buffs: [...(cur.buffs || []), { type: src.type, turns, n: src.n, subject: src.subject, mode: src.mode, from }] };
       }
       set({ teams: nt });
       get().addLog(tgPlural('log.fx.buff', turns, { n: turns }));
@@ -639,7 +701,8 @@ function stepHead(set, get, action, ctx) {
       // Retire un objet (catégorie optionnelle) à la/les cible(s) ; repli sur l'or.
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
-      for (const idx of t.indices) get().engineLoseItem?.(idx, action.category, action.fallbackGold);
+      const loseIdx = applyReflection(set, get, action, ctx, t.indices).indices;
+      for (const idx of loseIdx) get().engineLoseItem?.(idx, action.category, action.fallbackGold);
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -648,8 +711,9 @@ function stepHead(set, get, action, ctx) {
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       const div = action.divisor || 2;
+      const curseIdx = applyReflection(set, get, action, ctx, t.indices).indices;
       const nt = [...get().teams];
-      for (const idx of t.indices) nt[idx] = { ...nt[idx], sablierActif: true, sablierDivisor: div };
+      for (const idx of curseIdx) nt[idx] = { ...nt[idx], sablierActif: true, sablierDivisor: div };
       set({ teams: nt });
       get().addLog(tg('log.fx.curseTimer', { n: div }));
       announce(set, get, '⏱️', tg('log.fx.curseTimer.toast', { n: div }), '#8745d4');
@@ -661,14 +725,43 @@ function stepHead(set, get, action, ctx) {
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       const add = Math.max(1, resolveAmount(action.n, srcTeam) || 1);
+      const curseQIdx = applyReflection(set, get, action, ctx, t.indices).indices;
       const nt = [...get().teams];
-      for (const idx of t.indices) {
+      for (const idx of curseQIdx) {
         const tm = nt[idx];
         nt[idx] = { ...tm, doubleActive: true, doubleExtra: Math.min((tm.doubleExtra || 0) + add, 4) };
       }
       set({ teams: nt });
       get().addLog(tgPlural('log.fx.curseExtra', add, { n: add }));
       announce(set, get, '❓', tgPlural('log.fx.curseExtra.toast', add, { n: add }), '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'blockPowers': {
+      // Empêche la/les cible(s) d'utiliser leurs POUVOIRS pendant X tours.
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const turns = Math.max(1, resolveAmount(action.turns ?? action.n, srcTeam) || 1);
+      const idxs = applyReflection(set, get, action, ctx, t.indices).indices;
+      const nt = [...get().teams];
+      for (const idx of idxs) nt[idx] = { ...nt[idx], powersBlockedTurns: Math.max(nt[idx].powersBlockedTurns || 0, turns) };
+      set({ teams: nt });
+      get().addLog(tgPlural('log.fx.blockPowers', turns, { n: turns }));
+      announce(set, get, '🚫', tgPlural('log.fx.blockPowers.toast', turns, { n: turns }), '#8a1f2e');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'blockConsumables': {
+      // Empêche la/les cible(s) d'utiliser leurs CONSOMMABLES pendant X tours.
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const turns = Math.max(1, resolveAmount(action.turns ?? action.n, srcTeam) || 1);
+      const idxs = applyReflection(set, get, action, ctx, t.indices).indices;
+      const nt = [...get().teams];
+      for (const idx of idxs) nt[idx] = { ...nt[idx], consumablesBlockedTurns: Math.max(nt[idx].consumablesBlockedTurns || 0, turns) };
+      set({ teams: nt });
+      get().addLog(tgPlural('log.fx.blockConsumables', turns, { n: turns }));
+      announce(set, get, '🚫', tgPlural('log.fx.blockConsumables.toast', turns, { n: turns }), '#8a1f2e');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }

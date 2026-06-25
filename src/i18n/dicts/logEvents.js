@@ -106,6 +106,7 @@ export default {
   'log.ev.coffreRefund':   { fr: '🧰 {icon} {item} ({rarity})... mais le sac est plein ! Revendu +{refund} 💰.', en: '🧰 {icon} {item} ({rarity})... but the bag is full! Sold back +{refund} 💰.' },
   'log.ev.coffreFind':     { fr: '🧰 {emoji} {name} trouve {icon} {item} ({rarity}) !', en: '🧰 {emoji} {name} finds {icon} {item} ({rarity})!' },
   'log.ev.pillageNothing': { fr: "🏴‍☠️ {emoji} {name} n'a aucun objet à piller !", en: '🏴‍☠️ {emoji} {name} has no item to plunder!' },
+  'log.ev.itemStealImmune': { fr: "🔒 {emoji} {name} est immunisé au vol d'objet : rien n'est pris !", en: '🔒 {emoji} {name} is immune to item theft: nothing taken!' },
   'log.ev.pickpocketNothing':{ fr: '🦝 Le voleur fouille... mais {emoji} {name} n\'a aucun objet à perdre !', en: '🦝 The thief searches... but {emoji} {name} has no item to lose!' },
   'log.ev.pickpocket':     { fr: '🦝 Pickpocket ! {emoji} {name} perd {icon} {item} !', en: '🦝 Pickpocket! {emoji} {name} loses {icon} {item}!' },
   'log.ev.default':        { fr: 'Événement appliqué.', en: 'Event applied.' },

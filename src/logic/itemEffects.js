@@ -249,6 +249,9 @@ export function reducedRecul(team, amount) {
  * Pièces effectivement volées à une équipe protégée (stealProtection en %).
  */
 export function reducedSteal(victim, amount) {
+  // Immunité au vol d'or (flag dédié ou protection 100 %) : rien volé. Couvre
+  // tous les sites de vol qui passent par ici (duel, événement volArgent, moteur).
+  if (isGoldStealImmune(victim)) return 0;
   const protection = Math.min(100, getEffectValue(victim, 'stealProtection'));
   return Math.max(0, Math.floor(amount * (1 - protection / 100)));
 }
@@ -259,4 +262,39 @@ export function reducedSteal(victim, amount) {
 export function reducedTax(team, amount) {
   const reduction = Math.min(100, getEffectValue(team, 'taxReduction'));
   return Math.max(0, Math.ceil(amount * (1 - reduction / 100)));
+}
+
+// --- Immunités & renvoi (passif d'équipement OU buff temporisé) --------
+
+/**
+ * Immunité au VOL D'OBJET (pillage, pickpocket, butin de combat). Passif
+ * d'équipement/set (`itemStealImmune`) ou buff temporisé du même nom.
+ */
+export function isItemStealImmune(team) {
+  return hasEffect(team, 'itemStealImmune') || hasBuff(team, 'itemStealImmune');
+}
+
+/**
+ * Immunité au VOL D'OR (steal entre équipes, Foudre/Tempête, événement volArgent).
+ * Passif `goldStealImmune`, buff du même nom, ou protection de 100 % (armureGarde).
+ */
+export function isGoldStealImmune(team) {
+  return hasEffect(team, 'goldStealImmune') || hasBuff(team, 'goldStealImmune') || getEffectValue(team, 'stealProtection') >= 100;
+}
+
+/**
+ * Chance de RENVOI (0..100 %) d'un effet négatif sur l'attaquant. Cumule le
+ * passif d'équipement/set (`reflectChance`) et les buffs temporisés du même nom
+ * (leur `n` = points de %). Plafonnée à 100.
+ */
+export function reflectChanceOf(team) {
+  return Math.min(100, getEffectValue(team, 'reflectChance') + buffValue(team, 'reflectChance'));
+}
+
+/**
+ * Tire au sort si l'effet est renvoyé pour cette équipe (selon reflectChanceOf).
+ */
+export function rollsReflect(team) {
+  const c = reflectChanceOf(team);
+  return c > 0 && Math.random() * 100 < c;
 }

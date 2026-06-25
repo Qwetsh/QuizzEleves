@@ -3,6 +3,7 @@ import { POWERS } from '../../../data/powers';
 import { useGameStore } from '../../../store/gameStore';
 import { useT } from '../../../i18n';
 import { locName } from '../../../i18n/content';
+import { getEffectValue } from '../../../logic/itemEffects';
 
 export default function TeamCard({ team, index }) {
   const T = useT();
@@ -54,6 +55,21 @@ export default function TeamCard({ team, index }) {
               : T('game.smokeNextOff')}>
               {"\u{1F4A8}"}{team.itemFumigeneTurns ? team.itemFumigeneTurns : ''}
             </span>
+          )}
+          {team.powersBlockedTurns > 0 && (
+            <span title={T('game.powersBlocked', { n: team.powersBlockedTurns })}>{'\u{1F6AB}'}{'⚡'}{team.powersBlockedTurns}</span>
+          )}
+          {team.consumablesBlockedTurns > 0 && (
+            <span title={T('game.consumablesBlocked', { n: team.consumablesBlockedTurns })}>{'\u{1F6AB}'}{'\u{1F9EA}'}{team.consumablesBlockedTurns}</span>
+          )}
+          {getEffectValue(team, 'itemStealImmune') > 0 && (
+            <span title={T('game.itemStealImmune')}>{'\u{1F512}'}{'\u{1F392}'}</span>
+          )}
+          {(getEffectValue(team, 'goldStealImmune') > 0 || getEffectValue(team, 'stealProtection') >= 100) && (
+            <span title={T('game.goldStealImmune')}>{'\u{1F512}'}{'\u{1FA99}'}</span>
+          )}
+          {getEffectValue(team, 'reflectChance') > 0 && (
+            <span title={T('game.reflectChance', { n: Math.min(100, getEffectValue(team, 'reflectChance')) })}>{'↩️'}</span>
           )}
         </div>
       </div>

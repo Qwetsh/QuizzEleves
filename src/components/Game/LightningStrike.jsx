@@ -5,8 +5,9 @@ import { useGameStore } from '../../store/gameStore';
 //  - vfx.type 'lightning' : éclair + flash blanc/bleu (Foudre)
 //  - vfx.type 'shield'    : flash bleu/cyan + onde (Bouclier qui absorbe un recul)
 //  - vfx.type 'trap'      : mâchoire 🪤 qui claque + onde rouge (Piège déclenché)
+//  - vfx.type 'reflect'   : disque violet + ↩️ tournoyant (effet RENVOYÉ à l'attaquant)
 // Déclenché par le champ store `vfx = { type, teamIndex, id }`, puis nettoyé.
-const VFX_TYPES = ['lightning', 'shield', 'trap'];
+const VFX_TYPES = ['lightning', 'shield', 'trap', 'reflect'];
 export default function LightningStrike() {
   const vfx = useGameStore((s) => s.vfx);
   const clearVfx = useGameStore((s) => s.clearVfx);
@@ -18,6 +19,7 @@ export default function LightningStrike() {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const isShield = vfx.type === 'shield';
     const isTrap = vfx.type === 'trap';
+    const isReflect = vfx.type === 'reflect';
 
     // Localise la cible : pion du plateau en priorité, sinon carte de la bande du bas.
     const el =
@@ -40,11 +42,11 @@ export default function LightningStrike() {
       pts.push(`${tx + jitter},${t * ty}`);
     }
 
-    setStrike({ id: vfx.id ?? 0, tx, ty, points: pts.join(' '), reduce, isShield, isTrap });
+    setStrike({ id: vfx.id ?? 0, tx, ty, points: pts.join(' '), reduce, isShield, isTrap, isReflect });
     const timer = setTimeout(() => {
       setStrike(null);
       clearVfx();
-    }, reduce ? 380 : (isShield ? 600 : (isTrap ? 920 : 750)));
+    }, reduce ? 380 : (isShield ? 600 : (isTrap ? 920 : (isReflect ? 780 : 750))));
     return () => clearTimeout(timer);
   }, [vfx?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -107,6 +109,40 @@ export default function LightningStrike() {
           filter: 'drop-shadow(0 5px 12px rgba(120,8,0,0.8))',
           animation: `tp-snap ${strike.reduce ? 350 : 860}ms cubic-bezier(.2,.9,.2,1) forwards`,
         }}>🪤</div>
+      </div>
+    );
+  }
+
+  // Renvoi : disque violet pulsé + ↩️ qui tournoie sur le pion de la cible
+  // (signale que l'effet a été retourné à l'attaquant).
+  if (strike.isReflect) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 250, pointerEvents: 'none', overflow: 'hidden' }}>
+        <style>{`
+          @keyframes rf-flash { 0% { opacity: 0; } 12% { opacity: 0.7; } 100% { opacity: 0; } }
+          @keyframes rf-ring { 0% { transform: translate(-50%,-50%) scale(0.3); opacity: 0.95; } 100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0; } }
+          @keyframes rf-spin { 0% { transform: translate(-50%,-50%) scale(0.4) rotate(0deg); opacity: 0; }
+                               25% { transform: translate(-50%,-50%) scale(1.25) rotate(160deg); opacity: 1; }
+                               100% { transform: translate(-50%,-50%) scale(1) rotate(360deg); opacity: 0; } }
+        `}</style>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(circle at ${strike.tx}px ${strike.ty}px, rgba(190,150,255,0.85), rgba(135,69,212,0.4) 30%, rgba(90,40,160,0.12) 58%, transparent 72%)`,
+          animation: `rf-flash ${strike.reduce ? 320 : 620}ms ease-out forwards`,
+        }} />
+        <div style={{
+          position: 'absolute', left: strike.tx, top: strike.ty,
+          width: 92, height: 92, borderRadius: '50%',
+          border: '4px solid rgba(190,150,255,0.95)',
+          boxShadow: '0 0 30px rgba(150,90,235,0.85)',
+          animation: `rf-ring ${strike.reduce ? 340 : 640}ms ease-out forwards`,
+        }} />
+        <div style={{
+          position: 'absolute', left: strike.tx, top: strike.ty,
+          fontSize: 64, lineHeight: 1,
+          filter: 'drop-shadow(0 4px 10px rgba(90,40,160,0.8))',
+          animation: `rf-spin ${strike.reduce ? 360 : 760}ms cubic-bezier(.2,.9,.2,1) forwards`,
+        }}>↩️</div>
       </div>
     );
   }

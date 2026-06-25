@@ -98,4 +98,13 @@ export default {
   // --- Fin de tour : effets de durée ---
   'log.store.fumigene':          { fr: '💨 Le fumigène de {emoji} {name} s\'est dissipé.', en: '💨 {emoji} {name}\'s smoke bomb has dissipated.' },
   'log.store.buffExpired':       { fr: '⏳ Un effet de durée de {emoji} {name} s\'est dissipé.', en: '⏳ A timed effect of {emoji} {name} has worn off.' },
+  // DoT « saignement d'or » (vol/perte par tour) + immunité.
+  'log.store.bleedSteal':        { fr: ['🩸 {emoji} {name} perd {n} pièce volée par {aemoji} {aname} !', '🩸 {emoji} {name} perd {n} pièces volées par {aemoji} {aname} !'],
+                                   en: ['🩸 {emoji} {name} loses {n} coin stolen by {aemoji} {aname}!', '🩸 {emoji} {name} loses {n} coins stolen by {aemoji} {aname}!'] },
+  'log.store.bleedLose':         { fr: ['🩸 {emoji} {name} perd {n} pièce (saignement) !', '🩸 {emoji} {name} perd {n} pièces (saignement) !'],
+                                   en: ['🩸 {emoji} {name} loses {n} coin (bleed)!', '🩸 {emoji} {name} loses {n} coins (bleed)!'] },
+  'log.store.bleedImmune':       { fr: "🔒 {emoji} {name} est immunisé : le saignement d'or n'a aucun effet.", en: '🔒 {emoji} {name} is immune: the gold bleed has no effect.' },
+  // Fin des blocages.
+  'log.store.powersUnblocked':       { fr: '✅ {emoji} {name} peut à nouveau utiliser ses pouvoirs.', en: '✅ {emoji} {name} can use powers again.' },
+  'log.store.consumablesUnblocked':  { fr: '✅ {emoji} {name} peut à nouveau utiliser ses consommables.', en: '✅ {emoji} {name} can use consumables again.' },
 };

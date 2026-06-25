@@ -2,7 +2,7 @@ import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
 import { moveForward, findPrevJunction, buildPredecessors } from '../logic/pathfinding.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { applyRecul } from '../logic/turnHelpers.js';
-import { hasEffect, reducedSteal, reducedTax, equippedSetCounts } from '../logic/itemEffects.js';
+import { hasEffect, reducedSteal, reducedTax, equippedSetCounts, isItemStealImmune } from '../logic/itemEffects.js';
 import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { SETS } from '../data/sets.js';
 import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock, cellKey, cellN, mkCell } from './itemHandlers.js';
@@ -211,6 +211,12 @@ export function eventSelectTarget(set, get, targetIndex) {
   // sinon resultat direct ("rien a piller")
   if (key === 'pillage') {
     const target = teams[targetIndex];
+    // Immunité au vol d'objet : la cible est protégée → « rien à piller » (marqué).
+    if (isItemStealImmune(target)) {
+      set({ showEvent: { ...showEvent, data: { ...showEvent.data, targetIndex, itemImmune: true } } });
+      applyEventEffect(set, get);
+      return;
+    }
     // Ne compter que les objets EXISTANTS au catalogue (une clé périmée/supprimée
     // ne se rend pas dans la liste → éviterait un soft-lock de la modale).
     const hasItems = Object.values(target?.equipment || {}).some((k) => ITEMS[cellKey(k)])
@@ -912,11 +918,18 @@ export function applyEventEffect(set, get) {
       // Cas "rien a piller" uniquement — le pillage effectif passe par eventPillageApply
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
-        message = tg('log.ev.pillageNothing', { emoji: newTeams[ti].emoji, name: newTeams[ti].name });
+        message = data?.itemImmune
+          ? tg('log.ev.itemStealImmune', { emoji: newTeams[ti].emoji, name: newTeams[ti].name })
+          : tg('log.ev.pillageNothing', { emoji: newTeams[ti].emoji, name: newTeams[ti].name });
       }
       break;
     }
     case 'pickpocket': {
+      // Immunité au vol d'objet : rien n'est perdu.
+      if (isItemStealImmune(team)) {
+        message = tg('log.ev.itemStealImmune', { emoji: team.emoji, name: team.name });
+        break;
+      }
       // Perd UN objet au hasard (equipement OU sac). Filtre les cles perimees.
       const picks = [];
       for (const slot of ['head', 'body', 'feet']) {

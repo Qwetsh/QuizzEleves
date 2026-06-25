@@ -1,7 +1,7 @@
 import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
 import { moveBack, findPrevJunction } from '../logic/pathfinding.js';
 import { consumePowerCharge, applyRecul } from '../logic/turnHelpers.js';
-import { reducedRecul, resolveAmount, diceLabel, moveDieSides } from '../logic/itemEffects.js';
+import { reducedRecul, resolveAmount, diceLabel, moveDieSides, rollsReflect } from '../logic/itemEffects.js';
 import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
 import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
@@ -31,6 +31,11 @@ export function usePower(set, get, powerKey) {
   // Silence (Sablier L5) : aucun pouvoir ce tour-ci.
   if (team.silencedNextTurn) {
     get().addLog(tg('log.pw.silenced', { emoji: team.emoji, name: team.name }));
+    return;
+  }
+  // Blocage des pouvoirs (objet/effet adverse) : aucun pouvoir pendant X tours.
+  if (team.powersBlockedTurns > 0) {
+    get().addLog(tgPlural('log.pw.powersBlocked', team.powersBlockedTurns, { emoji: team.emoji, name: team.name, n: team.powersBlockedTurns }));
     return;
   }
   const charges = team.powers?.[powerKey]?.charges ?? 0;
@@ -436,6 +441,15 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       // Temp\u00EAte cibl\u00E9e : vol d'or \u2014 bloqu\u00E9 par Banque fortifi\u00E9e (goldUnstealable).
       if (effect.stealGold && !vEff.goldUnstealable) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
       const amt = reducedRecul(v, rolled);
+      // Renvoi (objet/passif « miroir ») : la cible retourne le recul à l'attaquant
+      // (réutilise reflectTotal, déjà appliqué à l'attaquant plus bas). Elle ne bouge pas.
+      if (amt > 0 && rollsReflect(v)) {
+        reflectTotal += amt;
+        newTeams[ti] = v;
+        addLog(tg('log.pw.foudreReflected', { vemoji: v.emoji, vname: v.name, aemoji: team.emoji, aname: team.name }));
+        get().emitVfx?.('reflect', ti);
+        continue;
+      }
       // Bannissement (L10) : renvoie à la dernière jonction ; sinon recul classique.
       let rr;
       if (effect.toPrevJunction) {

@@ -27,10 +27,13 @@ export default function PowerButtons() {
 
   const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding };
 
+  // Blocage des pouvoirs (objet/effet adverse) : aucun bouton de cast ce tour-ci.
+  const powersBlocked = (team.powersBlockedTurns ?? 0) > 0;
+
   // Pouvoirs OFFENSIFS utilisables MAINTENANT (fenetre de cast).
   // Le Bouclier (passif) et l'Indice (reserve aux questions) ne s'affichent pas ici ;
   // la Relance a son propre bouton sous le de.
-  const castable = getAvailablePowers(team).filter(
+  const castable = powersBlocked ? [] : getAvailablePowers(team).filter(
     (p) => p.category === 'off' && canUsePowerInContext(p.key, ctx)
   );
 
@@ -40,11 +43,11 @@ export default function PowerButtons() {
   // Ultime « Échange de place » (Relance L10) : bouton actif, dispo à son tour hors
   // modale/lancer, si l'équipe a la voie et assez de charges, et qu'un leader existe.
   const swap = relanceSwapInfo(useGameStore.getState, currentTeam);
-  const showSwap = swap?.canUse && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
+  const showSwap = swap?.canUse && !powersBlocked && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
   const relColor = POWERS.relance?.color || '#8745d4';
   // Ultime « Immunité totale » (Bouclier L10) : bouton actif, mêmes conditions de fenêtre.
   const immune = shieldImmunityInfo(useGameStore.getState, currentTeam);
-  const showImmune = immune?.canUse && (team.totalImmuneTurns ?? 0) <= 0 && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
+  const showImmune = immune?.canUse && !powersBlocked && (team.totalImmuneTurns ?? 0) <= 0 && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
   const shieldColor = POWERS.bouclier?.color || '#3b6cb3';
 
   return (

@@ -227,6 +227,125 @@ export const ITEMS = {
   parchemoinOr5: { name: 'Parchemin de l’avare', icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +15 pièces quand tu fais 5.', enchant: { kind: 'trigger', on: 'roll', values: [5], do: [{ action: 'money', mode: 'gain', target: 'self', n: 15, unit: 'flat' }] } },
   parchemoinTemps:{ name: 'Parchemin du sage',  icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +3s au temps de réponse.', enchant: { type: 'timerBonus', value: 3 } },
   parchemoinRecul:{ name: 'Parchemin du roc',   icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : recul subi réduit d’1 case.', enchant: { type: 'reculReduction', value: 1 } },
+
+  // === EFFETS AVANCÉS — immunités, renvoi, blocages, saignement d'or ========
+  // Passifs d'équipement (immunité au vol d'objet / d'or, renvoi % d'effet).
+  talismanGardien: {
+    name: 'Talisman du gardien', icon: '🧿', slot: 'feet', rarity: 'rare', price: 24,
+    desc: "Tes objets sont impossibles à voler (pillage, pickpocket, butin de duel).",
+    effects: [{ type: 'itemStealImmune', value: 1 }],
+  },
+  cadenasRunique: {
+    name: 'Cadenas runique', icon: '🔒', slot: 'feet', rarity: 'rare', price: 24,
+    desc: "Ton or est impossible à voler.",
+    effects: [{ type: 'goldStealImmune', value: 1 }],
+  },
+  amuletteMiroir: {
+    name: 'Amulette du miroir', icon: '🪞', slot: 'feet', rarity: 'legendaire', price: 40, lootOnly: true,
+    desc: "30 % de chance de RENVOYER un effet négatif (objet ou pouvoir) sur l'attaquant.",
+    effects: [{ type: 'reflectChance', value: 30 }],
+  },
+  // Consommables offensifs (ciblent une équipe).
+  fioleSangsue: {
+    name: 'Fiole de sangsue', icon: '🩸', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: "Une équipe se fait voler 1D10 d'or à chacun de ses 3 prochains tours (à ton profit).",
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'target', buff: { type: 'bleedGold', turns: 3, n: 'd10', mode: 'steal' } }] }],
+  },
+  sceauSilence: {
+    name: 'Sceau de silence', icon: '🤐', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: "Bloque les POUVOIRS d'une équipe pendant 2 tours.",
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockPowers', target: 'target', turns: 2 }] }],
+  },
+  baillonOsier: {
+    name: "Bâillon d'osier", icon: '🧺', slot: 'consumable', rarity: 'rare', price: 14,
+    desc: "Bloque les CONSOMMABLES d'une équipe pendant 2 tours.",
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockConsumables', target: 'target', turns: 2 }] }],
+  },
+  // Consommable « pacte » : on renonce à ses pouvoirs, mais on gagne de l'or.
+  pacteReclus: {
+    name: 'Pacte du reclus', icon: '🧙', slot: 'consumable', rarity: 'rare', price: 18,
+    desc: "Tu renonces à tes POUVOIRS pendant 3 tours, mais gagnes 40 pièces tout de suite.",
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockPowers', target: 'self', turns: 3 }, { action: 'money', mode: 'gain', target: 'self', n: 40, unit: 'flat' }] }],
+  },
+
+  // === EFFETS AVANCÉS — fournée 2 (équipements + consommables) ==============
+  // -- Équipements passifs (renvoi / immunités, parfois combinés) --
+  heaumeRenvoi: {
+    name: 'Heaume du renvoi', icon: '⛑️', slot: 'head', rarity: 'rare', price: 26,
+    desc: '20 % de chance de renvoyer un effet négatif sur l’attaquant.',
+    effects: [{ type: 'reflectChance', value: 20 }],
+  },
+  capeReflet: {
+    name: 'Cape de reflet', icon: '🌫️', slot: 'body', rarity: 'rare', price: 30,
+    desc: '25 % de chance de renvoyer un effet négatif sur l’attaquant.',
+    effects: [{ type: 'reflectChance', value: 25 }],
+  },
+  plastronGardien: {
+    name: 'Plastron du gardien', icon: '🦺', slot: 'body', rarity: 'rare', price: 26,
+    desc: 'Tes objets sont impossibles à voler.',
+    effects: [{ type: 'itemStealImmune', value: 1 }],
+  },
+  diademeBanquier: {
+    name: 'Diadème du banquier', icon: '👑', slot: 'head', rarity: 'legendaire', price: 48, lootOnly: true,
+    desc: 'Ton or est impossible à voler, et +2 pièces par bonne réponse.',
+    effects: [{ type: 'goldStealImmune', value: 1 }, { type: 'moneyPerCorrect', value: 2 }],
+  },
+  sandalesSpectre: {
+    name: 'Sandales du spectre', icon: '👣', slot: 'feet', rarity: 'legendaire', price: 46, lootOnly: true,
+    desc: 'Tes objets sont involables et ton recul subi est réduit d’1 case.',
+    effects: [{ type: 'itemStealImmune', value: 1 }, { type: 'reculReduction', value: 1 }],
+  },
+  miroirArdent: {
+    name: 'Miroir ardent', icon: '🔮', slot: 'head', rarity: 'legendaire', price: 50, lootOnly: true,
+    desc: '40 % de chance de renvoyer un effet négatif sur l’attaquant.',
+    effects: [{ type: 'reflectChance', value: 40 }],
+  },
+
+  // -- Consommables OFFENSIFS (ciblent une ou plusieurs équipes) --
+  poisonLent: {
+    name: 'Poison lent', icon: '🧫', slot: 'consumable', rarity: 'rare', price: 12,
+    desc: 'Une équipe perd 1D6 d’or à chacun de ses 2 prochains tours (perte sèche).',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'target', buff: { type: 'bleedGold', turns: 2, n: 'd6', mode: 'lose' } }] }],
+  },
+  voleurDeVoix: {
+    name: 'Voleur de voix', icon: '🗣️', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: 'Bloque les POUVOIRS d’un adversaire au hasard pendant 2 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockPowers', target: 'randomOpponent', turns: 2 }] }],
+  },
+  museliere: {
+    name: 'Muselière', icon: '😶', slot: 'consumable', rarity: 'rare', price: 14,
+    desc: 'Bloque les CONSOMMABLES d’un adversaire au hasard pendant 2 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockConsumables', target: 'randomOpponent', turns: 2 }] }],
+  },
+  brouilleurRunique: {
+    name: 'Brouilleur runique', icon: '📡', slot: 'consumable', rarity: 'legendaire', price: 30, lootOnly: true,
+    desc: 'Bloque les POUVOIRS de TOUTES les autres équipes pendant 1 tour.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockPowers', target: 'allOthers', turns: 1 }] }],
+  },
+
+  // -- Consommables DÉFENSIFS (buff temporaire sur soi) --
+  potionMiroir: {
+    name: 'Potion de miroir', icon: '🪩', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: '50 % de chance de renvoyer un effet négatif, pendant 2 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'self', buff: { type: 'reflectChance', turns: 2, n: 50 } }] }],
+  },
+  fioleInsaisissable: {
+    name: 'Fiole d’insaisissable', icon: '💨', slot: 'consumable', rarity: 'commun', price: 8,
+    desc: 'Tes objets sont involables pendant 3 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'self', buff: { type: 'itemStealImmune', turns: 3 } }] }],
+  },
+  elixirCoffreFort: {
+    name: 'Élixir du coffre-fort', icon: '🪙', slot: 'consumable', rarity: 'commun', price: 8,
+    desc: 'Ton or est involable pendant 3 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'self', buff: { type: 'goldStealImmune', turns: 3 } }] }],
+  },
+
+  // -- Consommable « tradeoff » : malus sur soi compensé par de l'or --
+  voeuSilence: {
+    name: 'Vœu de silence', icon: '🤫', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: 'Tu renonces à tes CONSOMMABLES pendant 3 tours, mais gagnes 35 pièces tout de suite.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockConsumables', target: 'self', turns: 3 }, { action: 'money', mode: 'gain', target: 'self', n: 35, unit: 'flat' }] }],
+  },
 };
 
 // Remplace le contenu de ITEMS en gardant la MÊME référence (mutée en place),

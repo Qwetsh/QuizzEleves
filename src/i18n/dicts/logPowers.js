@@ -4,6 +4,9 @@ export default {
   // --- Indice ---
   'log.pw.silenced':        { fr: '🔇 {emoji} {name} est réduit au silence : aucun pouvoir ce tour-ci.',
                               en: '🔇 {emoji} {name} is silenced: no power this turn.' },
+  'log.pw.powersBlocked':   { fr: ['🚫 {emoji} {name} : pouvoirs bloqués ({n} tour) !', '🚫 {emoji} {name} : pouvoirs bloqués ({n} tours) !'],
+                              en: ['🚫 {emoji} {name}: powers blocked ({n} turn)!', '🚫 {emoji} {name}: powers blocked ({n} turns)!'] },
+  'log.pw.foudreReflected': { fr: '↩️ {vemoji} {vname} RENVOIE la Foudre sur {aemoji} {aname} !', en: '↩️ {vemoji} {vname} REFLECTS the Lightning onto {aemoji} {aname}!' },
   'log.pw.indiceAllGone':   { fr: '💡 {emoji} {name} : toutes les mauvaises réponses sont déjà éliminées.',
                               en: '💡 {emoji} {name}: all wrong answers are already eliminated.' },
   'log.pw.indiceUse':       { fr: ['💡 {emoji} {name} utilise {power} (niv.{level}) ! {n} réponse éliminée{bonus}.', '💡 {emoji} {name} utilise {power} (niv.{level}) ! {n} réponses éliminées{bonus}.'],

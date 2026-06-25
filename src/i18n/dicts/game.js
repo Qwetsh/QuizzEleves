@@ -80,4 +80,9 @@ export default {
   'game.shieldBlocks': { fr: 'Bouclier : annule {n}', en: 'Shield: blocks {n}' },
   'game.smokeNextOff': { fr: 'Fumigène : prochain pouvoir offensif annulé', en: 'Smoke: next offensive power cancelled' },
   'game.smokeNextOffTurns': { fr: 'Fumigène : prochain pouvoir offensif annulé ({turns})', en: 'Smoke: next offensive power cancelled ({turns})' },
+  'game.powersBlocked': { fr: 'Pouvoirs bloqués ({n})', en: 'Powers blocked ({n})' },
+  'game.consumablesBlocked': { fr: 'Consommables bloqués ({n})', en: 'Consumables blocked ({n})' },
+  'game.itemStealImmune': { fr: "Immunisé au vol d'objet", en: 'Immune to item theft' },
+  'game.goldStealImmune': { fr: "Immunisé au vol d'or", en: 'Immune to gold theft' },
+  'game.reflectChance': { fr: "Renvoi d'effet : {n}%", en: 'Effect reflect: {n}%' },
 };

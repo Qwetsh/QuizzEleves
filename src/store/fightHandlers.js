@@ -1,4 +1,4 @@
-import { getEffectValue, reducedSteal, reducedRecul } from '../logic/itemEffects.js';
+import { getEffectValue, reducedSteal, reducedRecul, isItemStealImmune } from '../logic/itemEffects.js';
 import { moveBack } from '../logic/pathfinding.js';
 import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
@@ -210,8 +210,10 @@ function applyFightReward(set, get) {
 
   if (f.reward.choice === 'loot') {
     // Pioche un objet au hasard chez le perdant : equipement ou sac
-    // Filtre sur ITEMS : ignore les clés périmées d'anciennes sauvegardes
-    const pool = [
+    // Filtre sur ITEMS : ignore les clés périmées d'anciennes sauvegardes.
+    // Immunité au vol d'objet : pool vide → le vainqueur fouille le champ (le
+    // perdant garde ses objets).
+    const pool = isItemStealImmune(loser) ? [] : [
       ...Object.entries(loser.equipment || {}).filter(([, k]) => ITEMS[cellKey(k)]).map(([slot, k]) => ({ kind: 'equipment', slot, key: cellKey(k) })),
       ...(loser.bag || []).map((c, i) => ({ kind: 'bag', index: i, key: cellKey(c) })).filter((e) => e.key && ITEMS[e.key]),
     ];

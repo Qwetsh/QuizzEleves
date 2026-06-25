@@ -29,10 +29,18 @@ export default function ConsumableBar() {
     if (item && item.slot === 'consumable') consumables.push({ i, key, item, n: cellN(bag[i]) });
   }
   if (consumables.length === 0) return null;
+  // Blocage des consommables : on grise et on signale (l'usage reste verrouillé
+  // côté store ; la revente via la carte de détail reste possible).
+  const blocked = (team.consumablesBlockedTurns ?? 0) > 0;
 
   return (
     <div className="hud-conso">
       <div className="hud-conso-label">{'\u{1F9EA}'} {T('game.itemsToUse')}</div>
+      {blocked && (
+        <div style={{ fontSize: 11.5, color: '#8a1f2e', fontWeight: 700, margin: '0 0 4px' }}>
+          {'\u{1F6AB}'} {T('game.consumablesBlocked', { n: team.consumablesBlockedTurns })}
+        </div>
+      )}
       <div className="hud-conso-grid">
         {consumables.map(({ i, key, item, n }) => {
           const color = RARITIES[item.rarity]?.color || '#888';
@@ -42,7 +50,7 @@ export default function ConsumableBar() {
               key={i}
               type="button"
               className="hud-conso-btn"
-              style={{ '--rar': color }}
+              style={{ '--rar': color, opacity: blocked ? 0.5 : 1 }}
               title={T('game.tapToUse', { name: locName(item) })}
               onClick={() => setPop({ cellKey: 'bag:' + i, itemKey: key })}
             >

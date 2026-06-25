@@ -24,6 +24,8 @@ const ACTIONS = [
   { key: 'loseItem', label: '💔 Perdre un objet' },
   { key: 'curseTimer', label: '⏱️ Malédiction : timer réduit' },
   { key: 'curseExtraQuestion', label: '❓ Malédiction : question(s) en +' },
+  { key: 'blockPowers', label: '🚫 Bloquer les pouvoirs (X tours)' },
+  { key: 'blockConsumables', label: '🚫 Bloquer les consommables (X tours)' },
 ];
 
 // Types d'effet de durée (buff) — voir gameStore (application) et teamStatus (affichage).
@@ -36,6 +38,10 @@ const BUFF_TYPES = [
   { k: 'loseOnWrong', label: 'perd de l’or en cas d’erreur (malus)' },
   { k: 'randomPath', label: 'voie choisie au hasard' },
   { k: 'duelImmune', label: 'immunisé contre les duels' },
+  { k: 'bleedGold', label: 'saigne de l’or à chaque tour (DoT)' },
+  { k: 'itemStealImmune', label: 'immunisé au vol d’objet' },
+  { k: 'goldStealImmune', label: 'immunisé au vol d’or' },
+  { k: 'reflectChance', label: 'renvoie les effets négatifs (% de chance)' },
 ];
 const TARGETS = [
   { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
@@ -92,6 +98,8 @@ export function describeAction(a) {
     case 'loseItem': return `faire perdre un ${a.category === 'equipment' ? 'équipement' : a.category === 'consumable' ? 'consommable' : 'objet'} à ${who}${a.fallbackGold ? ` (sinon ${a.fallbackGold} or)` : ''}`;
     case 'curseTimer': return `malédiction : timer ÷${a.divisor || 2} pour ${who}`;
     case 'curseExtraQuestion': return `malédiction : +${amountLabel(a.n)} question(s) pour ${who}`;
+    case 'blockPowers': return `bloquer les pouvoirs de ${who} pendant ${amountLabel(a.turns)} tour(s)`;
+    case 'blockConsumables': return `bloquer les consommables de ${who} pendant ${amountLabel(a.turns)} tour(s)`;
     case 'rerollQuestion': {
       const sl = (s) => s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s;
       return typeof a.chance === 'number'
@@ -262,6 +270,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'loseItem') Object.assign(base, { target: 'self', category: '', fallbackGold: 10 });
         if (k === 'curseTimer') Object.assign(base, { target: 'all', divisor: 2 });
         if (k === 'curseExtraQuestion') Object.assign(base, { target: 'all', n: 1 });
+        if (k === 'blockPowers' || k === 'blockConsumables') Object.assign(base, { target: 'target', turns: 2 });
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -389,6 +398,15 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         </>
       )}
 
+      {(a.action === 'blockPowers' || a.action === 'blockConsumables') && (
+        <>
+          <W>{a.action === 'blockPowers' ? 'pouvoirs' : 'consommables'} bloqués pendant</W>
+          <AmountInput value={a.turns ?? 2} onChange={(v) => upd({ turns: v })} min={1} scale={false} unit=" tour(s)" />
+          <W>tour(s), à</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
       {a.action === 'buff' && (() => {
         const b = a.buff || {};
         const setB = (patch) => upd({ buff: { ...b, ...patch } });
@@ -405,8 +423,11 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
               <W>l'équipe</W>
               <select className="qed-select fx-blank" value={b.type || 'themeBonus'} onChange={(e) => {
                 const t = e.target.value;
-                // Le dé forcé n'accepte que 4/6/10 : seed une valeur valide au changement.
-                setB(t === 'moveDieSides' && ![4, 6, 10].includes(Number(b.n)) ? { type: t, n: 4 } : { type: t });
+                // Seed une valeur par défaut valide selon le type choisi.
+                if (t === 'moveDieSides' && ![4, 6, 10].includes(Number(b.n))) setB({ type: t, n: 4 });
+                else if (t === 'bleedGold') setB({ type: t, n: b.n ?? 'd10', mode: b.mode ?? 'steal' });
+                else if (t === 'reflectChance') setB({ type: t, n: typeof b.n === 'number' ? b.n : 50 });
+                else setB({ type: t });
               }}>
                 {BUFF_TYPES.map((t) => <option key={t.k} value={t.k}>{t.label}</option>)}
               </select>
@@ -423,6 +444,13 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
                 <select className="qed-select fx-blank" value={b.n ?? 4} onChange={(e) => setB({ n: Number(e.target.value) })}>
                   <option value={4}>D4</option><option value={6}>D6</option><option value={10}>D10</option>
                 </select></>)}
+              {b.type === 'bleedGold' && (<>
+                <select className="qed-select fx-blank" value={b.mode || 'steal'} onChange={(e) => setB({ mode: e.target.value })}>
+                  <option value="steal">vole (au lanceur)</option><option value="lose">retire (perte sèche)</option>
+                </select>
+                <W>de</W><AmountInput value={b.n ?? 'd10'} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or / tour</W></>)}
+              {b.type === 'reflectChance' && (<><W>avec</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 50} onChange={(v) => setB({ n: v })} min={1} max={100} scale={false} /><W>% de chance</W></>)}
             </div>
           </div>
         );
