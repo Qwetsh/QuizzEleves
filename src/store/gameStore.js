@@ -1559,6 +1559,15 @@ export const useGameStore = create((set, get) => ({
     if (!mp) return;
     const rest = mp.filter((m) => m.teamIndex !== teamIndex);
     set({ movePath: rest.length ? rest : null });
+    // Auto-déclenchement des PIÈGES : dès que l'équipe courante a fini son trajet
+    // d'atterrissage, si sa case porte un piège, on enchaîne SANS « Continuer »
+    // (demande utilisateur). Les autres cases gardent le bouton pour laisser
+    // jouer pouvoirs/boutique avant la résolution.
+    const st = get();
+    if (teamIndex === st.currentTeam && st.pendingLanding && !st.rolling && !st.awaitingChoice && !st.showDiceModal) {
+      const node = st.board[st.teams[st.currentTeam]?.pos];
+      if (node?.trap) st.confirmLanding();
+    }
   },
 
   // Effet visuel transitoire (foudre/bouclier...) consomme par les overlays.
