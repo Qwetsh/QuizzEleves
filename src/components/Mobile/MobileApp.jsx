@@ -1311,6 +1311,17 @@ function AlchemyView({ session, teamIdx, code, token }) {
   };
 
   const OP = [{ left: '34%', top: '40%' }, { left: '63%', top: '42%' }, { left: '48%', top: '66%' }];
+  // Bulles de la marmite (vue de dessus) : position dispersée, taille, durée, délai.
+  const BUBBLES = [
+    { l: '30%', t: '34%', s: 7, d: 3.0, delay: 0 },
+    { l: '58%', t: '30%', s: 10, d: 3.8, delay: 0.6 },
+    { l: '46%', t: '50%', s: 6, d: 2.6, delay: 1.2 },
+    { l: '66%', t: '56%', s: 8, d: 3.4, delay: 1.8 },
+    { l: '34%', t: '62%', s: 5, d: 3.1, delay: 0.9 },
+    { l: '52%', t: '70%', s: 7, d: 2.9, delay: 2.3 },
+    { l: '70%', t: '40%', s: 5, d: 3.6, delay: 1.5 },
+    { l: '40%', t: '44%', s: 6, d: 2.7, delay: 2.8 },
+  ];
   const tabStyle = (active) => ({ flex: 1, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '9px 0', fontFamily: "'Baloo 2', var(--font-display), sans-serif", fontWeight: 700, fontSize: 14, transition: 'all .2s', ...(active ? { background: '#fffaef', color: '#7c5a1c', boxShadow: '0 2px 6px rgba(120,80,20,.18)' } : { background: 'transparent', color: '#a98c5c' }) });
   const modeStyle = (active) => ({ border: 'none', cursor: 'pointer', borderRadius: 8, padding: '3px 9px', fontSize: 10, fontWeight: 800, ...(active ? { background: '#7c5a1c', color: '#fff' } : { background: 'transparent', color: '#9b7e4e' }) });
   const ceremonyBtn = (bg, col) => ({ marginTop: 26, border: 'none', borderRadius: 14, padding: '13px 34px', fontFamily: "'Baloo 2', var(--font-display), sans-serif", fontWeight: 800, fontSize: 15, cursor: 'pointer', background: bg, color: col });
@@ -1355,12 +1366,17 @@ function AlchemyView({ session, teamIdx, code, token }) {
               <div style={{ position: 'absolute', width: 186, height: 186, borderRadius: '50%', background: 'linear-gradient(150deg,#1d1727,#0d0916)', boxShadow: 'inset 0 8px 18px rgba(0,0,0,.65)' }} />
               <div style={{ position: 'relative', width: 176, height: 176, zIndex: 3, borderRadius: '50%', background: `radial-gradient(circle at 40% 34%, ${liquid}ee, ${liquid} 60%, rgba(0,0,0,.5))`, boxShadow: 'inset 0 8px 22px rgba(0,0,0,.5), inset 0 -4px 12px rgba(255,255,255,.07)' }}>
                 <div style={{ position: 'absolute', inset: 6, borderRadius: '50%', overflow: 'hidden', pointerEvents: 'none' }}>
-                  <div style={{ position: 'absolute', inset: '-20%', background: 'conic-gradient(from 0deg,rgba(255,255,255,.12),transparent 28%,rgba(0,0,0,.16) 54%,transparent 80%,rgba(255,255,255,.10))', animation: 'alc-spinSlow 11s linear infinite' }} />
+                  {/* Reflet statique de la surface (léger éclat en haut, vue de dessus) */}
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'radial-gradient(ellipse 60% 38% at 50% 22%, rgba(255,255,255,.16), transparent 70%)' }} />
+                  {/* Bulles qui surgissent et éclatent à la surface */}
+                  {BUBBLES.map((b, bi) => (
+                    <span key={bi} style={{ position: 'absolute', left: b.l, top: b.t, width: b.s, height: b.s, marginLeft: -b.s / 2, marginTop: -b.s / 2, borderRadius: '50%', background: 'radial-gradient(circle at 32% 28%, rgba(255,255,255,.95), rgba(255,255,255,.18) 58%, transparent 78%)', border: '1px solid rgba(255,255,255,.28)', boxShadow: '0 0 4px rgba(255,255,255,.35)', animation: `alc-bubblePop ${b.d}s ease-out ${b.delay}s infinite` }} />
+                  ))}
                 </div>
-                <span style={{ position: 'absolute', left: '32%', top: '44%', width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,.5)', animation: 'alc-bubbleUp 2.6s ease-in infinite' }} />
-                <span style={{ position: 'absolute', left: '58%', top: '54%', width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,.45)', animation: 'alc-bubbleUp 3s ease-in .8s infinite' }} />
                 {cauldronList.map((c, k) => (
-                  <div key={c.idx} onPointerDown={(e) => onDown(e, c.bi, 'cauldron', c.idx)} style={{ position: 'absolute', left: OP[k].left, top: OP[k].top, marginLeft: -19, marginTop: -19, width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'grab', touchAction: 'none', zIndex: 5, animation: 'alc-orbPlop .45s cubic-bezier(.3,1.5,.5,1) both', boxShadow: '0 4px 12px rgba(0,0,0,.45), inset 0 2px 4px rgba(255,255,255,.45)', border: '2px solid rgba(255,255,255,.6)', background: alcColor(keyOf(c.bi)), padding: 3 }}><AlcVisual item={ITEMS[keyOf(c.bi)]} emojiSize={20} /></div>
+                  <div key={c.idx} style={{ position: 'absolute', left: OP[k].left, top: OP[k].top, marginLeft: -19, marginTop: -19, width: 38, height: 38, zIndex: 5, animation: 'alc-ingFloat 4.5s ease-in-out infinite', animationDelay: `${k * 0.6}s` }}>
+                    <div onPointerDown={(e) => onDown(e, c.bi, 'cauldron', c.idx)} style={{ width: '100%', height: '100%', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'grab', touchAction: 'none', animation: 'alc-ingDrop .45s cubic-bezier(.3,1.5,.5,1) both', boxShadow: '0 4px 12px rgba(0,0,0,.45), inset 0 2px 4px rgba(255,255,255,.45)', border: '2px solid rgba(255,255,255,.6)', background: alcColor(keyOf(c.bi)), padding: 3 }}><AlcVisual item={ITEMS[keyOf(c.bi)]} emojiSize={20} /></div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1713,15 +1729,14 @@ function adminItemCat(item) {
   return 'consumable';
 }
 
-// Sélecteur d'objet (admin) : catégories + recherche, puis sélection d'un objet
-// avec une QUANTITÉ (consommables empilables) et validation explicite — au lieu
-// d'envoyer dès le tap. Le sélecteur reste ouvert pour enchaîner plusieurs dons.
+// Sélecteur d'objet (admin) : catégories + recherche, puis PANIER — on ajuste la
+// quantité de chaque objet directement dans la grille (stepper en face), on en
+// empile plusieurs, puis on valide tout d'un coup (un don par entrée du panier).
 function AdminItemPicker({ onGive, onClose, teamName, T = tFor(false) }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
-  const [sel, setSel] = useState(null); // clé de l'objet sélectionné
-  const [qty, setQty] = useState(1);
-  const [done, setDone] = useState(null); // dernier don { key, n } pour le retour visuel
+  const [cart, setCart] = useState({}); // { key: qty }
+  const [sent, setSent] = useState(0);  // nb d'unités du dernier envoi (retour visuel)
 
   const CATS = [
     ['all', T('mobile.catAll')],
@@ -1738,16 +1753,19 @@ function AdminItemPicker({ onGive, onClose, teamName, T = tFor(false) }) {
     return locName(item).toLowerCase().includes(ql) || item.name.toLowerCase().includes(ql);
   });
 
-  const selItem = sel ? ITEMS[sel] : null;
-  const stackable = !!selItem && selItem.slot === 'consumable'; // seuls les consommables s'empilent
-  const pick = (k) => { setSel(k); setQty(1); setDone(null); };
-  const validate = () => {
-    if (!sel) return;
-    const n = stackable ? qty : 1;
-    onGive(sel, n);
-    setDone({ key: sel, n });
-    setSel(null);
-    setQty(1);
+  const setQty = (k, n) => setCart((c) => {
+    const next = { ...c };
+    const v = Math.max(0, Math.min(9, n));
+    if (v === 0) delete next[k]; else next[k] = v;
+    return next;
+  });
+  const add = (k) => { setSent(0); setQty(k, (cart[k] || 0) + 1); };
+  const totalUnits = Object.values(cart).reduce((s, n) => s + n, 0);
+  const send = () => {
+    if (!totalUnits) return;
+    Object.entries(cart).forEach(([k, n]) => onGive(k, n));
+    setSent(totalUnits);
+    setCart({});
   };
 
   return (
@@ -1771,7 +1789,7 @@ function AdminItemPicker({ onGive, onClose, teamName, T = tFor(false) }) {
           <input className="mob-text-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder={T('mobile.searchPlaceholder')} />
         </div>
 
-        {/* Grille défilante */}
+        {/* Grille défilante — chaque carte porte son propre stepper de quantité */}
         <div style={{ flex: 1, minHeight: 80, overflowY: 'auto', padding: '4px 16px 8px' }}>
           {keys.length === 0
             ? <div className="mob-empty" style={{ margin: '14px 0' }}>{T('mobile.noItemInCat')}</div>
@@ -1780,43 +1798,45 @@ function AdminItemPicker({ onGive, onClose, teamName, T = tFor(false) }) {
                 {keys.map((k) => {
                   const item = ITEMS[k];
                   const color = RARITIES[item.rarity]?.color || '#888';
-                  const on = sel === k;
+                  const qty = cart[k] || 0;
+                  const on = qty > 0;
                   return (
-                    <button key={k} onClick={() => pick(k)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 10, border: on ? '2px solid #8a6418' : `1.5px solid ${color}55`, background: on ? '#fff7e0' : '#fffefb', cursor: 'pointer', textAlign: 'left' }}>
-                      <span style={{ width: 30, height: 30, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>{itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.icon}</span>
-                      <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{locName(item)}</span>
-                    </button>
+                    <div key={k} style={{ display: 'flex', flexDirection: 'column', borderRadius: 10, border: on ? '2px solid #8a6418' : `1.5px solid ${color}55`, background: on ? '#fff7e0' : '#fffefb', overflow: 'hidden' }}>
+                      <button onClick={() => add(k)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 6px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+                        <span style={{ width: 30, height: 30, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 18 }}>{itemImg(item) ? <img src={itemImg(item)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : item.icon}</span>
+                        <span style={{ fontSize: 12, lineHeight: 1.2, minWidth: 0 }}>{locName(item)}</span>
+                      </button>
+                      {on ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '0 8px 8px' }}>
+                          <button onClick={() => setQty(k, qty - 1)} style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(122,94,58,0.4)', background: '#fffefb', fontSize: 18, fontWeight: 800, color: '#7a5e3a', cursor: 'pointer' }}>−</button>
+                          <span style={{ minWidth: 22, textAlign: 'center', fontSize: 17, fontWeight: 800, fontFamily: 'var(--font-display)', color: '#5a4626' }}>{qty}</span>
+                          <button onClick={() => setQty(k, qty + 1)} disabled={qty >= 9} style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(122,94,58,0.4)', background: '#fffefb', fontSize: 18, fontWeight: 800, color: '#7a5e3a', cursor: 'pointer', opacity: qty >= 9 ? 0.4 : 1 }}>+</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => add(k)} style={{ margin: '0 8px 8px', padding: '4px 0', borderRadius: 8, border: '1px dashed rgba(122,94,58,0.4)', background: 'transparent', fontSize: 11.5, fontWeight: 700, color: '#9b7e4e', cursor: 'pointer' }}>+ {T('mobile.cartAdd')}</button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             )}
         </div>
 
-        {/* Pied fixe : sélection + quantité + validation, ou fermeture */}
+        {/* Pied fixe : récap du panier + envoi groupé, ou fermeture */}
         <div style={{ flexShrink: 0, padding: '10px 16px calc(16px + env(safe-area-inset-bottom))', borderTop: '1px solid rgba(122,94,58,0.2)', background: 'rgba(255,255,255,0.6)' }}>
-          {selItem ? (
+          {totalUnits > 0 ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <span style={{ fontSize: 22 }}>{itemImg(selItem) ? <img src={itemImg(selItem)} alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} /> : selItem.icon}</span>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#5a4626', minWidth: 0 }}>{locName(selItem)}</span>
-                {stackable && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <button onClick={() => setQty((n) => Math.max(1, n - 1))} disabled={qty <= 1} style={{ width: 34, height: 34, borderRadius: 8, border: '1.5px solid rgba(122,94,58,0.4)', background: '#fffefb', fontSize: 20, fontWeight: 800, color: '#7a5e3a', cursor: 'pointer', opacity: qty <= 1 ? 0.4 : 1 }}>−</button>
-                    <span style={{ minWidth: 28, textAlign: 'center', fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-display)', color: '#5a4626' }}>{qty}</span>
-                    <button onClick={() => setQty((n) => Math.min(9, n + 1))} disabled={qty >= 9} style={{ width: 34, height: 34, borderRadius: 8, border: '1.5px solid rgba(122,94,58,0.4)', background: '#fffefb', fontSize: 20, fontWeight: 800, color: '#7a5e3a', cursor: 'pointer', opacity: qty >= 9 ? 0.4 : 1 }}>+</button>
-                  </div>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#5a4626' }}>🧺 {T('mobile.cartCount', { n: totalUnits, s: totalUnits > 1 ? 's' : '' })}</span>
+                <button onClick={() => setCart({})} style={{ border: 'none', background: 'transparent', fontSize: 12.5, fontWeight: 700, color: '#a05a2c', cursor: 'pointer', textDecoration: 'underline' }}>{T('mobile.cartClear')}</button>
               </div>
-              <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={validate}>{T('mobile.giveCount', { n: stackable ? qty : 1 })}</button>
+              <button className="mob-btn mob-btn--gold" style={{ width: '100%' }} onClick={send}>{T('mobile.cartSend', { n: totalUnits })}</button>
             </>
           ) : (
             <>
-              {done && ITEMS[done.key] && (
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#2f5a18', textAlign: 'center', marginBottom: 8 }}>
-                  ✓ {T('mobile.gaveConfirm', { icon: ITEMS[done.key].icon, name: locName(ITEMS[done.key]), n: done.n })}
-                </div>
-              )}
-              {!done && <div style={{ fontSize: 12.5, color: 'var(--ink-400)', fontStyle: 'italic', textAlign: 'center', marginBottom: 8 }}>{T('mobile.givePick')}</div>}
+              {sent > 0
+                ? <div style={{ fontSize: 13, fontWeight: 700, color: '#2f5a18', textAlign: 'center', marginBottom: 8 }}>{T('mobile.cartSent', { n: sent, s: sent > 1 ? 's' : '' })}</div>
+                : <div style={{ fontSize: 12.5, color: 'var(--ink-400)', fontStyle: 'italic', textAlign: 'center', marginBottom: 8 }}>{T('mobile.cartEmpty')}</div>}
               <button className="mob-btn mob-btn--ghost" style={{ width: '100%' }} onClick={onClose}>{T('common.close')}</button>
             </>
           )}
