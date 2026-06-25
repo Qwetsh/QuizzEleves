@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path';
 import {
   INGREDIENTS, TEMPLATES, AXIS_POWER, AXIS_THRESHOLD, MAX_POTION_EFFECTS, MAX_INGREDIENT_EFFECTS,
   RARITY_SPLIT, FOE_TARGETS, FORMS, FORMS_EN, AXIS_FLAVOR, RARITY_EN, LEGENDARY_ICON, NEGATIVE,
+  POTION_ART, POTION_ART_FALLBACK,
 } from './alchemy-palette.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -66,12 +67,18 @@ function describe(a) {
     case 'curseTimer': return 'timer ÷2 (autres)';
     case 'curseExtraQuestion': return `+${t(a.n)} question (autres)`;
     case 'randomPathNext': return 'voie aléatoire (autres)';
+    case 'blockPowers': return `bloque pouvoirs ${t(a.turns)}T (autres)`;
+    case 'blockConsumables': return `bloque conso ${t(a.turns)}T (autres)`;
     case 'buff': {
       const b = a.buff || {};
       if (b.type === 'themeBonus') return `+${t(b.n)} or/bonne rép. (${b.turns}T)`;
       if (b.type === 'advanceOnCorrect') return `avance/bonne rép. (${b.turns}T)`;
       if (b.type === 'diceBonus') return `dé +${t(b.n)} (${b.turns}T)`;
       if (b.type === 'duelImmune') return `immunité duel (${b.turns}T)`;
+      if (b.type === 'bleedGold') return `saignement ${t(b.n)} or/tour (${b.turns}T${b.mode === 'steal' ? ', volé' : ''})`;
+      if (b.type === 'reflectChance') return `renvoi ${t(b.n)}% (${b.turns}T)`;
+      if (b.type === 'goldStealImmune') return `or involable (${b.turns}T)`;
+      if (b.type === 'itemStealImmune') return `objets involables (${b.turns}T)`;
       return `buff ${b.type}`;
     }
     default: return a.action;
@@ -100,12 +107,18 @@ function describeEn(a) {
     case 'curseTimer': return 'timer ÷2 (others)';
     case 'curseExtraQuestion': return `+${t(a.n)} question (others)`;
     case 'randomPathNext': return 'random path (others)';
+    case 'blockPowers': return `block powers ${t(a.turns)}T (others)`;
+    case 'blockConsumables': return `block consumables ${t(a.turns)}T (others)`;
     case 'buff': {
       const b = a.buff || {};
       if (b.type === 'themeBonus') return `+${t(b.n)} gold/correct (${b.turns}T)`;
       if (b.type === 'advanceOnCorrect') return `advance/correct (${b.turns}T)`;
       if (b.type === 'diceBonus') return `die +${t(b.n)} (${b.turns}T)`;
       if (b.type === 'duelImmune') return `duel immunity (${b.turns}T)`;
+      if (b.type === 'bleedGold') return `bleed ${t(b.n)} gold/turn (${b.turns}T${b.mode === 'steal' ? ', stolen' : ''})`;
+      if (b.type === 'reflectChance') return `reflect ${t(b.n)}% (${b.turns}T)`;
+      if (b.type === 'goldStealImmune') return `gold unstealable (${b.turns}T)`;
+      if (b.type === 'itemStealImmune') return `items unstealable (${b.turns}T)`;
       return `buff ${b.type}`;
     }
     default: return a.action;
@@ -143,7 +156,7 @@ function buildPotion(ings, rng) {
   }
   // 5) renvoie les briques brutes ; l'assemblage (avec plafond par rareté) se
   // fait après l'attribution de rareté.
-  return { actions, rollTable, power, axes, subj };
+  return { actions, rollTable, power, axes, subj, score };
 }
 
 // Plafond d'effets par rareté (la rareté donne sa « richesse » à la potion).
@@ -166,7 +179,7 @@ const ingredientsOut = {};
 const INGREDIENT_LOOT = {};
 INGREDIENTS.forEach((ing) => {
   ingredientsOut[ing.key] = {
-    name: ing.name, name_en: ing.name_en, icon: ing.icon, slot: 'consumable', family: 'ingredient',
+    name: ing.name, name_en: ing.name_en, icon: ing.icon, img: ing.img, slot: 'consumable', family: 'ingredient',
     rarity: ing.rarity, price: ing.rarity === 'commun' ? 4 : ing.rarity === 'rare' ? 6 : 9,
     desc: 'Ingrédient d\'alchimie. Combine-le par 3 pour distiller une potion.',
     desc_en: 'Alchemy ingredient. Combine three to distill a potion.',
@@ -198,6 +211,19 @@ const nCommon = Math.round(sorted.length * RARITY_SPLIT.commun);
 const nRare = Math.round(sorted.length * RARITY_SPLIT.rare);
 sorted.forEach((b, idx) => { b.rarity = idx < nCommon ? 'commun' : idx < nCommon + nRare ? 'rare' : 'legendaire'; });
 
+// Plancher de rareté GRADUÉ par magnitude : certains axes sont forts. Un effet
+// substantiel (score ≥ 2) pousse la potion au minimum en « rare » ; cumulé
+// (score ≥ 3, ex. deux ingrédients ou un légendaire renforcé) → « légendaire ».
+// Un effet mineur (score 1, un seul ingrédient rare) peut rester commun.
+const RARITY_ORDER = { commun: 0, rare: 1, legendaire: 2 };
+const STRONG_FLOOR_AXES = new Set(['reflect', 'foeBleed', 'foeSilence', 'foeGag']);
+built.forEach((b) => {
+  let strongMax = 0;
+  for (const ax of b.axes) if (STRONG_FLOOR_AXES.has(ax)) strongMax = Math.max(strongMax, b.score[ax] || 0);
+  const floor = strongMax >= 3 ? 'legendaire' : strongMax >= 2 ? 'rare' : null;
+  if (floor && RARITY_ORDER[b.rarity] < RARITY_ORDER[floor]) b.rarity = floor;
+});
+
 // Construit potions + recettes (effets plafonnés selon la rareté)
 const potionsOut = {};
 const recipes = [];
@@ -216,8 +242,12 @@ built.forEach((b) => {
   effCounts.push((effects[0].do?.length || 0) + (effects[0].table ? 1 : 0));
   const desc = `Potion ${b.rarity}. ${descParts.slice(0, 5).join(', ') || 'effet mineur'}.`;
   const desc_en = `${RARITY_EN[b.rarity] || 'Common'} potion. ${descPartsEn.slice(0, 5).join(', ') || 'minor effect'}.`;
+  // Visuel : une des fioles dessinées, choisie par l'AXE DOMINANT (cohérent avec
+  // l'effet) puis index déterministe (hash de la combinaison) → variété stable.
+  const artList = POTION_ART[domAxis] || POTION_ART_FALLBACK;
+  const img = 'alc-pot-' + artList[Math.abs(b.i * 131 + b.j * 17 + b.k * 7) % artList.length];
   potionsOut[key] = {
-    name, name_en, icon, slot: 'consumable', family: 'potion', rarity: b.rarity, price: 0, lootOnly: true,
+    name, name_en, icon, img, slot: 'consumable', family: 'potion', rarity: b.rarity, price: 0, lootOnly: true,
     desc, desc_en, effects,
   };
   recipes.push({ id: key, ingredients: [b.ings[0].key, b.ings[1].key, b.ings[2].key], potion: key });

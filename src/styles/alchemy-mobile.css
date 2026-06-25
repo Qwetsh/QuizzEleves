@@ -1,0 +1,26 @@
+/* Onglet Alchimie (mobile) — visuel « marmite & grimoire » (design Claude Design).
+   Keyframes + polices + utilitaires. Le composant reste en styles inline pour
+   coller au design ; ce fichier ne porte que l'animation et la typo. */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Nunito:wght@400;600;700;800&display=swap');
+
+.alc-scr::-webkit-scrollbar { display: none; }
+.alc-scr { scrollbar-width: none; }
+
+@keyframes alc-steamRise { 0% { transform: translateY(0) scaleX(1); opacity: 0; } 25% { opacity: .5; } 100% { transform: translateY(-58px) scaleX(1.7); opacity: 0; } }
+@keyframes alc-bubbleUp { 0% { transform: translateY(6px) scale(.4); opacity: 0; } 30% { opacity: .9; } 100% { transform: translateY(-14px) scale(1); opacity: 0; } }
+@keyframes alc-potWobble { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+@keyframes alc-floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes alc-orbPlop { 0% { transform: translateY(-30px) scale(.6); opacity: .3; } 60% { transform: translateY(3px) scale(1.12); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes alc-glowPulse { 0%,100% { box-shadow: 0 6px 18px rgba(200,150,40,.45), inset 0 1px 0 rgba(255,255,255,.6); } 50% { box-shadow: 0 6px 30px rgba(230,180,60,.8), inset 0 1px 0 rgba(255,255,255,.6); } }
+@keyframes alc-spinSlow { to { transform: rotate(360deg); } }
+@keyframes alc-sparkle { 0%,100% { transform: scale(0); opacity: 0; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes alc-riseShine { 0% { transform: translateY(40px) scale(.6); opacity: 0; } 60% { transform: translateY(-6px) scale(1.05); opacity: 1; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes alc-burstIn { 0% { transform: scale(0); opacity: .95; } 70% { opacity: .85; } 100% { transform: scale(3.4); opacity: 0; } }
+@keyframes alc-ringPulse { 0% { transform: scale(.3); opacity: .9; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes alc-fadeUp { 0% { transform: translateY(14px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes alc-scrimIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes alc-failShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes alc-spinFast { to { transform: rotate(360deg); } }
+@keyframes alc-ringSwirl { 0% { transform: rotate(0deg) scale(1); opacity: 1; } 12% { transform: rotate(40deg) scale(1.08); } 72% { opacity: 1; } 100% { transform: rotate(700deg) scale(.06); opacity: 0; } }
+@keyframes alc-drainPulse { 0%,100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.5); opacity: .9; } }
+@keyframes alc-flashUp { 0%,68% { opacity: 0; transform: scale(.35); } 86% { opacity: .95; transform: scale(1.08); } 100% { opacity: 0; transform: scale(1.3); } }

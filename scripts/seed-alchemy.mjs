@@ -29,10 +29,10 @@ async function insertAll(table, rows) {
 const itemRows = [];
 let ord = 1000;
 for (const [key, it] of Object.entries(INGREDIENTS)) {
-  itemRows.push({ key, name: it.name, icon: it.icon, slot: 'consumable', rarity: it.rarity, price: it.price, loot_only: false, effects: it.effects, family: 'ingredient', description: it.desc, enabled: true, ord: ord++ });
+  itemRows.push({ key, name: it.name, icon: it.icon, img: it.img ?? null, slot: 'consumable', rarity: it.rarity, price: it.price, loot_only: false, effects: it.effects, family: 'ingredient', description: it.desc, enabled: true, ord: ord++ });
 }
 for (const [key, p] of Object.entries(POTIONS)) {
-  itemRows.push({ key, name: p.name, icon: p.icon, slot: 'consumable', rarity: p.rarity, price: 0, loot_only: true, effects: p.effects, family: 'potion', description: p.desc, enabled: true, ord: ord++ });
+  itemRows.push({ key, name: p.name, icon: p.icon, img: p.img ?? null, slot: 'consumable', rarity: p.rarity, price: 0, loot_only: true, effects: p.effects, family: 'potion', description: p.desc, enabled: true, ord: ord++ });
 }
 const recipeRows = ALCHEMY_RECIPES.map((r, i) => ({ key: r.id, ingredients: r.ingredients, potion: r.potion, enabled: true, ord: i }));
 
