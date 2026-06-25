@@ -189,7 +189,7 @@ function MinigameStage({ fight, attacker, defender }) {
   const T = useT();
   const fightRoundWin = useGameStore((s) => s.fightRoundWin);
   const minigame = resolveMinigame(fight);
-  const { Component, persistent } = minigame;
+  const { Component, persistent, content } = minigame;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 14, gap: 10, minHeight: 0 }}>
@@ -233,6 +233,7 @@ function MinigameStage({ fight, attacker, defender }) {
           subject={fight.subject}
           round={fight.round}
           onRoundWin={fightRoundWin}
+          content={content}
         />
       </div>
     </div>

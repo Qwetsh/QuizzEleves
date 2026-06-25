@@ -27,41 +27,78 @@ export const REGULAR_VERBS = [
 export const SVT_CHALLENGES = [
   {
     id: 'vertebres',
-    prompt: 'Touche tous les VERTÉBRÉS !',
+    prompt: 'Touche tous les VERTÉBRÉS !', prompt_en: 'Tap all the VERTEBRATES!',
     good: ['chien', 'aigle', 'truite', 'grenouille', 'vipère', 'requin', 'tortue', 'cheval', 'pigeon', 'lézard'],
     bad: ['fourmi', 'escargot', 'méduse', 'araignée', 'pieuvre', 'crabe', 'papillon', 'ver de terre', 'moustique', 'étoile de mer', 'criquet', 'abeille'],
   },
   {
     id: 'ovipares',
-    prompt: 'Touche les animaux OVIPARES (qui pondent des œufs) !',
+    prompt: 'Touche les animaux OVIPARES (qui pondent des œufs) !', prompt_en: 'Tap the OVIPAROUS animals (that lay eggs)!',
     good: ['poule', 'tortue', 'crocodile', 'saumon', 'grenouille', 'autruche', 'couleuvre', 'papillon'],
     bad: ['chien', 'vache', 'baleine', 'chauve-souris', 'lion', 'dauphin', 'cheval', 'lapin', 'éléphant', 'chat'],
   },
   {
     id: 'mammiferes',
-    prompt: 'Touche tous les MAMMIFÈRES !',
+    prompt: 'Touche tous les MAMMIFÈRES !', prompt_en: 'Tap all the MAMMALS!',
     good: ['baleine', 'chauve-souris', 'dauphin', 'être humain', 'lion', 'souris', 'vache', 'kangourou'],
     bad: ['requin', 'manchot', 'crocodile', 'autruche', 'thon', 'grenouille', 'abeille', 'tortue', 'perroquet', 'truite'],
   },
   {
     id: 'digestif',
-    prompt: "Touche les organes de l'appareil DIGESTIF !",
+    prompt: "Touche les organes de l'appareil DIGESTIF !", prompt_en: 'Tap the organs of the DIGESTIVE system!',
     good: ['estomac', 'œsophage', 'intestin grêle', 'gros intestin', 'foie', 'pancréas', 'glandes salivaires', 'bouche'],
     bad: ['cœur', 'poumon', 'rein', 'vessie', 'cerveau', 'trachée', 'artère', 'diaphragme'],
   },
   {
     id: 'squelette',
-    prompt: 'Touche les OS du squelette !',
+    prompt: 'Touche les OS du squelette !', prompt_en: 'Tap the BONES of the skeleton!',
     good: ['fémur', 'tibia', 'humérus', 'radius', 'crâne', 'vertèbre', 'bassin', 'cubitus'],
     bad: ['biceps', 'quadriceps', 'cœur', 'foie', 'triceps', 'tendon', 'estomac', 'poumon'],
   },
   {
     id: 'renouvelables',
-    prompt: "Touche les sources d'énergie RENOUVELABLES !",
+    prompt: "Touche les sources d'énergie RENOUVELABLES !", prompt_en: 'Tap the RENEWABLE energy sources!',
     good: ['solaire', 'éolienne', 'hydraulique', 'géothermie', 'biomasse', 'marémotrice'],
     bad: ['pétrole', 'charbon', 'gaz naturel', 'uranium', 'essence', 'fioul', 'kérosène', 'butane'],
   },
 ];
+
+// ════════════════════════════════════════════════════════════════════════════
+// CONTENU DE THÈMES SUPPLÉMENTAIRES — démontre la réutilisation des moteurs
+// existants (timeline, bubble) pour des thèmes arbitraires, SANS nouveau code.
+// ════════════════════════════════════════════════════════════════════════════
+
+// --- Films (moteur `timeline`) : replacer par année de sortie ---
+export const MOVIE_EVENTS = [
+  { name: 'Les Temps modernes', year: 1936 },
+  { name: 'Le Magicien d\'Oz', year: 1939 },
+  { name: 'Les 400 coups', year: 1959 },
+  { name: 'La Grande Vadrouille', year: 1966 },
+  { name: '2001, l\'Odyssée de l\'espace', year: 1968 },
+  { name: 'Le Parrain', year: 1972 },
+  { name: 'Les Dents de la mer', year: 1975 },
+  { name: 'Star Wars', year: 1977 },
+  { name: 'E.T. l\'extra-terrestre', year: 1982 },
+  { name: 'Retour vers le futur', year: 1985 },
+  { name: 'Le Roi Lion', year: 1994 },
+  { name: 'Titanic', year: 1997 },
+  { name: 'Le Seigneur des Anneaux', year: 2001 },
+  { name: 'Avatar', year: 2009 },
+  { name: 'Intouchables', year: 2011 },
+  { name: 'La Reine des neiges', year: 2013 },
+  { name: 'Interstellar', year: 2014 },
+  { name: 'Avengers: Endgame', year: 2019 },
+  { name: 'Spider-Man: No Way Home', year: 2021 },
+  { name: 'Barbie', year: 2023 },
+];
+
+// --- Jeux vidéo (moteur `bubble`) : « clique tous les RPG » ---
+export const RPG_CHALLENGE = {
+  id: 'jeux-rpg',
+  prompt: 'Touche tous les jeux de RÔLE (RPG) !', prompt_en: 'Tap all the ROLE-PLAYING games (RPG)!',
+  good: ['Final Fantasy', 'The Witcher 3', 'Skyrim', 'Pokémon', 'Elden Ring', 'Dragon Quest', "Baldur's Gate 3", 'Persona 5', 'Mass Effect', 'Diablo', 'Dark Souls', 'Kingdom Hearts', 'Chrono Trigger', 'Fallout'],
+  bad: ['FIFA', 'Call of Duty', 'Minecraft', 'Fortnite', 'Tetris', 'Mario Kart', 'Counter-Strike', 'Among Us', 'Rocket League', 'Street Fighter', 'Pac-Man', 'Overwatch', 'Just Dance', 'Angry Birds'],
+};
 
 // --- Timeline (histoire) ---
 // Evenements dates du programme college, a replacer dans l'ordre

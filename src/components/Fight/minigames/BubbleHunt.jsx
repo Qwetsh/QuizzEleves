@@ -3,51 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
 import { useT } from '../../../i18n';
+import { makeSchedules, ROUND_MS, LIFE_MS } from './bubbleSchedule';
 
-const ROUND_MS = 30000;
-const LIFE_MS = 2600;          // duree de vie d'une bulle
-const SPAWN_EVERY_MS = 850;    // cadence d'apparition (+ jitter)
-const GOOD_RATIO = 0.55;
 const FEEDBACK_MS = 320;       // la bulle touchee reste colorée un instant
-
-/**
- * Genere le planning des bulles d'une manche : memes mots, memes instants,
- * memes positions des deux cotes (equite parfaite). La zone de jeu est
- * decoupee en 4x3 cases pour eviter les chevauchements de bulles vivantes.
- */
-function makeSchedule(challenge) {
-  const goodPool = shuffle(challenge.good);
-  const badPool = shuffle(challenge.bad);
-  let gi = 0;
-  let bi = 0;
-  const cols = 4;
-  const rows = 3;
-  const zoneBusyUntil = Array(cols * rows).fill(0);
-  const items = [];
-  let t = 700;
-  let id = 0;
-
-  while (t < ROUND_MS - LIFE_MS - 200) {
-    const free = [];
-    for (let z = 0; z < cols * rows; z++) if (zoneBusyUntil[z] <= t) free.push(z);
-    if (free.length) {
-      const z = free[Math.floor(Math.random() * free.length)];
-      zoneBusyUntil[z] = t + LIFE_MS + 250;
-      const good = Math.random() < GOOD_RATIO;
-      const label = good ? goodPool[gi++ % goodPool.length] : badPool[bi++ % badPool.length];
-      items.push({
-        id: id++,
-        label,
-        good,
-        x: (z % cols + 0.5) / cols + (Math.random() - 0.5) * 0.08,
-        y: (Math.floor(z / cols) + 0.5) / rows + (Math.random() - 0.5) * 0.10,
-        t,
-      });
-    }
-    t += SPAWN_EVERY_MS + Math.random() * 300;
-  }
-  return items;
-}
 
 /**
  * Moteur de chasse aux bulles — écran scindé tactile.
@@ -57,12 +15,16 @@ function makeSchedule(challenge) {
  * verbes (anglais) et Le Grand Tri (SVT).
  *
  * Props : { attacker, defender, round, onRoundWin,
- *           pickChallenge() -> { id, prompt, good[], bad[] } }
+ *           content: [{ id, prompt, prompt_en?, good[], bad[] }] }
+ * Le contenu (défis) vient du thème. À chaque manche, un défi est tiré sans
+ * répétition (tant qu'il en reste). Deux plannings indépendants par côté.
  */
-export default function BubbleHunt({ attacker, defender, round, onRoundWin, pickChallenge }) {
+export default function BubbleHunt({ attacker, defender, round, onRoundWin, content }) {
   const T = useT();
+  const en = T.lang === 'en';
+  const usedRef = useRef([]);
   const [challenge, setChallenge] = useState(null);
-  const [schedule, setSchedule] = useState(null);
+  const [schedule, setSchedule] = useState(null); // { attacker: [...], defender: [...] }
   const [now, setNow] = useState(0);
   const [tapped, setTapped] = useState({ attacker: {}, defender: {} });
   const [scores, setScores] = useState({ attacker: 0, defender: 0 });
@@ -70,10 +32,21 @@ export default function BubbleHunt({ attacker, defender, round, onRoundWin, pick
   const [tie, setTie] = useState(false);
   const reported = useRef(false);
 
+  // Tire un défi du contenu du thème, sans répétition tant qu'il en reste.
+  const pickChallenge = () => {
+    const list = Array.isArray(content) ? content : content ? [content] : [];
+    if (!list.length) return null;
+    const remaining = list.filter((c) => !usedRef.current.includes(c.id));
+    const pool = remaining.length ? remaining : list;
+    const ch = shuffle(pool)[0];
+    usedRef.current = [...usedRef.current, ch.id];
+    return ch;
+  };
+
   const startRound = () => {
     const ch = pickChallenge();
     setChallenge(ch);
-    setSchedule(makeSchedule(ch));
+    setSchedule(ch ? makeSchedules(ch) : null);
     setNow(0);
     setTapped({ attacker: {}, defender: {} });
     setScores({ attacker: 0, defender: 0 });
@@ -121,8 +94,8 @@ export default function BubbleHunt({ attacker, defender, round, onRoundWin, pick
 
   const renderSide = (side, team) => {
     // Bulles vivantes : non expirees, non touchees (ou touchees a l'instant,
-    // le temps du feedback colore)
-    const visible = schedule.filter((b) => {
+    // le temps du feedback colore). Chaque côté a SON propre planning.
+    const visible = schedule[side].filter((b) => {
       if (b.t > now || now >= b.t + LIFE_MS) return false;
       const tap = tapped[side][b.id];
       return !tap || now - tap.at < FEEDBACK_MS;
@@ -213,7 +186,7 @@ export default function BubbleHunt({ attacker, defender, round, onRoundWin, pick
           boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
         }}
       >
-        {tie ? T('fight.bubble.tie') : finished ? T('fight.bubble.timeUp') : challenge.prompt}
+        {tie ? T('fight.bubble.tie') : finished ? T('fight.bubble.timeUp') : (en ? (challenge.prompt_en || challenge.prompt) : challenge.prompt)}
         <div style={{ fontSize: 11, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)', marginTop: 2 }}>
           {T('fight.bubble.hint')}
         </div>

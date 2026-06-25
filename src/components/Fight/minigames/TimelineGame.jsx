@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TIMELINE_EVENTS, shuffle } from '../../../data/fightData';
+import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
 import { useT } from '../../../i18n';
 
@@ -18,11 +18,12 @@ const CARD_W = 150;
  * marque) ; la carte est replacée au bon endroit et on continue.
  * La frise persiste sur tout le combat (composant persistant).
  */
-export default function TimelineGame({ attacker, defender, onRoundWin }) {
+export default function TimelineGame({ attacker, defender, onRoundWin, content }) {
   const T = useT();
-  // Etat initialise une seule fois pour tout le combat (initialiseur pur)
+  // Etat initialise une seule fois pour tout le combat (initialiseur pur).
+  // `content` = [{ name, value }] du thème (dates d'histoire, sorties de films…).
   const [init] = useState(() => {
-    const deck = shuffle(TIMELINE_EVENTS);
+    const deck = shuffle(content || []);
     return { placed: [deck[0]], current: deck[1], rest: deck.slice(2) };
   });
   const deckRef = useRef(init.rest);

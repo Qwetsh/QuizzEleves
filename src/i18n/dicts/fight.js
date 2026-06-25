@@ -145,6 +145,23 @@ export default {
   'fight.mg.geographie.step3': { fr: 'Moins de 100 km = 5 000 points (puis dégressif)', en: 'Under 100 km = 5,000 points (then decreasing)' },
   'fight.mg.geographie.step4': { fr: 'Premier à 10 000 points !', en: 'First to 10,000 points!' },
 
+  // Thèmes additionnels réutilisant les moteurs existants (timeline, bubble).
+  'fight.mg.films.name': { fr: 'Frise des films', en: 'Movie Timeline' },
+  'fight.mg.films.rules': { fr: 'Chacun son tour, placez le film au bon endroit selon son année de sortie. Une erreur = manche perdue !', en: 'Taking turns, place the movie in the right spot by its release year. A mistake = round lost!' },
+  'fight.mg.films.goal': { fr: 'Placez chaque film selon son année de sortie', en: 'Place each movie by its release year' },
+  'fight.mg.films.step1': { fr: 'Chacun son tour, une carte-film apparaît', en: 'Taking turns, a movie card appears' },
+  'fight.mg.films.step2': { fr: 'Glissez-la entre les bonnes dates de sortie', en: 'Drag it between the right release dates' },
+  'fight.mg.films.step3': { fr: 'Bien placée : on continue', en: 'Well placed: keep going' },
+  'fight.mg.films.step4': { fr: 'Une erreur = manche perdue !', en: 'A mistake = round lost!' },
+
+  'fight.mg.jeuxvideo.name': { fr: 'Chasse aux RPG', en: 'RPG Hunt' },
+  'fight.mg.jeuxvideo.rules': { fr: 'Des bulles de jeux apparaissent et éclatent : touchez les jeux de RÔLE (RPG) avant qu\'ils disparaissent ! +1 / -1, 30 secondes.', en: 'Game bubbles appear and pop: tap the ROLE-PLAYING games (RPG) before they vanish! +1 / -1, 30 seconds.' },
+  'fight.mg.jeuxvideo.goal': { fr: 'Touchez les RPG, évitez les autres genres !', en: 'Tap the RPGs, avoid other genres!' },
+  'fight.mg.jeuxvideo.step1': { fr: 'Des bulles de jeux montent à l\'écran', en: 'Game bubbles rise up the screen' },
+  'fight.mg.jeuxvideo.step2': { fr: 'Touchez seulement les jeux de rôle (RPG)', en: 'Tap only the role-playing games (RPG)' },
+  'fight.mg.jeuxvideo.step3': { fr: 'Bon jeu +1, mauvais −1', en: 'Right game +1, wrong −1' },
+  'fight.mg.jeuxvideo.step4': { fr: 'Le meilleur score en 30 s gagne la manche', en: 'The best score in 30 s wins the round' },
+
   'fight.mg.default.name': { fr: 'Duel de rapidité', en: 'Speed Duel' },
   'fight.mg.default.rules': { fr: 'La même question des deux côtés : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'The same question on both sides: the first to tap the right answer wins the round. A mistake locks your side!' },
   'fight.mg.default.goal': { fr: 'Le plus rapide à trouver la bonne réponse gagne', en: 'The fastest to find the right answer wins' },
