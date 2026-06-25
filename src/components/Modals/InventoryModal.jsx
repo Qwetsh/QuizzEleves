@@ -11,7 +11,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, RARITIES } from '../../data/items';
-import { isValidMove, normalizeBag, cellKey, cellN } from '../../store/itemHandlers';
+import { isValidMove, normalizeBag, cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
 import { itemImg } from '../../logic/itemAssets';
 import ItemActionCard from './ItemActionCard';
@@ -36,7 +36,7 @@ const EQUIP_SLOTS = [
 ];
 
 /* ---------- Case (équipement ou sac), habillage image ---------- */
-function ImgSlot({ k, variant, glyph, itemKey, count = 1, style, refCb, onGrab, state, popStamp, away }) {
+function ImgSlot({ k, variant, glyph, itemKey, count = 1, enchanted = 0, style, refCb, onGrab, state, popStamp, away }) {
   const item = ITEMS[itemKey];
   const rarityColor = item ? RARITIES[item.rarity]?.color : null;
   const legendary = item?.rarity === 'legendaire';
@@ -73,6 +73,7 @@ function ImgSlot({ k, variant, glyph, itemKey, count = 1, style, refCb, onGrab, 
             ? <img className="inv-item-img" src={img} alt={locName(item)} draggable={false} />
             : <span className="inv-emoji">{item.icon}</span>}
           {count > 1 && <span className="inv-stack-badge">×{count}</span>}
+          {enchanted > 0 && <span className="inv-ench-badge" title="Enchanté">✦{enchanted > 1 ? enchanted : ''}</span>}
         </div>
       )}
     </div>
@@ -260,6 +261,7 @@ export default function InventoryModal() {
                     variant="equip"
                     glyph={SLOT_GLYPHS[s.key]}
                     itemKey={cellKey(equipment[s.key])}
+                    enchanted={cellEnchants(equipment[s.key]).length}
                     style={{ left: '21.3%', top: s.cy }}
                     refCb={(el) => { slotEls.current[k] = el; }}
                     onGrab={onGrab}
@@ -281,6 +283,7 @@ export default function InventoryModal() {
                       variant="bag"
                       itemKey={cellKey(cell)}
                       count={cellN(cell)}
+                      enchanted={cellEnchants(cell).length}
                       refCb={(el) => { slotEls.current[k] = el; }}
                       onGrab={onGrab}
                       state={slotState(k)}

@@ -42,6 +42,8 @@ export default {
   // --- Enchantement ---
   'log.it.enchant':   { fr: '📜 {emoji} {name} enchante {icon} {item} ({slot}) avec {parch} !',
                         en: '📜 {emoji} {name} enchants {icon} {item} ({slot}) with {parch}!' },
+  'log.it.inscribe':  { fr: '✒️ {emoji} {name} grave un parchemin d\'enchantement ({cost} or).',
+                        en: '✒️ {emoji} {name} inscribes an enchantment scroll ({cost} gold).' },
 
   // --- Alchimie (distillation) ---
   'log.it.craft':          { fr: '⚗️ {emoji} {name} distille {icon} {potion} !',

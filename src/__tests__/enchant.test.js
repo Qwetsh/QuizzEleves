@@ -2,7 +2,8 @@
 // est lu par le moteur et SUIT l'objet (déséquiper / troc).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
-import { enchantWith, moveInventoryItem, cellKey, cellEnchants } from '../store/itemHandlers.js';
+import { enchantWith, craftParchment, moveInventoryItem, cellKey, cellEnchants } from '../store/itemHandlers.js';
+import { enchantCost } from '../data/enchantPalette.js';
 import { getEffectValue } from '../logic/itemEffects.js';
 import { equipOnRollActions } from '../store/effectEngine.js';
 
@@ -66,5 +67,40 @@ describe('l’enchantement SUIT la pièce', () => {
     expect(r.ok).toBe(true);
     // l’équipe 1 reçoit la pièce enchantée (équipée car slot libre)
     expect(getEffectValue(S().teams[1], 'timerBonus')).toBe(3);
+  });
+});
+
+describe('Autel du Scribe — craft de parchemin custom', () => {
+  beforeEach(() => setup({ money: 50, equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: ['parcheminVierge'] }));
+
+  it('grave un parchemin gravé (specs custom), consomme vierge + or', () => {
+    const cost = enchantCost([{ id: 'timerBonus', value: 5 }]);
+    const r = craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]);
+    expect(r.ok).toBe(true);
+    const t = S().teams[0];
+    expect(t.money).toBe(50 - cost);
+    const grave = t.bag.find((c) => cellKey(c) === 'parcheminGrave');
+    expect(grave).toBeTruthy();
+    expect(cellEnchants(grave)).toEqual([{ type: 'timerBonus', value: 5 }]);
+  });
+
+  it('le parchemin gravé applique bien son effet custom sur une pièce', () => {
+    craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]);
+    const gi = S().teams[0].bag.findIndex((c) => cellKey(c) === 'parcheminGrave');
+    enchantWith(set, get, 0, gi, 'feet');
+    expect(getEffectValue(S().teams[0], 'timerBonus')).toBe(5);
+  });
+
+  it('refuse sans vierge ou sans or', () => {
+    setup({ money: 0, equipment: { feet: 'bottesMontagne' }, bag: ['parcheminVierge'] });
+    expect(craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]).ok).toBe(false); // or insuffisant
+    setup({ money: 99, equipment: { feet: 'bottesMontagne' }, bag: ['parchemoinTemps'] });
+    expect(craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]).ok).toBe(false); // pas un vierge
+  });
+
+  it('plafond de 3 enchants par pièce', () => {
+    const ench = [{ type: 'timerBonus', value: 1 }, { type: 'timerBonus', value: 1 }, { type: 'timerBonus', value: 1 }];
+    setup({ money: 99, equipment: { feet: { key: 'bottesMontagne', enchants: ench } }, bag: ['parchemoinTemps'] });
+    expect(enchantWith(set, get, 0, 0, 'feet').ok).toBe(false); // déjà 3
   });
 });

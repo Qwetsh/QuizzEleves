@@ -1,6 +1,7 @@
 import { ITEMS, SLOTS } from '../data/items.js';
 import { matchRecipe } from '../data/recipes.js';
 import { itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { validateParchment, ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
@@ -488,13 +489,19 @@ export function enchantWith(set, get, teamIdx, bagIndex, slot) {
   const bag = normalizeBag(team.bag);
   const pKey = cellKey(bag[bagIndex]);
   const parch = ITEMS[pKey];
-  if (!parch || parch.family !== 'parchment' || !parch.enchant) return { ok: false, reason: 'pas un parchemin' };
+  // Specs à appliquer : soit l'enchant FIXE de l'item (parchemins pré-faits), soit
+  // les specs CUSTOM portées par la case (parchemin gravé à l'Autel du Scribe).
+  const customSpecs = cellEnchants(bag[bagIndex]);
+  const toApply = customSpecs.length ? customSpecs : (parch?.enchant ? [parch.enchant] : []);
+  if (!parch || parch.family !== 'parchment' || !toApply.length) return { ok: false, reason: 'pas un parchemin' };
   if (!['head', 'body', 'feet'].includes(slot)) return { ok: false, reason: 'emplacement invalide' };
   const cur = team.equipment?.[slot];
   const curKey = itemKeyOf(cur);
   if (!curKey || !ITEMS[curKey]) return { ok: false, reason: 'aucune pièce sur cet emplacement' };
+  // Plafond d'enchants par pièce.
+  if (itemEnchantsOf(cur).length + toApply.length > ENCHANT_CAP_PER_PIECE) return { ok: false, reason: 'plafond d\'enchantements atteint' };
 
-  const enchants = [...itemEnchantsOf(cur), parch.enchant];
+  const enchants = [...itemEnchantsOf(cur), ...toApply];
   const equipment = { ...team.equipment, [slot]: { key: curKey, enchants } };
   const nbag = [...bag];
   nbag[bagIndex] = cellN(bag[bagIndex]) > 1 ? mkCell(pKey, cellN(bag[bagIndex]) - 1) : null;
@@ -504,6 +511,43 @@ export function enchantWith(set, get, teamIdx, bagIndex, slot) {
   get().addLog(tg('log.it.enchant', { emoji: team.emoji, name: team.name, icon: ITEMS[curKey].icon, item: locName(ITEMS[curKey]), slot: SLOTS[slot].name, parch: locName(parch) }));
   if (get().phase === 'game') saveGame(get());
   return { ok: true };
+}
+
+// === AUTEL DU SCRIBE : grave un parchemin d'enchantement personnalisé =========
+// Consomme 1 PARCHEMIN VIERGE (à blankIndex) + l'OR du coût, et produit un
+// « parchemin gravé » portant les specs custom (champ `enchants` de la case).
+// `parts` = [{ id, value?, trigger?, dice?, subject? }] (1-2 effets, cf.
+// enchantPalette). Garde-fou « sac plein » : si le gravé ne tient pas, on ANNULE
+// (vierge + or préservés). { ok, reason?, key? }.
+export function craftParchment(set, get, teamIdx, blankIndex, parts) {
+  const { teams } = get();
+  const team = teams[teamIdx];
+  if (!team) return { ok: false, reason: 'équipe invalide' };
+  const bag = normalizeBag(team.bag);
+  const blank = ITEMS[cellKey(bag[blankIndex])];
+  if (!blank || blank.family !== 'parchment' || !blank.blank) return { ok: false, reason: 'pas un parchemin vierge' };
+
+  const v = validateParchment(parts || []);
+  if (!v.ok) return { ok: false, reason: v.reason || 'enchantement invalide' };
+  if ((team.money ?? 0) < v.cost) return { ok: false, reason: 'or insuffisant' };
+
+  // Consomme 1 vierge + l'or, puis place le gravé (la consommation peut libérer
+  // une case → placement APRÈS). Si le sac reste plein, on n'a rien committé.
+  const nbag = [...bag];
+  nbag[blankIndex] = cellN(bag[blankIndex]) > 1 ? mkCell(cellKey(bag[blankIndex]), cellN(bag[blankIndex]) - 1) : null;
+  let t = { ...team, bag: nbag, money: (team.money ?? 0) - v.cost };
+  const placed = placeItem(t, { key: 'parcheminGrave', enchants: v.enchants });
+  if (placed.outcome === 'refunded') {
+    get().addLog(tg('log.it.craftFull', { emoji: team.emoji, name: team.name }));
+    return { ok: false, reason: 'sac plein' };
+  }
+  t = placed.team;
+  const nt = [...teams];
+  nt[teamIdx] = t;
+  set({ teams: nt });
+  get().addLog(tg('log.it.inscribe', { emoji: team.emoji, name: team.name, cost: v.cost }));
+  if (get().phase === 'game') saveGame(get());
+  return { ok: true, key: 'parcheminGrave' };
 }
 
 // === ALCHIMIE : distillation de 3 ingrédients du sac en une potion ===========

@@ -1768,6 +1768,21 @@ export const useGameStore = create((set, get) => ({
   },
   cancelEnchant: () => set({ showEnchantPicker: null }),
 
+  // Autel du Scribe (TBI) : grave un parchemin custom pour l'équipe active.
+  // `parts` = 1-2 effets configurés (cf. enchantPalette). Résout le 1er parchemin
+  // vierge du sac. Renvoie le résultat de craftParchment ({ ok, reason? }).
+  showScribe: false,
+  openScribe: () => set({ showScribe: true }),
+  closeScribe: () => set({ showScribe: false }),
+  craftParchmentFor: (teamIdx, parts) => {
+    const t = get().teams[teamIdx];
+    if (!t) return { ok: false };
+    const bag = itemH.normalizeBag(t.bag);
+    const i = bag.findIndex((c) => { const it = ITEMS[itemH.cellKey(c)]; return it && it.family === 'parchment' && it.blank; });
+    if (i < 0) return { ok: false, reason: 'aucun parchemin vierge' };
+    return itemH.craftParchment(set, get, teamIdx, i, parts);
+  },
+
   // --- Items / inventaire (delegated) ---
   openInventory: () => {
     const { finished, rolling, showQuestion, showEvent, showFight, awaitingChoice } = get();
@@ -1828,6 +1843,11 @@ export const useGameStore = create((set, get) => ({
       // Enchantement : applique le parchemin (payload.key) sur la pièce du slot.
       const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
       if (i >= 0) itemH.enchantWith(set, get, idx, i, payload.slot);
+    } else if (type === 'craftParchment') {
+      // Autel du Scribe : grave un parchemin custom (payload.parts) en consommant
+      // un parchemin vierge + l'or. Résout le vierge vers une case du sac du TBI.
+      const i = itemH.normalizeBag(team.bag).findIndex((c) => { const it = ITEMS[itemH.cellKey(c)]; return it && it.family === 'parchment' && it.blank; });
+      if (i >= 0) itemH.craftParchment(set, get, idx, i, payload.parts || []);
     } else if (type === 'buyItem') {
       // Achat d'un objet de la boutique pour l'équipe du téléphone.
       itemH.buyItem(set, get, payload.key, idx);

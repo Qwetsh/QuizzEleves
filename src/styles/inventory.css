@@ -426,6 +426,28 @@
   pointer-events: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
 }
+/* Marqueur d'objet enchanté (✦) — coin haut-gauche, liseré violet. */
+.inv-ench-badge {
+  position: absolute;
+  left: 3%;
+  top: 3%;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #6a3fa0, #4a2a7a);
+  color: #f3e6ff;
+  border: 2px solid #b98cff;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(155, 89, 208, 0.7), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
 @keyframes inv-pop {
   0% { transform: scale(0.5); }
   60% { transform: scale(1.14); }

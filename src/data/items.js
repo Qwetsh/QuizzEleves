@@ -228,6 +228,13 @@ export const ITEMS = {
   parchemoinTemps:{ name: 'Parchemin du sage',  icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +3s au temps de réponse.', enchant: { type: 'timerBonus', value: 3 } },
   parchemoinRecul:{ name: 'Parchemin du roc',   icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : recul subi réduit d’1 case.', enchant: { type: 'reculReduction', value: 1 } },
 
+  // Parchemin VIERGE : matière première de l'Autel du Scribe (craft d'enchant
+  // personnalisé). En boutique quand l'extension Enchantement est active.
+  parcheminVierge: { name: 'Parchemin vierge', name_en: 'Blank scroll', icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'commun', price: 8, blank: true, desc: "Sert à graver un enchantement personnalisé à l'Autel du Scribe (avec de l'or).", desc_en: 'Used to inscribe a custom enchantment at the Scribe\'s Altar (with gold).' },
+  // Parchemin GRAVÉ : porteur d'un enchant CUSTOM (specs dans la case du sac, champ
+  // `enchants`). Uniquement produit par le craft (lootOnly → hors boutique/loot).
+  parcheminGrave: { name: 'Parchemin gravé', name_en: 'Inscribed scroll', icon: '✒️', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 0, lootOnly: true, desc: 'Parchemin d\'enchantement gravé sur mesure.', desc_en: 'A custom-inscribed enchantment scroll.' },
+
   // === EFFETS AVANCÉS — immunités, renvoi, blocages, saignement d'or ========
   // Passifs d'équipement (immunité au vol d'objet / d'or, renvoi % d'effet).
   talismanGardien: {
