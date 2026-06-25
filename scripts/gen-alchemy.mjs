@@ -145,6 +145,50 @@ function describeEn(a) {
   }
 }
 
+// Épithètes (style « de X », invariables en genre) pour rendre CHAQUE nom de
+// potion unique sans souci d'accord. 28 × 10 formes → espace largement suffisant.
+const EPITHETS = [
+  { fr: 'de braise', en: 'of ember' }, { fr: "d'azur", en: 'of azure' }, { fr: 'des cimes', en: 'of the peaks' },
+  { fr: 'de givre', en: 'of frost' }, { fr: "d'ombre", en: 'of shadow' }, { fr: "de l'aube", en: 'of dawn' },
+  { fr: 'du crépuscule', en: 'of dusk' }, { fr: 'de jade', en: 'of jade' }, { fr: "d'ambre", en: 'of amber' },
+  { fr: 'de suie', en: 'of soot' }, { fr: 'des abysses', en: 'of the abyss' }, { fr: 'de cristal', en: 'of crystal' },
+  { fr: 'de lune', en: 'of the moon' }, { fr: 'de soleil', en: 'of the sun' }, { fr: 'de sang', en: 'of blood' },
+  { fr: 'de cendre', en: 'of ash' }, { fr: "d'émeraude", en: 'of emerald' }, { fr: 'de rubis', en: 'of ruby' },
+  { fr: 'de saphir', en: 'of sapphire' }, { fr: "d'onyx", en: 'of onyx' }, { fr: 'de nacre', en: 'of pearl' },
+  { fr: "d'ivoire", en: 'of ivory' }, { fr: 'de bronze', en: 'of bronze' }, { fr: 'de pourpre', en: 'of crimson' },
+  { fr: 'de brume', en: 'of mist' }, { fr: 'des vents', en: 'of the winds' }, { fr: "de l'orage", en: 'of the storm' },
+  { fr: 'de la faille', en: 'of the rift' },
+];
+
+// Construit un nom GARANTI unique (FR et EN) à partir des saveurs d'effets.
+// Préférence : « Forme Principal » → « Forme Principal et Secondaire » →
+// + épithète. Les ensembles `usedFr`/`usedEn` assurent l'unicité globale.
+function makeUniqueName(flavors, counter, usedFr, usedEn) {
+  const primary = flavors[0] || { word: 'du Mystère', word_en: 'of Mystery' };
+  const secondary = flavors[1] || null;
+  const start = counter % FORMS.length;
+  const render = (f, sec, ep) => ({
+    fr: `${FORMS[f]} ${primary.word}${sec && secondary ? ` et ${secondary.word}` : ''}${ep >= 0 ? ` ${EPITHETS[ep].fr}` : ''}`,
+    en: `${FORMS_EN[f]} ${primary.word_en}${sec && secondary ? ` and ${secondary.word_en}` : ''}${ep >= 0 ? ` ${EPITHETS[ep].en}` : ''}`,
+  });
+  // Ordre de préférence (du + court au + long) : « Forme Primaire » →
+  // « Forme Primaire Épithète » → « Forme Primaire et Secondaire » →
+  // combinaison (dernier recours). Garde des noms courts ET uniques.
+  const tiers = [];
+  for (let i = 0; i < FORMS.length; i++) tiers.push([(start + i) % FORMS.length, false, -1]);
+  for (let e = 0; e < EPITHETS.length; e++) for (let i = 0; i < FORMS.length; i++) tiers.push([(start + i) % FORMS.length, false, e]);
+  if (secondary) for (let i = 0; i < FORMS.length; i++) tiers.push([(start + i) % FORMS.length, true, -1]);
+  if (secondary) for (let e = 0; e < EPITHETS.length; e++) for (let i = 0; i < FORMS.length; i++) tiers.push([(start + i) % FORMS.length, true, e]);
+  for (const [f, sec, ep] of tiers) {
+    const { fr, en } = render(f, sec, ep);
+    if (!usedFr.has(fr) && !usedEn.has(en)) { usedFr.add(fr); usedEn.add(en); return { name: fr, name_en: en }; }
+  }
+  // Repli (espace de noms épuisé — ne devrait pas arriver) : suffixe d'index.
+  const { fr, en } = render(start, !!secondary, 0);
+  usedFr.add(`${fr} ${counter}`); usedEn.add(`${en} ${counter}`);
+  return { name: `${fr} ${counter}`, name_en: `${en} ${counter}` };
+}
+
 // Assemble le trigger on:'use' final à partir des actions du distributeur
 // (potion-effects.mjs) + table de hasard optionnelle. Garantit ≥1 effet.
 function assembleEffects(actions, rollTable) {
@@ -193,14 +237,14 @@ order.forEach((bi, rank) => { built[bi].rarity = rank < nCommon ? 'commun' : ran
 const potionsOut = {};
 const recipes = [];
 const effCounts = [];
+const usedFr = new Set();
+const usedEn = new Set();
 let formCounter = 0;
 built.forEach((b) => {
   const key = `pot${pad2(b.i)}${pad2(b.j)}${pad2(b.k)}`;
   const rng = mulberry32(comboSeed(b.i, b.j, b.k));
-  const { actions, rollTable, flavor, art } = buildPotionEffects(rng, b.rarity);
-  const formIdx = (formCounter++) % FORMS.length;
-  const name = `${FORMS[formIdx]} ${flavor.word}`;
-  const name_en = `${FORMS_EN[formIdx]} ${flavor.word_en}`;
+  const { actions, rollTable, flavor, art, flavors } = buildPotionEffects(rng, b.rarity);
+  const { name, name_en } = makeUniqueName(flavors, formCounter++, usedFr, usedEn);
   const icon = b.rarity === 'legendaire' ? LEGENDARY_ICON : flavor.icon;
   const { effects, descParts, descPartsEn } = assembleEffects(actions, rollTable);
   effCounts.push((effects[0].do?.length || 0) + (effects[0].table ? 1 : 0));

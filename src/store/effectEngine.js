@@ -766,7 +766,7 @@ function stepHead(set, get, action, ctx) {
       return 'done';
     }
     case 'placeTrap': {
-      if (ctx.tile == null) { set({ showTilePicker: { label: action.trap?.label, icon: action.trap?.icon } }); return 'suspend'; }
+      if (ctx.tile == null) { set({ showTilePicker: { label: loc(action.trap, 'label'), icon: action.trap?.icon } }); return 'suspend'; }
       placeTrapAt(set, get, ctx.tile, action.trap, ctx.sourceTeam);
       clearCtxResolution(set, get, 'tile');
       return 'done';
@@ -825,9 +825,9 @@ function placeTrapAt(set, get, nodeId, trap, ownerTeam) {
   const node = board[nodeId];
   if (!node) return;
   if (node.trap) { addLog(tg('log.fx.trapAlready')); return; }
-  const newBoard = { ...board, [nodeId]: { ...node, trap: { label: trap?.label, icon: trap?.icon || '🪤', do: trap?.do || [], ownerTeam } } };
+  const trapLabel = loc(trap, 'label') || tg('log.fx.trapDefault');
+  const newBoard = { ...board, [nodeId]: { ...node, trap: { label: trapLabel, icon: trap?.icon || '🪤', do: trap?.do || [], ownerTeam } } };
   set({ board: newBoard });
-  const trapLabel = trap?.label || tg('log.fx.trapDefault');
   addLog(tg('log.fx.trapPlaced', { emoji: teams[ownerTeam]?.emoji ?? '', label: trapLabel }));
   announce(set, get, trap?.icon || '🪤', tg('log.fx.trapPlaced.toast', { label: trapLabel }), '#c9472f');
 }

@@ -89,6 +89,43 @@ describe('alchemyGen — potions', () => {
   });
 });
 
+// Étiquette de TYPE d'effet (pour la garde de distribution).
+function effectLabel(a) {
+  if (a.action === 'money') return 'money:' + a.mode;
+  if (a.action === 'move') return 'move:' + a.dir;
+  if (a.action === 'buff') return 'buff:' + (a.buff?.type || '?');
+  return a.action;
+}
+
+describe('alchemyGen — rééquilibrage (distribution & noms)', () => {
+  const keys = Object.keys(POTIONS);
+  const pots = keys.map((k) => POTIONS[k]);
+
+  it('chaque potion a AU MOINS 2 effets (plancher anti-fadeur)', () => {
+    for (const p of pots) expect(effectCount(p.effects)).toBeGreaterThanOrEqual(2);
+  });
+
+  it('tous les noms FR et EN sont uniques (1140 distincts)', () => {
+    expect(new Set(pots.map((p) => p.name)).size).toBe(pots.length);
+    expect(new Set(pots.map((p) => p.name_en)).size).toBe(pots.length);
+  });
+
+  it('couverture large (≥27 types) et aucun effet > 25 % des potions', () => {
+    const withType = {};
+    for (const p of pots) {
+      const types = new Set();
+      for (const fx of p.effects) {
+        for (const a of (fx.do || [])) types.add(effectLabel(a));
+        if (fx.roll && fx.table) types.add('gamble');
+      }
+      for (const t of types) withType[t] = (withType[t] || 0) + 1;
+    }
+    const entries = Object.entries(withType);
+    expect(entries.length).toBeGreaterThanOrEqual(27);
+    for (const [, n] of entries) expect(n / pots.length).toBeLessThanOrEqual(0.25);
+  });
+});
+
 describe('alchemyGen — recettes', () => {
   it('1140 recettes uniques, ingrédients valides, potion existante', () => {
     expect(ALCHEMY_RECIPES).toHaveLength(1140);

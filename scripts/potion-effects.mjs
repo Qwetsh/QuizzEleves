@@ -163,8 +163,15 @@ export function buildPotionEffects(rng, rarity, opts = {}) {
   }
 
   const actions = chosen.map((e) => e.build(rng, rarity));
-  // Effet dominant (pour nom/icône/visuel) : 1er effet self s'il existe, sinon
+  // Effet dominant (pour icône/visuel) : 1er effet self s'il existe, sinon
   // gamble, sinon 1er. (Le nom reflète l'aide principale.)
   const dom = chosen.find((e) => e.cat === 'self') || gambleFlavor || chosen[0] || byKey.moneyGain;
-  return { actions, rollTable, domKey: dom.key || 'gamble', flavor: dom.flavor, art: dom.art };
+  // Saveurs ORDONNÉES et distinctes (dominant d'abord) → pour composer le nom à
+  // partir de l'effet principal + secondaire (variété maximale des noms).
+  const flavors = [];
+  const pushF = (f) => { if (f && !flavors.some((o) => o.word === f.word)) flavors.push(f); };
+  pushF(dom.flavor);
+  for (const e of chosen) pushF(e.flavor);
+  if (gambleFlavor) pushF(gambleFlavor.flavor);
+  return { actions, rollTable, domKey: dom.key || 'gamble', flavor: dom.flavor, art: dom.art, flavors };
 }
