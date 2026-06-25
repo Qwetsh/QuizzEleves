@@ -232,6 +232,7 @@ export default {
   'mobile.tabShop': { fr: 'Boutique', en: 'Shop' },
   'mobile.tabTrade': { fr: 'Troc', en: 'Trade' },
   'mobile.tabAlchemy': { fr: 'Alchi', en: 'Alchemy' },
+  'mobile.tabScribe': { fr: 'Scribe', en: 'Scribe' },
   'mobile.tabQuestions': { fr: 'Questions', en: 'Questions' },
   'mobile.tabHistory': { fr: 'Historique', en: 'History' },
 };

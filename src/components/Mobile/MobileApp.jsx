@@ -17,6 +17,7 @@ import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from
 import { tFor, setLang } from '../../i18n';
 import { locName, locDesc, loc } from '../../i18n/content';
 import SetBonusInfo from '../Modals/SetBonusInfo';
+import ScribeView from './ScribeView';
 import '../../styles/mobile.css';
 import '../../styles/alchemy-mobile.css';
 
@@ -1933,7 +1934,7 @@ function AdminPanel({ code, session, onClose }) {
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
 // L'onglet « Troc » réunit désormais trocs ouverts ET complots (cf. TradeView) :
 // il s'affiche dès que l'une OU l'autre extension est active (`hasTrade`).
-function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T = tFor(false) }) {
+function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, tradeAlert = 0, T = tFor(false) }) {
   const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
       onClick={() => setTab(id)}
@@ -1969,6 +1970,7 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, tradeAlert = 0, T 
       {hasShop && <Tab id="shop" icon={'\u{1F6D2}'} label={T('mobile.tabShop')} />}
       {hasTrade && <Tab id="trade" icon={'🤝'} label={T('mobile.tabTrade')} badge={tradeAlert} />}
       {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label={T('mobile.tabAlchemy')} />}
+      {hasScribe && <Tab id="scribe" icon={'\u{2712}️'} label={T('mobile.tabScribe')} />}
       <Tab id="history" icon={'\u{1F4DC}'} label={T('mobile.tabHistory')} />
     </nav>
   );
@@ -2153,6 +2155,7 @@ export default function MobileApp() {
     const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
     const hasDiplo = extOn(session.extensions, 'diplomacy') && owned && !!token;
     const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
+    const hasScribe = extOn(session.extensions, 'enchant') && owned && !!token;
     // L'onglet « Troc » réunit trocs ouverts et complots : présent si l'une OU
     // l'autre extension est active.
     const hasExchange = hasTrade || hasDiplo;
@@ -2160,12 +2163,13 @@ export default function MobileApp() {
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'trade' && hasExchange ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} hasTrade={hasTrade} hasDiplo={hasDiplo} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
+      : tab === 'scribe' && hasScribe ? <ScribeView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} tradeAlert={tradeAlert} T={T} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} hasScribe={hasScribe} tradeAlert={tradeAlert} T={T} />
       </>
     );
   }
