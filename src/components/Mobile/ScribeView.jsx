@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ITEMS } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
 import { cellKey, cellN } from '../../store/itemHandlers';
-import { sendIntent } from '../../logic/sessionConfig';
 import { tFor } from '../../i18n';
 import { locName } from '../../i18n/content';
 import {
@@ -20,11 +19,12 @@ const SUBJECT_KEYS = Object.keys(SUBJECTS);
 const ACCENT = '#7a4fae';
 const PARCH = 'linear-gradient(180deg,#fbf3df,#efe0bd)';
 
-export default function ScribeView({ session, teamIdx, code, token }) {
-  const en = !!session?.englishMode;
+// `team` = équipe qui grave · `en` = mode anglais · `onInscribe(parts)` = action
+// d'inscription : mobile → sendIntent (optimiste, undefined) ; TBI → craftParchmentFor
+// (synchrone, renvoie { ok }). Si elle renvoie { ok:false }, on annule la cérémonie.
+export default function ScribeView({ team, en = false, onInscribe }) {
   const T = tFor(en);
   const L = (fr, eng) => (en ? eng : fr);
-  const team = session.teams[teamIdx];
 
   const [parts, setParts] = useState([]);     // [{ id, value, trigger, dice, subject }]
   const [picking, setPicking] = useState(false);
@@ -59,8 +59,9 @@ export default function ScribeView({ session, teamIdx, code, token }) {
 
   const inscribe = () => {
     if (!canInscribe) return;
+    const res = onInscribe?.(parts);
+    if (res && res.ok === false) return; // refus synchrone (TBI) : on ne lance pas la cérémonie
     setPhase('inscribing');
-    sendIntent(code, token, 'craftParchment', { parts }).catch(() => {});
     setTimeout(() => setPhase('done'), 1700);
   };
   const reset = () => { setParts([]); setPhase('idle'); };
@@ -124,7 +125,8 @@ export default function ScribeView({ session, teamIdx, code, token }) {
   };
 
   return (
-    <div className="alc-scr" style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 96px', position: 'relative' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div className="alc-scr" style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 12px' }}>
       {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#6e4e8e' }}>✒️ {L("L'Autel du Scribe", "The Scribe's Altar")}</div>
@@ -157,8 +159,10 @@ export default function ScribeView({ session, teamIdx, code, token }) {
         </div>
       )}
 
-      {/* Barre de gravure (fixe en bas du contenu) */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 64, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'linear-gradient(180deg,rgba(255,254,251,0),rgba(255,254,251,0.96) 30%)' }}>
+      </div>
+
+      {/* Barre de gravure (pied de l'Autel) */}
+      <div style={{ flexShrink: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', borderTop: '1px solid rgba(122,94,58,0.2)', background: 'rgba(255,254,251,0.96)' }}>
         {blanks < 1 && <div style={{ fontSize: 12, color: '#c0392b', fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>{L('⚠️ Pas de parchemin vierge (achète-en en boutique).', '⚠️ No blank scroll (buy one in the shop).')}</div>}
         {blanks >= 1 && parts.length > 0 && gold < cost && <div style={{ fontSize: 12, color: '#c0392b', fontWeight: 700, textAlign: 'center', marginBottom: 6 }}>{L('⚠️ Or insuffisant.', '⚠️ Not enough gold.')}</div>}
         <button onClick={inscribe} disabled={!canInscribe} style={{

@@ -5,6 +5,8 @@ export default {
   'game.yourTurn': { fr: 'C\'est ton tour !', en: 'Your turn!' },
   'game.openShop': { fr: 'Ouvrir la boutique', en: 'Open the shop' },
   'game.openInventory': { fr: 'Ouvrir l\'inventaire', en: 'Open the inventory' },
+  'game.openScribe': { fr: 'Ouvrir l\'Autel du Scribe', en: 'Open the Scribe\'s Altar' },
+  'game.scribeBtn': { fr: 'Autel', en: 'Altar' },
   'game.title': { fr: 'Quête des Matières', en: 'Subject Quest' },
   'game.boardGame': { fr: 'Jeu de plateau', en: 'Board game' },
   'game.journal': { fr: 'Journal', en: 'Log' },

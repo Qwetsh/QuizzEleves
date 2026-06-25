@@ -15,6 +15,7 @@ import TestLinksPanel from './TestLinksPanel';
 import DevItemGiver from './DevItemGiver';
 import { OFFLINE } from '../../logic/offline';
 import { bagUnitCount } from '../../store/itemHandlers';
+import { extOn } from '../../extensions/registry';
 import QuestionModal from '../Modals/QuestionModal';
 import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
@@ -23,6 +24,7 @@ import ShopModal from '../Modals/ShopModal';
 import ShopPromptModal from '../Modals/ShopPromptModal';
 import DuelChoiceModal from '../Modals/DuelChoiceModal';
 import InventoryModal from '../Modals/InventoryModal';
+import ScribeModal from '../Modals/ScribeModal';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ChargePickerModal from '../Modals/ChargePickerModal';
 import SpecPickerModal from '../Modals/SpecPickerModal';
@@ -57,8 +59,10 @@ export default function GameLayout() {
   const reset = useGameStore((s) => s.reset);
   const openShop = useGameStore((s) => s.openShop);
   const openInventory = useGameStore((s) => s.openInventory);
+  const openScribe = useGameStore((s) => s.openScribe);
   const devAddMoney = useGameStore((s) => s.devAddMoney);
   const itemsOn = useGameStore((s) => s.itemsEnabled());
+  const scribeOn = useGameStore((s) => extOn(s.extensions, 'enchant'));
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
 
@@ -121,6 +125,14 @@ export default function GameLayout() {
                 {bagUnitCount(team.bag) > 0 && (
                   <span className="hud-imgbtn-badge">{bagUnitCount(team.bag)}</span>
                 )}
+              </button>
+            )}
+
+            {/* Autel du Scribe (extension Enchantement) : créer un parchemin custom */}
+            {itemsOn && scribeOn && (
+              <button onClick={openScribe} aria-label={T('game.openScribe')} title={T('game.openScribe')}
+                style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 18px', borderRadius: 18, border: '2px solid #b98cff', background: 'linear-gradient(180deg,#7a4fae,#5a2f8e)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 16, cursor: 'pointer', boxShadow: '0 6px 16px rgba(90,47,142,0.45), inset 0 1px 0 rgba(255,255,255,0.25)' }}>
+                <span style={{ fontSize: 26 }}>{'\u{2712}\u{FE0F}'}</span>{T('game.scribeBtn')}
               </button>
             )}
 
@@ -259,6 +271,7 @@ export default function GameLayout() {
       <ShopModal />
       <ShopPromptModal />
       <InventoryModal />
+      <ScribeModal />
       <FightModal />
       <DuelChoiceModal />
       <LootReveal />

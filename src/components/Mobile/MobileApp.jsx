@@ -2163,7 +2163,7 @@ export default function MobileApp() {
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'trade' && hasExchange ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} hasTrade={hasTrade} hasDiplo={hasDiplo} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
-      : tab === 'scribe' && hasScribe ? <ScribeView session={session} teamIdx={teamIdx} code={code} token={token} />
+      : tab === 'scribe' && hasScribe ? <ScribeView team={session.teams[teamIdx]} en={!!session.englishMode} onInscribe={(parts) => { sendIntent(code, token, 'craftParchment', { parts }).catch(() => {}); }} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     content = (
