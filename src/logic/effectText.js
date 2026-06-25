@@ -112,6 +112,7 @@ export function describeAction(a, lang = getLang()) {
         itemStealImmune: 'immune to item theft',
         goldStealImmune: 'immune to gold theft',
         reflectChance: `${amountLabel(b.n ?? 0, lang)}% chance to reflect a negative effect`,
+        moveDieSides: `movement die becomes a D${b.n ?? 6}`,
       } : {
         themeBonus: `+${amountLabel(b.n ?? 5, lang)} or par bonne réponse${b.subject ? ` en ${subjName(b.subject, lang)}` : ''}`,
         advanceOnCorrect: `avance de ${amountLabel(b.n ?? 'd4', lang)} à chaque bonne réponse`,
@@ -124,11 +125,13 @@ export function describeAction(a, lang = getLang()) {
         itemStealImmune: "immunisé au vol d'objet",
         goldStealImmune: "immunisé au vol d'or",
         reflectChance: `${amountLabel(b.n ?? 0, lang)}% de chance de renvoyer un effet négatif`,
+        moveDieSides: `dé de mouvement transformé en D${b.n ?? 6}`,
       };
       return `${dur}, ${tgt} : ${D[b.type] || b.type}`;
     }
     case 'blockPowers': return en ? `blocks ${who}'s powers for ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}` : `bloque les pouvoirs de ${who} pendant ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}`;
     case 'blockConsumables': return en ? `blocks ${who}'s consumables for ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}` : `bloque les consommables de ${who} pendant ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}`;
+    case 'loseItem': return en ? `makes ${who} lose an item${a.fallbackGold ? ` (or −${amountLabel(a.fallbackGold, lang)} gold)` : ''}` : `fait perdre un objet à ${who}${a.fallbackGold ? ` (ou −${amountLabel(a.fallbackGold, lang)} or)` : ''}`;
     case 'hideWrong': return en ? `removes ${amountLabel(a.n ?? 1, lang)} ${wrongAnsW(a.n ?? 1, lang)}` : `élimine ${amountLabel(a.n ?? 1, lang)} ${wrongAnsW(a.n ?? 1, lang)}`;
     case 'shieldNext': return en ? `shield (cancels ${amountLabel(a.n ?? 1, lang)} ${setbackW(a.n ?? 1, lang)})` : `bouclier (annule ${amountLabel(a.n ?? 1, lang)} ${setbackW(a.n ?? 1, lang)})`;
     case 'fumigene': return en

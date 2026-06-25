@@ -6,9 +6,15 @@
 // (relançable). Les parchemins (Enchantement) et le reste du catalogue sont
 // intacts.
 //
-//   node scripts/seed-alchemy.mjs
+//   node scripts/seed-alchemy.mjs                 (ingrédients + potions + recettes)
+//   node scripts/seed-alchemy.mjs --potions-only  (potions + recettes SEULEMENT)
+//
+// ⚠️ --potions-only PRÉSERVE les ingrédients en DB (effets édités à la main) :
+//    il ne purge/réinsère QUE les potions et les recettes.
 import { createClient } from '@supabase/supabase-js';
 import { INGREDIENTS, POTIONS, ALCHEMY_RECIPES } from '../src/data/alchemyGen.js';
+
+const POTIONS_ONLY = process.argv.includes('--potions-only');
 
 const URL = process.env.VITE_SUPABASE_URL || 'https://tppecozmygtjmbcdqgfc.supabase.co';
 const KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_tVHWrjNRFN_RDTuD5PEdkA_uMaP7HXJ';
@@ -28,20 +34,25 @@ async function insertAll(table, rows) {
 
 const itemRows = [];
 let ord = 1000;
-for (const [key, it] of Object.entries(INGREDIENTS)) {
-  itemRows.push({ key, name: it.name, icon: it.icon, img: it.img ?? null, slot: 'consumable', rarity: it.rarity, price: it.price, loot_only: false, effects: it.effects, family: 'ingredient', description: it.desc, enabled: true, ord: ord++ });
+if (!POTIONS_ONLY) {
+  for (const [key, it] of Object.entries(INGREDIENTS)) {
+    itemRows.push({ key, name: it.name, icon: it.icon, img: it.img ?? null, slot: 'consumable', rarity: it.rarity, price: it.price, loot_only: false, effects: it.effects, family: 'ingredient', description: it.desc, enabled: true, ord: ord++ });
+  }
 }
+ord = Math.max(ord, 2000); // potions après les ingrédients
 for (const [key, p] of Object.entries(POTIONS)) {
   itemRows.push({ key, name: p.name, icon: p.icon, img: p.img ?? null, slot: 'consumable', rarity: p.rarity, price: 0, loot_only: true, effects: p.effects, family: 'potion', description: p.desc, enabled: true, ord: ord++ });
 }
 const recipeRows = ALCHEMY_RECIPES.map((r, i) => ({ key: r.id, ingredients: r.ingredients, potion: r.potion, enabled: true, ord: i }));
 
-console.log(`Préparé : ${Object.keys(INGREDIENTS).length} ingrédients + ${Object.keys(POTIONS).length} potions = ${itemRows.length} items ; ${recipeRows.length} recettes.`);
+const families = POTIONS_ONLY ? ['potion'] : ['ingredient', 'potion'];
+console.log(`Mode : ${POTIONS_ONLY ? 'POTIONS-ONLY (ingrédients préservés)' : 'complet'}`);
+console.log(`Préparé : ${itemRows.length} items (${families.join('/')}) ; ${recipeRows.length} recettes.`);
 
-// 1) purge ancien set alchimie (ingredient/potion uniquement — parchemins gardés)
-console.log('Purge ancien set ingredient/potion…');
+// 1) purge l'ancien set (ingredient+potion en complet ; potion seul en --potions-only)
+console.log(`Purge ancien set ${families.join('/')}…`);
 {
-  const { error } = await supabase.from('quete_items').delete().in('family', ['ingredient', 'potion']);
+  const { error } = await supabase.from('quete_items').delete().in('family', families);
   if (error) throw new Error('purge items: ' + error.message);
 }
 console.log('Purge des recettes existantes…');

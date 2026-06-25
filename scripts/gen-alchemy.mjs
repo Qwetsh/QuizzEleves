@@ -7,10 +7,9 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
-  INGREDIENTS, TEMPLATES, AXIS_POWER, AXIS_THRESHOLD, MAX_POTION_EFFECTS, MAX_INGREDIENT_EFFECTS,
-  RARITY_SPLIT, FOE_TARGETS, FORMS, FORMS_EN, AXIS_FLAVOR, RARITY_EN, LEGENDARY_ICON, NEGATIVE,
-  POTION_ART, POTION_ART_FALLBACK,
+  INGREDIENTS, MAX_INGREDIENT_EFFECTS, RARITY_SPLIT, FORMS, FORMS_EN, RARITY_EN, LEGENDARY_ICON,
 } from './alchemy-palette.mjs';
+import { buildPotionEffects } from './potion-effects.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -45,9 +44,20 @@ function soloEffects(ing) {
   return out;
 }
 
+// Montant lisible : nombre, dé ('dN'), ou valeur à l'échelle ({per,factor,base}).
+const PER_FR = { streak: 'série', precision: 'précis.', correct: 'bonnes', wrong: 'erreurs', timeleft: 'temps' };
+const PER_EN = { streak: 'streak', precision: 'prec.', correct: 'correct', wrong: 'wrong', timeleft: 'time' };
+function amtLabel(n, en) {
+  if (n && typeof n === 'object') {
+    if (n.per) return `${n.base}+${n.factor}·${(en ? PER_EN : PER_FR)[n.per] || n.per}`;
+    return '?';
+  }
+  return String(n);
+}
+
 // --- Description lisible d'une action (pour desc potion) ----------------------
 function describe(a) {
-  const t = (n) => (typeof n === 'object' ? '?' : n);
+  const t = (n) => amtLabel(n, false);
   switch (a.action) {
     case 'money': {
       const who = a.target === 'self' ? '' : (a.target === 'allOthers' ? ' aux autres' : (a.target === 'target' ? ' à une équipe' : ' à un adversaire'));
@@ -69,11 +79,16 @@ function describe(a) {
     case 'randomPathNext': return 'voie aléatoire (autres)';
     case 'blockPowers': return `bloque pouvoirs ${t(a.turns)}T (autres)`;
     case 'blockConsumables': return `bloque conso ${t(a.turns)}T (autres)`;
+    case 'loseItem': return `vole un objet (autres)`;
+    case 'placeTrap': return 'pose un piège';
     case 'buff': {
       const b = a.buff || {};
       if (b.type === 'themeBonus') return `+${t(b.n)} or/bonne rép. (${b.turns}T)`;
       if (b.type === 'advanceOnCorrect') return `avance/bonne rép. (${b.turns}T)`;
       if (b.type === 'diceBonus') return `dé +${t(b.n)} (${b.turns}T)`;
+      if (b.type === 'moveDieSides') return `dé de mvt d${t(b.n)} (${b.turns}T)`;
+      if (b.type === 'noRecul') return `aucun recul (${b.turns}T)`;
+      if (b.type === 'loseOnWrong') return `−${t(b.n)} or si erreur (${b.turns}T)`;
       if (b.type === 'duelImmune') return `immunité duel (${b.turns}T)`;
       if (b.type === 'bleedGold') return `saignement ${t(b.n)} or/tour (${b.turns}T${b.mode === 'steal' ? ', volé' : ''})`;
       if (b.type === 'reflectChance') return `renvoi ${t(b.n)}% (${b.turns}T)`;
@@ -87,7 +102,7 @@ function describe(a) {
 
 // --- Variante ANGLAISE de describe() (pour desc_en des potions) ---------------
 function describeEn(a) {
-  const t = (n) => (typeof n === 'object' ? '?' : n);
+  const t = (n) => amtLabel(n, true);
   switch (a.action) {
     case 'money': {
       const who = a.target === 'self' ? '' : (a.target === 'allOthers' ? ' from others' : (a.target === 'target' ? ' from a team' : ' from an opponent'));
@@ -109,11 +124,16 @@ function describeEn(a) {
     case 'randomPathNext': return 'random path (others)';
     case 'blockPowers': return `block powers ${t(a.turns)}T (others)`;
     case 'blockConsumables': return `block consumables ${t(a.turns)}T (others)`;
+    case 'loseItem': return 'steal an item (others)';
+    case 'placeTrap': return 'set a trap';
     case 'buff': {
       const b = a.buff || {};
       if (b.type === 'themeBonus') return `+${t(b.n)} gold/correct (${b.turns}T)`;
       if (b.type === 'advanceOnCorrect') return `advance/correct (${b.turns}T)`;
       if (b.type === 'diceBonus') return `die +${t(b.n)} (${b.turns}T)`;
+      if (b.type === 'moveDieSides') return `move die d${t(b.n)} (${b.turns}T)`;
+      if (b.type === 'noRecul') return `no setback (${b.turns}T)`;
+      if (b.type === 'loseOnWrong') return `−${t(b.n)} gold on wrong (${b.turns}T)`;
       if (b.type === 'duelImmune') return `duel immunity (${b.turns}T)`;
       if (b.type === 'bleedGold') return `bleed ${t(b.n)} gold/turn (${b.turns}T${b.mode === 'steal' ? ', stolen' : ''})`;
       if (b.type === 'reflectChance') return `reflect ${t(b.n)}% (${b.turns}T)`;
@@ -125,49 +145,12 @@ function describeEn(a) {
   }
 }
 
-// --- Génération d'une potion pour une combinaison de 3 ingrédients ------------
-function buildPotion(ings, rng) {
-  // 1) somme des scores d'axe
-  const score = {};
-  for (const ing of ings) for (const [ax, w] of Object.entries(ing.profile)) score[ax] = (score[ax] || 0) + w;
-  // 2) matière favorite dominante (pour themeBuff) = celle de l'ingrédient au plus gros poids
-  const subj = [...ings].sort((a, b) => Object.values(b.profile).reduce((s, v) => s + v, 0) - Object.values(a.profile).reduce((s, v) => s + v, 0))[0].favSubject;
-  // 3) axes retenus, triés par score×puissance, plafonnés
-  const axes = Object.entries(score)
-    .filter(([, v]) => v >= AXIS_THRESHOLD)
-    .sort((a, b) => (b[1] * (AXIS_POWER[b[0]] || 1)) - (a[1] * (AXIS_POWER[a[0]] || 1)))
-    .slice(0, MAX_POTION_EFFECTS)
-    .map(([ax]) => ax);
-  // 4) construit les actions
-  const actions = [];
-  let rollTable = null;
-  let power = 0;
-  for (const ax of axes) {
-    const m = score[ax];
-    power += m * (AXIS_POWER[ax] || 1);
-    const ft = NEGATIVE.includes(ax) ? pick(rng, FOE_TARGETS) : null;
-    const out = TEMPLATES[ax](m, rng, subj, ft);
-    for (const a of out) {
-      if (a.kind === 'inline-roll') { rollTable = a.table; continue; }
-      // chance occasionnelle pour varier (sur effets positifs non vitaux)
-      if (!NEGATIVE.includes(ax) && rng() < 0.12) a.chance = 0.75;
-      actions.push(a);
-    }
-  }
-  // 5) renvoie les briques brutes ; l'assemblage (avec plafond par rareté) se
-  // fait après l'attribution de rareté.
-  return { actions, rollTable, power, axes, subj, score };
-}
-
-// Plafond d'effets par rareté (la rareté donne sa « richesse » à la potion).
-const EFFECT_CAP = { commun: 2, rare: 4, legendaire: 6 };
-// Assemble le trigger on:'use' final en respectant le plafond (actions triées
-// par puissance ; la table d6 compte pour 1 effet, gardée en dernier).
-function assembleEffects(actions, rollTable, cap) {
-  const kept = actions.slice(0, rollTable ? Math.max(0, cap - 1) : cap);
+// Assemble le trigger on:'use' final à partir des actions du distributeur
+// (potion-effects.mjs) + table de hasard optionnelle. Garantit ≥1 effet.
+function assembleEffects(actions, rollTable) {
   const trigger = { kind: 'trigger', on: 'use' };
-  if (kept.length) trigger.do = kept;
-  if (rollTable && cap - kept.length >= 1) { trigger.roll = 'd6'; trigger.table = rollTable; }
+  if (actions.length) trigger.do = actions;
+  if (rollTable) { trigger.roll = 'd6'; trigger.table = rollTable; }
   if (!trigger.do && !trigger.table) trigger.do = [{ action: 'money', mode: 'gain', target: 'self', n: 5, unit: 'flat' }];
   const descParts = (trigger.do || []).map(describe).concat(trigger.table ? ['🎲 hasard'] : []);
   const descPartsEn = (trigger.do || []).map(describeEn).concat(trigger.table ? ['🎲 chance'] : []);
@@ -195,56 +178,37 @@ for (let i = 0; i < INGREDIENTS.length; i++)
     for (let k = j + 1; k < INGREDIENTS.length; k++)
       combos.push([i, j, k]);
 
-const built = combos.map(([i, j, k]) => {
-  const rng = mulberry32(comboSeed(i, j, k));
-  const ings = [INGREDIENTS[i], INGREDIENTS[j], INGREDIENTS[k]];
-  const p = buildPotion(ings, rng);
-  return { i, j, k, ings, ...p };
-});
+const built = combos.map(([i, j, k]) => ({ i, j, k, ings: [INGREDIENTS[i], INGREDIENTS[j], INGREDIENTS[k]] }));
 
-// Rareté par percentile de puissance (respecte RARITY_SPLIT) + influence des
-// ingrédients légendaires (un légendaire pousse vers le haut).
-const legendaryBonus = (ings) => ings.filter((g) => g.rarity === 'legendaire').length * 6 + ings.filter((g) => g.rarity === 'rare').length * 1.5;
-built.forEach((b) => { b.rank = b.power + legendaryBonus(b.ings); });
-const sorted = [...built].sort((a, b) => a.rank - b.rank);
-const nCommon = Math.round(sorted.length * RARITY_SPLIT.commun);
-const nRare = Math.round(sorted.length * RARITY_SPLIT.rare);
-sorted.forEach((b, idx) => { b.rarity = idx < nCommon ? 'commun' : idx < nCommon + nRare ? 'rare' : 'legendaire'; });
+// Rareté : répartition déterministe (RARITY_SPLIT) via mélange semé des combos.
+// La puissance n'est plus un critère (distribution d'effets pilotée, pas dérivée).
+const rarRng = mulberry32(20260626);
+const order = built.map((_, idx) => idx);
+for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rarRng() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+const nCommon = Math.round(built.length * RARITY_SPLIT.commun);
+const nRare = Math.round(built.length * RARITY_SPLIT.rare);
+order.forEach((bi, rank) => { built[bi].rarity = rank < nCommon ? 'commun' : rank < nCommon + nRare ? 'rare' : 'legendaire'; });
 
-// Plancher de rareté GRADUÉ par magnitude : certains axes sont forts. Un effet
-// substantiel (score ≥ 2) pousse la potion au minimum en « rare » ; cumulé
-// (score ≥ 3, ex. deux ingrédients ou un légendaire renforcé) → « légendaire ».
-// Un effet mineur (score 1, un seul ingrédient rare) peut rester commun.
-const RARITY_ORDER = { commun: 0, rare: 1, legendaire: 2 };
-const STRONG_FLOOR_AXES = new Set(['reflect', 'foeBleed', 'foeSilence', 'foeGag']);
-built.forEach((b) => {
-  let strongMax = 0;
-  for (const ax of b.axes) if (STRONG_FLOOR_AXES.has(ax)) strongMax = Math.max(strongMax, b.score[ax] || 0);
-  const floor = strongMax >= 3 ? 'legendaire' : strongMax >= 2 ? 'rare' : null;
-  if (floor && RARITY_ORDER[b.rarity] < RARITY_ORDER[floor]) b.rarity = floor;
-});
-
-// Construit potions + recettes (effets plafonnés selon la rareté)
+// Construit potions + recettes via le distributeur d'effets équilibré.
 const potionsOut = {};
 const recipes = [];
 const effCounts = [];
 let formCounter = 0;
 built.forEach((b) => {
   const key = `pot${pad2(b.i)}${pad2(b.j)}${pad2(b.k)}`;
-  const domAxis = b.axes[0] || 'gold';
-  const flavor = AXIS_FLAVOR[domAxis] || AXIS_FLAVOR.gold;
+  const rng = mulberry32(comboSeed(b.i, b.j, b.k));
+  const { actions, rollTable, flavor, art } = buildPotionEffects(rng, b.rarity);
   const formIdx = (formCounter++) % FORMS.length;
-  const form = FORMS[formIdx];
-  const name = `${form} ${flavor.word}`;
+  const name = `${FORMS[formIdx]} ${flavor.word}`;
   const name_en = `${FORMS_EN[formIdx]} ${flavor.word_en}`;
   const icon = b.rarity === 'legendaire' ? LEGENDARY_ICON : flavor.icon;
-  const { effects, descParts, descPartsEn } = assembleEffects(b.actions, b.rollTable, EFFECT_CAP[b.rarity]);
+  const { effects, descParts, descPartsEn } = assembleEffects(actions, rollTable);
   effCounts.push((effects[0].do?.length || 0) + (effects[0].table ? 1 : 0));
   const desc = `Potion ${b.rarity}. ${descParts.slice(0, 5).join(', ') || 'effet mineur'}.`;
   const desc_en = `${RARITY_EN[b.rarity] || 'Common'} potion. ${descPartsEn.slice(0, 5).join(', ') || 'minor effect'}.`;
-  // Visuel : une des fioles dessinées, choisie par l'AXE DOMINANT (cohérent avec
-  // l'effet) puis index déterministe (hash de la combinaison) → variété stable.
-  const artList = POTION_ART[domAxis] || POTION_ART_FALLBACK;
+  // Visuel : fiole choisie par l'effet DOMINANT (art du distributeur) + index
+  // déterministe (hash de la combinaison) → variété stable et cohérente.
+  const artList = art && art.length ? art : ['r2c2', 'r4c2', 'r3c3', 'r1c2'];
   const img = 'alc-pot-' + artList[Math.abs(b.i * 131 + b.j * 17 + b.k * 7) % artList.length];
   potionsOut[key] = {
     name, name_en, icon, img, slot: 'consumable', family: 'potion', rarity: b.rarity, price: 0, lootOnly: true,

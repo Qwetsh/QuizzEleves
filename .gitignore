@@ -13,3 +13,6 @@ art/
 # Artefacts transitoires de la traduction des questions (la base = source de vérité)
 scripts/generated/to-translate.json
 scripts/generated/translated.json
+
+# Sauvegardes DB locales (restauration)
+backups/
