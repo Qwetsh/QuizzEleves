@@ -219,6 +219,37 @@ function DemoGeo() {
   );
 }
 
+// 7) Memory (paires) : deux cartes se retournent et révèlent une paire qui matche
+function DemoMemory() {
+  const cells = [0, 1, 2, 3, 4, 5];
+  // les cartes 1 et 4 forment la paire révélée (dog / chien)
+  const reveal = { 1: 'dog', 4: 'chien' };
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 64px)', gridTemplateRows: 'repeat(2, 56px)', gap: 10 }}>
+        {cells.map((c) => {
+          const isPair = c === 1 || c === 4;
+          return (
+            <motion.div
+              key={c}
+              style={{ borderRadius: 10, display: 'grid', placeItems: 'center', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14, border: '2px solid #b89a5e', overflow: 'hidden' }}
+              animate={isPair
+                ? { background: ['radial-gradient(circle at 50% 30%,#6a4f8a,#3a2a55)', 'radial-gradient(circle at 50% 30%,#6a4f8a,#3a2a55)', 'linear-gradient(180deg,#d1f0b8,#fffdf7)', 'linear-gradient(180deg,#d1f0b8,#fffdf7)'], color: ['#3a2a55', '#3a2a55', '#3a5a18', '#3a5a18'], borderColor: ['#b89a5e', '#b89a5e', '#5b8c3a', '#5b8c3a'] }
+                : { background: 'radial-gradient(circle at 50% 30%,#6a4f8a,#3a2a55)', color: '#3a2a55' }}
+              transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.55, 1] }}
+            >
+              {isPair
+                ? <motion.span animate={{ opacity: [0, 0, 1, 1] }} transition={{ duration: 3, repeat: Infinity, times: [0, 0.5, 0.6, 1] }}>{reveal[c]}</motion.span>
+                : <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)' }}>{'❓'}</span>}
+            </motion.div>
+          );
+        })}
+      </div>
+      <FloatPlus x={150} val="paire !" color="#7bd66a" />
+    </div>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
   pickAnswer: DemoPickAnswer,
@@ -226,6 +257,7 @@ const DEMOS = {
   compute: DemoCompute,
   word: DemoWord,
   geo: DemoGeo,
+  memory: DemoMemory,
 };
 
 function DemoScreen({ type }) {

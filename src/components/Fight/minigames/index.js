@@ -4,9 +4,10 @@ import TimelineGame from './TimelineGame.jsx';
 import CompteEstBon from './CompteEstBon.jsx';
 import MotLePlusLong from './MotLePlusLong.jsx';
 import GeoDuel from './GeoDuel.jsx';
+import MemoryGame from './MemoryGame.jsx';
 import {
   IRREGULAR_VERBS, REGULAR_VERBS, SVT_CHALLENGES, TIMELINE_EVENTS,
-  MOVIE_EVENTS, RPG_CHALLENGE,
+  MOVIE_EVENTS, RPG_CHALLENGE, MEMORY_VOCAB,
 } from '../../../data/fightData';
 
 /**
@@ -29,6 +30,7 @@ const ENGINES = {
   maths: { Component: CompteEstBon, persistent: false },
   french: { Component: MotLePlusLong, persistent: false },
   geo: { Component: GeoDuel, persistent: true, pointsBased: true },
+  memory: { Component: MemoryGame, persistent: false },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -83,6 +85,11 @@ const THEME_MINIGAMES = {
     engine: 'bubble', content: [RPG_CHALLENGE],
     name: 'fight.mg.jeuxvideo.name', rules: 'fight.mg.jeuxvideo.rules',
     howto: { demo: 'tapBubbles', goal: 'fight.mg.jeuxvideo.goal', steps: ['fight.mg.jeuxvideo.step1', 'fight.mg.jeuxvideo.step2', 'fight.mg.jeuxvideo.step3', 'fight.mg.jeuxvideo.step4'] },
+  },
+  vocabulaire: {
+    engine: 'memory', content: MEMORY_VOCAB,
+    name: 'fight.mg.vocabulaire.name', rules: 'fight.mg.vocabulaire.rules',
+    howto: { demo: 'memory', goal: 'fight.mg.vocabulaire.goal', steps: ['fight.mg.vocabulaire.step1', 'fight.mg.vocabulaire.step2', 'fight.mg.vocabulaire.step3', 'fight.mg.vocabulaire.step4'] },
   },
 };
 

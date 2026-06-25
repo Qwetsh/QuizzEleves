@@ -36,6 +36,13 @@ describe('mini-jeux — registre piloté par les données', () => {
     expect(films.Component).toBe(getMinigame('histoire').Component);
     expect(jv.Component).toBe(getMinigame('anglais').Component);
   });
+
+  it('le moteur Memory expose un contenu de paires { a, b }', () => {
+    const mem = getMinigame('vocabulaire');
+    expect(typeof mem.Component).toBe('function');
+    expect(mem.content.length).toBeGreaterThanOrEqual(6);
+    expect(mem.content.every((p) => typeof p.a === 'string' && typeof p.b === 'string')).toBe(true);
+  });
 });
 
 describe('BubbleHunt — anti-triche (2 plannings)', () => {

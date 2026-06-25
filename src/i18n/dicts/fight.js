@@ -162,6 +162,19 @@ export default {
   'fight.mg.jeuxvideo.step3': { fr: 'Bon jeu +1, mauvais −1', en: 'Right game +1, wrong −1' },
   'fight.mg.jeuxvideo.step4': { fr: 'Le meilleur score en 30 s gagne la manche', en: 'The best score in 30 s wins the round' },
 
+  'fight.mg.vocabulaire.name': { fr: 'Memory des mots', en: 'Word Memory' },
+  'fight.mg.vocabulaire.rules': { fr: 'Chacun son tour, retournez 2 cartes pour associer chaque mot anglais à sa traduction. Paire trouvée = vous rejouez ! Le plus de paires gagne la manche.', en: 'Taking turns, flip 2 cards to match each English word with its translation. A pair found = play again! The most pairs wins the round.' },
+  'fight.mg.vocabulaire.goal': { fr: 'Retrouvez les paires mot ↔ traduction', en: 'Find the word ↔ translation pairs' },
+  'fight.mg.vocabulaire.step1': { fr: 'Chacun son tour, retournez 2 cartes', en: 'Taking turns, flip 2 cards' },
+  'fight.mg.vocabulaire.step2': { fr: 'Une paire (mot + traduction) = +1 et vous rejouez', en: 'A pair (word + translation) = +1 and you play again' },
+  'fight.mg.vocabulaire.step3': { fr: 'Sinon, les cartes se retournent et c\'est à l\'autre', en: 'Otherwise, the cards flip back and it\'s the other\'s turn' },
+  'fight.mg.vocabulaire.step4': { fr: 'Le plus de paires à la fin gagne la manche', en: 'The most pairs at the end wins the round' },
+
+  // Libellés du moteur Memory (in-game).
+  'fight.memory.turn': { fr: 'Au tour de', en: 'Turn:' },
+  'fight.memory.tie': { fr: 'Égalité ! On rejoue.', en: 'Tie! Replaying.' },
+  'fight.memory.hint': { fr: 'Retournez 2 cartes — une paire et vous rejouez !', en: 'Flip 2 cards — a pair and you play again!' },
+
   'fight.mg.default.name': { fr: 'Duel de rapidité', en: 'Speed Duel' },
   'fight.mg.default.rules': { fr: 'La même question des deux côtés : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'The same question on both sides: the first to tap the right answer wins the round. A mistake locks your side!' },
   'fight.mg.default.goal': { fr: 'Le plus rapide à trouver la bonne réponse gagne', en: 'The fastest to find the right answer wins' },

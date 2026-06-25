@@ -136,6 +136,27 @@ export const TIMELINE_EVENTS = [
   { name: 'Mise en circulation de l\'euro', year: 2002 },
 ];
 
+// --- Vocabulaire (moteur `memory`) : associer chaque mot anglais à sa traduction ---
+// Forme générique `memory` : [{ a, b }] = deux faces liées d'une paire.
+export const MEMORY_VOCAB = [
+  { a: 'dog', b: 'chien' },
+  { a: 'house', b: 'maison' },
+  { a: 'water', b: 'eau' },
+  { a: 'book', b: 'livre' },
+  { a: 'tree', b: 'arbre' },
+  { a: 'sun', b: 'soleil' },
+  { a: 'school', b: 'école' },
+  { a: 'friend', b: 'ami' },
+  { a: 'cat', b: 'chat' },
+  { a: 'bread', b: 'pain' },
+  { a: 'horse', b: 'cheval' },
+  { a: 'flower', b: 'fleur' },
+  { a: 'night', b: 'nuit' },
+  { a: 'king', b: 'roi' },
+  { a: 'island', b: 'île' },
+  { a: 'fire', b: 'feu' },
+];
+
 export function shuffle(arr) {
   const p = arr.slice();
   for (let i = p.length - 1; i > 0; i--) {
