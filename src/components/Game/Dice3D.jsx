@@ -1,4 +1,5 @@
 import { useT } from '../../i18n';
+import { FORGE_EFFECTS, FORGE_FAMILY_COLOR } from '../../logic/forgeEffects';
 
 const DICE_FACE_ROT = {
   1: { x: 0,    y: 0 },
@@ -31,7 +32,20 @@ function PipPattern({ n }) {
   );
 }
 
-function DiceFace({ pips, side, size, number }) {
+// Rendu d'UNE face forgée : valeur de déplacement + icône d'effet (couleur de
+// famille). Utilisé quand le dé est personnalisé (extension Forge).
+function ForgedFace({ face, size }) {
+  const meta = face?.effect?.type ? FORGE_EFFECTS[face.effect.type] : null;
+  const color = (meta && FORGE_FAMILY_COLOR[meta.family]) || '#3a2c18';
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'grid', placeItems: 'center' }}>
+      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: size * 0.44, lineHeight: 1, color }}>{face?.value ?? 0}</span>
+      {meta && <span style={{ position: 'absolute', bottom: size * 0.07, fontSize: size * 0.2 }}>{meta.icon}</span>}
+    </div>
+  );
+}
+
+function DiceFace({ pips, side, size, number, face }) {
   const half = size / 2;
   const transforms = {
     front:  `rotateY(0deg) translateZ(${half}px)`,
@@ -46,7 +60,9 @@ function DiceFace({ pips, side, size, number }) {
       className="dice3d-face"
       style={{ width: size, height: size, transform: transforms[side] }}
     >
-      {number != null
+      {face
+        ? <ForgedFace face={face} size={size} />
+        : number != null
         ? <span style={{
             display: 'grid', placeItems: 'center', width: '100%', height: '100%',
             fontFamily: 'var(--font-display)', fontWeight: 800,
@@ -57,11 +73,12 @@ function DiceFace({ pips, side, size, number }) {
   );
 }
 
-export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false }) {
+export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false, faces = null }) {
   const T = useT();
-  // Au-delà d'un D6 (ex. D10 → 7..10), le cube à pips ne peut pas représenter la
-  // face : on présente la face avant (rotation 0) avec le NOMBRE écrit.
-  const numeric = value > 6;
+  // Dé personnalisé (Forge) : chaque face du cube porte sa face forgée. Sinon,
+  // au-delà d'un D6 (legacy), on écrit le nombre sur la face avant.
+  const f = Array.isArray(faces) && faces.length === 6 ? faces : null;
+  const numeric = !f && value > 6;
   const target = numeric ? { x: 0, y: 0 } : (DICE_FACE_ROT[value] || DICE_FACE_ROT[1]);
   const spins = rolling ? 4 : 0;
   const rotX = target.x + spins * 360 + (rolling ? 720 : 0);
@@ -87,12 +104,12 @@ export default function Dice3D({ value = 1, rolling = false, size = 96, onClick,
             : 'transform 480ms cubic-bezier(.34,1.56,.64,1)',
         }}
       >
-        <DiceFace pips={1} side="front"  size={size} number={numeric ? value : null} />
-        <DiceFace pips={6} side="back"   size={size} />
-        <DiceFace pips={3} side="top"    size={size} />
-        <DiceFace pips={4} side="bottom" size={size} />
-        <DiceFace pips={2} side="right"  size={size} />
-        <DiceFace pips={5} side="left"   size={size} />
+        <DiceFace pips={1} side="front"  size={size} number={numeric ? value : null} face={f ? f[0] : null} />
+        <DiceFace pips={6} side="back"   size={size} face={f ? f[5] : null} />
+        <DiceFace pips={3} side="top"    size={size} face={f ? f[2] : null} />
+        <DiceFace pips={4} side="bottom" size={size} face={f ? f[3] : null} />
+        <DiceFace pips={2} side="right"  size={size} face={f ? f[1] : null} />
+        <DiceFace pips={5} side="left"   size={size} face={f ? f[4] : null} />
       </div>
     </div>
   );

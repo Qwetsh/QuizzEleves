@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
+import { extOn } from '../../extensions/registry';
+import { getDieFaces } from '../../logic/forge';
+import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { soundDice } from '../../logic/sounds';
 import '../../styles/dice-roll-modal.css';
 
@@ -83,12 +86,19 @@ export default function DiceRollModal() {
   const diceValue = useGameStore((s) => s.diceValue);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
+  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
   const completeDiceRoll = useGameStore((s) => s.completeDiceRoll);
 
   const [phase, setPhase] = useState('intro');
 
   const team = teams[currentTeam];
   const accent = team?.color || '#888';
+  // Forge : le dé montre les faces forgées ; la face tirée (slot = diceValue)
+  // donne la VALEUR de déplacement et l'effet à révéler (≠ adresse du slot).
+  const faces = forgeOn && team ? getDieFaces(team) : null;
+  const landed = faces && diceValue ? faces[((diceValue - 1) % 6 + 6) % 6] : null;
+  const moveVal = landed ? landed.value : diceValue;
+  const landedMeta = landed?.effect?.type ? FORGE_EFFECTS[landed.effect.type] : null;
 
   useEffect(() => {
     if (!showDiceModal) return;
@@ -145,12 +155,13 @@ export default function DiceRollModal() {
           )}
 
           <div className={'dice-modal-dice ' + (phase === 'reveal' || phase === 'outro' ? 'is-revealed' : '')}>
-            <Dice3D value={diceValue} rolling={phase !== 'intro'} size={220} />
+            <Dice3D value={diceValue} rolling={phase !== 'intro'} size={220} faces={faces} />
           </div>
 
           {(phase === 'reveal' || phase === 'outro') && (
             <div className="dice-modal-value-badge">
-              <span className="dice-modal-value-num">{diceValue}</span>
+              <span className="dice-modal-value-num">{moveVal}</span>
+              {landedMeta && <span style={{ fontSize: 22, marginLeft: 4 }}>{landedMeta.icon}</span>}
             </div>
           )}
         </div>
@@ -166,7 +177,7 @@ export default function DiceRollModal() {
           )}
           {(phase === 'reveal' || phase === 'outro') && (
             <div className="dice-modal-caption-reveal">
-              <span className="dice-modal-caption-big">{diceValue === 1 ? T('modal.dice.oneSquare') : T('modal.dice.nSquares', { n: diceValue })}</span>
+              <span className="dice-modal-caption-big">{moveVal === 1 ? T('modal.dice.oneSquare') : T('modal.dice.nSquares', { n: moveVal })}</span>
               <span className="dice-modal-caption-sub">{T('modal.dice.toTravel')}</span>
             </div>
           )}
