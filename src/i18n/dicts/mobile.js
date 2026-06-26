@@ -85,6 +85,18 @@ export default {
   'mobile.emptyStall': { fr: "Étal vide pour l'instant…", en: 'Stall is empty for now…' },
   'mobile.shopHintOwned': { fr: "Touche un objet pour voir ses effets et l'acheter.", en: 'Tap an item to see its effects and buy it.' },
   'mobile.shopHintReadonly': { fr: "Lecture seule · achats depuis le téléphone de l'équipe.", en: "Read-only · purchases from the team's phone." },
+  'mobile.forge': { fr: '🔨 Forge de dés', en: '🔨 Die forge' },
+  'mobile.forgeShop': { fr: '🎲 Faces à acheter', en: '🎲 Faces for sale' },
+  'mobile.forgeDie': { fr: 'Ton dé', en: 'Your die' },
+  'mobile.forgeReserve': { fr: 'Ta réserve', en: 'Your reserve' },
+  'mobile.forgeHint': { fr: 'Choisis une face de ta réserve, puis un emplacement du dé.', en: 'Pick a face from your reserve, then a die slot.' },
+  'mobile.forgeReserveEmpty': { fr: 'Réserve vide — achète des faces ci-dessus.', en: 'Empty reserve — buy faces above.' },
+  'mobile.forgeOverwrite': { fr: 'Écraser cette face ? (perdue)', en: 'Overwrite this face? (lost)' },
+  'mobile.forgeConfirm': { fr: 'Écraser', en: 'Overwrite' },
+  'mobile.forgeCancel': { fr: 'Annuler', en: 'Cancel' },
+  'mobile.forgeReadonly': { fr: "Lecture seule · forge depuis le téléphone de l'équipe.", en: "Read-only · forge from the team's phone." },
+  'mobile.facesEmpty': { fr: 'Aucune face en vente.', en: 'No faces on sale.' },
+  'mobile.buyFaceFor': { fr: 'Acheter ({price} 🪙)', en: 'Buy ({price} 🪙)' },
 
   // — Équipe (TeamView) —
   'mobile.gameOver': { fr: '🏁 Partie terminée', en: '🏁 Game over' },
@@ -233,6 +245,7 @@ export default {
   'mobile.tabTrade': { fr: 'Troc', en: 'Trade' },
   'mobile.tabAlchemy': { fr: 'Alchi', en: 'Alchemy' },
   'mobile.tabScribe': { fr: 'Scribe', en: 'Scribe' },
+  'mobile.tabForge': { fr: 'Forge', en: 'Forge' },
   'mobile.tabQuestions': { fr: 'Questions', en: 'Questions' },
   'mobile.tabHistory': { fr: 'Historique', en: 'History' },
 };

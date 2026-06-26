@@ -13,6 +13,8 @@ import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { extOn } from '../../extensions/registry';
+import { getDieFaces, isFaceForged } from '../../logic/forge';
+import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel } from '../../logic/forgeEffects';
 import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from '../../logic/pacts';
 import { tFor, setLang } from '../../i18n';
 import { locName, locDesc, loc } from '../../i18n/content';
@@ -665,6 +667,115 @@ function ShopView({ session, teamIdx, owned, code, token }) {
         </section>
       )}
       {sheet && <ItemSheet itemKey={sheet.itemKey} loc={sheet.loc} team={t} owned={owned} locked={locked} onAction={buy} onClose={() => setSheet(null)} T={T} />}
+    </div>
+  );
+}
+
+// Atelier de forge mobile : acheter des faces (vitrine) puis les poser sur le dé.
+function ForgeView({ session, teamIdx, owned, code, token }) {
+  const T = tFor(session?.englishMode);
+  const en = !!session?.englishMode;
+  const t = session.teams[teamIdx];
+  const faces = getDieFaces(t);
+  const reserve = t.faceStock || [];
+  const shopFaces = session.shopFaces || [];
+  const locked = (session.currentTeam === teamIdx && !!session.locked) || session.status === 'finished';
+  const [sel, setSel] = useState(null);       // index réserve sélectionné
+  const [confirm, setConfirm] = useState(null); // { slot } à écraser
+
+  const buy = (i) => { if (owned && !locked && code && token) sendIntent(code, token, 'buyFace', { faceIndex: i }).catch(() => {}); };
+  const forge = (slot, stock) => { if (owned && !locked && code && token) sendIntent(code, token, 'forgeFace', { slotIndex: slot, stockIndex: stock }).catch(() => {}); };
+  const place = (slot) => {
+    if (sel == null || !reserve[sel]) return;
+    if (isFaceForged(faces[slot])) { setConfirm({ slot }); return; }
+    forge(slot, sel); setSel(null);
+  };
+  const doConfirm = () => { forge(confirm.slot, sel); setConfirm(null); setSel(null); };
+
+  const colorOf = (f) => { const m = f?.effect?.type ? FORGE_EFFECTS[f.effect.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
+  const iconOf = (f) => (f?.effect?.type ? FORGE_EFFECTS[f.effect.type]?.icon : null);
+
+  return (
+    <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
+      <div className="mob-pick-head">{T('mobile.forge')}</div>
+
+      {/* Le dé : 6 slots */}
+      <section className="mob-section">
+        <div className="mob-section-title">{T('mobile.forgeDie')}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {faces.map((face, i) => {
+            const color = colorOf(face);
+            const clickable = owned && !locked && sel != null;
+            return (
+              <button key={i} type="button" onClick={() => clickable && place(i)} disabled={!clickable}
+                title={faceEffectLabel(face, en) || undefined}
+                style={{ position: 'relative', width: 56, height: 56, borderRadius: 12, border: `2px solid ${color}`,
+                  background: '#fffdf7', display: 'grid', placeItems: 'center', cursor: clickable ? 'pointer' : 'default',
+                  boxShadow: clickable ? `0 0 0 2px ${color}33` : 'none' }}>
+                <span style={{ position: 'absolute', top: 2, left: 5, fontSize: 10, color: '#9b7e4e', fontWeight: 700 }}>{i + 1}</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: '#3a2c18' }}>{face.value}</span>
+                {iconOf(face) && <span style={{ position: 'absolute', bottom: 1, right: 3, fontSize: 14 }}>{iconOf(face)}</span>}
+              </button>
+            );
+          })}
+        </div>
+        {confirm && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+            <span style={{ color: '#c0392b', fontWeight: 700, fontSize: 12.5 }}>{T('mobile.forgeOverwrite')}</span>
+            <button className="mob-btn mob-btn--gold" onClick={doConfirm}>{T('mobile.forgeConfirm')}</button>
+            <button className="mob-btn" onClick={() => setConfirm(null)}>{T('mobile.forgeCancel')}</button>
+          </div>
+        )}
+      </section>
+
+      {/* La réserve : faces achetées non posées */}
+      <section className="mob-section">
+        <div className="mob-section-title">{T('mobile.forgeReserve')} ({reserve.length})</div>
+        {reserve.length === 0 ? (
+          <div className="mob-empty">{T('mobile.forgeReserveEmpty')}</div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {reserve.map((f, i) => {
+              const color = colorOf(f); const on = sel === i;
+              return (
+                <button key={i} type="button" disabled={!owned || locked}
+                  onClick={() => { setSel(on ? null : i); setConfirm(null); }}
+                  title={faceEffectLabel(f, en) || undefined}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 11px', borderRadius: 10,
+                    border: `2px solid ${color}`, background: on ? color : '#fffdf7', color: on ? '#fff' : '#3a2c18', fontWeight: 700 }}>
+                  +{f.value} {iconOf(f) || ''}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <div className="mob-foot" style={{ marginTop: 8 }}>{owned ? T('mobile.forgeHint') : T('mobile.forgeReadonly')}</div>
+      </section>
+
+      {/* La vitrine : faces à acheter */}
+      <section className="mob-section">
+        <div className="mob-section-title">{T('mobile.forgeShop')}</div>
+        {shopFaces.length === 0 ? (
+          <div className="mob-empty">{T('mobile.facesEmpty')}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {shopFaces.map((f, i) => {
+              const color = colorOf(f);
+              const eff = faceEffectLabel(f, en);
+              const broke = (t.money ?? 0) < (f.price || 0);
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, border: `1px solid ${color}55`, background: '#fffefb' }}>
+                  <span style={{ width: 40, height: 40, borderRadius: 10, border: `2px solid ${color}`, display: 'grid', placeItems: 'center', fontWeight: 800, fontFamily: 'var(--font-display)', fontSize: 18 }}>{f.value}</span>
+                  <span style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>{eff || T('mobile.forgeDie')}</span>
+                  <button className="mob-btn mob-btn--gold" disabled={!owned || locked || broke} onClick={() => buy(i)}>
+                    {T('mobile.buyFaceFor', { price: f.price || 0 })}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -1934,7 +2045,7 @@ function AdminPanel({ code, session, onClose }) {
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
 // L'onglet « Troc » réunit désormais trocs ouverts ET complots (cf. TradeView) :
 // il s'affiche dès que l'une OU l'autre extension est active (`hasTrade`).
-function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, tradeAlert = 0, T = tFor(false) }) {
+function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, hasForge, tradeAlert = 0, T = tFor(false) }) {
   const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
       onClick={() => setTab(id)}
@@ -1971,6 +2082,7 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, tradeAl
       {hasTrade && <Tab id="trade" icon={'🤝'} label={T('mobile.tabTrade')} badge={tradeAlert} />}
       {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label={T('mobile.tabAlchemy')} />}
       {hasScribe && <Tab id="scribe" icon={'\u{2712}️'} label={T('mobile.tabScribe')} />}
+      {hasForge && <Tab id="forge" icon={'🔨'} label={T('mobile.tabForge')} />}
       <Tab id="history" icon={'\u{1F4DC}'} label={T('mobile.tabHistory')} />
     </nav>
   );
@@ -2148,6 +2260,7 @@ export default function MobileApp() {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
     const hasShop = extOn(session.extensions, 'equipment');
+    const hasForge = extOn(session.extensions, 'forge');
     // Troc : RÉSERVÉ au propriétaire de l'équipe (comme les achats). Valider ou
     // proposer un troc engage l'inventaire de l'équipe ; un téléphone qui a
     // seulement « sélectionné » une autre équipe (owned=false) ne peut pas
@@ -2164,12 +2277,13 @@ export default function MobileApp() {
       : tab === 'trade' && hasExchange ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} hasTrade={hasTrade} hasDiplo={hasDiplo} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'scribe' && hasScribe ? <ScribeView team={session.teams[teamIdx]} en={!!session.englishMode} onInscribe={(parts) => { sendIntent(code, token, 'craftParchment', { parts }).catch(() => {}); }} />
+      : tab === 'forge' && hasForge ? <ForgeView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} hasScribe={hasScribe} tradeAlert={tradeAlert} T={T} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} hasScribe={hasScribe} hasForge={hasForge} tradeAlert={tradeAlert} T={T} />
       </>
     );
   }
