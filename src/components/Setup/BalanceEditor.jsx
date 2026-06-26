@@ -1015,31 +1015,56 @@ export default function BalanceEditor({ onClose }) {
                       )}
 
                       {draft.slot === 'consumable' && draft.family === 'parchment' && (() => {
-                        const isTrigger = draft.enchant?.kind === 'trigger';
-                        const rollVal = draft.enchant?.values?.[0] ?? 5;
-                        const trigAmt = draft.enchant?.do?.[0]?.n ?? 15;
-                        const passType = draft.enchant?.type || 'timerBonus';
-                        const passVal = draft.enchant?.value ?? 3;
+                        const e = draft.enchant || {};
+                        const isTrigger = e.kind === 'trigger';
+                        const on = isTrigger ? e.on : null;
+                        const rollVal = e.values?.[0] ?? 5;
+                        const trigAmt = e.do?.[0]?.n ?? 15;
+                        const subj = e.subjects?.[0] ?? SUBJECT_KEYS[0];
+                        const passType = e.type || 'timerBonus';
+                        const passVal = e.value ?? 3;
+                        const money = (n) => [{ action: 'money', mode: 'gain', target: 'self', n, unit: 'flat' }];
+                        const TRIG_OPTS = [
+                          ['__roll', '🎲 +or quand je fais N'],
+                          ['__correct', '✅ +or à chaque bonne réponse'],
+                          ['__wrong', '❌ +or à chaque erreur'],
+                          ['__questionSubject', '🎯 +or sur une question de…'],
+                        ];
+                        const buildTrigger = (kind) => {
+                          const base = { kind: 'trigger', do: money(trigAmt) };
+                          if (kind === 'roll') return { ...base, on: 'roll', values: [rollVal] };
+                          if (kind === 'questionSubject') return { ...base, on: 'questionSubject', subjects: [subj] };
+                          return { ...base, on: kind }; // correct | wrong
+                        };
                         return (
                           <div className="qed-field" style={{ marginTop: 8, padding: 10, border: '1px solid rgba(122,94,58,0.2)', borderRadius: 10 }}>
                             <label className="qed-label">📜 Effet du parchemin (posé sur la pièce)</label>
                             <div className="bal-row">
                               <span className="bal-label">Type</span>
-                              <select className="qed-select" style={{ width: 220 }} value={isTrigger ? '__roll' : passType}
+                              <select className="qed-select" style={{ width: 220 }} value={isTrigger ? '__' + on : passType}
                                 onChange={(ev) => {
-                                  if (ev.target.value === '__roll') set({ enchant: { kind: 'trigger', on: 'roll', values: [rollVal], do: [{ action: 'money', mode: 'gain', target: 'self', n: trigAmt, unit: 'flat' }] } });
-                                  else set({ enchant: { type: ev.target.value, value: passVal } });
+                                  const v = ev.target.value;
+                                  if (v.startsWith('__')) set({ enchant: buildTrigger(v.slice(2)) });
+                                  else set({ enchant: { type: v, value: passVal } });
                                 }}>
                                 {EQUIP_EFFECTS.map((t) => <option key={t} value={t}>{EFFECT_LABELS[t] || t}</option>)}
-                                <option value="__roll">💰 +or quand je fais N</option>
+                                {TRIG_OPTS.map(([v, lab]) => <option key={v} value={v}>{lab}</option>)}
                               </select>
                             </div>
                             {isTrigger ? (
                               <>
-                                <div className="bal-row"><span className="bal-label">Quand je fais</span>
-                                  <Stepper value={rollVal} onChange={(v) => set({ enchant: { ...draft.enchant, values: [Math.max(1, Math.min(10, v))] } })} min={1} max={10} /></div>
+                                {on === 'roll' && (
+                                  <div className="bal-row"><span className="bal-label">Quand je fais</span>
+                                    <Stepper value={rollVal} onChange={(v) => set({ enchant: { ...e, values: [Math.max(1, Math.min(10, v))] } })} min={1} max={10} /></div>
+                                )}
+                                {on === 'questionSubject' && (
+                                  <div className="bal-row"><span className="bal-label">Matière</span>
+                                    <select className="qed-select" style={{ width: 220 }} value={subj} onChange={(ev) => set({ enchant: { ...e, subjects: [ev.target.value] } })}>
+                                      {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
+                                    </select></div>
+                                )}
                                 <div className="bal-row"><span className="bal-label">+ pièces</span>
-                                  <Stepper value={trigAmt} onChange={(v) => set({ enchant: { ...draft.enchant, do: [{ ...draft.enchant.do[0], n: v }] } })} max={999} /></div>
+                                  <Stepper value={trigAmt} onChange={(v) => set({ enchant: { ...e, do: [{ ...e.do[0], n: v }] } })} max={999} /></div>
                               </>
                             ) : (
                               <div className="bal-row"><span className="bal-label">Valeur</span>
