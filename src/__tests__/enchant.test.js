@@ -18,8 +18,12 @@ function setup(over) {
   useGameStore.setState({ phase: 'game', devSandbox: true, finished: false, currentTeam: 0, log: [], teams: [team(over), team()] });
 }
 
+// Parchemins gravés (specs custom portées par la case) — remplacent les pré-faits.
+const PARCH_TEMPS = { key: 'parcheminGrave', enchants: [{ type: 'timerBonus', value: 3 }] };
+const PARCH_OR5 = { key: 'parcheminGrave', enchants: [{ kind: 'trigger', on: 'roll', values: [5], do: [{ action: 'money', mode: 'gain', target: 'self', n: 15, unit: 'flat' }] }] };
+
 describe('enchantWith', () => {
-  beforeEach(() => setup({ equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: ['parchemoinTemps'] }));
+  beforeEach(() => setup({ equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: [PARCH_TEMPS] }));
 
   it('pose l’enchantement sur la pièce (instance) et consomme le parchemin', () => {
     const r = enchantWith(set, get, 0, 0, 'feet');
@@ -41,7 +45,7 @@ describe('enchantWith', () => {
   });
 
   it('un parchemin on:roll devient un déclencheur de la pièce', () => {
-    setup({ equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: ['parchemoinOr5'] });
+    setup({ equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: [PARCH_OR5] });
     enchantWith(set, get, 0, 0, 'feet');
     const acts = equipOnRollActions(S().teams[0], 5);
     expect(acts.some((a) => a.action === 'money')).toBe(true);
@@ -50,7 +54,7 @@ describe('enchantWith', () => {
 });
 
 describe('l’enchantement SUIT la pièce', () => {
-  beforeEach(() => setup({ equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: ['parchemoinTemps'] }));
+  beforeEach(() => setup({ equipment: { head: null, body: null, feet: 'bottesMontagne' }, bag: [PARCH_TEMPS] }));
 
   it('déséquiper puis ré-équiper conserve l’enchantement', () => {
     enchantWith(set, get, 0, 0, 'feet');
@@ -94,13 +98,13 @@ describe('Autel du Scribe — craft de parchemin custom', () => {
   it('refuse sans vierge ou sans or', () => {
     setup({ money: 0, equipment: { feet: 'bottesMontagne' }, bag: ['parcheminVierge'] });
     expect(craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]).ok).toBe(false); // or insuffisant
-    setup({ money: 99, equipment: { feet: 'bottesMontagne' }, bag: ['parchemoinTemps'] });
-    expect(craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]).ok).toBe(false); // pas un vierge
+    setup({ money: 99, equipment: { feet: 'bottesMontagne' }, bag: ['parcheminGrave'] });
+    expect(craftParchment(set, get, 0, 0, [{ id: 'timerBonus', value: 5 }]).ok).toBe(false); // pas un vierge (gravé, blank=false)
   });
 
   it('plafond de 3 enchants par pièce', () => {
     const ench = [{ type: 'timerBonus', value: 1 }, { type: 'timerBonus', value: 1 }, { type: 'timerBonus', value: 1 }];
-    setup({ money: 99, equipment: { feet: { key: 'bottesMontagne', enchants: ench } }, bag: ['parchemoinTemps'] });
+    setup({ money: 99, equipment: { feet: { key: 'bottesMontagne', enchants: ench } }, bag: [PARCH_TEMPS] });
     expect(enchantWith(set, get, 0, 0, 'feet').ok).toBe(false); // déjà 3
   });
 });

@@ -223,10 +223,8 @@ export const ITEMS = {
   elixirSupreme: { name: 'Élixir suprême',    icon: '🌟', slot: 'consumable', family: 'potion', rarity: 'legendaire', price: 0, lootOnly: true, desc: 'Potion : +20 pièces, +8s et recharge 1 pouvoir.', effects: [{ type: 'gainMoney', value: 20 }, { type: 'extraTime', value: 8 }, { type: 'gainCharge', value: 1 }] },
 
   // === ENCHANTEMENT — parchemins (posés sur une pièce équipée) ==============
-  // family:'parchment'. `enchant` = effet/déclencheur ajouté à la pièce visée.
-  parchemoinOr5: { name: 'Parchemin de l’avare', icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +15 pièces quand tu fais 5.', enchant: { kind: 'trigger', on: 'roll', values: [5], do: [{ action: 'money', mode: 'gain', target: 'self', n: 15, unit: 'flat' }] } },
-  parchemoinTemps:{ name: 'Parchemin du sage',  icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : +3s au temps de réponse.', enchant: { type: 'timerBonus', value: 3 } },
-  parchemoinRecul:{ name: 'Parchemin du roc',   icon: '📜', slot: 'consumable', family: 'parchment', rarity: 'rare', price: 12, desc: 'Enchante une pièce : recul subi réduit d’1 case.', enchant: { type: 'reculReduction', value: 1 } },
+  // family:'parchment'. Les parchemins pré-faits ont été RETIRÉS : l'enchantement
+  // passe désormais par l'Autel du Scribe (craft d'un parchemin gravé sur mesure).
 
   // Parchemin VIERGE : matière première de l'Autel du Scribe (craft d'enchant
   // personnalisé). En boutique quand l'extension Enchantement est active.
