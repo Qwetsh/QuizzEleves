@@ -32,6 +32,11 @@ function rowToItem(r) {
     // Alchimie / Enchantement : sous-famille de consommable + effet de parchemin.
     family: r.family || undefined,
     enchant: r.enchant || undefined,
+    // Parchemin VIERGE (matière première de l'Autel du Scribe) : pas de colonne
+    // dédiée en DB → on le DÉRIVE. Un parchemin est « vierge » s'il n'a aucun
+    // effet fixe (`enchant`) ni n'est lootOnly : le vierge s'achète et se grave,
+    // le gravé est lootOnly, et un parchemin pré-fait (éditeur) porte un enchant.
+    blank: r.family === 'parchment' && !r.enchant && !r.loot_only ? true : undefined,
   };
 }
 
