@@ -2,7 +2,7 @@
 // dans la chaîne de recul (max avec le Bouclier, jamais la somme — spec §6.3).
 import { describe, it, expect, afterEach } from 'vitest';
 import { applyBalance } from '../logic/balanceConfig.js';
-import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock, FORGE_RESOLVED } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock, faceRollEngineActions, isRelanceFace, FORGE_RESOLVED } from '../logic/forgeEffects.js';
 import { applyRecul, resolveWrongAnswer } from '../logic/turnHelpers.js';
 
 const BOARD = (() => {
@@ -102,10 +102,21 @@ describe('Forge — armement des effets au lancer', () => {
     expect(arm('butin', 0).forgeButin).toBe(0.5);
     expect(arm('butin', 1).forgeButin).toBe('guaranteed');
   });
-  it('FORGE_RESOLVED liste les 7 effets câblés (sans recharge/questionFraiche/relance)', () => {
-    expect(FORGE_RESOLVED).toContain('aubaine');
-    expect(FORGE_RESOLVED).not.toContain('recharge');
-    expect(FORGE_RESOLVED).not.toContain('relance');
+  it('Question fraîche arme un drapeau', () => {
+    expect(arm('questionFraiche', 0).forgeFreshQ).toBe(true);
+  });
+  it('Recharge → action moteur gainCharge avec le bon palier', () => {
+    expect(faceRollEngineActions({ effect: { type: 'recharge', tier: 0 } })).toEqual([{ action: 'gainCharge', n: 1 }]);
+    expect(faceRollEngineActions({ effect: { type: 'recharge', tier: 2 } })).toEqual([{ action: 'gainCharge', n: 'full' }]);
+    expect(faceRollEngineActions({ effect: { type: 'prime', tier: 0 } })).toEqual([]);
+  });
+  it('isRelanceFace détecte une face Relance', () => {
+    expect(isRelanceFace({ effect: { type: 'relance', tier: 0 } })).toBe(true);
+    expect(isRelanceFace({ effect: null })).toBe(false);
+  });
+  it('FORGE_RESOLVED couvre le lot complet (10 effets)', () => {
+    ['prime', 'egide', 'aubaine', 'indice', 'repit', 'gardeSerie', 'butin', 'recharge', 'questionFraiche', 'relance']
+      .forEach((k) => expect(FORGE_RESOLVED).toContain(k));
   });
 });
 

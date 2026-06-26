@@ -75,6 +75,7 @@ export default {
 
   // --- gainCharge ---
   'log.fx.noPowerToCharge': { fr: '✨ Aucun pouvoir à recharger.', en: '✨ No power to recharge.' },
+  'log.fx.chargeNoEffect': { fr: '✨ Pouvoir déjà plein : aucun effet.', en: '✨ Power already full: no effect.' },
 
   // --- forceSubject ---
   'log.fx.forceSubject':       { fr: '🎯 {icon} {who} forcée en {subject} !', en: '🎯 {icon} {who} forced to {subject}!' },

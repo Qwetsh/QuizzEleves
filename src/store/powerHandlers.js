@@ -600,14 +600,24 @@ export function chargePickerChoice(set, get, powerKey) {
   const { teams, currentTeam, addLog } = get();
   // Source : 'item' (consommable legacy) ou 'engine' (moteur d'effets / équipement)
   const source = get().showChargePicker?.source;
+  // `amount` (Recharge de Forge) : 1 / 2 / 'full' ; défaut 1 (recharge classique).
+  const amount = get().showChargePicker?.amount ?? 1;
   const team = teams[currentTeam];
-  const newTeams = [...teams];
   const currentCharges = team.powers?.[powerKey]?.charges ?? 0;
-  const newPowers = { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: addCharge(currentCharges) } };
-  newTeams[currentTeam] = { ...team, powers: newPowers };
+  const next = amount === 'full' ? MAX_CHARGES : Math.min(MAX_CHARGES, currentCharges + (Number(amount) || 1));
+  const gained = next - currentCharges;
+  const newTeams = [...teams];
+  newTeams[currentTeam] = { ...team, powers: { ...team.powers, [powerKey]: { ...team.powers[powerKey], charges: next } } };
   const pName = locName(POWERS[powerKey]) || powerKey;
-  addLog(tg('log.pw.gainCharge', { emoji: team.emoji, name: team.name, power: pName }));
-  soundCharge();
+  // Pouvoir déjà plein → charge perdue, feedback « aucun effet » (spec §6.1).
+  if (gained <= 0) {
+    addLog(tg('log.fx.chargeNoEffect'));
+  } else {
+    addLog(gained === 1
+      ? tg('log.pw.gainCharge', { emoji: team.emoji, name: team.name, power: pName })
+      : tg('log.pw.gainChargeN', { emoji: team.emoji, name: team.name, n: gained, power: pName }));
+    soundCharge();
+  }
   set({ teams: newTeams, showChargePicker: false });
 
   // Moteur d'effets : reprendre la file après la recharge (l'action gainCharge est résolue).

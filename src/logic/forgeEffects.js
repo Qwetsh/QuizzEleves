@@ -141,10 +141,9 @@ export function faceEffectLabel(face, en = false) {
 export const SHOP_FACE_SLOTS = 6;
 export const FACE_STOCK_MAX = 12;
 
-// Effets dont la RÉSOLUTION est câblée (le reste — recharge, questionFraiche,
-// relance — arrive dans une étape ultérieure). La boutique ne propose QUE ces
-// effets-là, pour qu'aucune face achetable ne soit muette.
-export const FORGE_RESOLVED = ['prime', 'egide', 'aubaine', 'indice', 'repit', 'gardeSerie', 'butin'];
+// Effets dont la RÉSOLUTION est câblée. La boutique ne propose QUE ces effets-là
+// (aucune face achetable ne doit être muette). Lot de départ complet (10).
+export const FORGE_RESOLVED = ['prime', 'egide', 'aubaine', 'indice', 'repit', 'gardeSerie', 'butin', 'recharge', 'questionFraiche', 'relance'];
 
 // Résolution d'une face AU LANCER : applique les effets 'roll' (Prime) et ARME
 // les effets 'preQuestion'/'correct' via des flags d'équipe consommés plus tard
@@ -222,10 +221,33 @@ export function resolveFaceAtRoll(team, face) {
       logs.push(en ? `🎁 ${who} — Spoils armed (${what}).` : `🎁 ${who} — Butin armé (${what}).`);
       break;
     }
-    // recharge / questionFraiche / relance : résolution câblée dans une étape ultérieure.
+    case 'questionFraiche': {
+      patch.forgeFreshQ = true; // consommé à l'affichage de la question (askQuestion)
+      logs.push(en ? `🔄 ${who} — Fresh question armed.` : `🔄 ${who} — Question fraîche armée.`);
+      break;
+    }
+    // recharge : via le moteur d'effets (sélecteur de pouvoir TBI) — voir
+    //   faceRollEngineActions. relance : interceptée au lancer (gameStore).
     default: break;
   }
   return { patch, logs };
+}
+
+// Actions « moteur d'effets » d'une face à appliquer AU LANCER (timing 'roll')
+// qui nécessitent la file/les interrupts — actuellement la Recharge (sélecteur
+// de pouvoir TBI, §6.1). Renvoie une liste d'actions (vide si rien).
+export function faceRollEngineActions(face) {
+  const e = face?.effect;
+  if (e?.type === 'recharge') {
+    const v = forgeTierValue('recharge', e.tier); // 1 | 2 | 'full'
+    return [{ action: 'gainCharge', n: v }];
+  }
+  return [];
+}
+
+// La face tirée est-elle une face-Relance ? (interceptée au lancer.)
+export function isRelanceFace(face) {
+  return face?.effect?.type === 'relance';
 }
 
 // Réduction de recul apportée par une Égide armée (résolu pour un recul `recul`).

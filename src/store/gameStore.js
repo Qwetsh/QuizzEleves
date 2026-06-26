@@ -11,7 +11,7 @@ import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
 import { defaultDieFaces, getDieFaces, clampFaceValue, DIE_SLOTS } from '../logic/forge.js';
-import { resolveFaceAtRoll, generateFaceStock, rollShopFace, faceShortLabel, FORGE_RESOLVED, SHOP_FACE_SLOTS, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, generateFaceStock, rollShopFace, faceShortLabel, FORGE_RESOLVED, SHOP_FACE_SLOTS, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -24,7 +24,7 @@ import * as fightH from './fightHandlers.js';
 import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
-import { LOOT } from '../logic/balanceConfig.js';
+import { LOOT, FORGE } from '../logic/balanceConfig.js';
 import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
@@ -724,7 +724,22 @@ export const useGameStore = create((set, get) => ({
     // Forge de dés : le slot tiré (value = 1→6, l'adresse immuable) désigne une
     // FACE forgée dont la VALEUR (0→6) fait avancer. Dé standard ou extension
     // désactivée : face.value === value (comportement inchangé).
-    const face = getDieFaces(team)[((value - 1) % 6 + 6) % 6];
+    const dieFaces = getDieFaces(team);
+    let face = dieFaces[((value - 1) % 6 + 6) % 6];
+    // Relance (face Forge) : relance le dé ; SEULE la dernière face compte (§6.2).
+    // L'enchaînement (une face-Relance qui retombe sur Relance) suit le flag
+    // balanceConfig (défaut : une seule relance).
+    if (isRelanceFace(face)) {
+      const chainOn = !!FORGE.relance?.enchainement;
+      let guard = 0;
+      do {
+        value = Math.floor(Math.random() * 6) + 1;
+        face = dieFaces[value - 1];
+        guard++;
+        addLog(tg('log.store.relanceFace', { emoji: team.emoji, name: team.name, value: clampFaceValue(face.value) }));
+      } while (chainOn && isRelanceFace(face) && guard < 6);
+      set({ diceValue: value }); // refléter la face finale affichée
+    }
     const moveValue = clampFaceValue(face.value);
     const bonus = buffValue(team, 'diceBonus');
     const eff = moveValue + bonus;
@@ -776,7 +791,13 @@ export const useGameStore = create((set, get) => ({
     // opts.skipOnRoll : une Relance ne re-d\u00E9clenche pas le bonus on:roll (d\u00E9j\u00E0
     // accord\u00E9 au 1er lancer) \u2192 \u00E9vite un double bonus.
     const postRoll = { stoppedAtJunction, remaining, junctionPos: finalPos };
-    const onRoll = opts.skipOnRoll ? [] : effectH.equipOnRollActions(team, value);
+    // Effets de face nécessitant le moteur/les interrupts (Recharge → sélecteur de
+    // pouvoir TBI) : joués via la MÊME file que les déclencheurs on:roll, qui
+    // enchaîne ensuite resolvePostRoll.
+    const onRoll = [
+      ...(opts.skipOnRoll ? [] : effectH.equipOnRollActions(team, value)),
+      ...faceRollEngineActions(face),
+    ];
     if (onRoll.length) {
       effectH.runEffects(set, get, onRoll, { source: 'roll', diceValue: value, postRoll });
       return;
@@ -1081,12 +1102,29 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
     const pool = questions[subject] || [];
     const asked = askedQuestions[subject] || new Set();
-    const result = pickQuestion(pool, asked);
+    let result = pickQuestion(pool, asked);
 
     if (!result) {
       addLog(tg('log.store.noQuestion', { subject: SUBJECTS[subject] ? loc(SUBJECTS[subject], 'name') : subject }));
       get().nextTurn();
       return;
+    }
+
+    // Question fraîche (face Forge) : écarte la 1re question et en pioche une autre
+    // (même thème). L'abandonnée est tracée (abandoned) mais hors stats de réussite.
+    if (team.forgeFreshQ) {
+      { const nt = [...get().teams]; nt[currentTeam] = { ...nt[currentTeam], forgeFreshQ: undefined }; set({ teams: nt }); }
+      addLog(tg('log.store.freshQuestion', { emoji: team.emoji, name: team.name }));
+      get().recordStat('answers', {
+        teamIdx: currentTeam, teamName: team.name, subject,
+        level: result.question.level || null, theme: result.question.t || null,
+        qId: result.question.id ?? `${subject}:${result.index}`, qText: result.question.q,
+        answers: result.question.a, correctIndex: result.question.c,
+        chosenIndex: null, correct: false, timedOut: false, abandoned: true, timeLeftRatio: null,
+        explanation: result.question.e || null,
+      });
+      const alt = pickQuestion(pool, result.newAsked); // exclut la question écartée
+      if (alt) result = alt; // sinon (pool épuisé) : on garde la 1re
     }
 
     const { question: q, newAsked } = result;
@@ -2321,10 +2359,10 @@ export const useGameStore = create((set, get) => ({
     let nt = get().teams;
     // Silence/Taxe (Sablier) : consommés à la fin du tour de l'équipe visée.
     const og = nt[currentTeam];
-    if (og && (og.silencedNextTurn || og.timeoutPenalty || og.forgeAegis != null || og.forgeGoldMult != null || og.forgeButin != null || og.forgeStreakGuard || og.forgeIndice != null || og.forgeRepit != null)) {
+    if (og && (og.silencedNextTurn || og.timeoutPenalty || og.forgeAegis != null || og.forgeGoldMult != null || og.forgeButin != null || og.forgeStreakGuard || og.forgeIndice != null || og.forgeRepit != null || og.forgeFreshQ)) {
       nt = [...nt];
       // Flags de face Forge = « ce tour » : nettoyés quand l'équipe rend la main.
-      nt[currentTeam] = { ...og, silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined, forgeGoldMult: undefined, forgeButin: undefined, forgeStreakGuard: undefined, forgeIndice: undefined, forgeRepit: undefined };
+      nt[currentTeam] = { ...og, silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined, forgeGoldMult: undefined, forgeButin: undefined, forgeStreakGuard: undefined, forgeIndice: undefined, forgeRepit: undefined, forgeFreshQ: undefined };
     }
     const ct = nt[newCurrent];
     if (ct?.itemFumigeneTurns > 0) {

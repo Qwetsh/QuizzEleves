@@ -1,7 +1,14 @@
 // Phase 2b-2 / 2c — actions store de la Forge : achat (buyFace) et pose (forgeFace).
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { getDieFaces } from '../logic/forge.js';
+
+const BOARD = (() => {
+  const b = { depart: { x: 0, y: 0, type: 'depart', next: ['n1'] } };
+  for (let i = 1; i <= 12; i++) b[`n${i}`] = { x: i, y: 0, type: 'subject', subject: 'maths', next: [i === 12 ? 'arrivee' : `n${i + 1}`] };
+  b.arrivee = { x: 13, y: 0, type: 'arrivee', next: [] };
+  return b;
+})();
 
 const S = () => useGameStore.getState();
 const baseTeam = (over = {}) => ({ name: 'T', emoji: '🦁', money: 100, correct: 0, wrong: 0, powers: {}, equipment: { head: null, body: null, feet: null }, bag: [], faceStock: [], ...over });
@@ -63,5 +70,42 @@ describe('Forge — forgeFace', () => {
     S().forgeFace(1, 0);
     expect(getDieFaces(S().teams[0])[1].value).toBe(2); // remplacée
     expect(S().teams[0].faceStock).toHaveLength(0);
+  });
+});
+
+describe('Forge — Relance (interception au lancer)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('une face Relance relance le dé : seule la dernière face compte', () => {
+    // slot 0 (base 1) = Relance ; slot 1 (base 2) = +5. Lancer = 1 → relance → 2.
+    const dieFaces = getDieFaces({}).map((f, i) => {
+      if (i === 0) return { base: 1, value: 1, effect: { type: 'relance', tier: 0 } };
+      if (i === 1) return { base: 2, value: 5, effect: null };
+      return f;
+    });
+    useGameStore.setState({ board: BOARD, teams: [baseTeam({ pos: 'depart', dieFaces })], preRollValue: null });
+    vi.spyOn(Math, 'random').mockReturnValue(0.2); // floor(0.2*6)+1 = 2 → slot 1 (+5)
+    S().handleDiceResult(1); // on tombe sur la face Relance (slot 0)
+    expect(S().preRollValue).toBe(5); // déplacement = valeur de la NOUVELLE face
+  });
+});
+
+describe('Forge — Recharge (palier via chargePicker)', () => {
+  it('applique le bon nombre de charges et respecte le plafond', () => {
+    useGameStore.setState({
+      teams: [baseTeam({ powers: { bouclier: { charges: 0, level: 1 } } })],
+      showChargePicker: { amount: 2 }, // pas de source 'engine' → pas de reprise de file
+    });
+    S().chargePickerChoice('bouclier');
+    expect(S().teams[0].powers.bouclier.charges).toBe(2);
+  });
+
+  it('« full » remplit jusqu\'au plafond (5)', () => {
+    useGameStore.setState({
+      teams: [baseTeam({ powers: { bouclier: { charges: 1, level: 1 } } })],
+      showChargePicker: { amount: 'full' },
+    });
+    S().chargePickerChoice('bouclier');
+    expect(S().teams[0].powers.bouclier.charges).toBe(5);
   });
 });

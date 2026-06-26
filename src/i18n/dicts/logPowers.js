@@ -74,6 +74,7 @@ export default {
 
   // --- Recharge (gainCharge) ---
   'log.pw.gainCharge':      { fr: '✨ {emoji} {name} gagne 1 charge de {power} !', en: '✨ {emoji} {name} gains 1 charge of {power}!' },
+  'log.pw.gainChargeN':     { fr: '✨ {emoji} {name} gagne {n} charges de {power} !', en: '✨ {emoji} {name} gains {n} charges of {power}!' },
 
   // --- Boutique (shop) ---
   'log.pw.unlock':          { fr: '🛒 {emoji} {name} débloque {power} ! (-{price} 💰)', en: '🛒 {emoji} {name} unlocks {power}! (-{price} 💰)' },

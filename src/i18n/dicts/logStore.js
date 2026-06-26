@@ -75,6 +75,8 @@ export default {
   'log.store.lootFound':         { fr: '✨ {emoji} {name} trouve un objet : {icon} {iname} !', en: '✨ {emoji} {name} finds an item: {icon} {iname}!' },
   'log.store.buyFace':           { fr: '🎲 {emoji} {name} achète une face : {label} ({price} 💰).', en: '🎲 {emoji} {name} buys a die face: {label} ({price} 💰).' },
   'log.store.forgeFace':         { fr: '🔨 {emoji} {name} forge la face n°{base} : {label}.', en: '🔨 {emoji} {name} forges face #{base}: {label}.' },
+  'log.store.relanceFace':       { fr: '🎲 {emoji} {name} relance (face Forge) → {value} !', en: '🎲 {emoji} {name} rerolls (forged face) → {value}!' },
+  'log.store.freshQuestion':     { fr: '🔄 {emoji} {name} écarte la question et en pioche une autre.', en: '🔄 {emoji} {name} discards the question and draws another.' },
 
   // --- Timeout ---
   'log.store.timeoutPenalty':    { fr: '💸 {emoji} {name} dépasse le temps : −{n} or (Taxe du temps).',

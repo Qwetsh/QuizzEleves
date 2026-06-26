@@ -14,6 +14,7 @@ import { soundShield } from '../logic/sounds.js';
 import { SUBJECTS } from '../data/subjects.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { ITEMS } from '../data/items.js';
+import { MAX_CHARGES } from '../data/powers.js';
 import { saveGame } from './persistence.js';
 import { tg, tgPlural } from '../i18n';
 import { loc } from '../i18n/content';
@@ -573,7 +574,10 @@ function stepHead(set, get, action, ctx) {
       // Aucun pouvoir à recharger : on saute (évite un sélecteur vide).
       const ct = get().teams[ctx.sourceTeam ?? get().currentTeam];
       if (!ct?.powers || Object.keys(ct.powers).length === 0) { get().addLog(tg('log.fx.noPowerToCharge')); return 'done'; }
-      set({ showChargePicker: { source: 'engine' } });
+      // Tous les pouvoirs déjà au plafond → aucune recharge possible (feedback).
+      if (!Object.values(ct.powers).some((p) => (p?.charges ?? 0) < MAX_CHARGES)) { get().addLog(tg('log.fx.chargeNoEffect')); return 'done'; }
+      // `amount` (Recharge de Forge) : 1 / 2 / 'full' charges à appliquer au pouvoir choisi.
+      set({ showChargePicker: { source: 'engine', amount: action.n ?? 1 } });
       return 'suspend';
     }
     case 'rerollQuestion': {
