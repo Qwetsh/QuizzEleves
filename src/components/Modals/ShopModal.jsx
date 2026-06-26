@@ -10,7 +10,8 @@ import { locName, locDesc, loc } from '../../i18n/content';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
-import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, FACE_STOCK_MAX } from '../../logic/forgeEffects';
+import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, faceShortLabel, FACE_STOCK_MAX } from '../../logic/forgeEffects';
+import { getDieFaces, isFaceForged } from '../../logic/forge';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -169,6 +170,95 @@ function FaceStall({ team, faces, onBuyFace, en }) {
   );
 }
 
+/* ---------- Banc de forge : pose une face de la réserve sur un slot du dé ---------- */
+function ForgeBench({ team, onForge }) {
+  const T = useT();
+  const [sel, setSel] = useState(null);       // index de la réserve sélectionné
+  const [confirm, setConfirm] = useState(null); // { slot } : écrasement à confirmer
+  const faces = getDieFaces(team);
+  const reserve = team.faceStock || [];
+
+  const place = (slot) => {
+    if (sel == null || !reserve[sel]) return;
+    if (isFaceForged(faces[slot])) { setConfirm({ slot }); return; } // face déjà forgée → confirmer
+    onForge(slot, sel); setSel(null);
+  };
+  const doConfirm = () => { onForge(confirm.slot, sel); setConfirm(null); setSel(null); };
+
+  const colorOf = (f) => {
+    const meta = f?.effect?.type ? FORGE_EFFECTS[f.effect.type] : null;
+    return (meta && FORGE_FAMILY_COLOR[meta.family]) || '#7a5e3a';
+  };
+  const iconOf = (f) => (f?.effect?.type ? FORGE_EFFECTS[f.effect.type]?.icon : null);
+
+  return (
+    <section className="shop-stall">
+      <div className="shop-stall-banner">{T('modal.shop.forgeBench')}</div>
+      <div className="shop-stall-note">{T('modal.shop.forgeHint')}</div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '6px 0' }}>
+        {faces.map((face, i) => {
+          const color = colorOf(face);
+          const clickable = sel != null;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => place(i)}
+              disabled={!clickable}
+              title={faceEffectLabel(face) || undefined}
+              style={{
+                position: 'relative', width: 62, height: 62, borderRadius: 12,
+                border: `2px solid ${color}`, background: '#fffdf7',
+                cursor: clickable ? 'pointer' : 'default', opacity: clickable ? 1 : 0.85,
+                display: 'grid', placeItems: 'center', boxShadow: clickable ? `0 0 0 2px ${color}33` : 'none',
+              }}
+            >
+              <span style={{ position: 'absolute', top: 2, left: 5, fontSize: 11, color: '#9b7e4e', fontWeight: 700 }}>{i + 1}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, lineHeight: 1, color: '#3a2c18' }}>{face.value}</span>
+              {iconOf(face) && <span style={{ position: 'absolute', bottom: 2, right: 4, fontSize: 15 }}>{iconOf(face)}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {confirm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '4px 0 8px' }}>
+          <span style={{ color: '#b5341f', fontWeight: 700, fontSize: 13 }}>
+            {T('modal.shop.forgeOverwrite', { label: faceShortLabel(faces[confirm.slot]) })}
+          </span>
+          <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={() => { soundClick(); doConfirm(); }}>{T('modal.shop.forgeConfirm')}</button>
+          <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
+        </div>
+      )}
+      <div className="shop-stall-banner" style={{ marginTop: 8 }}>{T('modal.shop.forgeReserve')} ({reserve.length})</div>
+      {reserve.length === 0 ? (
+        <div className="shop-empty">{T('modal.shop.forgeReserveEmpty')}</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '4px 0' }}>
+          {reserve.map((f, i) => {
+            const color = colorOf(f);
+            const on = sel === i;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { soundClick(); setSel(on ? null : i); setConfirm(null); }}
+                title={faceEffectLabel(f) || undefined}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 10,
+                  border: `2px solid ${color}`, background: on ? color : '#fffdf7', color: on ? '#fff' : '#3a2c18',
+                  fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                +{f.value} {iconOf(f) || ''}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /* ---------- Étal : recharger ---------- */
 function RechargeStall({ ownedPowers, money, onBuyCharge }) {
   const T = useT();
@@ -308,6 +398,7 @@ export default function ShopModal() {
   const buyNewPower = useGameStore((s) => s.buyNewPower);
   const buyItem = useGameStore((s) => s.buyItem);
   const buyFace = useGameStore((s) => s.buyFace);
+  const forgeFace = useGameStore((s) => s.forgeFace);
   const shopStock = useGameStore((s) => s.shopStock);
   const shopFaceStock = useGameStore((s) => s.shopFaceStock);
   const teams = useGameStore((s) => s.teams);
@@ -397,7 +488,10 @@ export default function ShopModal() {
                     )}
                   </>
                 ) : tab === 'faces' ? (
-                  <FaceStall team={team} faces={shopFaceStock} onBuyFace={buyFace} en={englishMode} />
+                  <>
+                    <FaceStall team={team} faces={shopFaceStock} onBuyFace={buyFace} en={englishMode} />
+                    <ForgeBench team={team} onForge={forgeFace} />
+                  </>
                 ) : (
                   <>
                     <RechargeStall

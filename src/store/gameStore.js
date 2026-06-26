@@ -10,7 +10,7 @@ import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
-import { defaultDieFaces, getDieFaces, clampFaceValue } from '../logic/forge.js';
+import { defaultDieFaces, getDieFaces, clampFaceValue, DIE_SLOTS } from '../logic/forge.js';
 import { resolveFaceAtRoll, generateFaceStock, rollShopFace, faceShortLabel, FORGE_RESOLVED, SHOP_FACE_SLOTS, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
@@ -1948,6 +1948,28 @@ export const useGameStore = create((set, get) => ({
     set({ teams: nt, shopFaceStock: newStock });
     saveGame(get());
   },
+  // Forge : pose une face de la réserve (stockIndex) sur un slot du dé (slotIndex).
+  // L'ADRESSE du slot (base) est immuable ; on remplace sa couche forge. Une face
+  // écrasée est PERDUE (pas de recyclage) — la confirmation est gérée côté UI.
+  forgeFace: (slotIndex, stockIndex, teamIndex) => {
+    const st = get();
+    if (!extOn(st.extensions, 'forge')) return;
+    const idx = teamIndex ?? st.currentTeam;
+    const team = st.teams[idx];
+    if (!team) return;
+    if (slotIndex < 0 || slotIndex >= DIE_SLOTS) return;
+    const stock = team.faceStock || [];
+    const f = stock[stockIndex];
+    if (!f) return;
+    const faces = getDieFaces(team).map((face, i) => (
+      i === slotIndex ? { base: i + 1, value: clampFaceValue(f.value), effect: f.effect || null } : face
+    ));
+    const nt = [...st.teams];
+    nt[idx] = { ...team, dieFaces: faces, faceStock: stock.filter((_, i) => i !== stockIndex) };
+    st.addLog(tg('log.store.forgeFace', { emoji: team.emoji, name: team.name, base: slotIndex + 1, label: faceShortLabel(f) }));
+    set({ teams: nt });
+    saveGame(get());
+  },
   sellEquipment: (slot) => itemH.sellEquipment(set, get, slot),
   sellBagItem: (i) => itemH.sellBagItem(set, get, i),
   useConsumable: (i) => itemH.useConsumable(set, get, i),
@@ -2011,6 +2033,9 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'buyFace') {
       // Forge : achat d'une face de la vitrine (index) pour l'équipe du téléphone.
       get().buyFace(payload.faceIndex, idx);
+    } else if (type === 'forgeFace') {
+      // Forge : pose d'une face de la réserve sur un slot du dé (atelier mobile).
+      get().forgeFace(payload.slotIndex, payload.stockIndex, idx);
     } else if (type === 'buyPower') {
       // Déblocage d'un nouveau pouvoir.
       powerH.buyNewPower(set, get, payload.key, idx);
