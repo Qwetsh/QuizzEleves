@@ -23,7 +23,9 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides, resolveAmount, isGoldStealImmune } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { RECIPES } from '../data/recipes.js';
+import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural } from '../i18n';
 import { loc } from '../i18n/content';
 import { hasPactSpec, isDiploTrade, pactTurns, withPromise, tickPromises, hasCoalitionSpec, coalitionTurns, withCoalition, tickCoalitions } from '../logic/pacts.js';
@@ -975,7 +977,7 @@ export const useGameStore = create((set, get) => ({
     if (!node) { get().nextTurn(); return; }
 
     if (node.type === 'event') {
-      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled() });
+      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled(), extensions: get().extensions });
       if (picked) {
         addLog(tg('log.store.landEvent', { emoji: team.emoji, name: team.name, eicon: picked.event.icon, ename: loc(picked.event, 'name') }));
         set({ pendingEventQuestion: { subject: node.subject || get().randomBoardSubject() } });
@@ -1623,16 +1625,17 @@ export const useGameStore = create((set, get) => ({
 
   // Retire un objet à une équipe (action `loseItem`). category : 'equipment' |
   // 'consumable' | undefined (les deux). Repli : perte de `fallbackGold` si rien.
-  engineLoseItem: (teamIdx, category, fallbackGold = 0) => {
+  engineLoseItem: (teamIdx, category, fallbackGold = 0, family) => {
     const idx = teamIdx ?? get().currentTeam;
     const team = get().teams[idx];
     if (!team) return;
     const pool = [];
-    if (category !== 'consumable') {
+    // `family` (optionnel) restreint au sac et à une famille précise (ex. 'ingredient').
+    if (!family && category !== 'consumable') {
       for (const [slot, v] of Object.entries(team.equipment || {})) { const k = itemH.cellKey(v); if (k && ITEMS[k]) pool.push({ kind: 'equip', slot, key: k }); }
     }
     if (category !== 'equipment') {
-      itemH.normalizeBag(team.bag).forEach((c, i) => { const k = itemH.cellKey(c); if (k && ITEMS[k]) pool.push({ kind: 'bag', index: i, key: k }); });
+      itemH.normalizeBag(team.bag).forEach((c, i) => { const k = itemH.cellKey(c); if (k && ITEMS[k] && (!family || ITEMS[k].family === family)) pool.push({ kind: 'bag', index: i, key: k }); });
     }
     const nt = [...get().teams];
     if (pool.length === 0) {
@@ -1657,6 +1660,101 @@ export const useGameStore = create((set, get) => ({
     }
     set({ teams: nt });
     get().addLog(tg('log.store.loseItem', { emoji: team.emoji, name: team.name, icon: it.icon, iname: loc(it, 'name') }));
+  },
+
+  // === Actions d'événements liées aux extensions Alchimie & Enchantement =======
+
+  // Donne un objet PRÉCIS (clé) à une équipe. `reveal` : cérémonie de gain (file-aware).
+  engineGrantItem: (teamIdx, key, { reveal = true, title = '🎁 Reçu !' } = {}) => {
+    const idx = teamIdx ?? get().currentTeam;
+    if (!ITEMS[key]) return;
+    const res = itemH.grantItem(set, get, idx, key);
+    if (!res || res.outcome === 'refunded' || !reveal) return;
+    const lr = get().lootReveal;
+    if (lr) set({ lootReveal: { ...lr, rest: [...(lr.rest || []), { itemKey: key, title }] } });
+    else get().showLoot(key, { title });
+  },
+
+  // Donne N ingrédients d'alchimie ALÉATOIRES (pondérés) à une équipe.
+  engineGrantIngredient: (teamIdx, n = 1) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const enabled = get().enabledItems || Object.keys(ITEMS);
+    for (let i = 0; i < Math.max(1, n); i++) {
+      const key = itemH.pickLootIngredient(enabled, null);
+      if (key) get().engineGrantItem(idx, key, { reveal: i === 0, title: '🌿 Ingrédient récolté !' });
+    }
+  },
+
+  // Révèle une recette d'alchimie (au grimoire de l'équipe). Aléatoire si non précisée.
+  engineDiscoverRecipe: (teamIdx, recipeKey) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const known = team.knownRecipes || [];
+    let rid = recipeKey;
+    if (!rid) {
+      const undisc = RECIPES.filter((r) => !known.includes(r.id));
+      if (!undisc.length) return;
+      rid = undisc[Math.floor(Math.random() * undisc.length)].id;
+    }
+    if (known.includes(rid)) return;
+    const recipe = RECIPES.find((r) => r.id === rid);
+    if (!recipe) return;
+    const nt = [...get().teams];
+    nt[idx] = { ...team, knownRecipes: [...known, rid] };
+    set({ teams: nt });
+    const pName = ITEMS[recipe.potion] ? loc(ITEMS[recipe.potion], 'name') : recipe.potion;
+    get().addLog(tg('log.fx.discoverRecipe', { emoji: team.emoji, name: team.name, potion: pName }));
+  },
+
+  // Enchante GRATUITEMENT une pièce équipée (specs données, sinon une rune aléatoire
+  // légère). Choisit une pièce sous le plafond d'enchants. Sans effet si rien à enchanter.
+  engineEnchantEquipped: (teamIdx, specs, slot) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const RUNES = [
+      { type: 'timerBonus', value: 2 },
+      { type: 'reculReduction', value: 1 },
+      { type: 'reflectChance', value: 15 },
+      { kind: 'trigger', on: 'roll', values: [6], do: [{ action: 'money', mode: 'gain', target: 'self', n: 10, unit: 'flat' }] },
+      { kind: 'trigger', on: 'correct', do: [{ action: 'money', mode: 'gain', target: 'self', n: 4, unit: 'flat' }] },
+    ];
+    const slots = ['head', 'body', 'feet'].filter((s) => {
+      const v = team.equipment?.[s];
+      const k = itemKeyOf(v);
+      return k && ITEMS[k] && itemEnchantsOf(v).length < ENCHANT_CAP_PER_PIECE;
+    });
+    if (!slots.length) return;
+    const useSlot = slot && slots.includes(slot) ? slot : slots[Math.floor(Math.random() * slots.length)];
+    const toApply = (specs && specs.length) ? specs : [RUNES[Math.floor(Math.random() * RUNES.length)]];
+    const cur = team.equipment[useSlot];
+    const enchants = [...itemEnchantsOf(cur), ...toApply].slice(0, ENCHANT_CAP_PER_PIECE);
+    const nt = [...get().teams];
+    nt[idx] = { ...team, equipment: { ...team.equipment, [useSlot]: { key: itemKeyOf(cur), enchants } } };
+    set({ teams: nt });
+    const it = ITEMS[itemKeyOf(cur)];
+    get().addLog(tg('log.fx.runeEnchant', { emoji: team.emoji, name: team.name, icon: it?.icon || '✨', item: it ? loc(it, 'name') : useSlot }));
+    effectH.announce(set, get, '🔮', tg('log.fx.runeEnchant.toast'), '#7a4fae');
+  },
+
+  // Efface un enchantement (au hasard) d'une pièce équipée enchantée. Sans effet si aucune.
+  engineUnenchant: (teamIdx) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const slots = ['head', 'body', 'feet'].filter((s) => itemEnchantsOf(team.equipment?.[s]).length > 0);
+    if (!slots.length) return;
+    const useSlot = slots[Math.floor(Math.random() * slots.length)];
+    const cur = team.equipment[useSlot];
+    const ench = itemEnchantsOf(cur);
+    const remIdx = Math.floor(Math.random() * ench.length);
+    const left = ench.filter((_, i) => i !== remIdx);
+    const nt = [...get().teams];
+    nt[idx] = { ...team, equipment: { ...team.equipment, [useSlot]: left.length ? { key: itemKeyOf(cur), enchants: left } : itemKeyOf(cur) } };
+    set({ teams: nt });
+    const it = ITEMS[itemKeyOf(cur)];
+    get().addLog(tg('log.fx.unenchant', { emoji: team.emoji, name: team.name, icon: it?.icon || '✨', item: it ? loc(it, 'name') : useSlot }));
   },
 
   // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---

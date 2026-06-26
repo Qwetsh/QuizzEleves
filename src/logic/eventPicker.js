@@ -1,4 +1,5 @@
 import { EVENTS } from '../data/events.js';
+import { extOn } from '../extensions/registry.js';
 
 /**
  * Tirage pondere d'un evenement parmi les evenements actifs.
@@ -6,12 +7,16 @@ import { EVENTS } from '../data/events.js';
  * @param {object} [opts]
  * @param {boolean} [opts.itemsEnabled=true] - si false, exclut les evenements qui
  *   dependent du systeme d'objets (marques `needsItems`) — extension equipement coupee.
+ * @param {object} [opts.extensions] - map d'extensions actives ; un event avec
+ *   `requires: ['alchemy', ...]` n'est tire QUE si toutes ses extensions sont actives.
  * @returns {{ key: string, event: object }} l'evenement tire
  */
 export function pickRandomEvent(enabledKeys, opts = {}) {
-  const { itemsEnabled = true } = opts;
+  const { itemsEnabled = true, extensions } = opts;
+  const ok = (ev) => (itemsEnabled || !ev.needsItems)
+    && (ev.requires || []).every((ext) => extOn(extensions, ext));
   const pool = enabledKeys
-    .filter((k) => EVENTS[k] && (itemsEnabled || !EVENTS[k].needsItems))
+    .filter((k) => EVENTS[k] && ok(EVENTS[k]))
     .map((k) => ({ key: k, event: EVENTS[k], weight: EVENTS[k].weight ?? 1 }));
 
   if (pool.length === 0) return null;

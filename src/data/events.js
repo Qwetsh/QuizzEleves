@@ -56,6 +56,30 @@ const BUILTIN_EVENTS = {
   forge:            { name: 'La Forge',          name_en: 'The Forge',          icon: '🔨', desc: 'Fais fondre 2 consommables pour forger 1 EQUIPEMENT aleatoire !', desc_en: 'Melt down 2 consumables to forge 1 random piece of EQUIPMENT!', category: 'item', optional: true, weight: 0.5, needsItems: true },
   reliquaire:       { name: 'Le Reliquaire',     name_en: 'The Reliquary',      icon: '🏺', desc: 'Une relique t\'attire : recois une piece d\'un SET que tu as deja commence !', desc_en: 'A relic draws you in: receive a piece from a SET you have already started!', category: 'item', optional: false, weight: 0.45, needsItems: true },
   tournoi:          { name: 'Tournoi eclair',    name_en: 'Lightning tournament', icon: '🏅', desc: 'Reponds vite ! Bonne reponse : tu remportes un consommable. Mauvaise : un adversaire le rafle !', desc_en: 'Answer fast! Right answer: you win a consumable. Wrong: an opponent snatches it!', needsQuestion: true, category: 'item', optional: true, weight: 0.5, needsItems: true },
+
+  // --- ALCHIMIE (extension `alchemy`) : ingrédients, recettes, chaudron ---
+  herboriste:       { name: 'L\'Herboriste',     name_en: 'The Herbalist',      icon: '🌿', desc: 'Une herboriste partage sa récolte : tu reçois 2 ingrédients d\'alchimie !', desc_en: 'An herbalist shares her harvest: you receive 2 alchemy ingredients!', category: 'item', optional: false, weight: 0.7, requires: ['alchemy'],
+    actions: [{ action: 'grantIngredient', target: 'self', n: 2 }] },
+  chaudronAbandonne:{ name: 'Le Chaudron abandonné', name_en: 'The Abandoned Cauldron', icon: '⚗️', desc: 'Près d\'un chaudron oublié traînent 3 ingrédients : de quoi distiller une potion !', desc_en: 'By a forgotten cauldron lie 3 ingredients: enough to distill a potion!', category: 'item', optional: false, weight: 0.5, requires: ['alchemy'],
+    actions: [{ action: 'grantIngredient', target: 'self', n: 3 }] },
+  pluieEssences:    { name: 'Pluie d\'essences', name_en: 'Rain of Essences',   icon: '🌧️', desc: 'Une pluie magique tombe : CHAQUE équipe reçoit un ingrédient !', desc_en: 'A magical rain falls: EACH team receives an ingredient!', category: 'item', optional: false, weight: 0.5, requires: ['alchemy'],
+    actions: [{ action: 'grantIngredient', target: 'all', n: 1 }] },
+  eureka:           { name: 'Eurêka !',          name_en: 'Eureka!',            icon: '📖', desc: 'Un grimoire poussiéreux te révèle une nouvelle recette de potion !', desc_en: 'A dusty grimoire reveals a new potion recipe to you!', category: 'item', optional: false, weight: 0.45, requires: ['alchemy'],
+    actions: [{ action: 'discoverRecipe', target: 'self' }] },
+  explosionChaudron:{ name: 'Explosion du chaudron', name_en: 'Cauldron Blast', icon: '💥', desc: 'Boum ! Une mauvaise manipulation fait partir un de tes ingrédients en fumée.', desc_en: 'Boom! A clumsy move sends one of your ingredients up in smoke.', category: 'item', optional: false, weight: 0.4, requires: ['alchemy'],
+    actions: [{ action: 'loseItem', target: 'self', category: 'consumable', family: 'ingredient', fallbackGold: 0 }] },
+
+  // --- ENCHANTEMENT (extension `enchant`) : parchemins, runes, scribe ---
+  scribeAmbulant:   { name: 'Le Scribe ambulant', name_en: 'The Wandering Scribe', icon: '✒️', desc: 'Un scribe te confie un parchemin vierge : grave-le à l\'Autel du Scribe !', desc_en: 'A scribe hands you a blank scroll: inscribe it at the Scribe\'s Altar!', category: 'item', optional: false, weight: 0.6, requires: ['enchant'],
+    actions: [{ action: 'grantItem', target: 'self', key: 'parcheminVierge' }] },
+  runeMysterieuse:  { name: 'Rune mystérieuse',  name_en: 'Mysterious Rune',    icon: '🔮', desc: 'Une rune ancienne s\'illumine et enchante GRATUITEMENT une de tes pièces équipées !', desc_en: 'An ancient rune lights up and enchants one of your equipped pieces FOR FREE!', category: 'item', optional: false, weight: 0.5, requires: ['enchant'],
+    actions: [{ action: 'enchantEquipped', target: 'self' }] },
+  subventionScribe: { name: 'Subvention du scribe', name_en: 'Scribe\'s Grant',  icon: '🪙', desc: 'La guilde des scribes finance ta prochaine gravure : +25 pièces !', desc_en: 'The scribes\' guild funds your next inscription: +25 coins!', category: 'money', optional: false, weight: 0.6, requires: ['enchant'],
+    actions: [{ action: 'money', mode: 'gain', target: 'self', n: 25, unit: 'flat' }] },
+  encreRunique:     { name: 'Encre runique',     name_en: 'Runic Ink',          icon: '🖋️', desc: 'Des runes scintillent sur toi : pendant 2 tours, +5 pièces à chaque bonne réponse !', desc_en: 'Runes shimmer over you: for 2 turns, +5 coins on each correct answer!', category: 'money', optional: false, weight: 0.5, requires: ['enchant'],
+    actions: [{ action: 'buff', target: 'self', buff: { type: 'themeBonus', turns: 2, n: 5 } }] },
+  effacement:       { name: 'Effacement',        name_en: 'Erasure',            icon: '🧽', desc: 'L\'encre pâlit : un enchantement de l\'une de tes pièces s\'efface…', desc_en: 'The ink fades: an enchantment on one of your pieces is erased…', category: 'item', optional: false, weight: 0.4, requires: ['enchant'],
+    actions: [{ action: 'unenchant', target: 'self' }] },
 };
 
 // EVENTS = base + personnalisés. `let` + export → liaison vivante : les modules

@@ -106,6 +106,12 @@ export default {
   'log.fx.curseTimer':       { fr: '⏱️ Malédiction : timer ÷{n} au prochain tour !', en: '⏱️ Curse: timer ÷{n} on the next turn!' },
   'log.fx.curseTimer.toast': { fr: 'Timer ÷{n}', en: 'Timer ÷{n}' },
 
+  // --- Alchimie / Enchantement (événements) ---
+  'log.fx.discoverRecipe': { fr: '📖 {emoji} {name} découvre une recette : {potion} !', en: '📖 {emoji} {name} discovers a recipe: {potion}!' },
+  'log.fx.runeEnchant': { fr: '🔮 {emoji} {name} : une rune enchante {icon} {item} !', en: '🔮 {emoji} {name}: a rune enchants {icon} {item}!' },
+  'log.fx.runeEnchant.toast': { fr: 'Rune gravée !', en: 'Rune inscribed!' },
+  'log.fx.unenchant': { fr: '🧽 {emoji} {name} : un enchantement de {icon} {item} s\'efface…', en: '🧽 {emoji} {name}: an enchantment fades from {icon} {item}…' },
+
   // --- curseExtraQuestion ---
   'log.fx.curseExtra':       { fr: ['❓ Malédiction : +{n} question au prochain tour !', '❓ Malédiction : +{n} questions au prochain tour !'],
                                en: ['❓ Curse: +{n} question on the next turn!', '❓ Curse: +{n} questions on the next turn!'] },

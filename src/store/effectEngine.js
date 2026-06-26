@@ -697,12 +697,50 @@ function stepHead(set, get, action, ctx) {
       if (get().engineLoot) get().engineLoot(ctx.sourceTeam ?? get().currentTeam, action.category);
       return 'done';
     }
+    // --- Actions Alchimie / Enchantement (événements dédiés) ---
+    case 'grantItem': {
+      // Donne un OBJET précis (action.key) à la/les cible(s). Révélation pour la source.
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const src = ctx.sourceTeam ?? get().currentTeam;
+      for (const idx of t.indices) get().engineGrantItem?.(idx, action.key, { reveal: idx === src, title: action.title });
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'grantIngredient': {
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineGrantIngredient?.(idx, action.n || 1);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'discoverRecipe': {
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineDiscoverRecipe?.(idx, action.recipe);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'enchantEquipped': {
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineEnchantEquipped?.(idx, action.specs, action.slot);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'unenchant': {
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineUnenchant?.(idx);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
     case 'loseItem': {
       // Retire un objet (catégorie optionnelle) à la/les cible(s) ; repli sur l'or.
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       const loseIdx = applyReflection(set, get, action, ctx, t.indices).indices;
-      for (const idx of loseIdx) get().engineLoseItem?.(idx, action.category, action.fallbackGold);
+      for (const idx of loseIdx) get().engineLoseItem?.(idx, action.category, action.fallbackGold, action.family);
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
