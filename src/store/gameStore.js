@@ -11,7 +11,7 @@ import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
 import { defaultDieFaces, getDieFaces, clampFaceValue } from '../logic/forge.js';
-import { resolveFaceAtRoll } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, generateFaceStock, rollShopFace, faceShortLabel, FORGE_RESOLVED, SHOP_FACE_SLOTS, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -621,6 +621,8 @@ export const useGameStore = create((set, get) => ({
       statsArchived: false,
       shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
       shopStockTurns: 0,
+      // Forge : vitrine de faces (uniquement les effets résolus) si l'extension est active.
+      shopFaceStock: forgeOn ? generateFaceStock(SHOP_FACE_SLOTS, Math.random, FORGE_RESOLVED) : [],
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       powerSetupIndex: 0, powerSetupCategory: 'def',
@@ -1923,6 +1925,29 @@ export const useGameStore = create((set, get) => ({
   },
   closeInventory: () => set({ showInventory: false }),
   buyItem: (key) => itemH.buyItem(set, get, key),
+  // Forge : achète une face de la vitrine → réserve de l'équipe (faceStock),
+  // renouvelle l'emplacement acheté (comme les objets). teamIndex optionnel (mobile).
+  buyFace: (faceIndex, teamIndex) => {
+    const st = get();
+    if (!extOn(st.extensions, 'forge')) return;
+    const idx = teamIndex ?? st.currentTeam;
+    const team = st.teams[idx];
+    const stock = st.shopFaceStock || [];
+    const f = stock[faceIndex];
+    if (!team || !f) return;
+    const price = f.price || 0;
+    const faceStock = [...(team.faceStock || [])];
+    if ((team.money || 0) < price || faceStock.length >= FACE_STOCK_MAX) return;
+    faceStock.push({ value: f.value, effect: f.effect || null });
+    const nt = [...st.teams];
+    nt[idx] = { ...team, money: team.money - price, faceStock };
+    const newStock = [...stock];
+    const repl = rollShopFace(Math.random, FORGE_RESOLVED);
+    newStock[faceIndex] = repl || newStock[faceIndex];
+    st.addLog(tg('log.store.buyFace', { emoji: team.emoji, name: team.name, label: faceShortLabel(f), price }));
+    set({ teams: nt, shopFaceStock: newStock });
+    saveGame(get());
+  },
   sellEquipment: (slot) => itemH.sellEquipment(set, get, slot),
   sellBagItem: (i) => itemH.sellBagItem(set, get, i),
   useConsumable: (i) => itemH.useConsumable(set, get, i),
@@ -1983,6 +2008,9 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'buyItem') {
       // Achat d'un objet de la boutique pour l'équipe du téléphone.
       itemH.buyItem(set, get, payload.key, idx);
+    } else if (type === 'buyFace') {
+      // Forge : achat d'une face de la vitrine (index) pour l'équipe du téléphone.
+      get().buyFace(payload.faceIndex, idx);
     } else if (type === 'buyPower') {
       // Déblocage d'un nouveau pouvoir.
       powerH.buyNewPower(set, get, payload.key, idx);

@@ -4,7 +4,7 @@ const SAVE_FIELDS = [
   'teams', 'currentTeam', 'board', 'boardDecor', 'viewBox', 'finished',
   'askedQuestions', 'questions', 'log', 'phase', 'boardSubjects', 'categoryPools',
   'extensions', 'enabledEvents', 'knownEventKeys', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'forcedDuels', 'connectionMode', 'sessionCode', 'boardParams', 'englishMode',
-  'shopStock', 'shopStockTurns',
+  'shopStock', 'shopStockTurns', 'shopFaceStock',
   'starterChestConfig', 'starterGold',
   'gameStats', 'statsArchived', 'classLabel',
 ];

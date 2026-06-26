@@ -115,6 +115,32 @@ export function faceShortLabel(face) {
   return meta ? `+${v} ${meta.icon}` : `+${v}`;
 }
 
+// Description lisible de l'effet d'une face (carte boutique / atelier). null si aucun.
+export function faceEffectLabel(face, en = false) {
+  const e = face?.effect;
+  const meta = e?.type ? FORGE_EFFECTS[e.type] : null;
+  if (!meta) return null;
+  const name = en ? meta.en : meta.fr;
+  const v = forgeTierValue(e.type, e.tier);
+  let detail = '';
+  switch (e.type) {
+    case 'prime': detail = en ? `+${v} gold` : `+${v} or`; break;
+    case 'aubaine': detail = `×${v}`; break;
+    case 'recharge': detail = v === 'full' ? (en ? 'full' : 'pleine') : `+${v}`; break;
+    case 'indice': detail = `−${v}`; break;
+    case 'repit': detail = `+${v} s`; break;
+    case 'egide': detail = v === 'cancel' ? (en ? 'cancel' : 'annule') : `−${v}`; break;
+    case 'butin': detail = v === 'guaranteed' ? (en ? 'guaranteed' : 'garanti') : `+${Math.round((Number(v) || 0) * 100)} %`; break;
+    default: detail = '';
+  }
+  return detail ? `${meta.icon} ${name} (${detail})` : `${meta.icon} ${name}`;
+}
+
+// Boutique de faces : nombre d'emplacements en vitrine + plafond de la réserve
+// de faces achetées (non posées) d'une équipe.
+export const SHOP_FACE_SLOTS = 6;
+export const FACE_STOCK_MAX = 12;
+
 // Effets dont la RÉSOLUTION est câblée (le reste — recharge, questionFraiche,
 // relance — arrive dans une étape ultérieure). La boutique ne propose QUE ces
 // effets-là, pour qu'aucune face achetable ne soit muette.

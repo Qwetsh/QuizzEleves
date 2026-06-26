@@ -10,6 +10,7 @@ import { locName, locDesc, loc } from '../../i18n/content';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
+import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, FACE_STOCK_MAX } from '../../logic/forgeEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -114,6 +115,51 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
                 {isConsumable || slotTaken ? T('common.buy') : T('common.equip')}{' '}
                 {discount < 1 && <s style={{ opacity: 0.6, marginRight: 4 }}>{item.price}</s>}
                 <Price value={price} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </Stall>
+  );
+}
+
+/* ---------- Étal : faces de dé (Forge) ---------- */
+function FaceStall({ team, faces, onBuyFace, en }) {
+  const T = useT();
+  const reserve = team.faceStock?.length || 0;
+  const stockFull = reserve >= FACE_STOCK_MAX;
+  if (!faces || faces.length === 0) return <div className="shop-empty">{T('modal.shop.facesEmpty')}</div>;
+  return (
+    <Stall
+      banner={T('modal.shop.faces')}
+      note={stockFull ? T('modal.shop.faceStockFull') : `${reserve}/${FACE_STOCK_MAX}`}
+    >
+      {faces.map((f, idx) => {
+        const meta = f.effect?.type ? FORGE_EFFECTS[f.effect.type] : null;
+        const color = (meta && FORGE_FAMILY_COLOR[meta.family]) || '#7a5e3a';
+        const price = f.price || 0;
+        const canBuy = team.money >= price && !stockFull;
+        const effLabel = faceEffectLabel(f, en);
+        const moveLabel = f.value === 0 ? T('modal.shop.faceSafe') : T('modal.shop.faceMove', { n: f.value });
+        return (
+          <div className="shop-card" key={idx}>
+            <div className="shop-card-inner">
+              <div className="shop-card-head">
+                <CardIcon icon={meta?.icon || '🎲'} color={color} />
+                <div className="shop-card-titles">
+                  <div className="shop-card-name">{moveLabel}</div>
+                  <div className="shop-card-sub" style={{ color }}>
+                    {effLabel || T('modal.shop.facePure')}
+                  </div>
+                </div>
+              </div>
+              <button
+                className="shop-buy"
+                disabled={!canBuy}
+                onClick={() => { soundClick(); onBuyFace(idx); }}
+              >
+                {T('common.buy')} <Price value={price} />
               </button>
             </div>
           </div>
@@ -261,12 +307,16 @@ export default function ShopModal() {
   const upgradePowerLevel = useGameStore((s) => s.upgradePowerLevel);
   const buyNewPower = useGameStore((s) => s.buyNewPower);
   const buyItem = useGameStore((s) => s.buyItem);
+  const buyFace = useGameStore((s) => s.buyFace);
   const shopStock = useGameStore((s) => s.shopStock);
+  const shopFaceStock = useGameStore((s) => s.shopFaceStock);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const masteryOn = useGameStore((s) => extOn(s.extensions, 'mastery'));
+  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
+  const englishMode = useGameStore((s) => s.englishMode);
 
-  const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs'
+  const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs' | 'faces'
 
   const team = showShop ? teams[currentTeam] : null;
 
@@ -325,6 +375,17 @@ export default function ShopModal() {
                   >
                     {T('modal.shop.tab.powers')}
                   </button>
+                  {forgeOn && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === 'faces'}
+                      className={'shop-tab' + (tab === 'faces' ? ' is-active' : '')}
+                      onClick={() => { soundClick(); setTab('faces'); }}
+                    >
+                      {T('modal.shop.tab.faces')}
+                    </button>
+                  )}
                 </div>
 
                 {tab === 'objets' ? (
@@ -335,6 +396,8 @@ export default function ShopModal() {
                       <div className="shop-empty">{T('modal.shop.empty')}</div>
                     )}
                   </>
+                ) : tab === 'faces' ? (
+                  <FaceStall team={team} faces={shopFaceStock} onBuyFace={buyFace} en={englishMode} />
                 ) : (
                   <>
                     <RechargeStall

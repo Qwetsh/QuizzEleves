@@ -11,6 +11,7 @@ export default function MobileSessionPanel() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   const finished = useGameStore((s) => s.finished);
   const shopStock = useGameStore((s) => s.shopStock);
+  const shopFaceStock = useGameStore((s) => s.shopFaceStock);
   const log = useGameStore((s) => s.log);
   const extensions = useGameStore((s) => s.extensions);
   const lv2Mode = useGameStore((s) => s.lv2Mode);
@@ -33,16 +34,16 @@ export default function MobileSessionPanel() {
   // (débounce léger pour grouper les rafales de mise à jour).
   useEffect(() => {
     if (!code) return;
-    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
+    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
     const id = setTimeout(() => { publishSession(code, payload).catch(() => {}); }, 250);
     return () => clearTimeout(id);
-  }, [code, teams, currentTeam, finished, shopStock, log, extensions, locked, englishMode, gameStats]);
+  }, [code, teams, currentTeam, finished, shopStock, shopFaceStock, log, extensions, locked, englishMode, gameStats]);
 
   async function activate() {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
+      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
       setSessionCode(await createSession(payload));
       setOpen(true);
     } catch (e) { setError(e.message || 'Connexion impossible'); }

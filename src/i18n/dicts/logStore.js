@@ -73,6 +73,7 @@ export default {
   'log.store.lootRefunded':      { fr: '✨ {emoji} {name} trouve {icon} {iname}... sac plein, revendu +{refund} 💰 !',
                                    en: '✨ {emoji} {name} finds {icon} {iname}... bag full, sold back +{refund} 💰!' },
   'log.store.lootFound':         { fr: '✨ {emoji} {name} trouve un objet : {icon} {iname} !', en: '✨ {emoji} {name} finds an item: {icon} {iname}!' },
+  'log.store.buyFace':           { fr: '🎲 {emoji} {name} achète une face : {label} ({price} 💰).', en: '🎲 {emoji} {name} buys a die face: {label} ({price} 💰).' },
 
   // --- Timeout ---
   'log.store.timeoutPenalty':    { fr: '💸 {emoji} {name} dépasse le temps : −{n} or (Taxe du temps).',
