@@ -62,6 +62,13 @@ export const EXTENSIONS = [
     default: false,
     needsItems: true,
   },
+  {
+    id: 'forge',
+    name: 'Forge de dés',
+    icon: '🎲',
+    desc: 'Chaque équipe personnalise les 6 faces de son dé (valeur de déplacement et/ou effet) : un 3ᵉ onglet « Faces » en boutique et un atelier de forge sur le téléphone. Désactivée : dé standard 1→6 pour tous.',
+    default: false,
+  },
 ];
 
 // État par défaut : { equipment: true, ... }

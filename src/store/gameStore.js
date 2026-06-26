@@ -10,6 +10,7 @@ import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
+import { defaultDieFaces } from '../logic/forge.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -591,6 +592,7 @@ export const useGameStore = create((set, get) => ({
       }
     }
     const { nodes, viewBox } = generateBoard({ ...boardParams, subjects: boardCats });
+    const forgeOn = extOn(get().extensions, 'forge');
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
       // Langue LV2 de l'équipe (choisie à la création) ; repli espagnol si le mode
@@ -598,6 +600,8 @@ export const useGameStore = create((set, get) => ({
       lv2: lv2On ? (t.lv2 || 'espagnol') : null,
       equipment: { head: null, body: null, feet: null },
       bag: Array(itemH.BAG_SIZE).fill(null),
+      // Forge de dés : dé standard 1→6 + stock de faces achetées (vide au départ).
+      ...(forgeOn ? { dieFaces: defaultDieFaces(), faceStock: [] } : {}),
     }));
     set({
       devSandbox: false,
@@ -1764,6 +1768,7 @@ export const useGameStore = create((set, get) => ({
     const { setupTeams, boardParams, level, useBrevet } = get();
     const { nodes, viewBox } = generateBoard(boardParams);
     // Deux equipes de test, equipees pour rendre la recompense interessante
+    const forgeOn = extOn(get().extensions, 'forge');
     const teams = setupTeams.slice(0, 2).map((t) => ({
       ...t,
       pos: 'depart',
@@ -1773,6 +1778,7 @@ export const useGameStore = create((set, get) => ({
       powers: { bouclier: { charges: 2, level: 1 }, foudre: { charges: 2, level: 1 } },
       equipment: { head: null, body: null, feet: null },
       bag: Array(itemH.BAG_SIZE).fill(null),
+      ...(forgeOn ? { dieFaces: defaultDieFaces(), faceStock: [] } : {}),
     }));
     const questions = getQuestions(level, { brevet: useBrevet });
     set({

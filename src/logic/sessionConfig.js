@@ -4,6 +4,8 @@
 // sans aucun téléphone connecté.
 import { supabase } from './supabaseClient.js';
 import { logText } from './logFormat.js';
+import { extOn } from '../extensions/registry.js';
+import { getDieFaces } from './forge.js';
 
 const TABLE = 'quete_game_sessions';
 const LOBBY_TABLE = 'quete_lobby_teams';
@@ -49,6 +51,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
     });
   }
   for (const k of Object.keys(questionLog)) questionLog[k] = questionLog[k].slice(-20);
+  const forgeOn = extOn(extensions, 'forge');
   return {
     questionLog,
     status,
@@ -102,6 +105,10 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, log
       // Alchimie : grimoire de l'équipe (ingrédients goûtés + recettes trouvées).
       knownIngredients: t.knownIngredients || [],
       knownRecipes: t.knownRecipes || [],
+      // Forge de dés : les 6 faces actuelles (normalisées) + faces achetées non
+      // posées, pour l'atelier de forge mobile. Publié seulement si l'extension
+      // est active (sinon le mobile ne montre pas l'atelier).
+      ...(forgeOn ? { dieFaces: getDieFaces(t), faceStock: t.faceStock || [] } : {}),
     })),
   };
 }
