@@ -3,6 +3,7 @@ import { SUBJECT_KEYS } from '../data/subjects.js';
 import { moveBack, moveForward } from './pathfinding.js';
 import { getEffectValue, hasBuff } from './itemEffects.js';
 import { resolvePowerEffect } from './powerEffects.js';
+import { aegisReduction } from './forgeEffects.js';
 import { tg, tgPlural } from '../i18n';
 import { getLang } from '../i18n/lang.js';
 import { locName } from '../i18n/content.js';
@@ -69,6 +70,10 @@ export function applyRecul(team, board, base, masteryOn = false) {
 
   // 2. Pouvoir Bouclier \u2014 RETIRE `amount` cases (1 charge), SEULEMENT si recul restant.
   const charges = team.powers?.bouclier?.charges ?? 0;
+  // Egide (effet de face Forge) armee ce tour : reduction de recul (0 si aucune).
+  const aegis = aegisReduction(team, recul);
+  // Reduction "classe bouclier" du POUVOIR : active (avec charge) sinon passive.
+  const powerAmt = charges > 0 ? (bEff.amount ?? 0) : (bEff.passiveReduce ?? 0);
   let advance = 0;      // cases gagnees (Sur-reduction / Forteresse)
   let pushAmount = 0;   // surplus a infliger aux adversaires (Sur-reduction)
   let pushMode = null;  // 'one' | 'all'
@@ -80,6 +85,12 @@ export function applyRecul(team, board, base, masteryOn = false) {
     bonusMoney = (bEff.bonusMoney ?? 0) + (bEff.goldOnUse || 0);
     if (bonusMoney) { patch.money = (team.money || 0) + bonusMoney; detail.push({ label: tg('log.turn.detail.bonusBouclier'), amount: bonusMoney }); }
     recul = 0;
+    shield = 'power';
+  } else if (recul > 0 && aegis > 0 && aegis >= powerAmt) {
+    // Egide >= reduction du Bouclier : on prend la MEILLEURE des deux (jamais la
+    // somme, spec 6.3). Egide est gratuite -> on garde la charge du pouvoir.
+    recul = Math.max(0, recul - aegis);
+    detail.push({ label: tg('log.turn.detail.egide'), note: `−${cases(aegis)}` });
     shield = 'power';
   } else if (charges > 0 && recul > 0) {
     const level = team.powers.bouclier.level ?? 1;

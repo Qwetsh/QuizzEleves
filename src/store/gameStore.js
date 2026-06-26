@@ -10,7 +10,8 @@ import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
-import { defaultDieFaces } from '../logic/forge.js';
+import { defaultDieFaces, getDieFaces, clampFaceValue } from '../logic/forge.js';
+import { resolveFaceAtRoll } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -718,12 +719,21 @@ export const useGameStore = create((set, get) => ({
     const team = teams[currentTeam];
     // Buff \u00AB bonus de d\u00E9 \u00BB (effet de dur\u00E9e) : pendant sa dur\u00E9e, le d\u00E9placement
     // effectif = valeur du d\u00E9 + N. L'atterrissage sur la case finale est normal.
+    // Forge de dés : le slot tiré (value = 1→6, l'adresse immuable) désigne une
+    // FACE forgée dont la VALEUR (0→6) fait avancer. Dé standard ou extension
+    // désactivée : face.value === value (comportement inchangé).
+    const face = getDieFaces(team)[((value - 1) % 6 + 6) % 6];
+    const moveValue = clampFaceValue(face.value);
     const bonus = buffValue(team, 'diceBonus');
-    const eff = value + bonus;
+    const eff = moveValue + bonus;
     set({ preRollPos: team.pos, preRollValue: eff, freeActivation: false });
     addLog(bonus > 0
-      ? tg('log.store.roll.bonus', { emoji: team.emoji, name: team.name, value, bonus, eff })
-      : tg('log.store.roll', { emoji: team.emoji, name: team.name, value }));
+      ? tg('log.store.roll.bonus', { emoji: team.emoji, name: team.name, value: moveValue, bonus, eff })
+      : tg('log.store.roll', { emoji: team.emoji, name: team.name, value: moveValue }));
+    // Effets de la face : 🎲 lancer (Prime…) appliqués maintenant ; ⏱️ avant
+    // question (Égide…) armés pour ce tour (pipeline §6).
+    const forgeRoll = resolveFaceAtRoll(team, face);
+    forgeRoll.logs.forEach(addLog);
 
     const result = moveForward(board, team.pos, eff);
 
@@ -753,7 +763,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     const newTeams = [...teams];
-    newTeams[currentTeam] = { ...team, pos: finalPos };
+    newTeams[currentTeam] = { ...team, pos: finalPos, ...forgeRoll.patch };
     // Build animation waypoints from path
     const waypoints = path.map((id) => ({ x: board[id].x, y: board[id].y }));
     set({ teams: newTeams, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
@@ -1242,7 +1252,7 @@ export const useGameStore = create((set, get) => ({
     } else {
       // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
       const masteryOnW = extOn(get().extensions, 'mastery');
-      const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue || 2, masteryOnW);
+      const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue ?? 2, masteryOnW);
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu ;
       // les bonus de loot arm\u00e9s par la Relance chanceuse sont consomm\u00e9s (pas de loot ici).
       newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
@@ -1461,7 +1471,7 @@ export const useGameStore = create((set, get) => ({
 
     // Recul = valeur du d\u00e9 qui a fait avancer (preRollValue), d\u00e9faut 2.
     const masteryOnT = extOn(get().extensions, 'mastery');
-    const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue || 2, masteryOnT);
+    const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue ?? 2, masteryOnT);
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu ;
     // bonus de loot de la Relance chanceuse consomm\u00e9s (pas de loot au timeout).
     newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
@@ -2238,9 +2248,9 @@ export const useGameStore = create((set, get) => ({
     // expiration à 0. (Fumigène posé avec une durée X ; autres buffs à venir.)
     let nt = get().teams;
     // Silence/Taxe (Sablier) : consommés à la fin du tour de l'équipe visée.
-    if (nt[currentTeam]?.silencedNextTurn || nt[currentTeam]?.timeoutPenalty) {
+    if (nt[currentTeam]?.silencedNextTurn || nt[currentTeam]?.timeoutPenalty || nt[currentTeam]?.forgeAegis != null) {
       nt = [...nt];
-      nt[currentTeam] = { ...nt[currentTeam], silencedNextTurn: false, timeoutPenalty: undefined };
+      nt[currentTeam] = { ...nt[currentTeam], silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined };
     }
     const ct = nt[newCurrent];
     if (ct?.itemFumigeneTurns > 0) {

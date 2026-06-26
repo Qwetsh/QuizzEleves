@@ -53,6 +53,7 @@ export default {
   'log.turn.detail.chargePlus': { fr: '+1 charge {power}', en: '+1 charge {power}' },
   'log.turn.detail.equipement': { fr: 'Équipement', en: 'Equipment' },
   'log.turn.detail.bouclierPassif': { fr: 'Bouclier (passif)', en: 'Shield (passive)' },
+  'log.turn.detail.egide': { fr: 'Égide (dé forgé)', en: 'Aegis (forged die)' },
   'log.turn.detail.forteresse': { fr: 'Forteresse : recul annulé → avance', en: 'Fortress: setback cancelled → advance' },
   'log.turn.detail.avance': { fr: 'Avance', en: 'Advance' },
 };

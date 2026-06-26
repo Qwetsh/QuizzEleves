@@ -47,7 +47,25 @@ const DEFAULT_LOOT = {
 
 export const LOOT = { ...DEFAULT_LOOT };
 
-export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS };
+// --- Forge de dés (extension « forge ») : tout est calibrable, rien en dur ---
+// Points de départ issus de la spec (à équilibrer en jouant). La logique lit
+// FORGE.* (voir forgeEffects.js) ; l'éditeur exposera ces valeurs en Phase 2.
+const DEFAULT_FORGE = {
+  budgetMax: 12,                    // puissance max d'une face (déplacement + effet)
+  effectTierCost: [2, 4, 6],        // coût de puissance d'un effet : petit / moyen / gros
+  relance: { enchainement: false }, // §6.2 : une face-Relance retombant sur Relance NE re-relance pas (défaut)
+  // Valeurs des paliers par effet (index 0/1/2 = petit / moyen / gros).
+  effects: {
+    prime: { tiers: [10, 25, 50] },     // 💰 +or sec (timing : lancer)
+    egide: { tiers: [2, 4, 'cancel'] },  // 🛡️ réduction de recul ce tour, MAX avec Bouclier (timing : avant question)
+  },
+  // Boutique (Phase 2) : prix de départ et poids de rareté par bande de puissance.
+  priceByBand: [25, 60, 120, 250, 400, 650],
+  rarityByBand: [10, 10, 6, 3, 3, 1],
+};
+export const FORGE = clone(DEFAULT_FORGE);
+
+export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS, forge: DEFAULT_FORGE };
 
 const LS_KEY = 'quete_balance_overrides_v1';
 
@@ -82,6 +100,8 @@ function resetToDefaults() {
   // override mutant les casserait).
   LOOT.ingredients = clone(DEFAULT_LOOT.ingredients);
   LOOT.ingredientMultiDrop = { ...DEFAULT_LOOT.ingredientMultiDrop };
+  // Forge : reset profond (sous-objets effects/relance + tableaux).
+  Object.assign(FORGE, clone(DEFAULT_FORGE));
   // Sets : restaure name/bonus2/bonus3 d'origine (clone profond).
   for (const [k, d] of Object.entries(DEFAULT_SETS)) {
     if (!SETS[k]) continue;
@@ -124,6 +144,9 @@ export function applyBalance(overrides) {
   }
 
   if (ov.loot) Object.assign(LOOT, ov.loot);
+
+  // Forge : fusion récursive (paliers d'effets, coûts, prix/rareté de bande).
+  if (ov.forge) deepAssign(FORGE, ov.forge);
 
   // Bonus de sets modifiés (name / bonus2 / bonus3).
   for (const [k, o] of Object.entries(ov.sets || {})) {
