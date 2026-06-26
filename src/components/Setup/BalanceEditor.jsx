@@ -16,6 +16,7 @@ import {
 import { fetchRecipeRows, saveRecipeRow, deleteRecipeRow, refreshRecipes } from '../../logic/recipesConfig';
 import { BASE_RECIPES } from '../../data/recipes';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
+import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { useGameStore } from '../../store/gameStore';
 import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger } from './EffectBuilder';
 import AlchemyRecipeForm, { recipeLine } from './AlchemyRecipeForm';
@@ -29,6 +30,7 @@ const TABS = [
   { key: 'sets', label: '⚜️ Sets' },
   { key: 'powers', label: '⚡ Pouvoirs' },
   { key: 'loot', label: '\u{1F3B0} Loot' },
+  { key: 'forge', label: '\u{1F3B2} Forge' },
 ];
 
 // Modèle d'une recette en cours d'édition (onglet Alchimie).
@@ -504,6 +506,7 @@ export default function BalanceEditor({ onClose }) {
             {tab === 'items' ? (rows == null ? 'Chargement…' : `${rows.length} objets`)
               : tab === 'powers' ? `${Object.keys(ov.powers || {}).length} pouvoir(s) modifié(s)`
               : tab === 'sets' ? `${Object.keys(SETS).length} sets`
+              : tab === 'forge' ? `${Object.keys(ov.forge || {}).length} réglage(s) Forge`
               : `${Object.keys(ov.loot || {}).length} réglage(s) modifié(s)`}
             {status && <span style={{ marginLeft: 6, color: status.startsWith('Erreur') || status.includes('échec') ? '#ffd9d0' : '#d6ffe0' }}>· {status}</span>}
           </span>
@@ -776,6 +779,72 @@ export default function BalanceEditor({ onClose }) {
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
                 <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, loot: {} }))}>{'↺'} Valeurs d'origine</button>
+                {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
+                {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
+              </div>
+            </div>
+          </div>
+        ) : tab === 'forge' ? (
+          <div className="qed-body">
+            <div className="bal-detail">
+              <div className="bal-detail-scroll">
+                {(() => {
+                  const F = DEFAULTS.forge;
+                  const fGet = (k) => ov.forge?.[k] ?? F[k];
+                  const setF = (k, v) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), [k]: v } })); };
+                  const relGet = () => (ov.forge?.relance?.enchainement ?? F.relance.enchainement);
+                  const setRel = (v) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), relance: { ...F.relance, ...(p.forge?.relance || {}), enchainement: v } } })); };
+                  const arrGet = (k) => (ov.forge?.[k] ?? F[k]);
+                  const setArr = (k, i, v) => { setStatus(null); const arr = [...arrGet(k)]; arr[i] = v; setF(k, arr); };
+                  const tiersGet = (type) => (ov.forge?.effects?.[type]?.tiers ?? F.effects[type].tiers);
+                  const setTier = (type, i, v) => {
+                    setStatus(null);
+                    setOv((p) => {
+                      const eff = { ...(p.forge?.effects || {}) };
+                      const cur = eff[type]?.tiers ?? F.effects[type].tiers;
+                      const arr = [...cur]; arr[i] = v;
+                      eff[type] = { ...(eff[type] || {}), tiers: arr };
+                      return { ...p, forge: { ...(p.forge || {}), effects: eff } };
+                    });
+                  };
+                  const BANDS = ['1-2', '3-4', '5-6', '7-8', '9-10', '11-12'];
+                  return (
+                    <>
+                      <div className="qed-label" style={{ marginBottom: 10 }}>{'\u{1F3B2}'} Forge de dés — réglages</div>
+                      <div className="bal-row"><span className="bal-label" style={{ width: 240 }}>Puissance max d'une face</span>
+                        <Stepper value={fGet('budgetMax')} onChange={(v) => setF('budgetMax', v)} min={1} max={12} /><span className="bal-default">défaut {F.budgetMax}</span></div>
+                      <div className="bal-row"><span className="bal-label" style={{ width: 240 }}>Relance : enchaînement</span>
+                        <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={relGet()} onChange={(e) => setRel(e.target.checked)} /> une face Relance peut re-relancer</label></div>
+
+                      <div className="qed-label" style={{ margin: '16px 0 8px' }}>Bandes de puissance — prix & rareté</div>
+                      {BANDS.map((b, i) => (
+                        <div className="bal-row" key={b}><span className="bal-label" style={{ width: 110 }}>P {b}</span>
+                          <span className="bal-default">prix</span><input type="number" className="qed-input" style={{ width: 80 }} value={arrGet('priceByBand')[i]} onChange={(e) => setArr('priceByBand', i, Math.max(0, parseInt(e.target.value, 10) || 0))} />
+                          <span className="bal-default">rareté</span><input type="number" className="qed-input" style={{ width: 70 }} value={arrGet('rarityByBand')[i]} onChange={(e) => setArr('rarityByBand', i, Math.max(0, parseInt(e.target.value, 10) || 0))} />
+                        </div>
+                      ))}
+
+                      <div className="qed-label" style={{ margin: '16px 0 8px' }}>Effets — valeurs des paliers</div>
+                      {Object.keys(F.effects).map((type) => {
+                        const meta = FORGE_EFFECTS[type];
+                        return (
+                          <div className="bal-row" key={type} style={{ gap: 8, flexWrap: 'wrap' }}>
+                            <span className="bal-label" style={{ width: 160 }}>{meta?.icon} {meta?.fr || type}</span>
+                            {tiersGet(type).map((t, i) => (
+                              typeof t === 'number'
+                                ? <input key={i} type="number" className="qed-input" style={{ width: 70 }} step="0.5" value={t} onChange={(e) => setTier(type, i, parseFloat(e.target.value) || 0)} />
+                                : <span key={i} className="bal-default" style={{ padding: '4px 8px', border: '1px dashed rgba(122,94,58,0.3)', borderRadius: 6 }}>{String(t)}</span>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="bal-detail-foot">
+                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
+                <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, forge: {} }))}>{'↺'} Valeurs d'origine</button>
                 {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
                 {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>
