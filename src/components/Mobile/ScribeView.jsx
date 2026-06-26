@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { ITEMS } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
 import { cellKey, cellN } from '../../store/itemHandlers';
+import { soundPower, soundCharge } from '../../logic/sounds';
 import { tFor } from '../../i18n';
 import { locName } from '../../i18n/content';
+import '../../styles/scribe.css';
 import {
   ENCHANT_EFFECTS, EFFECT_BY_ID, clampValue, effectPower, enchantCost,
   validateParchment, totalPower, MAX_EFFECTS_PER_PARCHMENT, MAX_TOTAL_POWER,
@@ -61,8 +63,9 @@ export default function ScribeView({ team, en = false, onInscribe }) {
     if (!canInscribe) return;
     const res = onInscribe?.(parts);
     if (res && res.ok === false) return; // refus synchrone (TBI) : on ne lance pas la cérémonie
+    try { soundPower(); } catch { /* audio indispo */ }
     setPhase('inscribing');
-    setTimeout(() => setPhase('done'), 1700);
+    setTimeout(() => { try { soundCharge(); } catch { /* audio indispo */ } setPhase('done'); }, 1700);
   };
   const reset = () => { setParts([]); setPhase('idle'); };
 
@@ -174,19 +177,35 @@ export default function ScribeView({ team, en = false, onInscribe }) {
       {/* Sélecteur d'effet */}
       {picking && <EffectPicker L={L} onPick={addEffect} onClose={() => setPicking(false)} />}
 
-      {/* Cérémonie d'inscription */}
+      {/* Cérémonie d'inscription (animée) */}
       {phase !== 'idle' && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(30,20,45,0.82)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="scribe-cer">
           {phase === 'inscribing' ? (
             <>
-              <div style={{ fontSize: 70, animation: 'alc-floaty 1.2s ease-in-out infinite' }}>✒️</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#e9d8ff', marginTop: 10 }}>{L('Gravure de l’enchantement…', 'Inscribing the enchantment…')}</div>
+              <div style={{ position: 'relative', marginBottom: 18 }}>
+                <div className="scribe-parch">
+                  <div className="ink" style={{ top: '30%', animationDelay: '.1s' }} />
+                  <div className="ink" style={{ top: '50%', width: '60%', animationDelay: '.4s' }} />
+                  <div className="ink" style={{ top: '70%', width: '70%', animationDelay: '.7s' }} />
+                </div>
+                <div className="scribe-quill">✒️</div>
+                <span className="scribe-spark" style={{ top: -10, left: -16 }}>✦</span>
+                <span className="scribe-spark" style={{ bottom: -6, right: -12, animationDelay: '.5s' }}>✦</span>
+                <span className="scribe-spark" style={{ top: '40%', right: -22, animationDelay: '.9s' }}>✨</span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#e9d8ff' }}>{L('Gravure de l’enchantement…', 'Inscribing the enchantment…')}</div>
             </>
           ) : (
             <>
-              <div style={{ fontSize: 74, filter: 'drop-shadow(0 0 24px rgba(155,89,208,0.9))', animation: 'alc-riseShine .7s ease-out both' }}>📜</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: '#fff', marginTop: 8 }}>{L('Parchemin gravé !', 'Scroll inscribed!')}</div>
-              <div style={{ fontSize: 13, color: '#cbb6e8', marginTop: 4, textAlign: 'center' }}>{L('Retrouve-le dans ton sac, puis applique-le sur une pièce.', 'Find it in your bag, then apply it to a piece.')}</div>
+              <div style={{ position: 'relative', display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                <span className="scribe-ring" />
+                <span className="scribe-spark" style={{ top: -18, left: -4 }}>✦</span>
+                <span className="scribe-spark" style={{ top: 4, right: -28, animationDelay: '.3s' }}>✨</span>
+                <span className="scribe-spark" style={{ bottom: -14, left: -22, animationDelay: '.6s' }}>✦</span>
+                <div className="scribe-scroll" style={{ animation: 'scribe-rise .7s ease-out both, scribe-float 2.4s ease-in-out .7s infinite' }}>📜</div>
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: '#fff' }}>{L('Parchemin gravé !', 'Scroll inscribed!')}</div>
+              <div style={{ fontSize: 13, color: '#cbb6e8', marginTop: 4, textAlign: 'center', maxWidth: 300 }}>{L('Retrouve-le dans ton sac, puis applique-le sur une pièce.', 'Find it in your bag, then apply it to a piece.')}</div>
               <button onClick={reset} style={{ marginTop: 18, padding: '11px 26px', borderRadius: 14, border: 'none', background: 'linear-gradient(180deg,#9b6fd0,#6e3fae)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 16, cursor: 'pointer' }}>{L('Parfait !', 'Perfect!')}</button>
             </>
           )}

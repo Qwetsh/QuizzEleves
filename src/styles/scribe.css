@@ -1,0 +1,48 @@
+/* Cérémonie d'inscription de l'Autel du Scribe (animation). Importé par ScribeView
+   → présent au mobile ET sur le TBI (où alchemy-mobile.css n'est pas chargé). */
+@keyframes scribe-quill {
+  0%, 100% { transform: translate(-22px, -6px) rotate(-12deg); }
+  50% { transform: translate(20px, 4px) rotate(8deg); }
+}
+@keyframes scribe-rise {
+  0% { transform: translateY(44px) scale(.6); opacity: 0; }
+  60% { transform: translateY(-8px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes scribe-sparkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1) rotate(140deg); opacity: 1; }
+}
+@keyframes scribe-glow {
+  0%, 100% { box-shadow: 0 0 22px rgba(155, 89, 208, .55), inset 0 0 18px rgba(155, 89, 208, .25); }
+  50% { box-shadow: 0 0 46px rgba(176, 122, 240, .95), inset 0 0 26px rgba(176, 122, 240, .4); }
+}
+@keyframes scribe-ink {
+  0% { width: 0; opacity: .25; }
+  100% { width: 78%; opacity: .9; }
+}
+@keyframes scribe-ring {
+  0% { transform: scale(.3); opacity: .9; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+@keyframes scribe-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.scribe-cer { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 24px;
+  background: radial-gradient(ellipse at 50% 40%, rgba(70,40,110,.9), rgba(24,14,40,.92)); }
+/* Parchemin en cours de gravure */
+.scribe-parch { position: relative; width: 200px; height: 150px; border-radius: 12px;
+  background: linear-gradient(180deg, #fbf3df, #ecdcb6); border: 2px solid #c8a86a;
+  animation: scribe-glow 1.1s ease-in-out infinite; overflow: hidden; }
+.scribe-parch .ink { position: absolute; left: 11%; height: 5px; border-radius: 3px;
+  background: linear-gradient(90deg, #6e3fae, #b07af0); animation: scribe-ink .9s ease-out both; }
+.scribe-quill { position: absolute; top: -14px; font-size: 40px; z-index: 3;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.4)); animation: scribe-quill 1.1s ease-in-out infinite; }
+.scribe-spark { position: absolute; font-size: 20px; animation: scribe-sparkle 1.4s ease-in-out infinite; }
+.scribe-ring { position: absolute; width: 120px; height: 120px; border-radius: 50%;
+  border: 3px solid rgba(200,160,255,.85); animation: scribe-ring 1.1s ease-out forwards; }
+.scribe-scroll { font-size: 78px; animation: scribe-rise .7s ease-out both;
+  filter: drop-shadow(0 0 26px rgba(176,122,240,.95)); }
