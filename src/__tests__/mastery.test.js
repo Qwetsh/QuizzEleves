@@ -399,13 +399,13 @@ describe('éditeur d’équilibrage : overrides de l’arbre Maîtrise', () => {
 describe('Relance — arbre de Maîtrise (résolveur, paliers, calibrage)', () => {
   const rl = (over) => resolvePowerEffect(teamWith('relance', over), 'relance', true);
 
-  it('cœur : modes replace(L1)/best(L3)/sum(L6) + remboursement + Gros dé (L8)', () => {
+  it('cœur : modes replace(L1)/best(L3)/sum(L6) + remboursement + Relance assurée (L8)', () => {
     expect(rl({ level: 1 }).mode).toBe('replace');
     expect(rl({ level: 3 }).mode).toBe('best');
     expect(rl({ level: 6 }).mode).toBe('sum');
     expect(rl({ level: 2 }).refundChance).toBe(0.10);
     expect(rl({ level: 4 }).refundChance).toBe(0.25);
-    expect(rl({ level: 8 }).dieSides).toBe(10);
+    expect(rl({ level: 8 }).minRoll).toBe(3);
   });
 
   it('Lucrative : or ×1 (L5) → ×2 (L7, palier 1) → ×3 (L9, palier 2)', () => {
@@ -475,7 +475,7 @@ describe('Relance — effets en jeu (store)', () => {
 
   it('vengeresse (L10) : la relance recule le leader de la valeur du dé', () => {
     vi.useFakeTimers();
-    vi.spyOn(Math, 'random').mockReturnValue(0.5); // dé D10 → 6 ; refund 0.5<0.25 = non
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // dé D6 → 4 ; refund 0.5<0.25 = non
     base([
       { ...teamWith('relance', { level: 10, spec10: 'vengeful', charges: 2 }), pos: 'n1' },
       { ...teamWith('relance'), pos: 'n10', powers: {} },
@@ -483,7 +483,7 @@ describe('Relance — effets en jeu (store)', () => {
     useGameStore.setState({ preRollPos: 'n1', preRollValue: 2 });
     S().useRelance();
     vi.advanceTimersByTime(1000);
-    expect(S().teams[1].pos).toBe('n4'); // n10 reculé de 6
+    expect(S().teams[1].pos).toBe('n6'); // n10 reculé de 4 (D6)
     vi.restoreAllMocks();
     vi.useRealTimers();
   });

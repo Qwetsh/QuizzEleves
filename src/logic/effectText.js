@@ -112,7 +112,6 @@ export function describeAction(a, lang = getLang()) {
         itemStealImmune: 'immune to item theft',
         goldStealImmune: 'immune to gold theft',
         reflectChance: `${amountLabel(b.n ?? 0, lang)}% chance to reflect a negative effect`,
-        moveDieSides: `movement die becomes a D${b.n ?? 6}`,
       } : {
         themeBonus: `+${amountLabel(b.n ?? 5, lang)} or par bonne réponse${b.subject ? ` en ${subjName(b.subject, lang)}` : ''}`,
         advanceOnCorrect: `avance de ${amountLabel(b.n ?? 'd4', lang)} à chaque bonne réponse`,
@@ -125,7 +124,6 @@ export function describeAction(a, lang = getLang()) {
         itemStealImmune: "immunisé au vol d'objet",
         goldStealImmune: "immunisé au vol d'or",
         reflectChance: `${amountLabel(b.n ?? 0, lang)}% de chance de renvoyer un effet négatif`,
-        moveDieSides: `dé de mouvement transformé en D${b.n ?? 6}`,
       };
       return `${dur}, ${tgt} : ${D[b.type] || b.type}`;
     }
@@ -161,7 +159,6 @@ function describeLegacy(fx, lang) {
     case 'reflectChance': txt = en ? `${v}% chance to reflect a negative effect onto the attacker` : `${v}% de chance de renvoyer un effet négatif sur l'attaquant`; break;
     case 'reculReduction': txt = en ? `setback reduced by ${v} ${spaceW(fx.value, lang)}` : `recul subi réduit de ${v} ${spaceW(fx.value, lang)}`; break;
     case 'reculReductionPct': txt = en ? `setback reduced by ${v}%` : `recul subi réduit de ${v}%`; break;
-    case 'moveDieSides': txt = en ? `movement die turned into a D${fx.value}` : `dé de mouvement transformé en D${fx.value}`; break;
     case 'hardcoreChance': txt = en ? `${v}% chance your question is Hardcore` : `${v}% de chance que ta question soit en Hardcore`; break;
     case 'tempeteImmune': txt = en ? 'immune to the Storm' : `immunité à la Tempête`; break;
     case 'duelImmune': txt = en ? 'immune to duels' : `immunité aux duels`; break;

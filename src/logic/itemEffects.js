@@ -179,27 +179,6 @@ export function getSubjectLootBonus(team, subject) {
   return total;
 }
 
-// Nombre de faces du dé de MOUVEMENT pour cette équipe (D4/D6/D10 ; 6 par défaut).
-// Règle de priorité (décision produit) :
-//   - les effets ACTIFS (buffs temporisés : consommables/pouvoirs) PRIMENT sur
-//     les effets passifs d'équipement ; entre buffs, le DERNIER posé gagne ;
-//   - sinon, le passif (équipement + sets) s'applique, le plus grand dé l'emporte.
-// → permet un malus « dé forcé en D4 » qui s'impose même face à un D10 équipé.
-const MOVE_DIE_SIDES = [4, 6, 10];
-const okSides = (v) => MOVE_DIE_SIDES.includes(Number(v) || 0);
-export function moveDieSides(team) {
-  // Actif : buffs moveDieSides, dans l'ordre de pose → le dernier prime.
-  const buffs = teamBuffs(team).filter((b) => b?.type === 'moveDieSides' && okSides(b.n));
-  if (buffs.length) return Number(buffs[buffs.length - 1].n);
-  // Passif : équipement + sets, le plus grand dé.
-  const passive = [];
-  for (const item of equippedItems(team)) {
-    for (const fx of item.effects) if (fx.type === 'moveDieSides' && passesChance(fx.chance) && okSides(fx.value)) passive.push(Number(fx.value));
-  }
-  for (const fx of activeSetEffects(team)) if (fx.type === 'moveDieSides' && passesChance(fx.chance) && okSides(fx.value)) passive.push(Number(fx.value));
-  return passive.length ? Math.max(...passive) : 6;
-}
-
 /**
  * Comme getEffectValue, mais DÉTAILLE chaque contribution (pour le journal).
  * Retourne { total, parts: [{ label, formula, amount }] } où `label` est le nom

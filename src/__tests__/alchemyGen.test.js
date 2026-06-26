@@ -10,7 +10,7 @@ const KNOWN_ACTIONS = new Set([
   'randomPathNext', 'teleportFurthest', 'challenge', 'placeTrap', 'hideWrong',
   'blockPowers', 'blockConsumables',
 ]);
-const KNOWN_BUFFS = new Set(['themeBonus', 'advanceOnCorrect', 'diceBonus', 'noRecul', 'loseOnWrong', 'randomPath', 'duelImmune', 'moveDieSides',
+const KNOWN_BUFFS = new Set(['themeBonus', 'advanceOnCorrect', 'diceBonus', 'noRecul', 'loseOnWrong', 'randomPath', 'duelImmune',
   'bleedGold', 'reflectChance', 'goldStealImmune', 'itemStealImmune']);
 const KNOWN_TARGETS = new Set([undefined, 'self', 'all', 'allOthers', 'randomOpponent', 'target']);
 

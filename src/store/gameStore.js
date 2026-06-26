@@ -23,7 +23,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, moveDieSides, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural } from '../i18n';
@@ -698,9 +698,8 @@ export const useGameStore = create((set, get) => ({
       get().nextTurn();
       return;
     }
-    // Faces du dé de mouvement (D4/D6/D10 selon l'équipement ; 6 par défaut).
-    const sides = moveDieSides(teams[currentTeam]);
-    const finalValue = Math.floor(Math.random() * sides) + 1;
+    // Dé de mouvement : toujours un D6 (1→6).
+    const finalValue = Math.floor(Math.random() * 6) + 1;
     set({ rolling: true, diceValue: finalValue, showDiceModal: true });
   },
 

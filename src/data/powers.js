@@ -170,7 +170,8 @@ export const POWERS = {
     ],
     tree: {
       // Cœur de la relance : MODE de résolution (replace → best → sum, le plus haut
-      // palier gagne), REMBOURSEMENT de charge (L2/L4) et GROS DÉ (L8 : D10).
+      // palier gagne), REMBOURSEMENT de charge (L2/L4) et RELANCE ASSURÉE (L8 :
+      // résultat minimum garanti, le multi-dé ayant été retiré du jeu).
       // Toutes ces valeurs sont calibrables via balanceConfig (tree.scale).
       scale: [
         { type: 'reroll', mode: 'replace' },                              // L1 Relance
@@ -180,9 +181,9 @@ export const POWERS = {
         { type: 'reroll', mode: 'best', refundChance: 0.25 },             // L5 (embranchement)
         { type: 'reroll', mode: 'sum', refundChance: 0.25 },              // L6 Somme
         { type: 'reroll', mode: 'sum', refundChance: 0.25 },              // L7 (renfort voie palier 1)
-        { type: 'reroll', mode: 'sum', refundChance: 0.25, dieSides: 10 },// L8 Gros dé (D10)
-        { type: 'reroll', mode: 'sum', refundChance: 0.25, dieSides: 10 },// L9 (renfort voie palier 2)
-        { type: 'reroll', mode: 'sum', refundChance: 0.25, dieSides: 10 },// L10 (ultime)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25, minRoll: 3 },  // L8 Relance assurée (≥3)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25, minRoll: 3 },  // L9 (renfort voie palier 2)
+        { type: 'reroll', mode: 'sum', refundChance: 0.25, minRoll: 4 },  // L10 (ultime)
       ],
       // Description « élève » par niveau : on n'écrit QUE ce que le niveau apporte
       // de nouveau (pas de répétition des acquis précédents). Affichée dans l'arbre
@@ -195,7 +196,7 @@ export const POWERS = {
         'Tu choisis une spécialité de Relance (3 voies au choix).',
         'La relance additionne les deux dés au lieu d’en garder un seul.',
         'Ta spécialité de Relance gagne un premier renfort.',
-        'La relance se lance avec un gros dé (D10).',
+        'La relance garantit un résultat d’au moins 3 (jamais de petit dé).',
         'Ta spécialité de Relance atteint son plein effet.',
         'Tu choisis un pouvoir ultime de Relance (3 au choix).',
       ],
@@ -207,7 +208,7 @@ export const POWERS = {
         'Pick a Reroll specialty (3 paths to choose from).',
         'The reroll adds both dice together instead of keeping one.',
         'Your Reroll specialty gains a first boost.',
-        'The reroll uses a big die (D10).',
+        'The reroll guarantees a result of at least 3 (never a tiny die).',
         'Your Reroll specialty reaches full power.',
         'Pick an ultimate Reroll power (3 to choose from).',
       ],

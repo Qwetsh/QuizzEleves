@@ -52,8 +52,6 @@ export const CATALOG = [
     build: (rng, rar) => ({ action: 'fumigene', turns: byRar(rng, rar, [1, 1], [1, 2], [2, 3]) }) },
   { key: 'buffDice', cat: 'self', weight: 6, flavor: { word: 'du Joueur', word_en: 'of the Gambler', icon: '🎲' }, art: ['r4c3', 'r1c6', 'r5c8', 'r3c3'],
     build: (rng, rar) => ({ action: 'buff', target: 'self', buff: { type: 'diceBonus', turns: byRar(rng, rar, [2, 2], [2, 3], [3, 4]), n: byRar(rng, rar, [1, 1], [1, 2], [2, 2]) } }) },
-  { key: 'buffMoveDie', cat: 'self', weight: 5, flavor: { word: 'de la Cavalcade', word_en: 'of the Cavalcade', icon: '🐎' }, art: ['r4c6', 'r1c6', 'r5c1'],
-    build: (rng, rar) => ({ action: 'buff', target: 'self', buff: { type: 'moveDieSides', turns: byRar(rng, rar, [2, 3], [3, 4], [3, 5]), n: rar === 'commun' ? 6 : 10 } }) },
   { key: 'buffNoRecul', cat: 'self', weight: 5, flavor: { word: 'de la Ténacité', word_en: 'of Tenacity', icon: '🧱' }, art: ['r1c5', 'r5c2', 'r2c6'],
     build: (rng, rar) => ({ action: 'buff', target: 'self', buff: { type: 'noRecul', turns: byRar(rng, rar, [1, 2], [2, 3], [3, 4]) } }) },
   { key: 'buffAdvance', cat: 'self', weight: 5, flavor: { word: 'du Marathon', word_en: 'of the Marathon', icon: '🏃' }, art: ['r1c6', 'r4c6', 'r5c4', 'r2c5'],

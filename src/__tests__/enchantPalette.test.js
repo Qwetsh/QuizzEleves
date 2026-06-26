@@ -48,9 +48,9 @@ describe('enchantPalette — puissance & coût', () => {
     const three = [{ id: 'timerBonus', value: 8 }, { id: 'reculReduction', value: 3 }, { id: 'reflectChance', value: 50 }];
     expect(three.length).toBeGreaterThan(MAX_EFFECTS_PER_PARCHMENT);
     expect(validateParchment(three).ok).toBe(false);
-    // deux effets maxés peuvent dépasser le plafond de puissance
-    const maxed = validateParchment([{ id: 'moveDieSides' }, { id: 'duelImmune' }]);
-    expect(maxed.power).toBeLessThanOrEqual(MAX_TOTAL_POWER); // 6+6=12 OK
+    // deux effets binaires forts restent sous le plafond de puissance
+    const maxed = validateParchment([{ id: 'goldStealImmune' }, { id: 'duelImmune' }]);
+    expect(maxed.power).toBeLessThanOrEqual(MAX_TOTAL_POWER); // 5+6=11 OK
   });
 
   it('un parchemin valide renvoie cost + enchants', () => {

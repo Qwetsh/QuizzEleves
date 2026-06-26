@@ -41,7 +41,6 @@ const PASSIVE = {
   reflectChance: { fr: 'Renvoi d\'effet', en: 'Reflect effect', icon: '🪞', type: 'reflectChance', min: 5, max: 50, step: 5, unitPower: 0.22, unitLabel: '%' },
   stealProtection: { fr: 'Or protégé', en: 'Gold protected', icon: '🔒', type: 'stealProtection', min: 10, max: 60, step: 10, unitPower: 0.1, unitLabel: '%' },
   lootBonusSubject: { fr: 'Butin sur une matière', en: 'Loot on a subject', icon: '🎁', type: 'lootBonusSubject', min: 10, max: 50, step: 10, unitPower: 0.1, unitLabel: '%', needsSubject: true },
-  moveDieSides: { fr: 'Dé de mouvement D10', en: 'Movement die D10', icon: '🎲', type: 'moveDieSides', binary: true, value: 10, power: 6 },
   duelImmune: { fr: 'Immunité aux duels', en: 'Duel immunity', icon: '🏰', type: 'duelImmune', binary: true, value: 1, power: 6 },
   goldStealImmune: { fr: 'Or involable', en: 'Gold unstealable', icon: '💰', type: 'goldStealImmune', binary: true, value: 1, power: 5 },
   itemStealImmune: { fr: 'Objets involables', en: 'Items unstealable', icon: '🧿', type: 'itemStealImmune', binary: true, value: 1, power: 5 },

@@ -86,7 +86,6 @@ function describe(a) {
       if (b.type === 'themeBonus') return `+${t(b.n)} or/bonne rép. (${b.turns}T)`;
       if (b.type === 'advanceOnCorrect') return `avance/bonne rép. (${b.turns}T)`;
       if (b.type === 'diceBonus') return `dé +${t(b.n)} (${b.turns}T)`;
-      if (b.type === 'moveDieSides') return `dé de mvt d${t(b.n)} (${b.turns}T)`;
       if (b.type === 'noRecul') return `aucun recul (${b.turns}T)`;
       if (b.type === 'loseOnWrong') return `−${t(b.n)} or si erreur (${b.turns}T)`;
       if (b.type === 'duelImmune') return `immunité duel (${b.turns}T)`;
@@ -131,7 +130,6 @@ function describeEn(a) {
       if (b.type === 'themeBonus') return `+${t(b.n)} gold/correct (${b.turns}T)`;
       if (b.type === 'advanceOnCorrect') return `advance/correct (${b.turns}T)`;
       if (b.type === 'diceBonus') return `die +${t(b.n)} (${b.turns}T)`;
-      if (b.type === 'moveDieSides') return `move die d${t(b.n)} (${b.turns}T)`;
       if (b.type === 'noRecul') return `no setback (${b.turns}T)`;
       if (b.type === 'loseOnWrong') return `−${t(b.n)} gold on wrong (${b.turns}T)`;
       if (b.type === 'duelImmune') return `duel immunity (${b.turns}T)`;

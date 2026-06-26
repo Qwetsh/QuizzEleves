@@ -33,7 +33,6 @@ const BUFF_TYPES = [
   { k: 'themeBonus', label: 'gagne de l’or à chaque bonne réponse' },
   { k: 'advanceOnCorrect', label: 'avance à chaque bonne réponse' },
   { k: 'diceBonus', label: 'le dé fait +N à chaque lancer' },
-  { k: 'moveDieSides', label: 'transforme le dé de mouvement (D4/D6/D10)' },
   { k: 'noRecul', label: 'ne recule pas en cas d’erreur' },
   { k: 'loseOnWrong', label: 'perd de l’or en cas d’erreur (malus)' },
   { k: 'randomPath', label: 'voie choisie au hasard' },
@@ -424,8 +423,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
               <select className="qed-select fx-blank" value={b.type || 'themeBonus'} onChange={(e) => {
                 const t = e.target.value;
                 // Seed une valeur par défaut valide selon le type choisi.
-                if (t === 'moveDieSides' && ![4, 6, 10].includes(Number(b.n))) setB({ type: t, n: 4 });
-                else if (t === 'bleedGold') setB({ type: t, n: b.n ?? 'd10', mode: b.mode ?? 'steal' });
+                if (t === 'bleedGold') setB({ type: t, n: b.n ?? 'd10', mode: b.mode ?? 'steal' });
                 else if (t === 'reflectChance') setB({ type: t, n: typeof b.n === 'number' ? b.n : 50 });
                 else setB({ type: t });
               }}>
@@ -440,10 +438,6 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
               {b.type === 'loseOnWrong' && (<><W>de</W><AmountInput value={b.n ?? 5} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or</W></>)}
               {b.type === 'advanceOnCorrect' && (<><W>de</W><AmountInput value={b.n ?? 'd4'} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>case(s)</W></>)}
               {b.type === 'diceBonus' && (<><W>de +</W><AmountInput value={b.n ?? 1} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au lancer de dé</W></>)}
-              {b.type === 'moveDieSides' && (<><W>en</W>
-                <select className="qed-select fx-blank" value={b.n ?? 4} onChange={(e) => setB({ n: Number(e.target.value) })}>
-                  <option value={4}>D4</option><option value={6}>D6</option><option value={10}>D10</option>
-                </select></>)}
               {b.type === 'bleedGold' && (<>
                 <select className="qed-select fx-blank" value={b.mode || 'steal'} onChange={(e) => setB({ mode: e.target.value })}>
                   <option value="steal">vole (au lanceur)</option><option value="lose">retire (perte sèche)</option>

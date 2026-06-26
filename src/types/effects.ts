@@ -58,7 +58,7 @@ export interface Trigger {
 
 // Un EFFET PASSIF simple (sur équipement/pouvoir) : `{ type, value, chance? }`.
 export interface PassiveEffect {
-  type: string;             // 'moneyPerCorrect' | 'reculReduction' | 'extraTime' | 'moveDieSides' | …
+  type: string;             // 'moneyPerCorrect' | 'reculReduction' | 'extraTime' | …
   value?: Amount;
   chance?: number;
   [k: string]: unknown;

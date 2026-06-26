@@ -1,7 +1,7 @@
 import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
 import { moveBack, findPrevJunction } from '../logic/pathfinding.js';
 import { consumePowerCharge, applyRecul } from '../logic/turnHelpers.js';
-import { reducedRecul, resolveAmount, diceLabel, moveDieSides, rollsReflect } from '../logic/itemEffects.js';
+import { reducedRecul, resolveAmount, diceLabel, rollsReflect } from '../logic/itemEffects.js';
 import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
 import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
@@ -162,8 +162,8 @@ export function useRelance(set, get) {
   set({ teams: newTeams, diceValue: null, rolling: true, pendingLanding: false, awaitingChoice: false, pendingMove: null });
 
   const rEff = powerEffectOf(get, team, 'relance');
-  // Faces du dé de relance : Gros dé (L8) impose un D10, sinon le dé de mouvement (D4/D6/D10).
-  const sides = rEff.dieSides || moveDieSides(team);
+  // Dé de relance : toujours un D6 (le multi-dé a été retiré du jeu).
+  const sides = 6;
   // Triple chance : meilleur de N dés. Dé chanceux : relance jusqu'à atteindre minRoll.
   let roll = Math.floor(Math.random() * sides) + 1;
   for (let k = 1; k < (rEff.rerollCount || 1); k++) roll = Math.max(roll, Math.floor(Math.random() * sides) + 1);
@@ -210,12 +210,9 @@ export function useRelance(set, get) {
         addLog(tg('log.pw.relanceGold', { n: gain }));
       }
 
-      // Relance chanceuse (L5) : sur un « haut » résultat, recharge un AUTRE pouvoir
-      // et arme un bonus de loot (palier L7) / double loot (palier L9). Le seuil est
-      // mis à l'échelle du dé : « 6+ » sur un D6 = 1 face gagnante → on garde le MÊME
-      // nombre de faces gagnantes sur le D10 du Gros dé (L8), sinon « 6+ » deviendrait
-      // 50 % au lieu de ~17 %.
-      const highThreshold = rEff.rechargeOnHigh ? (sides - 6 + rEff.rechargeOnHigh) : 0;
+      // Relance chanceuse (L5) : sur un « haut » résultat (6+ sur le D6), recharge un
+      // AUTRE pouvoir et arme un bonus de loot (palier L7) / double loot (palier L9).
+      const highThreshold = rEff.rechargeOnHigh || 0;
       if (rEff.rechargeOnHigh && finalValue >= highThreshold) {
         const keys = Object.keys(me().powers || {}).filter((k) => POWERS[k] && k !== 'relance');
         const pool = keys.length ? keys : Object.keys(me().powers || {}).filter((k) => POWERS[k]);
