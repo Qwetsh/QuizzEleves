@@ -66,7 +66,7 @@ const DEFAULT_FORGE = {
     questionFraiche: { tiers: [true],                  costs: [4] },       // 🔄 retire la question, en tire une autre
     egide:           { tiers: [2, 4, 'cancel'],        costs: [2, 4, 6] }, // 🛡️ réduction de recul ce tour, MAX avec Bouclier
     gardeSerie:      { tiers: [true],                  costs: [4] },       // 🔗 la série ne casse pas en cas d'erreur
-    butin:           { tiers: ['chance', 'guaranteed'], costs: [2, 6] },   // 🎁 bonus de loot sur bonne réponse
+    butin:           { tiers: [0.5, 'guaranteed'],     costs: [2, 6] },   // 🎁 bonus de loot sur bonne réponse (+50% chance / garanti)
     relance:         { tiers: [true],                  costs: [4] },       // 🎲 relance le dé (seule la dernière face compte)
   },
   // Boutique (Phase 2) : prix de départ et poids de rareté par bande de puissance.

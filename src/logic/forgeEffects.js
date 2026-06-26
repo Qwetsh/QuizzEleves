@@ -115,11 +115,21 @@ export function faceShortLabel(face) {
   return meta ? `+${v} ${meta.icon}` : `+${v}`;
 }
 
-// Résolution d'une face AU LANCER : applique les effets 'roll' et ARME ceux
-// 'preQuestion'. Renvoie { patch, logs } à fusionner dans l'équipe (le store
-// applique patch sur newTeams et pousse logs dans le journal).
-//   - patch.money     : Prime (or sec)
-//   - patch.forgeAegis: Égide armée pour le tour (nombre de cases ou 'cancel')
+// Effets dont la RÉSOLUTION est câblée (le reste — recharge, questionFraiche,
+// relance — arrive dans une étape ultérieure). La boutique ne propose QUE ces
+// effets-là, pour qu'aucune face achetable ne soit muette.
+export const FORGE_RESOLVED = ['prime', 'egide', 'aubaine', 'indice', 'repit', 'gardeSerie', 'butin'];
+
+// Résolution d'une face AU LANCER : applique les effets 'roll' (Prime) et ARME
+// les effets 'preQuestion'/'correct' via des flags d'équipe consommés plus tard
+// (cf. gameStore). Renvoie { patch, logs } à fusionner dans l'équipe.
+//   - patch.money          : Prime (or sec, immédiat)
+//   - patch.forgeAegis     : Égide (réduction de recul ; nombre | 'cancel')
+//   - patch.forgeGoldMult  : Aubaine (×or de la bonne réponse)
+//   - patch.forgeIndice    : Indice (nb de mauvaises réponses éliminées)
+//   - patch.forgeRepit     : Répit (secondes ajoutées au timer)
+//   - patch.forgeStreakGuard: Garde de série (la série ne casse pas)
+//   - patch.forgeButin     : Butin (+chance de loot, ou 'guaranteed')
 export function resolveFaceAtRoll(team, face) {
   const patch = {};
   const logs = [];
@@ -127,24 +137,67 @@ export function resolveFaceAtRoll(team, face) {
   if (!eff || !eff.type || !FORGE_EFFECTS[eff.type]) return { patch, logs };
   const en = getLang() === 'en';
   const who = `${team.emoji} ${team.name}`;
+  const v = forgeTierValue(eff.type, eff.tier);
 
-  if (eff.type === 'prime') {
-    const amt = Number(forgeTierValue('prime', eff.tier)) || 0;
-    if (amt > 0) {
-      patch.money = (team.money || 0) + amt;
-      logs.push(en ? `💰 ${who} — forged die: +${amt} gold (Bounty).`
-                   : `💰 ${who} — dé forgé : +${amt} or (Prime).`);
+  switch (eff.type) {
+    case 'prime': {
+      const amt = Number(v) || 0;
+      if (amt > 0) {
+        patch.money = (team.money || 0) + amt;
+        logs.push(en ? `💰 ${who} — forged die: +${amt} gold (Bounty).`
+                     : `💰 ${who} — dé forgé : +${amt} or (Prime).`);
+      }
+      break;
     }
-  } else if (eff.type === 'egide') {
-    const v = forgeTierValue('egide', eff.tier);
-    if (v != null) {
-      patch.forgeAegis = v; // nombre | 'cancel' — consommé par applyRecul (max avec Bouclier)
-      const what = v === 'cancel'
-        ? (en ? 'cancels the setback' : 'annule le recul')
-        : (en ? `−${v} to the setback` : `−${v} au recul`);
-      logs.push(en ? `🛡️ ${who} — Aegis armed (${what}).`
-                   : `🛡️ ${who} — Égide armée (${what}).`);
+    case 'egide': {
+      if (v != null) {
+        patch.forgeAegis = v; // consommé par applyRecul (max avec Bouclier)
+        const what = v === 'cancel'
+          ? (en ? 'cancels the setback' : 'annule le recul')
+          : (en ? `−${v} to the setback` : `−${v} au recul`);
+        logs.push(en ? `🛡️ ${who} — Aegis armed (${what}).` : `🛡️ ${who} — Égide armée (${what}).`);
+      }
+      break;
     }
+    case 'aubaine': {
+      const m = Number(v) || 1;
+      patch.forgeGoldMult = m;
+      logs.push(en ? `💰 ${who} — Windfall armed (×${m} gold on a correct answer).`
+                   : `💰 ${who} — Aubaine armée (or ×${m} si bonne réponse).`);
+      break;
+    }
+    case 'indice': {
+      const n = Number(v) || 0;
+      if (n > 0) {
+        patch.forgeIndice = n;
+        logs.push(en ? `💡 ${who} — Hint armed (−${n} wrong answer${n > 1 ? 's' : ''}).`
+                     : `💡 ${who} — Indice armé (−${n} mauvaise${n > 1 ? 's' : ''} réponse${n > 1 ? 's' : ''}).`);
+      }
+      break;
+    }
+    case 'repit': {
+      const s = Number(v) || 0;
+      if (s > 0) {
+        patch.forgeRepit = s;
+        logs.push(en ? `⏳ ${who} — Respite armed (+${s}s).` : `⏳ ${who} — Répit armé (+${s} s).`);
+      }
+      break;
+    }
+    case 'gardeSerie': {
+      patch.forgeStreakGuard = true;
+      logs.push(en ? `🔗 ${who} — Streak guard armed.` : `🔗 ${who} — Garde de série armée.`);
+      break;
+    }
+    case 'butin': {
+      patch.forgeButin = v; // nombre (+fraction de chance) | 'guaranteed'
+      const what = v === 'guaranteed'
+        ? (en ? 'guaranteed loot' : 'butin garanti')
+        : (en ? `+${Math.round((Number(v) || 0) * 100)}% loot` : `+${Math.round((Number(v) || 0) * 100)} % de butin`);
+      logs.push(en ? `🎁 ${who} — Spoils armed (${what}).` : `🎁 ${who} — Butin armé (${what}).`);
+      break;
+    }
+    // recharge / questionFraiche / relance : résolution câblée dans une étape ultérieure.
+    default: break;
   }
   return { patch, logs };
 }

@@ -2,7 +2,7 @@
 // dans la chaîne de recul (max avec le Bouclier, jamais la somme — spec §6.3).
 import { describe, it, expect, afterEach } from 'vitest';
 import { applyBalance } from '../logic/balanceConfig.js';
-import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock, FORGE_RESOLVED } from '../logic/forgeEffects.js';
 import { applyRecul, resolveWrongAnswer } from '../logic/turnHelpers.js';
 
 const BOARD = (() => {
@@ -77,6 +77,35 @@ describe('Forge — Égide dans applyRecul (max avec Bouclier, jamais la somme)'
     const r = applyRecul(t, BOARD, 6); // amount 2 → recul 4
     expect(r.applied).toBe(4);
     expect(r.patch.powers.bouclier.charges).toBe(0);
+  });
+});
+
+describe('Forge — armement des effets au lancer', () => {
+  const arm = (type, tier) => resolveFaceAtRoll(team(), { effect: { type, tier } }).patch;
+
+  it('Aubaine arme un multiplicateur d\'or', () => {
+    expect(arm('aubaine', 0).forgeGoldMult).toBe(1.5);
+    expect(arm('aubaine', 2).forgeGoldMult).toBe(3);
+  });
+  it('Indice arme un nombre de réponses à éliminer', () => {
+    expect(arm('indice', 0).forgeIndice).toBe(1);
+    expect(arm('indice', 1).forgeIndice).toBe(2);
+  });
+  it('Répit arme des secondes', () => {
+    expect(arm('repit', 0).forgeRepit).toBe(5);
+    expect(arm('repit', 1).forgeRepit).toBe(10);
+  });
+  it('Garde de série arme un drapeau', () => {
+    expect(arm('gardeSerie', 0).forgeStreakGuard).toBe(true);
+  });
+  it('Butin arme une fraction de chance ou « guaranteed »', () => {
+    expect(arm('butin', 0).forgeButin).toBe(0.5);
+    expect(arm('butin', 1).forgeButin).toBe('guaranteed');
+  });
+  it('FORGE_RESOLVED liste les 7 effets câblés (sans recharge/questionFraiche/relance)', () => {
+    expect(FORGE_RESOLVED).toContain('aubaine');
+    expect(FORGE_RESOLVED).not.toContain('recharge');
+    expect(FORGE_RESOLVED).not.toContain('relance');
   });
 });
 

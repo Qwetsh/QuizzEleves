@@ -1109,11 +1109,11 @@ export const useGameStore = create((set, get) => ({
     // Bonus de temps : equipement (permanent) + consommable Sablier de poche (one-shot)
     // + crédit « Vol de temps » (Sablier L10, one-shot) + Relance opportune (L5, one-shot).
     const opportune = team.relanceQ || null;
-    const itemBonusTime = getEffectValue(team, 'timerBonus') + (team.itemTimerBonus || 0) + (team.timeCredit || 0) + (opportune?.bonusTime || 0);
-    if (team.itemTimerBonus || team.timeCredit || opportune) {
+    const itemBonusTime = getEffectValue(team, 'timerBonus') + (team.itemTimerBonus || 0) + (team.timeCredit || 0) + (opportune?.bonusTime || 0) + (team.forgeRepit || 0);
+    if (team.itemTimerBonus || team.timeCredit || opportune || team.forgeRepit) {
       const nt = [...get().teams];
-      // relanceQ consommé ici (le bonus de temps s'applique à CETTE question).
-      nt[currentTeam] = { ...nt[currentTeam], itemTimerBonus: 0, timeCredit: 0, relanceQ: undefined };
+      // relanceQ + Répit (Forge) consommés ici (le bonus s'applique à CETTE question).
+      nt[currentTeam] = { ...nt[currentTeam], itemTimerBonus: 0, timeCredit: 0, relanceQ: undefined, forgeRepit: undefined };
       set({ teams: nt });
     }
 
@@ -1153,18 +1153,26 @@ export const useGameStore = create((set, get) => ({
     // CHAQUE question. getEffectValue resout le de et la probabilite a chaque
     // appel (ex. 'd3' a 100% => 1 a 3 reponses retirees ; un 3 les retire toutes).
     const indiceBoost = getEffectValue(team, 'indiceBoost');
+    const forgeHide = team.forgeIndice || 0; // Indice (Forge) armé au lancer
     let indiceHidden = [];
-    if (indiceBoost > 0) {
+    if (indiceBoost + forgeHide > 0) {
       const wrong = q.a.map((_, i) => i).filter((i) => i !== q.c);
       for (let i = wrong.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
       }
-      indiceHidden = wrong.slice(0, Math.min(indiceBoost, wrong.length));
-      if (indiceHidden.length) {
-        const n = indiceHidden.length;
-        addLog(tgPlural('log.store.equipHide', n, { n }));
+      indiceHidden = wrong.slice(0, Math.min(indiceBoost + forgeHide, wrong.length));
+      // Le log d'équipement ne couvre que sa part ; l'Indice de Forge a déjà été
+      // annoncé à l'armement (au lancer).
+      if (indiceBoost > 0) {
+        const n = Math.min(indiceBoost, indiceHidden.length);
+        if (n > 0) addLog(tgPlural('log.store.equipHide', n, { n }));
       }
+    }
+    if (team.forgeIndice) {
+      const nt = [...get().teams];
+      nt[currentTeam] = { ...nt[currentTeam], forgeIndice: undefined };
+      set({ teams: nt });
     }
 
     set({
@@ -1220,8 +1228,10 @@ export const useGameStore = create((set, get) => ({
       const bonusBreak = explainEffectValue(tTeam, 'moneyPerCorrect');
       // Facteur d'or de la rafale Double (Chrono partagé ×1.5 / Rafale tranquille ÷2).
       const gFactor = team.doubleActive ? (team.doubleGoldFactor || 1) : 1;
+      // Aubaine (face Forge) : multiplie l'or de la bonne réponse de ce tour.
+      const aubaine = team.forgeGoldMult || 1;
       // Antisèche (Indice L10) : bonus d'or forfaitaire sur cette bonne réponse.
-      const gain = Math.round((base + bonusBreak.total) * gFactor) + (indiceBonusMoney || 0);
+      const gain = Math.round((base + bonusBreak.total) * gFactor * aubaine) + (indiceBonusMoney || 0);
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
@@ -1255,7 +1265,8 @@ export const useGameStore = create((set, get) => ({
       const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue ?? 2, masteryOnW);
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu ;
       // les bonus de loot arm\u00e9s par la Relance chanceuse sont consomm\u00e9s (pas de loot ici).
-      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+      // Garde de série (face Forge) : la série ne casse pas sur cette erreur.
+      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: team.forgeStreakGuard ? (team.streak || 0) : 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
       // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes les \u00e9quipes \u00bb du surplus (auto).
       // Une \u00e9quipe immunis\u00e9e est \u00e9pargn\u00e9e ; une Bombe fumig\u00e8ne esquive (et se consomme).
       const surgeMoves = [];
@@ -1365,8 +1376,10 @@ export const useGameStore = create((set, get) => ({
         nt[currentTeam] = { ...nt[currentTeam], relanceLootBonus: undefined, relanceDoubleLoot: undefined };
         set({ teams: nt });
       }
-      const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100 + relLootBonus;
-      const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100 + relLootBonus;
+      // Butin (face Forge) : +chance de loot (fraction) sur les deux canaux.
+      const butinBonus = typeof lootTeam.forgeButin === 'number' ? lootTeam.forgeButin : 0;
+      const consumRate = (LOOT.answerConsumableRate || 0) * timeRatio + getEffectValue(lootTeam, 'lootBonusConsumable') / 100 + relLootBonus + butinBonus;
+      const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100 + relLootBonus + butinBonus;
       const drops = [];
       if (Math.random() < consumRate) {
         const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
@@ -1400,6 +1413,11 @@ export const useGameStore = create((set, get) => ({
             }
           }
         }
+      }
+      // Butin « garanti » (face Forge) : si rien n'est tombé, force un consommable.
+      if (lootTeam.forgeButin === 'guaranteed' && !drops.length) {
+        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+        if (k) drops.push(k);
       }
       const revealQueue = [];
       if (drops.length) {
@@ -1474,7 +1492,8 @@ export const useGameStore = create((set, get) => ({
     const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue ?? 2, masteryOnT);
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu ;
     // bonus de loot de la Relance chanceuse consomm\u00e9s (pas de loot au timeout).
-    newTeams[currentTeam] = { ...updatedTeam, streak: 0, answerTimeRatio: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+    // Garde de série (face Forge) : la série tient même au temps écoulé.
+    newTeams[currentTeam] = { ...updatedTeam, streak: team.forgeStreakGuard ? (team.streak || 0) : 0, answerTimeRatio: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
     // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes \u00bb du surplus (auto, immunit\u00e9/fumig\u00e8ne g\u00e9r\u00e9s).
     if (surplusPush === 'all' && pushAmount > 0) {
       const board = get().board;
@@ -2248,9 +2267,11 @@ export const useGameStore = create((set, get) => ({
     // expiration à 0. (Fumigène posé avec une durée X ; autres buffs à venir.)
     let nt = get().teams;
     // Silence/Taxe (Sablier) : consommés à la fin du tour de l'équipe visée.
-    if (nt[currentTeam]?.silencedNextTurn || nt[currentTeam]?.timeoutPenalty || nt[currentTeam]?.forgeAegis != null) {
+    const og = nt[currentTeam];
+    if (og && (og.silencedNextTurn || og.timeoutPenalty || og.forgeAegis != null || og.forgeGoldMult != null || og.forgeButin != null || og.forgeStreakGuard || og.forgeIndice != null || og.forgeRepit != null)) {
       nt = [...nt];
-      nt[currentTeam] = { ...nt[currentTeam], silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined };
+      // Flags de face Forge = « ce tour » : nettoyés quand l'équipe rend la main.
+      nt[currentTeam] = { ...og, silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined, forgeGoldMult: undefined, forgeButin: undefined, forgeStreakGuard: undefined, forgeIndice: undefined, forgeRepit: undefined };
     }
     const ct = nt[newCurrent];
     if (ct?.itemFumigeneTurns > 0) {
