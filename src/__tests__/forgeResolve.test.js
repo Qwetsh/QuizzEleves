@@ -2,7 +2,7 @@
 // dans la chaîne de recul (max avec le Bouclier, jamais la somme — spec §6.3).
 import { describe, it, expect, afterEach } from 'vitest';
 import { applyBalance } from '../logic/balanceConfig.js';
-import { resolveFaceAtRoll, aegisReduction } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock } from '../logic/forgeEffects.js';
 import { applyRecul, resolveWrongAnswer } from '../logic/turnHelpers.js';
 
 const BOARD = (() => {
@@ -77,6 +77,41 @@ describe('Forge — Égide dans applyRecul (max avec Bouclier, jamais la somme)'
     const r = applyRecul(t, BOARD, 6); // amount 2 → recul 4
     expect(r.applied).toBe(4);
     expect(r.patch.powers.bouclier.charges).toBe(0);
+  });
+});
+
+describe('Forge — puissance & générateur de faces', () => {
+  it('facePower = valeur + coût de l\'effet', () => {
+    expect(facePower({ value: 5, effect: null })).toBe(5);
+    expect(facePower({ value: 3, effect: { type: 'prime', tier: 1 } })).toBe(7); // 3 + coût 4
+    expect(facePower({ value: 6, effect: { type: 'egide', tier: 2 } })).toBe(12); // 6 + coût 6
+  });
+
+  it('buildFaceOfPower produit une face de la puissance demandée (P = 1..12)', () => {
+    for (let P = 1; P <= 12; P++) {
+      const f = buildFaceOfPower(P, () => 0);
+      expect(f).not.toBeNull();
+      expect(facePower(f)).toBe(P);
+      expect(f.value).toBeGreaterThanOrEqual(0);
+      expect(f.value).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it('rollShopFace : puissance dans [1,12] + un prix', () => {
+    const f = rollShopFace(() => 0);
+    expect(f.power).toBeGreaterThanOrEqual(1);
+    expect(f.power).toBeLessThanOrEqual(12);
+    expect(typeof f.price).toBe('number');
+  });
+
+  it('generateFaceStock renvoie le nombre de faces demandé', () => {
+    expect(generateFaceStock(8, () => 0)).toHaveLength(8);
+  });
+
+  it('enabledTypes restreint les effets proposés', () => {
+    // puissance 8 sans effet autorisé : impossible en face « course » pure (max 6)
+    // → la seule option reste une face à effet ; si aucun effet permis, null.
+    expect(buildFaceOfPower(8, () => 0, [])).toBeNull();
   });
 });
 

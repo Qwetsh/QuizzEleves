@@ -52,14 +52,25 @@ export const LOOT = { ...DEFAULT_LOOT };
 // FORGE.* (voir forgeEffects.js) ; l'éditeur exposera ces valeurs en Phase 2.
 const DEFAULT_FORGE = {
   budgetMax: 12,                    // puissance max d'une face (déplacement + effet)
-  effectTierCost: [2, 4, 6],        // coût de puissance d'un effet : petit / moyen / gros
   relance: { enchainement: false }, // §6.2 : une face-Relance retombant sur Relance NE re-relance pas (défaut)
-  // Valeurs des paliers par effet (index 0/1/2 = petit / moyen / gros).
+  // Lot de départ (spec §5). Pour chaque effet : `tiers` = valeur par palier,
+  // `costs` = coût de PUISSANCE du palier (la puissance d'une face = valeur de
+  // déplacement + coût de l'effet). Les métadonnées (icône, famille, timing)
+  // vivent dans forgeEffects.js (FORGE_EFFECTS).
   effects: {
-    prime: { tiers: [10, 25, 50] },     // 💰 +or sec (timing : lancer)
-    egide: { tiers: [2, 4, 'cancel'] },  // 🛡️ réduction de recul ce tour, MAX avec Bouclier (timing : avant question)
+    prime:           { tiers: [10, 25, 50],            costs: [2, 4, 6] }, // 💰 +or sec (lancer)
+    aubaine:         { tiers: [1.5, 2, 3],             costs: [2, 4, 6] }, // 💰× ×or de la bonne réponse (bonne réponse)
+    recharge:        { tiers: [1, 2, 'full'],          costs: [2, 4, 6] }, // 🔋 +charge de pouvoir (lancer)
+    indice:          { tiers: [1, 2],                  costs: [2, 4] },    // 💡 −mauvaises réponses (avant question)
+    repit:           { tiers: [5, 10],                 costs: [2, 4] },    // ⏳ +temps (avant question)
+    questionFraiche: { tiers: [true],                  costs: [4] },       // 🔄 retire la question, en tire une autre
+    egide:           { tiers: [2, 4, 'cancel'],        costs: [2, 4, 6] }, // 🛡️ réduction de recul ce tour, MAX avec Bouclier
+    gardeSerie:      { tiers: [true],                  costs: [4] },       // 🔗 la série ne casse pas en cas d'erreur
+    butin:           { tiers: ['chance', 'guaranteed'], costs: [2, 6] },   // 🎁 bonus de loot sur bonne réponse
+    relance:         { tiers: [true],                  costs: [4] },       // 🎲 relance le dé (seule la dernière face compte)
   },
   // Boutique (Phase 2) : prix de départ et poids de rareté par bande de puissance.
+  // 6 bandes de puissance P : [1-2, 3-4, 5-6, 7-8, 9-10, 11-12].
   priceByBand: [25, 60, 120, 250, 400, 650],
   rarityByBand: [10, 10, 6, 3, 3, 1],
 };
