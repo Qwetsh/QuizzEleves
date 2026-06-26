@@ -5,7 +5,7 @@ import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, RARITIES, SLOTS, setItemsData } from '../data/items.js';
 import { getEffectValue, reducedRecul, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { resolveWrongAnswer } from '../logic/turnHelpers.js';
-import { generateShopStock, generateBlackMarketStock, pickLootItem, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
+import { generateShopStock, generateBlackMarketStock, pickLootItem, pickReplacement, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
 import { EVENTS } from '../data/events.js';
 
 // Le sac est positionnel (BAG_SIZE cases, null = vide) : on compare le contenu
@@ -131,6 +131,20 @@ describe('catalogue items.js', () => {
     // Aucun objet active
     expect(generateShopStock([])).toEqual([]);
     expect(pickLootItem(0.5, [])).toBeNull();
+  });
+
+  it('le parchemin vierge est ÉPINGLÉ en boutique quand l\'enchantement est actif', () => {
+    const enabled = Object.keys(ITEMS);
+    // Sans la famille parchment autorisée : pas de vierge en boutique.
+    for (let n = 0; n < 10; n++) expect(generateShopStock(enabled, [])).not.toContain('parcheminVierge');
+    // Avec parchment autorisé : TOUJOURS présent.
+    for (let n = 0; n < 20; n++) {
+      const stock = generateShopStock(enabled, ['parchment']);
+      expect(stock).toContain('parcheminVierge');
+      expect(new Set(stock).size).toBe(stock.length); // pas de doublon
+    }
+    // Réassort à l'identique après achat du vierge.
+    expect(pickReplacement('parcheminVierge', [], enabled, ['parchment'])).toBe('parcheminVierge');
   });
 });
 

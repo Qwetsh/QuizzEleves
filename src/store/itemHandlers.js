@@ -154,17 +154,31 @@ export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS),
 // Vitrine de la boutique : SHOP_CONSUMABLE_SLOTS consommables + SHOP_EQUIPMENT_SLOTS
 // équipements. `allowFamilies` (ex. ['ingredient','parchment']) ajoute ces familles
 // quand les extensions Alchimie/Enchantement sont actives.
+// Objets ÉPINGLÉS de la boutique : toujours présents (hors rotation aléatoire).
+// Le parchemin VIERGE (matière première de l'Autel du Scribe) en fait partie dès
+// que l'extension Enchantement est active → l'enchantement reste toujours accessible.
+function isPinnedShopKey(key, allowFamilies) {
+  return allowFamilies.includes('parchment') && ITEMS[key]?.family === 'parchment' && ITEMS[key]?.blank;
+}
+function pinnedShopConsumables(enabledKeys, allowFamilies) {
+  return enabledKeys.filter((k) => isPinnedShopKey(k, allowFamilies));
+}
+
 export function generateShopStock(enabledKeys = Object.keys(ITEMS), allowFamilies = []) {
+  const pinned = pinnedShopConsumables(enabledKeys, allowFamilies);
   return [
-    ...pickShopItems('consumable', SHOP_CONSUMABLE_SLOTS, enabledKeys, [], allowFamilies),
+    ...pinned,
+    ...pickShopItems('consumable', Math.max(0, SHOP_CONSUMABLE_SLOTS - pinned.length), enabledKeys, pinned, allowFamilies),
     ...pickShopItems('equipment', SHOP_EQUIPMENT_SLOTS, enabledKeys),
   ];
 }
 
 // Objet de remplacement après un achat : même catégorie que `boughtKey`, absent
 // du stock courant ET différent de l'objet acheté (pour qu'il ne réapparaisse
-// pas aussitôt). null si le pool est épuisé.
+// pas aussitôt). null si le pool est épuisé. Un objet ÉPINGLÉ (parchemin vierge)
+// se réapprovisionne à l'IDENTIQUE → il reste toujours en boutique.
 export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys(ITEMS), allowFamilies = []) {
+  if (isPinnedShopKey(boughtKey, allowFamilies)) return boughtKey;
   const category = isConsumableKey(boughtKey) ? 'consumable' : 'equipment';
   // L'équipement ne reçoit jamais de famille ; les consommables oui (ext. active).
   const picked = pickShopItems(category, 1, enabledKeys, [...stock, boughtKey], category === 'consumable' ? allowFamilies : []);
