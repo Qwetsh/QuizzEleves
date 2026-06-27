@@ -2,7 +2,7 @@
 // dans la chaîne de recul (max avec le Bouclier, jamais la somme — spec §6.3).
 import { describe, it, expect, afterEach } from 'vitest';
 import { applyBalance } from '../logic/balanceConfig.js';
-import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock, faceRollEngineActions, isRelanceFace, FORGE_RESOLVED } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock, generateSlotFaces, faceRollEngineActions, isRelanceFace, FORGE_RESOLVED } from '../logic/forgeEffects.js';
 import { applyRecul, resolveWrongAnswer } from '../logic/turnHelpers.js';
 
 const BOARD = (() => {
@@ -146,6 +146,12 @@ describe('Forge — puissance & générateur de faces', () => {
 
   it('generateFaceStock renvoie le nombre de faces demandé', () => {
     expect(generateFaceStock(8, () => 0)).toHaveLength(8);
+  });
+
+  it('generateSlotFaces : une offre par slot (1→6), chacune étiquetée de son slot', () => {
+    const stock = generateSlotFaces(() => 0);
+    expect(stock).toHaveLength(6);
+    stock.forEach((f, i) => expect(f.slot).toBe(i + 1));
   });
 
   it('enabledTypes restreint les effets proposés', () => {

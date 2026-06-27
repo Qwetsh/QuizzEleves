@@ -681,51 +681,36 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
   const reserve = t.faceStock || [];
   const shopFaces = session.shopFaces || [];
   const locked = (session.currentTeam === teamIdx && !!session.locked) || session.status === 'finished';
-  const [sel, setSel] = useState(null);       // index réserve sélectionné
-  const [confirm, setConfirm] = useState(null); // { slot } à écraser
+  const [confirm, setConfirm] = useState(null); // { stockIndex, slot } à écraser
 
   const buy = (i) => { if (owned && !locked && code && token) sendIntent(code, token, 'buyFace', { faceIndex: i }).catch(() => {}); };
   const forge = (slot, stock) => { if (owned && !locked && code && token) sendIntent(code, token, 'forgeFace', { slotIndex: slot, stockIndex: stock }).catch(() => {}); };
-  const place = (slot) => {
-    if (sel == null || !reserve[sel]) return;
-    if (isFaceForged(faces[slot])) { setConfirm({ slot }); return; }
-    forge(slot, sel); setSel(null);
+  const tryForge = (stockIndex) => {
+    if (!owned || locked) return;
+    const f = reserve[stockIndex]; if (!f) return;
+    const slot = (f.slot || 1) - 1; // slot cible de la face
+    if (isFaceForged(faces[slot])) { setConfirm({ stockIndex, slot }); return; }
+    forge(slot, stockIndex);
   };
-  const doConfirm = () => { forge(confirm.slot, sel); setConfirm(null); setSel(null); };
+  const doConfirm = () => { forge(confirm.slot, confirm.stockIndex); setConfirm(null); };
 
   const colorOf = (f) => { const m = f?.effect?.type ? FORGE_EFFECTS[f.effect.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
-  const iconOf = (f) => (f?.effect?.type ? FORGE_EFFECTS[f.effect.type]?.icon : null);
 
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{T('mobile.forge')}</div>
 
-      {/* Le dé : 6 slots */}
+      {/* Le dé : 6 slots (affichage) */}
       <section className="mob-section">
         <div className="mob-section-title">{T('mobile.forgeDie')}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           {faces.map((face, i) => (
-            <FaceTile
-              key={i}
-              face={face}
-              base={i + 1}
-              size={54}
-              clickable={owned && !locked && sel != null}
-              onClick={(owned && !locked && sel != null) ? () => place(i) : undefined}
-              title={faceEffectLabel(face, en) || undefined}
-            />
+            <FaceTile key={i} face={face} base={i + 1} size={54} title={faceEffectLabel(face, en) || undefined} />
           ))}
         </div>
-        {confirm && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
-            <span style={{ color: '#c0392b', fontWeight: 700, fontSize: 12.5 }}>{T('mobile.forgeOverwrite')}</span>
-            <button className="mob-btn mob-btn--gold" onClick={doConfirm}>{T('mobile.forgeConfirm')}</button>
-            <button className="mob-btn" onClick={() => setConfirm(null)}>{T('mobile.forgeCancel')}</button>
-          </div>
-        )}
       </section>
 
-      {/* La réserve : faces achetées non posées */}
+      {/* La réserve : touche une face → forge sur SON slot */}
       <section className="mob-section">
         <div className="mob-section-title">{T('mobile.forgeReserve')} ({reserve.length})</div>
         {reserve.length === 0 ? (
@@ -736,19 +721,26 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
               <FaceTile
                 key={i}
                 face={f}
-                size={50}
-                selected={sel === i}
+                size={52}
+                slotTag={f.slot}
                 clickable={owned && !locked}
-                onClick={(owned && !locked) ? () => { setSel(sel === i ? null : i); setConfirm(null); } : undefined}
+                onClick={(owned && !locked) ? () => tryForge(i) : undefined}
                 title={faceEffectLabel(f, en) || undefined}
               />
             ))}
           </div>
         )}
-        <div className="mob-foot" style={{ marginTop: 8 }}>{owned ? T('mobile.forgeHint') : T('mobile.forgeReadonly')}</div>
+        {confirm && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+            <span style={{ color: '#c0392b', fontWeight: 700, fontSize: 12.5 }}>{T('mobile.forgeOverwriteSlot', { n: confirm.slot + 1 })}</span>
+            <button className="mob-btn mob-btn--gold" onClick={doConfirm}>{T('mobile.forgeConfirm')}</button>
+            <button className="mob-btn" onClick={() => setConfirm(null)}>{T('mobile.forgeCancel')}</button>
+          </div>
+        )}
+        <div className="mob-foot" style={{ marginTop: 8 }}>{owned ? T('mobile.forgeHintSlot') : T('mobile.forgeReadonly')}</div>
       </section>
 
-      {/* La vitrine : faces à acheter */}
+      {/* La vitrine : faces à acheter (par slot) */}
       <section className="mob-section">
         <div className="mob-section-title">{T('mobile.forgeShop')}</div>
         {shopFaces.length === 0 ? (
@@ -761,8 +753,10 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
               const broke = (t.money ?? 0) < (f.price || 0);
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, border: `1px solid ${color}55`, background: '#fffefb' }}>
-                  <FaceTile face={f} size={46} />
-                  <span style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>{eff || T('mobile.forgeDie')}</span>
+                  <FaceTile face={f} size={46} slotTag={f.slot} />
+                  <span style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>
+                    <b>{T('mobile.faceSlotShort', { n: f.slot })}</b> · {eff || T('mobile.forgeDie')}
+                  </span>
                   <button className="mob-btn mob-btn--gold" disabled={!owned || locked || broke} onClick={() => buy(i)}>
                     {T('mobile.buyFaceFor', { price: f.price || 0 })}
                   </button>

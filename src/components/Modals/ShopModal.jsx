@@ -147,16 +147,18 @@ function FaceStall({ team, faces, onBuyFace, en }) {
       {!faces || faces.length === 0 ? (
         <div className="forge-shop-empty">{T('modal.shop.facesEmpty')}</div>
       ) : (
-        <div className="forge-shop-scroll scroll-hidden">
+        <div className="forge-shop-grid">
           {faces.map((f, idx) => {
+            const slot = f.slot || (idx + 1);
             const rar = faceRarity(f.power);
             const price = f.price || 0;
             const canBuy = team.money >= price && !stockFull;
             const effLabel = faceEffectLabel(f, en);
             return (
               <div className="forge-shop-card" key={idx} style={{ '--rar': rar.color }}>
+                <span className="forge-shop-slot">{T('modal.shop.faceSlot', { n: slot })}</span>
+                <FaceTile face={f} size={62} slotTag={slot} />
                 <span className="forge-shop-rarity">{rar.label}</span>
-                <FaceTile face={f} size={66} />
                 <div className="forge-shop-card-eff">{effLabel || T('modal.shop.facePure')}</div>
                 <button className="shop-buy" disabled={!canBuy} onClick={() => { soundClick(); onBuyFace(idx); }}>
                   {T('common.buy')} <Price value={price} />
@@ -170,51 +172,38 @@ function FaceStall({ team, faces, onBuyFace, en }) {
   );
 }
 
-/* ---------- Banc de forge : zones DÉ et RÉSERVE distinctes ---------- */
+/* ---------- Banc de forge : DÉ (affichage) + RÉSERVE (forge en 1 tap sur le slot lié) ---------- */
 function ForgeBench({ team, onForge }) {
   const T = useT();
-  const [sel, setSel] = useState(null);         // index de la réserve sélectionné
-  const [confirm, setConfirm] = useState(null); // { slot } : écrasement à confirmer
+  const [confirm, setConfirm] = useState(null); // { stockIndex, slot } : écrasement à confirmer
   const faces = getDieFaces(team);
   const reserve = team.faceStock || [];
 
-  const place = (slot) => {
-    if (sel == null || !reserve[sel]) return;
-    if (isFaceForged(faces[slot])) { setConfirm({ slot }); return; } // face déjà forgée → confirmer
-    onForge(slot, sel); setSel(null);
+  const tryForge = (stockIndex) => {
+    const f = reserve[stockIndex];
+    if (!f) return;
+    const slot = (f.slot || 1) - 1; // slot cible de la face
+    if (isFaceForged(faces[slot])) { setConfirm({ stockIndex, slot }); return; } // déjà forgé → confirmer
+    onForge(slot, stockIndex);
   };
-  const doConfirm = () => { onForge(confirm.slot, sel); setConfirm(null); setSel(null); };
+  const doConfirm = () => { onForge(confirm.slot, confirm.stockIndex); setConfirm(null); };
 
   return (
     <section className="shop-stall">
       <div className="forge-bench">
-        {/* Zone DÉ — plateau */}
+        {/* Zone DÉ — plateau (affichage des 6 slots actuels) */}
         <div>
           <div className="forge-zone-title">{T('modal.shop.forgeBench')}</div>
-          <div className="forge-hint">{T('modal.shop.forgeHint')}</div>
           <div className="forge-tray">
             {faces.map((face, i) => (
-              <FaceTile
-                key={i}
-                face={face}
-                base={i + 1}
-                clickable={sel != null}
-                onClick={sel != null ? () => place(i) : undefined}
-                title={faceEffectLabel(face) || undefined}
-              />
+              <FaceTile key={i} face={face} base={i + 1} title={faceEffectLabel(face) || undefined} />
             ))}
           </div>
-          {confirm && (
-            <div className="forge-confirm">
-              <span className="forge-confirm-text">{T('modal.shop.forgeOverwrite', { label: faceShortLabel(faces[confirm.slot]) })}</span>
-              <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={() => { soundClick(); doConfirm(); }}>{T('modal.shop.forgeConfirm')}</button>
-              <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
-            </div>
-          )}
         </div>
-        {/* Zone RÉSERVE */}
+        {/* Zone RÉSERVE — chaque face se forge sur SON slot */}
         <div>
           <div className="forge-zone-title">{T('modal.shop.forgeReserve')}<span className="cnt">{reserve.length}/{FACE_STOCK_MAX}</span></div>
+          <div className="forge-hint">{T('modal.shop.forgeHintSlot')}</div>
           {reserve.length === 0 ? (
             <div className="forge-empty">{T('modal.shop.forgeReserveEmpty')}</div>
           ) : (
@@ -224,13 +213,20 @@ function ForgeBench({ team, onForge }) {
                   <FaceTile
                     key={i}
                     face={f}
-                    selected={sel === i}
+                    slotTag={f.slot}
                     clickable
-                    onClick={() => { soundClick(); setSel(sel === i ? null : i); setConfirm(null); }}
+                    onClick={() => { soundClick(); tryForge(i); }}
                     title={faceEffectLabel(f) || undefined}
                   />
                 ))}
               </div>
+            </div>
+          )}
+          {confirm && (
+            <div className="forge-confirm">
+              <span className="forge-confirm-text">{T('modal.shop.forgeOverwriteSlot', { n: confirm.slot + 1, label: faceShortLabel(faces[confirm.slot]) })}</span>
+              <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={() => { soundClick(); doConfirm(); }}>{T('modal.shop.forgeConfirm')}</button>
+              <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
             </div>
           )}
         </div>

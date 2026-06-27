@@ -11,7 +11,7 @@ import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
 import { defaultDieFaces, getDieFaces, clampFaceValue, DIE_SLOTS } from '../logic/forge.js';
-import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, generateFaceStock, rollShopFace, faceShortLabel, FORGE_RESOLVED, SHOP_FACE_SLOTS, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, generateSlotFaces, rollSlotFace, faceShortLabel, FORGE_RESOLVED, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -623,8 +623,8 @@ export const useGameStore = create((set, get) => ({
       statsArchived: false,
       shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
       shopStockTurns: 0,
-      // Forge : vitrine de faces (uniquement les effets résolus) si l'extension est active.
-      shopFaceStock: forgeOn ? generateFaceStock(SHOP_FACE_SLOTS, Math.random, FORGE_RESOLVED) : [],
+      // Forge : vitrine ORGANISÉE PAR SLOT (une offre par slot 1→6, effets résolus only).
+      shopFaceStock: forgeOn ? generateSlotFaces(Math.random, FORGE_RESOLVED) : [],
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       powerSetupIndex: 0, powerSetupCategory: 'def',
@@ -1982,11 +1982,13 @@ export const useGameStore = create((set, get) => ({
     const price = f.price || 0;
     const faceStock = [...(team.faceStock || [])];
     if ((team.money || 0) < price || faceStock.length >= FACE_STOCK_MAX) return;
-    faceStock.push({ value: f.value, effect: f.effect || null });
+    // La face conserve son SLOT cible : elle ne pourra être forgée que là.
+    faceStock.push({ value: f.value, effect: f.effect || null, slot: f.slot });
     const nt = [...st.teams];
     nt[idx] = { ...team, money: team.money - price, faceStock };
     const newStock = [...stock];
-    const repl = rollShopFace(Math.random, FORGE_RESOLVED);
+    // Renouvelle l'offre DU MÊME slot (vitrine organisée par slot).
+    const repl = rollSlotFace(f.slot, Math.random, FORGE_RESOLVED);
     newStock[faceIndex] = repl || newStock[faceIndex];
     st.addLog(tg('log.store.buyFace', { emoji: team.emoji, name: team.name, label: faceShortLabel(f), price }));
     set({ teams: nt, shopFaceStock: newStock });
@@ -2001,18 +2003,22 @@ export const useGameStore = create((set, get) => ({
     const idx = teamIndex ?? st.currentTeam;
     const team = st.teams[idx];
     if (!team) return;
-    if (slotIndex < 0 || slotIndex >= DIE_SLOTS) return;
     const stock = team.faceStock || [];
     const f = stock[stockIndex];
     if (!f) return;
+    // Face liée à un slot : elle se pose UNIQUEMENT sur son slot cible (f.slot).
+    // Repli sur slotIndex pour d'éventuelles faces héritées sans slot.
+    const target = f.slot ? f.slot - 1 : slotIndex;
+    if (target < 0 || target >= DIE_SLOTS) return;
+    if (slotIndex != null && slotIndex !== target) return; // garde : slot non concordant
     const faces = getDieFaces(team).map((face, i) => (
-      i === slotIndex ? { base: i + 1, value: clampFaceValue(f.value), effect: f.effect || null } : face
+      i === target ? { base: i + 1, value: clampFaceValue(f.value), effect: f.effect || null } : face
     ));
     const nt = [...st.teams];
     nt[idx] = { ...team, dieFaces: faces, faceStock: stock.filter((_, i) => i !== stockIndex) };
-    st.addLog(tg('log.store.forgeFace', { emoji: team.emoji, name: team.name, base: slotIndex + 1, label: faceShortLabel(f) }));
+    st.addLog(tg('log.store.forgeFace', { emoji: team.emoji, name: team.name, base: target + 1, label: faceShortLabel(f) }));
     // Cérémonie de forge (overlay TBI) : marteau/enclume/étincelles + son.
-    set({ teams: nt, forgeCeremony: { teamIdx: idx, base: slotIndex + 1, face: { value: clampFaceValue(f.value), effect: f.effect || null } } });
+    set({ teams: nt, forgeCeremony: { teamIdx: idx, base: target + 1, face: { value: clampFaceValue(f.value), effect: f.effect || null } } });
     saveGame(get());
   },
   clearForgeCeremony: () => set({ forgeCeremony: null }),

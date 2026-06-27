@@ -15,7 +15,7 @@
 // ============================================================
 import { FORGE } from './balanceConfig.js';
 import { getLang } from '../i18n/lang.js';
-import { clampFaceValue } from './forge.js';
+import { clampFaceValue, DIE_SLOTS } from './forge.js';
 
 // Couleur par famille d'effet (spec §5) : or, question, défense, pouvoir, loot.
 export const FORGE_FAMILY_COLOR = {
@@ -102,6 +102,24 @@ export function generateFaceStock(count, rng = Math.random, enabledTypes = null)
   const out = [];
   for (let i = 0; i < count; i++) {
     const f = rollShopFace(rng, enabledTypes);
+    if (f) out.push(f);
+  }
+  return out;
+}
+
+// Face de boutique LIÉE À UN SLOT précis (1→6) : ne pourra être forgée que sur ce
+// slot du dé. Sert à imposer des choix par emplacement.
+export function rollSlotFace(slot, rng = Math.random, enabledTypes = null) {
+  const f = rollShopFace(rng, enabledTypes);
+  return f ? { ...f, slot } : null;
+}
+
+// Vitrine ORGANISÉE PAR SLOT : une offre par slot du dé (1→6), chacune étiquetée
+// de son slot cible. Renouvelée par slot à l'achat (côté store).
+export function generateSlotFaces(rng = Math.random, enabledTypes = null) {
+  const out = [];
+  for (let s = 1; s <= DIE_SLOTS; s++) {
+    const f = rollSlotFace(s, rng, enabledTypes);
     if (f) out.push(f);
   }
   return out;

@@ -10,6 +10,7 @@ export default function FaceTile({
   face,
   size = 64,
   base = null,        // adresse du slot (atelier) — petit chiffre en coin
+  slotTag = null,     // slot CIBLE d'une face liée (boutique/réserve) — badge « →N »
   selected = false,
   dim = false,
   clickable = false,
@@ -38,6 +39,7 @@ export default function FaceTile({
       title={title}
     >
       {base != null && <span className="facetile-base">{base}</span>}
+      {slotTag != null && <span className="facetile-slot">{'→'}{slotTag}</span>}
       <span className="facetile-top"><span className="facetile-val">{v}</span></span>
       {meta && (
         <span className="facetile-ribbon">
