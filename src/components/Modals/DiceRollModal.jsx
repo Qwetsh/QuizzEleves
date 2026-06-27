@@ -109,7 +109,9 @@ export default function DiceRollModal() {
     timers.push(setTimeout(() => setPhase('outro'), 350 + 1200 + 1100));
     timers.push(setTimeout(() => completeDiceRoll(), 350 + 1200 + 1100 + 280));
     return () => timers.forEach(clearTimeout);
-  }, [showDiceModal]);
+    // `diceValue` dans les deps : une Relance (face Forge) change la valeur en
+    // gardant la modale ouverte → la timeline d'animation redémarre (re-spin).
+  }, [showDiceModal, diceValue]);
 
   if (!showDiceModal || !team || !diceValue) return null;
 

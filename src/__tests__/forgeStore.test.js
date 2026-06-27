@@ -76,16 +76,19 @@ describe('Forge — forgeFace', () => {
 describe('Forge — Relance (interception au lancer)', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('une face Relance relance le dé : seule la dernière face compte', () => {
+  it('une face Relance ré-anime puis la dernière face compte', () => {
     // slot 0 (base 1) = Relance ; slot 1 (base 2) = +5. Lancer = 1 → relance → 2.
     const dieFaces = getDieFaces({}).map((f, i) => {
       if (i === 0) return { base: 1, value: 1, effect: { type: 'relance', tier: 0 } };
       if (i === 1) return { base: 2, value: 5, effect: null };
       return f;
     });
-    useGameStore.setState({ board: BOARD, teams: [baseTeam({ pos: 'depart', dieFaces })], preRollValue: null });
+    useGameStore.setState({ board: BOARD, teams: [baseTeam({ pos: 'depart', dieFaces })], preRollValue: null, diceValue: 1, showDiceModal: true, relanceCount: 0 });
     vi.spyOn(Math, 'random').mockReturnValue(0.2); // floor(0.2*6)+1 = 2 → slot 1 (+5)
-    S().handleDiceResult(1); // on tombe sur la face Relance (slot 0)
+    S().completeDiceRoll(); // face Relance (slot 0) → ré-animation avec la nouvelle valeur
+    expect(S().diceValue).toBe(2);
+    expect(S().relanceCount).toBe(1);
+    S().completeDiceRoll(); // slot 1 n'est pas Relance → résolution
     expect(S().preRollValue).toBe(5); // déplacement = valeur de la NOUVELLE face
   });
 });

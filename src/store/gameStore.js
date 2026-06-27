@@ -158,6 +158,7 @@ const TURN_RESET = {
   showTilePicker: null,
   showActionDice: null,
   forgeCeremony: null,
+  relanceCount: 0,
   showSubjectPicker: false,
   inspectTrap: null,
   rerollUsed: false,
@@ -708,12 +709,27 @@ export const useGameStore = create((set, get) => ({
     }
     // Dé de mouvement : toujours un D6 (1→6).
     const finalValue = Math.floor(Math.random() * 6) + 1;
-    set({ rolling: true, diceValue: finalValue, showDiceModal: true });
+    set({ rolling: true, diceValue: finalValue, showDiceModal: true, relanceCount: 0 });
   },
 
   completeDiceRoll: () => {
-    const { diceValue } = get();
-    set({ showDiceModal: false, rolling: false });
+    const { diceValue, teams, currentTeam } = get();
+    const team = teams[currentTeam];
+    // Relance (face Forge) : si la face tombée est une Relance, on RE-ANIME la
+    // modale avec une nouvelle valeur (seule la dernière face compte, §6.2).
+    // Enchaînement (re-relance) piloté par balanceConfig (défaut : une seule).
+    if (team && diceValue && extOn(get().extensions, 'forge')) {
+      const faces = getDieFaces(team);
+      const face = faces[((diceValue - 1) % 6 + 6) % 6];
+      const n = get().relanceCount || 0;
+      if (isRelanceFace(face) && (n === 0 || (FORGE.relance?.enchainement && n < 6))) {
+        const nv = Math.floor(Math.random() * 6) + 1;
+        get().addLog(tg('log.store.relanceFace', { emoji: team.emoji, name: team.name, value: clampFaceValue(faces[nv - 1].value) }));
+        set({ diceValue: nv, relanceCount: n + 1, rolling: true }); // showDiceModal reste true → ré-animation
+        return;
+      }
+    }
+    set({ showDiceModal: false, rolling: false, relanceCount: 0 });
     if (diceValue) get().handleDiceResult(diceValue);
   },
 
@@ -725,22 +741,11 @@ export const useGameStore = create((set, get) => ({
     // Forge de dés : le slot tiré (value = 1→6, l'adresse immuable) désigne une
     // FACE forgée dont la VALEUR (0→6) fait avancer. Dé standard ou extension
     // désactivée : face.value === value (comportement inchangé).
-    const dieFaces = getDieFaces(team);
-    let face = dieFaces[((value - 1) % 6 + 6) % 6];
-    // Relance (face Forge) : relance le dé ; SEULE la dernière face compte (§6.2).
-    // L'enchaînement (une face-Relance qui retombe sur Relance) suit le flag
-    // balanceConfig (défaut : une seule relance).
-    if (isRelanceFace(face)) {
-      const chainOn = !!FORGE.relance?.enchainement;
-      let guard = 0;
-      do {
-        value = Math.floor(Math.random() * 6) + 1;
-        face = dieFaces[value - 1];
-        guard++;
-        addLog(tg('log.store.relanceFace', { emoji: team.emoji, name: team.name, value: clampFaceValue(face.value) }));
-      } while (chainOn && isRelanceFace(face) && guard < 6);
-      set({ diceValue: value }); // refléter la face finale affichée
-    }
+    // La face tirée (slot = value) donne la valeur de déplacement. La Relance est
+    // résolue EN AMONT (completeDiceRoll ré-anime la modale, seule la dernière face
+    // compte) : ici `face` n'est donc plus une face-Relance, sauf la dernière d'une
+    // relance simple — auquel cas sa VALEUR s'applique normalement (§6.2).
+    const face = getDieFaces(team)[((value - 1) % 6 + 6) % 6];
     const moveValue = clampFaceValue(face.value);
     const bonus = buffValue(team, 'diceBonus');
     const eff = moveValue + bonus;
