@@ -15,6 +15,7 @@ import { getTeamEffects } from '../../logic/teamStatus';
 import { extOn } from '../../extensions/registry';
 import { getDieFaces, isFaceForged } from '../../logic/forge';
 import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel } from '../../logic/forgeEffects';
+import FaceTile from '../Game/FaceTile';
 import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from '../../logic/pacts';
 import { tFor, setLang } from '../../i18n';
 import { locName, locDesc, loc } from '../../i18n/content';
@@ -703,21 +704,17 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
       <section className="mob-section">
         <div className="mob-section-title">{T('mobile.forgeDie')}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {faces.map((face, i) => {
-            const color = colorOf(face);
-            const clickable = owned && !locked && sel != null;
-            return (
-              <button key={i} type="button" onClick={() => clickable && place(i)} disabled={!clickable}
-                title={faceEffectLabel(face, en) || undefined}
-                style={{ position: 'relative', width: 56, height: 56, borderRadius: 12, border: `2px solid ${color}`,
-                  background: '#fffdf7', display: 'grid', placeItems: 'center', cursor: clickable ? 'pointer' : 'default',
-                  boxShadow: clickable ? `0 0 0 2px ${color}33` : 'none' }}>
-                <span style={{ position: 'absolute', top: 2, left: 5, fontSize: 10, color: '#9b7e4e', fontWeight: 700 }}>{i + 1}</span>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: '#3a2c18' }}>{face.value}</span>
-                {iconOf(face) && <span style={{ position: 'absolute', bottom: 1, right: 3, fontSize: 14 }}>{iconOf(face)}</span>}
-              </button>
-            );
-          })}
+          {faces.map((face, i) => (
+            <FaceTile
+              key={i}
+              face={face}
+              base={i + 1}
+              size={54}
+              clickable={owned && !locked && sel != null}
+              onClick={(owned && !locked && sel != null) ? () => place(i) : undefined}
+              title={faceEffectLabel(face, en) || undefined}
+            />
+          ))}
         </div>
         {confirm && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 }}>
@@ -735,18 +732,17 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
           <div className="mob-empty">{T('mobile.forgeReserveEmpty')}</div>
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {reserve.map((f, i) => {
-              const color = colorOf(f); const on = sel === i;
-              return (
-                <button key={i} type="button" disabled={!owned || locked}
-                  onClick={() => { setSel(on ? null : i); setConfirm(null); }}
-                  title={faceEffectLabel(f, en) || undefined}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '7px 11px', borderRadius: 10,
-                    border: `2px solid ${color}`, background: on ? color : '#fffdf7', color: on ? '#fff' : '#3a2c18', fontWeight: 700 }}>
-                  +{f.value} {iconOf(f) || ''}
-                </button>
-              );
-            })}
+            {reserve.map((f, i) => (
+              <FaceTile
+                key={i}
+                face={f}
+                size={50}
+                selected={sel === i}
+                clickable={owned && !locked}
+                onClick={(owned && !locked) ? () => { setSel(sel === i ? null : i); setConfirm(null); } : undefined}
+                title={faceEffectLabel(f, en) || undefined}
+              />
+            ))}
           </div>
         )}
         <div className="mob-foot" style={{ marginTop: 8 }}>{owned ? T('mobile.forgeHint') : T('mobile.forgeReadonly')}</div>
@@ -765,7 +761,7 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
               const broke = (t.money ?? 0) < (f.price || 0);
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, border: `1px solid ${color}55`, background: '#fffefb' }}>
-                  <span style={{ width: 40, height: 40, borderRadius: 10, border: `2px solid ${color}`, display: 'grid', placeItems: 'center', fontWeight: 800, fontFamily: 'var(--font-display)', fontSize: 18 }}>{f.value}</span>
+                  <FaceTile face={f} size={46} />
                   <span style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>{eff || T('mobile.forgeDie')}</span>
                   <button className="mob-btn mob-btn--gold" disabled={!owned || locked || broke} onClick={() => buy(i)}>
                     {T('mobile.buyFaceFor', { price: f.price || 0 })}

@@ -1,5 +1,5 @@
 import { useT } from '../../i18n';
-import { FORGE_EFFECTS, FORGE_FAMILY_COLOR } from '../../logic/forgeEffects';
+import FaceTile from './FaceTile';
 
 const DICE_FACE_ROT = {
   1: { x: 0,    y: 0 },
@@ -32,19 +32,6 @@ function PipPattern({ n }) {
   );
 }
 
-// Rendu d'UNE face forgée : valeur de déplacement + icône d'effet (couleur de
-// famille). Utilisé quand le dé est personnalisé (extension Forge).
-function ForgedFace({ face, size }) {
-  const meta = face?.effect?.type ? FORGE_EFFECTS[face.effect.type] : null;
-  const color = (meta && FORGE_FAMILY_COLOR[meta.family]) || '#3a2c18';
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'grid', placeItems: 'center' }}>
-      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: size * 0.44, lineHeight: 1, color }}>{face?.value ?? 0}</span>
-      {meta && <span style={{ position: 'absolute', bottom: size * 0.07, fontSize: size * 0.2 }}>{meta.icon}</span>}
-    </div>
-  );
-}
-
 function DiceFace({ pips, side, size, number, face }) {
   const half = size / 2;
   const transforms = {
@@ -61,7 +48,7 @@ function DiceFace({ pips, side, size, number, face }) {
       style={{ width: size, height: size, transform: transforms[side] }}
     >
       {face
-        ? <ForgedFace face={face} size={size} />
+        ? <FaceTile face={face} size={size} flat />
         : number != null
         ? <span style={{
             display: 'grid', placeItems: 'center', width: '100%', height: '100%',

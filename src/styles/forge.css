@@ -1,3 +1,176 @@
+/* ============================================================
+   FACE DE DÉ — pastille designée (parchemin en relief + bandeau d'effet).
+   Variable --s = taille (px), --fam = couleur de famille de l'effet.
+   ============================================================ */
+.facetile {
+  position: relative;
+  width: var(--s, 64px);
+  height: var(--s, 64px);
+  border-radius: calc(var(--s, 64px) * 0.2);
+  border: 2px solid var(--fam, #b8862c);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(165deg, #fffdf6 0%, #fff6e3 52%, color-mix(in srgb, var(--fam, #b8862c) 22%, #fff6e3) 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    inset 0 calc(var(--s, 64px) * -0.06) calc(var(--s, 64px) * 0.1) rgba(122, 94, 58, 0.13),
+    0 2px 5px rgba(60, 40, 20, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+.facetile.is-clickable { cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.facetile.is-clickable:hover { transform: translateY(-2px); }
+.facetile.is-sel {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--fam, #b8862c) 55%, transparent),
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    0 4px 10px rgba(60, 40, 20, 0.28);
+}
+.facetile.is-dim { opacity: 0.5; }
+.facetile.facetile--safe { border-style: dashed; }
+
+.facetile-top { flex: 1; display: grid; place-items: center; min-height: 0; }
+.facetile-val {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: calc(var(--s, 64px) * 0.5);
+  line-height: 1;
+  color: #3a2c18;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75), 0 2px 3px rgba(122, 94, 58, 0.18);
+}
+.facetile-base {
+  position: absolute;
+  top: 5%;
+  left: 9%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: calc(var(--s, 64px) * 0.16);
+  color: #b3946a;
+  z-index: 1;
+}
+.facetile-ribbon {
+  height: 32%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--s, 64px) * 0.05);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fam, #b8862c) 72%, #ffffff), var(--fam, #b8862c));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.facetile-ribbon-icon { font-size: calc(var(--s, 64px) * 0.22); line-height: 1; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3)); }
+.facetile-pips { display: inline-flex; gap: calc(var(--s, 64px) * 0.03); }
+.facetile-pip {
+  width: calc(var(--s, 64px) * 0.06);
+  height: calc(var(--s, 64px) * 0.06);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+.facetile-pip.on { background: #fffdf6; box-shadow: 0 0 3px rgba(255, 255, 255, 0.6); }
+
+/* Variante « nue » pour les faces du dé 3D (pas de bordure/ombre propre). */
+.facetile--flat {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 65%),
+    linear-gradient(165deg, #fffdf6, color-mix(in srgb, var(--fam, #b8862c) 16%, #fff6e3));
+}
+
+/* ============================================================
+   ATELIER DE FORGE — zones DÉ et RÉSERVE distinctes (boutique TBI).
+   ============================================================ */
+.forge-bench { display: flex; flex-direction: column; gap: 14px; }
+.forge-zone-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: #6b5230;
+  margin: 0 0 2px;
+}
+.forge-zone-title .cnt { margin-left: auto; font-size: 13px; color: #9b7e4e; font-weight: 700; }
+.forge-hint { font-size: 12.5px; color: #9b7e4e; margin: -4px 0 8px; }
+
+/* Plateau du dé : tray bois encadré, les 6 slots bien lisibles. */
+.forge-tray {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #6b4f33, #573f28);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+.forge-tray .facetile { width: 100%; height: auto; aspect-ratio: 1; --s: 64px; }
+.forge-slot-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.forge-slot-addr { font-size: 11px; font-weight: 700; color: #d9c39b; }
+
+.forge-reserve-zone {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 253, 246, 0.6);
+  border: 1px dashed rgba(122, 94, 58, 0.3);
+}
+.forge-reserve-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.forge-reserve-grid .facetile { --s: 56px; }
+.forge-empty { text-align: center; color: #9b7e4e; font-size: 13px; padding: 14px 0; }
+
+.forge-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 4px 0 2px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(181, 52, 31, 0.08);
+}
+.forge-confirm-text { color: #b5341f; font-weight: 700; font-size: 13px; }
+
+/* ============================================================
+   VITRINE DE FACES — cartes par bande de rareté + défilement lisible.
+   ============================================================ */
+.forge-shop-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.forge-shop-card {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  background: #fffdf6;
+  border: 2px solid var(--rar, #c9b896);
+  box-shadow: 0 2px 5px rgba(60, 40, 20, 0.12);
+}
+.forge-shop-card-eff { font-size: 12px; font-weight: 700; color: #5b4a2e; text-align: center; min-height: 30px; display: flex; align-items: center; }
+.forge-shop-rarity {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rar, #9b7e4e);
+}
+.forge-shop-empty { text-align: center; color: #9b7e4e; padding: 18px; }
+
 /* Cérémonie de forge (Phase 3) — marteau/enclume, métal rougeoyant, étincelles.
    Affichée brièvement quand une équipe forge une face de son dé. */
 
@@ -7,8 +180,8 @@
   z-index: 80;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 60%, rgba(40, 18, 4, 0.5), rgba(8, 5, 2, 0.8));
-  animation: forge-cer-in 0.2s ease both, forge-cer-out 0.35s ease 1.65s both;
+  background: radial-gradient(circle at 50% 56%, rgba(64, 28, 6, 0.55), rgba(8, 5, 2, 0.84));
+  animation: forge-cer-in 0.2s ease both, forge-cer-out 0.4s ease 1.8s both;
 }
 @keyframes forge-cer-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes forge-cer-out { to { opacity: 0; } }
@@ -18,87 +191,77 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* Le marteau descend, frappe (~360 ms), rebondit puis remonte. */
 .forge-cer-hammer {
-  font-size: 76px;
+  font-size: 88px;
   transform-origin: 78% 82%;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
-  animation: forge-hammer 1.15s cubic-bezier(0.5, 0, 0.3, 1) both;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+  animation: forge-hammer 1.2s cubic-bezier(0.5, 0, 0.3, 1) both;
 }
 @keyframes forge-hammer {
-  0%   { transform: rotate(-72deg) translateY(-34px); opacity: 0; }
+  0%   { transform: rotate(-78deg) translateY(-40px); opacity: 0; }
   18%  { opacity: 1; }
-  30%  { transform: rotate(10deg) translateY(10px); }
+  30%  { transform: rotate(12deg) translateY(12px); }
   40%  { transform: rotate(0deg); }
-  62%  { transform: rotate(-10deg); }
-  100% { transform: rotate(-34deg) translateY(-22px); opacity: 0; }
+  62%  { transform: rotate(-12deg); }
+  100% { transform: rotate(-36deg) translateY(-26px); opacity: 0; }
 }
 
-.forge-cer-anvil {
-  position: relative;
-  width: 160px;
-  height: 150px;
-  display: grid;
-  place-items: center;
-}
-
-/* La face apparaît rouge incandescente puis refroidit vers sa couleur de famille. */
-.forge-cer-face {
-  position: relative;
-  width: 116px;
-  height: 116px;
-  border-radius: 22px;
-  display: grid;
-  place-items: center;
-  border: 3px solid var(--fc, #c9762e);
-  color: var(--fc, #c9762e);
-  background: #fffaf0;
-  animation: forge-glow 1.45s ease 0.3s both;
-}
+/* La pièce forgée (FaceTile) : incandescente puis refroidie. */
+.forge-cer-piece { position: relative; display: grid; place-items: center; }
+.forge-cer-tile { animation: forge-glow 1.5s ease 0.3s both; }
+.forge-cer-tile .facetile { width: 124px; height: 124px; }
 @keyframes forge-glow {
-  0%   { background: #ff5717; box-shadow: 0 0 64px 18px #ff6a2a; filter: brightness(1.7); transform: scale(1.12); }
-  25%  { background: #ff7a30; }
+  0%   { filter: brightness(2.1) saturate(1.5) drop-shadow(0 0 62px #ff6a2a); transform: scale(1.18); }
+  18%  { filter: brightness(1.8) drop-shadow(0 0 48px #ff7a30); }
   60%  { transform: scale(1); }
-  100% { background: #fffaf0; box-shadow: 0 0 18px 2px var(--fc, #c9762e); filter: none; }
+  100% { filter: none; transform: scale(1); }
 }
-.forge-cer-val {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 54px;
-  line-height: 1;
-}
-.forge-cer-fx {
-  position: absolute;
-  bottom: 9px;
-  right: 12px;
-  font-size: 28px;
+
+/* Enclume stylisée sous la pièce. */
+.forge-cer-anvil {
+  width: 152px;
+  height: 32px;
+  margin-top: -4px;
+  background: linear-gradient(180deg, #4b4b52, #2b2b30);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.12), 0 8px 16px rgba(0, 0, 0, 0.55);
+  clip-path: polygon(8% 0, 92% 0, 100% 52%, 76% 52%, 68% 100%, 32% 100%, 24% 52%, 0 52%);
 }
 
 /* Gerbe d'étincelles au moment de l'impact. */
-.forge-cer-sparks { position: absolute; inset: 0; pointer-events: none; }
+.forge-cer-sparks { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .forge-cer-spark {
   position: absolute;
-  top: 50%;
+  top: 44%;
   left: 50%;
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff, #ffb13b 60%, #ff7a1e);
-  animation: forge-spark 0.72s ease 0.32s both;
+  background: radial-gradient(circle, #fff, #ffb13b 55%, #ff6a1e);
+  box-shadow: 0 0 8px #ffb13b;
+  animation: forge-spark 0.8s ease 0.3s both;
 }
 @keyframes forge-spark {
-  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
-  15%  { opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--x, 0)), calc(-50% + var(--y, 0))) scale(0.2); opacity: 0; }
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  12%  { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--x, 0)), calc(-50% + var(--y, 0))) scale(0.15); opacity: 0; }
 }
 
 .forge-cer-label {
   font-family: var(--font-display);
   font-weight: 800;
   color: #ffe7c2;
-  font-size: 20px;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+  font-size: 22px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.forge-cer-net {
+  font-weight: 800;
+  color: #fff;
+  font-size: 16px;
+  background: rgba(0, 0, 0, 0.38);
+  padding: 4px 14px;
+  border-radius: 999px;
 }

@@ -10,8 +10,9 @@ import { locName, locDesc, loc } from '../../i18n/content';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
-import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, faceShortLabel, FACE_STOCK_MAX } from '../../logic/forgeEffects';
+import { faceEffectLabel, faceShortLabel, FACE_STOCK_MAX } from '../../logic/forgeEffects';
 import { getDieFaces, isFaceForged } from '../../logic/forge';
+import FaceTile from '../Game/FaceTile';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
@@ -125,55 +126,54 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
   );
 }
 
-/* ---------- Étal : faces de dé (Forge) ---------- */
+/* ---------- Vitrine de faces (Forge) : cartes par bande de rareté ---------- */
+const FACE_RARITY = [
+  { label: 'Commune', color: '#7c9a5a' },
+  { label: 'Commune', color: '#7c9a5a' },
+  { label: 'Peu commune', color: '#3b8ea5' },
+  { label: 'Rare', color: '#7a5ad4' },
+  { label: 'Rare', color: '#7a5ad4' },
+  { label: 'Très rare', color: '#d4762e' },
+];
+const faceRarity = (power) => FACE_RARITY[Math.min(5, Math.max(0, Math.floor((((power) || 1) - 1) / 2)))];
+
 function FaceStall({ team, faces, onBuyFace, en }) {
   const T = useT();
   const reserve = team.faceStock?.length || 0;
   const stockFull = reserve >= FACE_STOCK_MAX;
-  if (!faces || faces.length === 0) return <div className="shop-empty">{T('modal.shop.facesEmpty')}</div>;
   return (
-    <Stall
-      banner={T('modal.shop.faces')}
-      note={stockFull ? T('modal.shop.faceStockFull') : `${reserve}/${FACE_STOCK_MAX}`}
-    >
-      {faces.map((f, idx) => {
-        const meta = f.effect?.type ? FORGE_EFFECTS[f.effect.type] : null;
-        const color = (meta && FORGE_FAMILY_COLOR[meta.family]) || '#7a5e3a';
-        const price = f.price || 0;
-        const canBuy = team.money >= price && !stockFull;
-        const effLabel = faceEffectLabel(f, en);
-        const moveLabel = f.value === 0 ? T('modal.shop.faceSafe') : T('modal.shop.faceMove', { n: f.value });
-        return (
-          <div className="shop-card" key={idx}>
-            <div className="shop-card-inner">
-              <div className="shop-card-head">
-                <CardIcon icon={meta?.icon || '🎲'} color={color} />
-                <div className="shop-card-titles">
-                  <div className="shop-card-name">{moveLabel}</div>
-                  <div className="shop-card-sub" style={{ color }}>
-                    {effLabel || T('modal.shop.facePure')}
-                  </div>
-                </div>
+    <section className="shop-stall">
+      <div className="shop-stall-banner">{T('modal.shop.faces')}</div>
+      {!faces || faces.length === 0 ? (
+        <div className="forge-shop-empty">{T('modal.shop.facesEmpty')}</div>
+      ) : (
+        <div className="forge-shop-scroll scroll-hidden">
+          {faces.map((f, idx) => {
+            const rar = faceRarity(f.power);
+            const price = f.price || 0;
+            const canBuy = team.money >= price && !stockFull;
+            const effLabel = faceEffectLabel(f, en);
+            return (
+              <div className="forge-shop-card" key={idx} style={{ '--rar': rar.color }}>
+                <span className="forge-shop-rarity">{rar.label}</span>
+                <FaceTile face={f} size={66} />
+                <div className="forge-shop-card-eff">{effLabel || T('modal.shop.facePure')}</div>
+                <button className="shop-buy" disabled={!canBuy} onClick={() => { soundClick(); onBuyFace(idx); }}>
+                  {T('common.buy')} <Price value={price} />
+                </button>
               </div>
-              <button
-                className="shop-buy"
-                disabled={!canBuy}
-                onClick={() => { soundClick(); onBuyFace(idx); }}
-              >
-                {T('common.buy')} <Price value={price} />
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </Stall>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 
-/* ---------- Banc de forge : pose une face de la réserve sur un slot du dé ---------- */
+/* ---------- Banc de forge : zones DÉ et RÉSERVE distinctes ---------- */
 function ForgeBench({ team, onForge }) {
   const T = useT();
-  const [sel, setSel] = useState(null);       // index de la réserve sélectionné
+  const [sel, setSel] = useState(null);         // index de la réserve sélectionné
   const [confirm, setConfirm] = useState(null); // { slot } : écrasement à confirmer
   const faces = getDieFaces(team);
   const reserve = team.faceStock || [];
@@ -185,76 +185,56 @@ function ForgeBench({ team, onForge }) {
   };
   const doConfirm = () => { onForge(confirm.slot, sel); setConfirm(null); setSel(null); };
 
-  const colorOf = (f) => {
-    const meta = f?.effect?.type ? FORGE_EFFECTS[f.effect.type] : null;
-    return (meta && FORGE_FAMILY_COLOR[meta.family]) || '#7a5e3a';
-  };
-  const iconOf = (f) => (f?.effect?.type ? FORGE_EFFECTS[f.effect.type]?.icon : null);
-
   return (
     <section className="shop-stall">
-      <div className="shop-stall-banner">{T('modal.shop.forgeBench')}</div>
-      <div className="shop-stall-note">{T('modal.shop.forgeHint')}</div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '6px 0' }}>
-        {faces.map((face, i) => {
-          const color = colorOf(face);
-          const clickable = sel != null;
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => place(i)}
-              disabled={!clickable}
-              title={faceEffectLabel(face) || undefined}
-              style={{
-                position: 'relative', width: 62, height: 62, borderRadius: 12,
-                border: `2px solid ${color}`, background: '#fffdf7',
-                cursor: clickable ? 'pointer' : 'default', opacity: clickable ? 1 : 0.85,
-                display: 'grid', placeItems: 'center', boxShadow: clickable ? `0 0 0 2px ${color}33` : 'none',
-              }}
-            >
-              <span style={{ position: 'absolute', top: 2, left: 5, fontSize: 11, color: '#9b7e4e', fontWeight: 700 }}>{i + 1}</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, lineHeight: 1, color: '#3a2c18' }}>{face.value}</span>
-              {iconOf(face) && <span style={{ position: 'absolute', bottom: 2, right: 4, fontSize: 15 }}>{iconOf(face)}</span>}
-            </button>
-          );
-        })}
-      </div>
-      {confirm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '4px 0 8px' }}>
-          <span style={{ color: '#b5341f', fontWeight: 700, fontSize: 13 }}>
-            {T('modal.shop.forgeOverwrite', { label: faceShortLabel(faces[confirm.slot]) })}
-          </span>
-          <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={() => { soundClick(); doConfirm(); }}>{T('modal.shop.forgeConfirm')}</button>
-          <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
-        </div>
-      )}
-      <div className="shop-stall-banner" style={{ marginTop: 8 }}>{T('modal.shop.forgeReserve')} ({reserve.length})</div>
-      {reserve.length === 0 ? (
-        <div className="shop-empty">{T('modal.shop.forgeReserveEmpty')}</div>
-      ) : (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '4px 0' }}>
-          {reserve.map((f, i) => {
-            const color = colorOf(f);
-            const on = sel === i;
-            return (
-              <button
+      <div className="forge-bench">
+        {/* Zone DÉ — plateau */}
+        <div>
+          <div className="forge-zone-title">{T('modal.shop.forgeBench')}</div>
+          <div className="forge-hint">{T('modal.shop.forgeHint')}</div>
+          <div className="forge-tray">
+            {faces.map((face, i) => (
+              <FaceTile
                 key={i}
-                type="button"
-                onClick={() => { soundClick(); setSel(on ? null : i); setConfirm(null); }}
-                title={faceEffectLabel(f) || undefined}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 10,
-                  border: `2px solid ${color}`, background: on ? color : '#fffdf7', color: on ? '#fff' : '#3a2c18',
-                  fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                +{f.value} {iconOf(f) || ''}
-              </button>
-            );
-          })}
+                face={face}
+                base={i + 1}
+                clickable={sel != null}
+                onClick={sel != null ? () => place(i) : undefined}
+                title={faceEffectLabel(face) || undefined}
+              />
+            ))}
+          </div>
+          {confirm && (
+            <div className="forge-confirm">
+              <span className="forge-confirm-text">{T('modal.shop.forgeOverwrite', { label: faceShortLabel(faces[confirm.slot]) })}</span>
+              <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={() => { soundClick(); doConfirm(); }}>{T('modal.shop.forgeConfirm')}</button>
+              <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
+            </div>
+          )}
         </div>
-      )}
+        {/* Zone RÉSERVE */}
+        <div>
+          <div className="forge-zone-title">{T('modal.shop.forgeReserve')}<span className="cnt">{reserve.length}/{FACE_STOCK_MAX}</span></div>
+          {reserve.length === 0 ? (
+            <div className="forge-empty">{T('modal.shop.forgeReserveEmpty')}</div>
+          ) : (
+            <div className="forge-reserve-zone">
+              <div className="forge-reserve-grid">
+                {reserve.map((f, i) => (
+                  <FaceTile
+                    key={i}
+                    face={f}
+                    selected={sel === i}
+                    clickable
+                    onClick={() => { soundClick(); setSel(sel === i ? null : i); setConfirm(null); }}
+                    title={faceEffectLabel(f) || undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
