@@ -228,6 +228,14 @@ export function soundForge() {
   setTimeout(() => playNoise(0.5, 0.16, { type: 'highpass', freq: 5200, q: 0.5 }), 430); // trempe
 }
 
+// Coulée d'une face dans son moule : jet de métal (glissando descendant) +
+// trempe (sifflement de vapeur). Joué au moment où la face est posée.
+export function soundCast() {
+  playTone(560, 0.16, 'sawtooth', 0.1);
+  setTimeout(() => playTone(300, 0.2, 'sawtooth', 0.1), 70);
+  setTimeout(() => playNoise(0.55, 0.2, { type: 'highpass', freq: 5200, q: 0.5 }), 200); // trempe
+}
+
 export function soundClick() {
   playTone(800, 0.05, 'square', 0.1);
 }

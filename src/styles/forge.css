@@ -131,46 +131,105 @@
 .forge-zone-title .cnt { margin-left: auto; font-size: 13px; color: #9b7e4e; font-weight: 700; }
 .forge-hint { font-size: 12.5px; color: #9b7e4e; margin: -4px 0 8px; }
 
-/* Le creuset : plateau de PIERRE chauffé, 6 moules où couler les faces. */
+/* Le creuset : un foyer de LAVE en fusion où sont posés des moules de PIERRE.
+   La lave coule entre les moules (interstices) et palpite ; des braises montent. */
 .forge-tray {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
-  padding: 16px 14px;
+  gap: 13px;
+  padding: 18px 15px;
   border-radius: 14px;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 132%, rgba(255, 110, 30, 0.3), transparent 62%),
-    linear-gradient(180deg, #453d33 0%, #2a241d 100%);
-  border: 1px solid #16110b;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.55), inset 0 0 38px rgba(255, 90, 20, 0.06);
+    radial-gradient(circle at 22% 28%, rgba(255, 160, 55, 0.55), transparent 38%),
+    radial-gradient(circle at 72% 68%, rgba(255, 95, 20, 0.5), transparent 42%),
+    radial-gradient(circle at 50% 110%, rgba(255, 120, 30, 0.45), transparent 55%),
+    linear-gradient(180deg, #5a2a10, #36160a);
+  background-size: 220% 220%, 240% 240%, 100% 100%, 100% 100%;
+  border: 2px solid #14100a;
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(255, 90, 20, 0.12);
+  animation: forge-lava 7s ease-in-out infinite alternate;
 }
-/* Moule en pierre (socket recessé) accueillant une face. */
+@keyframes forge-lava {
+  0% { background-position: 0% 0%, 100% 100%, 50% 100%, 0 0; }
+  100% { background-position: 35% 25%, 65% 75%, 50% 100%, 0 0; }
+}
+/* Braises qui montent du foyer. */
+.forge-embers { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.forge-ember {
+  position: absolute;
+  bottom: -6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd98a, #ff7a1e 60%, transparent);
+  box-shadow: 0 0 6px #ff9a3a;
+  animation: forge-ember-rise linear infinite;
+}
+@keyframes forge-ember-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  15% { opacity: 0.9; }
+  80% { opacity: 0.7; }
+  100% { transform: translateY(-150px) translateX(var(--drift, 8px)) scale(0.3); opacity: 0; }
+}
+/* Moule de PIERRE (socket recessé, texture mouchetée) posé dans la lave. */
 .forge-mold {
   position: relative;
+  z-index: 2;
   display: grid;
   place-items: center;
   padding: 7px;
   border-radius: 12px;
-  background: radial-gradient(circle at 50% 34%, #2c2620, #17130f);
-  box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.62), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  background:
+    radial-gradient(circle at 28% 22%, #3b332a, transparent 50%),
+    radial-gradient(circle at 74% 82%, #211b15, transparent 55%),
+    linear-gradient(158deg, #2e2820, #16120d);
+  box-shadow: inset 0 3px 7px rgba(0, 0, 0, 0.65), inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 .forge-mold .facetile { width: 100%; height: auto; aspect-ratio: 1; }
 /* Cible de drop valide : le moule rougeoie comme un creuset en fusion. */
 .forge-mold.is-target {
-  background: radial-gradient(circle at 50% 40%, rgba(255, 145, 45, 0.5), #241a12);
+  background: radial-gradient(circle at 50% 40%, rgba(255, 150, 50, 0.6), #241a12);
   animation: forge-mold-pulse 0.9s ease-in-out infinite;
 }
 @keyframes forge-mold-pulse {
-  0%, 100% { box-shadow: inset 0 0 14px rgba(255, 120, 30, 0.55), 0 0 12px rgba(255, 120, 30, 0.4); }
-  50% { box-shadow: inset 0 0 22px rgba(255, 155, 55, 0.95), 0 0 24px rgba(255, 140, 40, 0.7); }
+  0%, 100% { box-shadow: inset 0 0 14px rgba(255, 120, 30, 0.6), 0 0 12px rgba(255, 120, 30, 0.45); }
+  50% { box-shadow: inset 0 0 24px rgba(255, 160, 60, 0.95), 0 0 26px rgba(255, 140, 40, 0.75); }
 }
 .forge-mold.is-locked { opacity: 0.42; filter: grayscale(0.45); }
-/* Flash de coulée au moment de la pose. */
-.forge-mold.is-placed { animation: forge-mold-flash 0.6s ease; }
+/* Coulée : flash du moule + la face « refroidit » du métal en fusion. */
+.forge-mold.is-placed { animation: forge-mold-flash 0.7s ease; }
 @keyframes forge-mold-flash {
   0% { box-shadow: inset 0 0 0 0 rgba(255, 200, 120, 0); }
-  20% { box-shadow: inset 0 0 30px 6px rgba(255, 210, 140, 0.95), 0 0 30px rgba(255, 150, 50, 0.8); }
+  35% { box-shadow: inset 0 0 32px 7px rgba(255, 215, 150, 0.95), 0 0 32px rgba(255, 150, 50, 0.85); }
   100% { box-shadow: inset 0 0 0 0 rgba(255, 200, 120, 0); }
+}
+.forge-mold.is-placed .facetile { animation: forge-cast-glow 0.85s ease 0.28s both; }
+@keyframes forge-cast-glow {
+  0% { filter: brightness(2.3) saturate(2.4) sepia(0.7) hue-rotate(-18deg); }
+  60% { filter: brightness(1.4) saturate(1.4) sepia(0.3); }
+  100% { filter: none; }
+}
+/* Jet de métal en fusion qui descend dans le moule. */
+.forge-pour {
+  position: absolute;
+  top: -42%;
+  left: 50%;
+  width: 13%;
+  height: 78%;
+  transform: translateX(-50%);
+  transform-origin: top center;
+  border-radius: 0 0 45% 45%;
+  background: linear-gradient(180deg, rgba(255, 235, 170, 0) 0%, #ffe08a 28%, #ff9a30 70%, #ff6a1e 100%);
+  filter: blur(0.4px) drop-shadow(0 0 9px #ff9a3a);
+  z-index: 5;
+  animation: forge-pour 0.4s ease-in both;
+}
+@keyframes forge-pour {
+  0% { transform: translateX(-50%) scaleY(0); opacity: 0.95; }
+  72% { transform: translateX(-50%) scaleY(1); opacity: 1; }
+  100% { transform: translateX(-50%) scaleY(1); opacity: 0; }
 }
 
 /* Établi de la réserve : lingots à faire glisser dans les moules. */

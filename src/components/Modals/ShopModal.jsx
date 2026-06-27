@@ -15,7 +15,7 @@ import { getDieFaces, isFaceForged } from '../../logic/forge';
 import FaceTile from '../Game/FaceTile';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
-import { soundClick } from '../../logic/sounds';
+import { soundClick, soundCast } from '../../logic/sounds';
 import EffectDetails from './EffectDetails';
 import { TemplePanel, CoinRune } from './TempleDecor';
 import ItemIcon from './ItemIcon';
@@ -174,10 +174,17 @@ function FaceStall({ team, faces, onBuyFace, en }) {
 
 /* ---------- Banc de forge : creuset (drag-and-drop d'un lingot vers son moule) ---------- */
 // Directions fixes des étincelles à la coulée (réparties autour du moule).
-const MOLD_SPARKS = Array.from({ length: 10 }, (_, i) => {
-  const a = (i / 10) * Math.PI * 2;
-  return { x: `${Math.cos(a) * 34}px`, y: `${Math.sin(a) * 34}px` };
+const MOLD_SPARKS = Array.from({ length: 12 }, (_, i) => {
+  const a = (i / 12) * Math.PI * 2;
+  return { x: `${Math.cos(a) * 36}px`, y: `${Math.sin(a) * 36}px` };
 });
+// Braises qui montent du foyer (positions/cadences fixes).
+const FORGE_EMBERS = Array.from({ length: 9 }, (_, i) => ({
+  left: `${6 + i * 10 + (i % 2 ? 3 : -2)}%`,
+  dur: `${2.4 + (i % 4) * 0.6}s`,
+  delay: `${(i * 0.5) % 3}s`,
+  drift: `${(i % 2 ? 1 : -1) * (6 + (i % 3) * 6)}px`,
+}));
 
 function ForgeBench({ team, onForge }) {
   const T = useT();
@@ -189,14 +196,15 @@ function ForgeBench({ team, onForge }) {
 
   const doForge = (slot, stockIndex) => {
     onForge(slot, stockIndex);
+    soundCast();
     setBurst(slot);
-    setTimeout(() => setBurst((b) => (b === slot ? null : b)), 650);
+    setTimeout(() => setBurst((b) => (b === slot ? null : b)), 1200);
   };
   const tryForge = (stockIndex, slot) => {
     if (isFaceForged(faces[slot])) { setConfirm({ stockIndex, slot }); return; }
     doForge(slot, stockIndex);
   };
-  const doConfirm = () => { soundClick(); doForge(confirm.slot, confirm.stockIndex); setConfirm(null); };
+  const doConfirm = () => { doForge(confirm.slot, confirm.stockIndex); setConfirm(null); };
 
   // --- Drag-and-drop (pointer : compatible souris + tactile TBI) ---
   const onPointerDown = (e, stockIndex) => {
@@ -214,8 +222,8 @@ function ForgeBench({ team, onForge }) {
       const mold = el && el.closest ? el.closest('[data-mold]') : null;
       const overSlot = mold ? Number(mold.dataset.mold) : -1;
       const moved = Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8;
-      if (overSlot === d.slot) { soundClick(); tryForge(d.stockIndex, d.slot); }
-      else if (!moved) { soundClick(); tryForge(d.stockIndex, d.slot); } // simple tap = forge sur son slot
+      if (overSlot === d.slot) { tryForge(d.stockIndex, d.slot); }
+      else if (!moved) { tryForge(d.stockIndex, d.slot); } // simple tap = forge sur son slot
       return null; // drop hors cible → annulé
     });
   };
@@ -229,6 +237,11 @@ function ForgeBench({ team, onForge }) {
         <div>
           <div className="forge-zone-title">{T('modal.shop.forgeBench')}</div>
           <div className="forge-tray">
+            <div className="forge-embers" aria-hidden="true">
+              {FORGE_EMBERS.map((e, k) => (
+                <span key={k} className="forge-ember" style={{ left: e.left, animationDuration: e.dur, animationDelay: e.delay, '--drift': e.drift }} />
+              ))}
+            </div>
             {faces.map((face, i) => {
               const cls = 'forge-mold'
                 + (drag && drag.slot === i ? ' is-target' : '')
@@ -237,10 +250,11 @@ function ForgeBench({ team, onForge }) {
               return (
                 <div key={i} className={cls} data-mold={i}>
                   <FaceTile face={face} base={i + 1} title={faceEffectLabel(face) || undefined} />
+                  {burst === i && <span className="forge-pour" />}
                   {burst === i && (
                     <span className="forge-mold-burst">
                       {MOLD_SPARKS.map((s, k) => (
-                        <span key={k} className="forge-mold-spark" style={{ '--x': s.x, '--y': s.y, animationDelay: `${k * 12}ms` }} />
+                        <span key={k} className="forge-mold-spark" style={{ '--x': s.x, '--y': s.y, animationDelay: `${300 + k * 12}ms` }} />
                       ))}
                     </span>
                   )}
