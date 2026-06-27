@@ -1,0 +1,104 @@
+/* Cérémonie de forge (Phase 3) — marteau/enclume, métal rougeoyant, étincelles.
+   Affichée brièvement quand une équipe forge une face de son dé. */
+
+.forge-cer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 60%, rgba(40, 18, 4, 0.5), rgba(8, 5, 2, 0.8));
+  animation: forge-cer-in 0.2s ease both, forge-cer-out 0.35s ease 1.65s both;
+}
+@keyframes forge-cer-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes forge-cer-out { to { opacity: 0; } }
+
+.forge-cer-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Le marteau descend, frappe (~360 ms), rebondit puis remonte. */
+.forge-cer-hammer {
+  font-size: 76px;
+  transform-origin: 78% 82%;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  animation: forge-hammer 1.15s cubic-bezier(0.5, 0, 0.3, 1) both;
+}
+@keyframes forge-hammer {
+  0%   { transform: rotate(-72deg) translateY(-34px); opacity: 0; }
+  18%  { opacity: 1; }
+  30%  { transform: rotate(10deg) translateY(10px); }
+  40%  { transform: rotate(0deg); }
+  62%  { transform: rotate(-10deg); }
+  100% { transform: rotate(-34deg) translateY(-22px); opacity: 0; }
+}
+
+.forge-cer-anvil {
+  position: relative;
+  width: 160px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+}
+
+/* La face apparaît rouge incandescente puis refroidit vers sa couleur de famille. */
+.forge-cer-face {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--fc, #c9762e);
+  color: var(--fc, #c9762e);
+  background: #fffaf0;
+  animation: forge-glow 1.45s ease 0.3s both;
+}
+@keyframes forge-glow {
+  0%   { background: #ff5717; box-shadow: 0 0 64px 18px #ff6a2a; filter: brightness(1.7); transform: scale(1.12); }
+  25%  { background: #ff7a30; }
+  60%  { transform: scale(1); }
+  100% { background: #fffaf0; box-shadow: 0 0 18px 2px var(--fc, #c9762e); filter: none; }
+}
+.forge-cer-val {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 54px;
+  line-height: 1;
+}
+.forge-cer-fx {
+  position: absolute;
+  bottom: 9px;
+  right: 12px;
+  font-size: 28px;
+}
+
+/* Gerbe d'étincelles au moment de l'impact. */
+.forge-cer-sparks { position: absolute; inset: 0; pointer-events: none; }
+.forge-cer-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, #ffb13b 60%, #ff7a1e);
+  animation: forge-spark 0.72s ease 0.32s both;
+}
+@keyframes forge-spark {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--x, 0)), calc(-50% + var(--y, 0))) scale(0.2); opacity: 0; }
+}
+
+.forge-cer-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: #ffe7c2;
+  font-size: 20px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+}

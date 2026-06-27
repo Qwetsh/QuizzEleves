@@ -157,6 +157,7 @@ const TURN_RESET = {
   pendingActions: null,
   showTilePicker: null,
   showActionDice: null,
+  forgeCeremony: null,
   showSubjectPicker: false,
   inspectTrap: null,
   rerollUsed: false,
@@ -2005,9 +2006,11 @@ export const useGameStore = create((set, get) => ({
     const nt = [...st.teams];
     nt[idx] = { ...team, dieFaces: faces, faceStock: stock.filter((_, i) => i !== stockIndex) };
     st.addLog(tg('log.store.forgeFace', { emoji: team.emoji, name: team.name, base: slotIndex + 1, label: faceShortLabel(f) }));
-    set({ teams: nt });
+    // Cérémonie de forge (overlay TBI) : marteau/enclume/étincelles + son.
+    set({ teams: nt, forgeCeremony: { teamIdx: idx, base: slotIndex + 1, face: { value: clampFaceValue(f.value), effect: f.effect || null } } });
     saveGame(get());
   },
+  clearForgeCeremony: () => set({ forgeCeremony: null }),
   sellEquipment: (slot) => itemH.sellEquipment(set, get, slot),
   sellBagItem: (i) => itemH.sellBagItem(set, get, i),
   useConsumable: (i) => itemH.useConsumable(set, get, i),

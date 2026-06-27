@@ -26,6 +26,7 @@ import DuelChoiceModal from '../Modals/DuelChoiceModal';
 import InventoryModal from '../Modals/InventoryModal';
 import ScribeModal from '../Modals/ScribeModal';
 import DiceRollModal from '../Modals/DiceRollModal';
+import ForgeCeremony from './ForgeCeremony';
 import ChargePickerModal from '../Modals/ChargePickerModal';
 import SpecPickerModal from '../Modals/SpecPickerModal';
 import EnchantPickerModal from '../Modals/EnchantPickerModal';
@@ -260,6 +261,7 @@ export default function GameLayout() {
       <EffectToast />
 
       {/* Modals */}
+      <ForgeCeremony />
       <DiceRollModal />
       <QuestionModal />
       <EventModal />

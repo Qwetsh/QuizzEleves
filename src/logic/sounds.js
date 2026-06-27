@@ -215,6 +215,19 @@ export function soundVictory() {
   });
 }
 
+// Forge : marteau qui frappe l'enclume (2 coups métalliques) + trempe (sifflement
+// de vapeur). Pièce sonore de la cérémonie de forge (§8).
+export function soundForge() {
+  const clang = (v) => {
+    playNoise(0.05, v, { type: 'bandpass', freq: 1700 + Math.random() * 700, q: 1.6 }); // impact
+    playTone(170, 0.12, 'square', v * 0.4);                                              // masse
+    setTimeout(() => playTone(2300, 0.18, 'triangle', v * 0.22), 8);                     // résonance
+  };
+  clang(0.26);
+  setTimeout(() => clang(0.22), 175);
+  setTimeout(() => playNoise(0.5, 0.16, { type: 'highpass', freq: 5200, q: 0.5 }), 430); // trempe
+}
+
 export function soundClick() {
   playTone(800, 0.05, 'square', 0.1);
 }
