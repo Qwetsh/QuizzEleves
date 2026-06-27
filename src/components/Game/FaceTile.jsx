@@ -20,7 +20,7 @@ export default function FaceTile({
 }) {
   const v = clampFaceValue(face?.value);
   const meta = face?.effect?.type ? FORGE_EFFECTS[face.effect.type] : null;
-  const fam = (meta && FORGE_FAMILY_COLOR[meta.family]) || '#b8862c';
+  const fam = (meta && FORGE_FAMILY_COLOR[meta.family]) || '#9aa1ad'; // acier pour les faces sans effet
   const tier = meta ? (face.effect.tier ?? 0) : -1;
   const cls = ['facetile']
     .concat(flat ? 'facetile--flat' : [])

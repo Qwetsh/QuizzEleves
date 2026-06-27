@@ -89,6 +89,7 @@ export default {
   'modal.shop.forgeReserveEmpty': { fr: 'Réserve vide — achète des faces dans la vitrine.', en: 'Empty reserve — buy faces in the shop above.' },
   'modal.shop.faceSlot': { fr: 'Slot {n}', en: 'Slot {n}' },
   'modal.shop.forgeHintSlot': { fr: 'Touche une face de la réserve : elle se forge sur SON slot du dé.', en: 'Tap a reserve face: it forges onto ITS die slot.' },
+  'modal.shop.forgeHintDrag': { fr: 'Glisse un lingot dans son moule rougeoyant (ou touche-le) pour le couler.', en: 'Drag an ingot into its glowing mold (or tap it) to cast it.' },
   'modal.shop.forgeOverwriteSlot': { fr: 'Remplacer la face n°{n} ({label}) ? (perdue)', en: 'Replace face #{n} ({label})? (lost)' },
   'modal.shop.forgeOverwrite': { fr: 'Écraser {label} ? (perdu)', en: 'Overwrite {label}? (lost)' },
   'modal.shop.forgeConfirm': { fr: 'Écraser', en: 'Overwrite' },

@@ -172,52 +172,102 @@ function FaceStall({ team, faces, onBuyFace, en }) {
   );
 }
 
-/* ---------- Banc de forge : DÉ (affichage) + RÉSERVE (forge en 1 tap sur le slot lié) ---------- */
+/* ---------- Banc de forge : creuset (drag-and-drop d'un lingot vers son moule) ---------- */
+// Directions fixes des étincelles à la coulée (réparties autour du moule).
+const MOLD_SPARKS = Array.from({ length: 10 }, (_, i) => {
+  const a = (i / 10) * Math.PI * 2;
+  return { x: `${Math.cos(a) * 34}px`, y: `${Math.sin(a) * 34}px` };
+});
+
 function ForgeBench({ team, onForge }) {
   const T = useT();
-  const [confirm, setConfirm] = useState(null); // { stockIndex, slot } : écrasement à confirmer
   const faces = getDieFaces(team);
   const reserve = team.faceStock || [];
+  const [drag, setDrag] = useState(null);       // { stockIndex, slot, sx, sy, x, y }
+  const [confirm, setConfirm] = useState(null); // { stockIndex, slot }
+  const [burst, setBurst] = useState(null);     // index de slot qui « coule »
 
-  const tryForge = (stockIndex) => {
+  const doForge = (slot, stockIndex) => {
+    onForge(slot, stockIndex);
+    setBurst(slot);
+    setTimeout(() => setBurst((b) => (b === slot ? null : b)), 650);
+  };
+  const tryForge = (stockIndex, slot) => {
+    if (isFaceForged(faces[slot])) { setConfirm({ stockIndex, slot }); return; }
+    doForge(slot, stockIndex);
+  };
+  const doConfirm = () => { soundClick(); doForge(confirm.slot, confirm.stockIndex); setConfirm(null); };
+
+  // --- Drag-and-drop (pointer : compatible souris + tactile TBI) ---
+  const onPointerDown = (e, stockIndex) => {
     const f = reserve[stockIndex];
     if (!f) return;
-    const slot = (f.slot || 1) - 1; // slot cible de la face
-    if (isFaceForged(faces[slot])) { setConfirm({ stockIndex, slot }); return; } // déjà forgé → confirmer
-    onForge(slot, stockIndex);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setConfirm(null);
+    setDrag({ stockIndex, slot: (f.slot || 1) - 1, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY });
   };
-  const doConfirm = () => { onForge(confirm.slot, confirm.stockIndex); setConfirm(null); };
+  const onPointerMove = (e) => { setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d)); };
+  const onPointerUp = (e) => {
+    setDrag((d) => {
+      if (!d) return null;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const mold = el && el.closest ? el.closest('[data-mold]') : null;
+      const overSlot = mold ? Number(mold.dataset.mold) : -1;
+      const moved = Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8;
+      if (overSlot === d.slot) { soundClick(); tryForge(d.stockIndex, d.slot); }
+      else if (!moved) { soundClick(); tryForge(d.stockIndex, d.slot); } // simple tap = forge sur son slot
+      return null; // drop hors cible → annulé
+    });
+  };
+
+  const dragFace = drag ? reserve[drag.stockIndex] : null;
 
   return (
     <section className="shop-stall">
       <div className="forge-bench">
-        {/* Zone DÉ — plateau (affichage des 6 slots actuels) */}
+        {/* LE CREUSET — 6 moules de pierre */}
         <div>
           <div className="forge-zone-title">{T('modal.shop.forgeBench')}</div>
           <div className="forge-tray">
-            {faces.map((face, i) => (
-              <FaceTile key={i} face={face} base={i + 1} title={faceEffectLabel(face) || undefined} />
-            ))}
+            {faces.map((face, i) => {
+              const cls = 'forge-mold'
+                + (drag && drag.slot === i ? ' is-target' : '')
+                + (drag && drag.slot !== i ? ' is-locked' : '')
+                + (burst === i ? ' is-placed' : '');
+              return (
+                <div key={i} className={cls} data-mold={i}>
+                  <FaceTile face={face} base={i + 1} title={faceEffectLabel(face) || undefined} />
+                  {burst === i && (
+                    <span className="forge-mold-burst">
+                      {MOLD_SPARKS.map((s, k) => (
+                        <span key={k} className="forge-mold-spark" style={{ '--x': s.x, '--y': s.y, animationDelay: `${k * 12}ms` }} />
+                      ))}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-        {/* Zone RÉSERVE — chaque face se forge sur SON slot */}
+        {/* L'ÉTABLI — lingots à faire glisser vers leur moule */}
         <div>
           <div className="forge-zone-title">{T('modal.shop.forgeReserve')}<span className="cnt">{reserve.length}/{FACE_STOCK_MAX}</span></div>
-          <div className="forge-hint">{T('modal.shop.forgeHintSlot')}</div>
+          <div className="forge-hint">{T('modal.shop.forgeHintDrag')}</div>
           {reserve.length === 0 ? (
             <div className="forge-empty">{T('modal.shop.forgeReserveEmpty')}</div>
           ) : (
             <div className="forge-reserve-zone">
               <div className="forge-reserve-grid">
                 {reserve.map((f, i) => (
-                  <FaceTile
+                  <div
                     key={i}
-                    face={f}
-                    slotTag={f.slot}
-                    clickable
-                    onClick={() => { soundClick(); tryForge(i); }}
-                    title={faceEffectLabel(f) || undefined}
-                  />
+                    onPointerDown={(e) => onPointerDown(e, i)}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    style={{ touchAction: 'none' }}
+                  >
+                    <FaceTile face={f} slotTag={f.slot} dim={drag?.stockIndex === i} title={faceEffectLabel(f) || undefined} />
+                  </div>
                 ))}
               </div>
             </div>
@@ -225,12 +275,18 @@ function ForgeBench({ team, onForge }) {
           {confirm && (
             <div className="forge-confirm">
               <span className="forge-confirm-text">{T('modal.shop.forgeOverwriteSlot', { n: confirm.slot + 1, label: faceShortLabel(faces[confirm.slot]) })}</span>
-              <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={() => { soundClick(); doConfirm(); }}>{T('modal.shop.forgeConfirm')}</button>
+              <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={doConfirm}>{T('modal.shop.forgeConfirm')}</button>
               <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
             </div>
           )}
         </div>
       </div>
+      {/* Lingot fantôme suivant le curseur pendant le drag. */}
+      {drag && dragFace && (
+        <div className="forge-drag-clone" style={{ left: drag.x, top: drag.y }}>
+          <FaceTile face={dragFace} size={58} slotTag={dragFace.slot} />
+        </div>
+      )}
     </section>
   );
 }
