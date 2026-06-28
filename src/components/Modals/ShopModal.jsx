@@ -3,6 +3,7 @@
 // les étals de parchemin (arrivage d'objets, recharge, amélioration,
 // déblocage de pouvoirs) à bannières de bois.
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
@@ -10,15 +11,12 @@ import { locName, locDesc, loc } from '../../i18n/content';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { maxPowerLevel, powerUpgradeCost, describePowerScale, specSlotForLevel } from '../../logic/powerEffects';
 import { extOn } from '../../extensions/registry';
-import { faceEffectLabel, faceShortLabel, FACE_STOCK_MAX } from '../../logic/forgeEffects';
-import { getDieFaces, isFaceForged } from '../../logic/forge';
-import FaceTile from '../Game/FaceTile';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { BAG_SIZE } from '../../store/itemHandlers';
-import { soundClick, soundCast } from '../../logic/sounds';
-import EffectDetails from './EffectDetails';
+import { soundClick } from '../../logic/sounds';
 import { TemplePanel, CoinRune } from './TempleDecor';
-import ItemIcon from './ItemIcon';
+import { itemImg } from '../../logic/itemAssets';
+import { itemEffectLines } from '../../logic/effectText';
 import '../../styles/inventory.css';
 import '../../styles/shop.css';
 
@@ -78,230 +76,87 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
       {items.map((key, idx) => {
         const item = ITEMS[key];
         if (!item) return null;
-        const rarityColor = RARITIES[item.rarity]?.color || '#888';
-        const isConsumable = item.slot === 'consumable';
-        const slotTaken = !isConsumable && !!equipment[item.slot];
-        // Va dans le sac si consommable ou slot occupé -> il faut une case libre
-        const needsBagRoom = isConsumable || slotTaken;
-        const bagFull = needsBagRoom && bag.filter(Boolean).length >= BAG_SIZE;
-        const price = discount < 1 ? Math.max(1, Math.round(item.price * discount)) : item.price;
-        const canBuy = team.money >= price && !bagFull;
-
         return (
-          <div className="shop-card" key={`${key}-${idx}`}>
-            <div className="shop-card-inner">
-              <div className="shop-card-head">
-                <ItemIcon item={item} size={38} ring />
-                <div className="shop-card-titles">
-                  <div className="shop-card-name">{locName(item)}</div>
-                  <div className="shop-card-sub" style={{ color: rarityColor }}>
-                    {RARITIES[item.rarity]?.name} · {isConsumable ? T('modal.shop.consumable') : SLOTS[item.slot]?.name}
-                  </div>
-                </div>
-              </div>
-              <div className="shop-card-desc">
-                {locDesc(item)}
-                <EffectDetails item={item} compact />
-                {slotTaken && !bagFull && (
-                  <div className="shop-card-warn">
-                    {T('modal.shop.slotTaken', { slot: SLOTS[item.slot]?.name })}
-                  </div>
-                )}
-                {bagFull && <div className="shop-card-warn is-danger">{T('modal.shop.bagFull')}</div>}
-              </div>
-              <button
-                className="shop-buy"
-                disabled={!canBuy}
-                onClick={() => { soundClick(); onBuyItem(key); }}
-              >
-                {isConsumable || slotTaken ? T('common.buy') : T('common.equip')}{' '}
-                {discount < 1 && <s style={{ opacity: 0.6, marginRight: 4 }}>{item.price}</s>}
-                <Price value={price} />
-              </button>
-            </div>
-          </div>
+          <ItemCard key={`${key}-${idx}`} item={item} bag={bag} equipment={equipment} money={team.money}
+            discount={discount} onBuy={() => { soundClick(); onBuyItem(key); }} T={T} />
         );
       })}
     </Stall>
   );
 }
 
-/* ---------- Vitrine de faces (Forge) : cartes par bande de rareté ---------- */
-const FACE_RARITY = [
-  { label: 'Commune', color: '#7c9a5a' },
-  { label: 'Commune', color: '#7c9a5a' },
-  { label: 'Peu commune', color: '#3b8ea5' },
-  { label: 'Rare', color: '#7a5ad4' },
-  { label: 'Rare', color: '#7a5ad4' },
-  { label: 'Très rare', color: '#d4762e' },
-];
-const faceRarity = (power) => FACE_RARITY[Math.min(5, Math.max(0, Math.floor((((power) || 1) - 1) / 2)))];
-
-function FaceStall({ team, faces, onBuyFace, en }) {
-  const T = useT();
-  const reserve = team.faceStock?.length || 0;
-  const stockFull = reserve >= FACE_STOCK_MAX;
-  return (
-    <section className="shop-stall">
-      <div className="shop-stall-banner">{T('modal.shop.faces')}</div>
-      {!faces || faces.length === 0 ? (
-        <div className="forge-shop-empty">{T('modal.shop.facesEmpty')}</div>
-      ) : (
-        <div className="forge-shop-grid">
-          {faces.map((f, idx) => {
-            const slot = f.slot || (idx + 1);
-            const rar = faceRarity(f.power);
-            const price = f.price || 0;
-            const canBuy = team.money >= price && !stockFull;
-            const effLabel = faceEffectLabel(f, en);
-            return (
-              <div className="forge-shop-card" key={idx} style={{ '--rar': rar.color }}>
-                <span className="forge-shop-slot">{T('modal.shop.faceSlot', { n: slot })}</span>
-                <FaceTile face={f} size={62} slotTag={slot} />
-                <span className="forge-shop-rarity">{rar.label}</span>
-                <div className="forge-shop-card-eff">{effLabel || T('modal.shop.facePure')}</div>
-                <button className="shop-buy" disabled={!canBuy} onClick={() => { soundClick(); onBuyFace(idx); }}>
-                  {T('common.buy')} <Price value={price} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
-/* ---------- Banc de forge : creuset (drag-and-drop d'un lingot vers son moule) ---------- */
-// Directions fixes des étincelles à la coulée (réparties autour du moule).
-const MOLD_SPARKS = Array.from({ length: 12 }, (_, i) => {
-  const a = (i / 12) * Math.PI * 2;
-  return { x: `${Math.cos(a) * 36}px`, y: `${Math.sin(a) * 36}px` };
-});
-// Braises qui montent du foyer (positions/cadences fixes).
-const FORGE_EMBERS = Array.from({ length: 9 }, (_, i) => ({
-  left: `${6 + i * 10 + (i % 2 ? 3 : -2)}%`,
-  dur: `${2.4 + (i % 4) * 0.6}s`,
-  delay: `${(i * 0.5) % 3}s`,
-  drift: `${(i % 2 ? 1 : -1) * (6 + (i % 3) * 6)}px`,
-}));
-
-function ForgeBench({ team, onForge }) {
-  const T = useT();
-  const faces = getDieFaces(team);
-  const reserve = team.faceStock || [];
-  const [drag, setDrag] = useState(null);       // { stockIndex, slot, sx, sy, x, y }
-  const [confirm, setConfirm] = useState(null); // { stockIndex, slot }
-  const [burst, setBurst] = useState(null);     // index de slot qui « coule »
-
-  const doForge = (slot, stockIndex) => {
-    onForge(slot, stockIndex);
-    soundCast();
-    setBurst(slot);
-    setTimeout(() => setBurst((b) => (b === slot ? null : b)), 1200);
-  };
-  const tryForge = (stockIndex, slot) => {
-    if (isFaceForged(faces[slot])) { setConfirm({ stockIndex, slot }); return; }
-    doForge(slot, stockIndex);
-  };
-  const doConfirm = () => { doForge(confirm.slot, confirm.stockIndex); setConfirm(null); };
-
-  // --- Drag-and-drop (pointer : compatible souris + tactile TBI) ---
-  const onPointerDown = (e, stockIndex) => {
-    const f = reserve[stockIndex];
-    if (!f) return;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    setConfirm(null);
-    setDrag({ stockIndex, slot: (f.slot || 1) - 1, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY });
-  };
-  const onPointerMove = (e) => { setDrag((d) => (d ? { ...d, x: e.clientX, y: e.clientY } : d)); };
-  const onPointerUp = (e) => {
-    setDrag((d) => {
-      if (!d) return null;
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const mold = el && el.closest ? el.closest('[data-mold]') : null;
-      const overSlot = mold ? Number(mold.dataset.mold) : -1;
-      const moved = Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8;
-      if (overSlot === d.slot) { tryForge(d.stockIndex, d.slot); }
-      else if (!moved) { tryForge(d.stockIndex, d.slot); } // simple tap = forge sur son slot
-      return null; // drop hors cible → annulé
-    });
-  };
-
-  const dragFace = drag ? reserve[drag.stockIndex] : null;
+/* ---------- Carte d'un objet (visuel « carte à collectionner ») ---------- */
+function ItemCard({ item, bag, equipment, money, discount, onBuy, T }) {
+  const [fxOpen, setFxOpen] = useState(false);
+  const rarityColor = RARITIES[item.rarity]?.color || '#888';
+  const isConsumable = item.slot === 'consumable';
+  const slotTaken = !isConsumable && !!equipment[item.slot];
+  const needsBagRoom = isConsumable || slotTaken;
+  const bagFull = needsBagRoom && bag.filter(Boolean).length >= BAG_SIZE;
+  const price = discount < 1 ? Math.max(1, Math.round(item.price * discount)) : item.price;
+  const canBuy = money >= price && !bagFull;
+  const fx = itemEffectLines(item);
+  const img = itemImg(item);
+  const slotName = isConsumable ? T('modal.item.consumable') : SLOTS[item.slot]?.name;
 
   return (
-    <section className="shop-stall">
-      <div className="forge-bench">
-        {/* LE CREUSET — 6 moules de pierre */}
-        <div>
-          <div className="forge-zone-title">{T('modal.shop.forgeBench')}</div>
-          <div className="forge-tray">
-            <div className="forge-embers" aria-hidden="true">
-              {FORGE_EMBERS.map((e, k) => (
-                <span key={k} className="forge-ember" style={{ left: e.left, animationDuration: e.dur, animationDelay: e.delay, '--drift': e.drift }} />
-              ))}
-            </div>
-            {faces.map((face, i) => {
-              const cls = 'forge-mold'
-                + (drag && drag.slot === i ? ' is-target' : '')
-                + (drag && drag.slot !== i ? ' is-locked' : '')
-                + (burst === i ? ' is-placed' : '');
-              return (
-                <div key={i} className={cls} data-mold={i}>
-                  <FaceTile face={face} base={i + 1} title={faceEffectLabel(face) || undefined} />
-                  {burst === i && <span className="forge-pour" />}
-                  {burst === i && (
-                    <span className="forge-mold-burst">
-                      {MOLD_SPARKS.map((s, k) => (
-                        <span key={k} className="forge-mold-spark" style={{ '--x': s.x, '--y': s.y, animationDelay: `${300 + k * 12}ms` }} />
-                      ))}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        {/* L'ÉTABLI — lingots à faire glisser vers leur moule */}
-        <div>
-          <div className="forge-zone-title">{T('modal.shop.forgeReserve')}<span className="cnt">{reserve.length}/{FACE_STOCK_MAX}</span></div>
-          <div className="forge-hint">{T('modal.shop.forgeHintDrag')}</div>
-          {reserve.length === 0 ? (
-            <div className="forge-empty">{T('modal.shop.forgeReserveEmpty')}</div>
-          ) : (
-            <div className="forge-reserve-zone">
-              <div className="forge-reserve-grid">
-                {reserve.map((f, i) => (
-                  <div
-                    key={i}
-                    onPointerDown={(e) => onPointerDown(e, i)}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    style={{ touchAction: 'none' }}
-                  >
-                    <FaceTile face={f} slotTag={f.slot} dim={drag?.stockIndex === i} title={faceEffectLabel(f) || undefined} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {confirm && (
-            <div className="forge-confirm">
-              <span className="forge-confirm-text">{T('modal.shop.forgeOverwriteSlot', { n: confirm.slot + 1, label: faceShortLabel(faces[confirm.slot]) })}</span>
-              <button className="shop-buy" style={{ padding: '6px 14px' }} onClick={doConfirm}>{T('modal.shop.forgeConfirm')}</button>
-              <button className="shop-buy" style={{ padding: '6px 14px', background: '#8a7a5e' }} onClick={() => setConfirm(null)}>{T('modal.shop.forgeCancel')}</button>
-            </div>
-          )}
-        </div>
+    <div className="shop-itemcard" style={{ '--rar': rarityColor }}>
+      <div className="sic-banner-top">
+        <div className="sic-name">{locName(item)}</div>
+        <div className="sic-sub">{RARITIES[item.rarity]?.name} · {slotName}</div>
       </div>
-      {/* Lingot fantôme suivant le curseur pendant le drag. */}
-      {drag && dragFace && (
-        <div className="forge-drag-clone" style={{ left: drag.x, top: drag.y }}>
-          <FaceTile face={dragFace} size={58} slotTag={dragFace.slot} />
-        </div>
+
+      <div className="sic-art">
+        <span className="sic-coin">{price}</span>
+        {img
+          ? <img className="sic-img" src={img} alt={locName(item)} draggable={false} />
+          : <span className="sic-emoji">{item.icon}</span>}
+        {fx.length > 0 && (
+          <button type="button" className="sic-info" onClick={() => setFxOpen(true)} title={T('modal.shop.fxDetail')} aria-label={T('modal.shop.fxDetail')}>
+            i
+          </button>
+        )}
+      </div>
+
+      <div className="sic-banner-bot">
+        <div className="sic-desc">{locDesc(item)}</div>
+        {bagFull && <div className="shop-card-warn is-danger">{T('modal.shop.bagFull')}</div>}
+      </div>
+
+      <button className="shop-buy sic-buy" disabled={!canBuy} onClick={onBuy}>
+        {isConsumable || slotTaken ? T('common.buy') : T('common.equip')}{' '}
+        {discount < 1 && <s style={{ opacity: 0.6, marginRight: 4 }}>{item.price}</s>}
+        <Price value={price} />
+      </button>
+
+      {/* Détail des effets : MODALE (portail) — n'altère plus la carte. */}
+      {fxOpen && createPortal(
+        <div className="inv-card-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) setFxOpen(false); }}>
+          <div className="inv-card" style={{ '--rar': rarityColor }} onPointerDown={(e) => e.stopPropagation()}>
+            <div className="inv-card-head">
+              <div className="inv-card-img">
+                {img ? <img src={img} alt="" draggable={false} /> : <span className="inv-card-emoji">{item.icon}</span>}
+              </div>
+              <div className="inv-card-name">{locName(item)}</div>
+              <div className="inv-card-rar">◆ {RARITIES[item.rarity]?.name} · {slotName}</div>
+            </div>
+            <div className="inv-card-body">
+              {item.desc && <div className="inv-card-desc">{locDesc(item)}</div>}
+              {fx.length > 0 && (
+                <>
+                  <div className="inv-card-fxlabel">{T('modal.item.effects')}</div>
+                  {fx.map((l, i) => <div key={i} className="inv-card-fxrow"><span className="ic">✦</span><span>{l}</span></div>)}
+                </>
+              )}
+              <div className="inv-card-actions">
+                <button className="inv-card-btn inv-card-btn--sell inv-card-btn--x" onClick={() => setFxOpen(false)}>✕</button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
-    </section>
+    </div>
   );
 }
 
@@ -443,17 +298,12 @@ export default function ShopModal() {
   const upgradePowerLevel = useGameStore((s) => s.upgradePowerLevel);
   const buyNewPower = useGameStore((s) => s.buyNewPower);
   const buyItem = useGameStore((s) => s.buyItem);
-  const buyFace = useGameStore((s) => s.buyFace);
-  const forgeFace = useGameStore((s) => s.forgeFace);
   const shopStock = useGameStore((s) => s.shopStock);
-  const shopFaceStock = useGameStore((s) => s.shopFaceStock);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const masteryOn = useGameStore((s) => extOn(s.extensions, 'mastery'));
-  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
-  const englishMode = useGameStore((s) => s.englishMode);
 
-  const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs' | 'faces'
+  const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs'
 
   const team = showShop ? teams[currentTeam] : null;
 
@@ -512,17 +362,6 @@ export default function ShopModal() {
                   >
                     {T('modal.shop.tab.powers')}
                   </button>
-                  {forgeOn && (
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === 'faces'}
-                      className={'shop-tab' + (tab === 'faces' ? ' is-active' : '')}
-                      onClick={() => { soundClick(); setTab('faces'); }}
-                    >
-                      {T('modal.shop.tab.faces')}
-                    </button>
-                  )}
                 </div>
 
                 {tab === 'objets' ? (
@@ -532,11 +371,6 @@ export default function ShopModal() {
                     {consoStock.length === 0 && equipStock.length === 0 && (
                       <div className="shop-empty">{T('modal.shop.empty')}</div>
                     )}
-                  </>
-                ) : tab === 'faces' ? (
-                  <>
-                    <FaceStall team={team} faces={shopFaceStock} onBuyFace={buyFace} en={englishMode} />
-                    <ForgeBench team={team} onForge={forgeFace} />
                   </>
                 ) : (
                   <>

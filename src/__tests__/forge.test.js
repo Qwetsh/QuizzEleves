@@ -11,7 +11,7 @@ describe('forge — modèle de dé', () => {
     faces.forEach((f, i) => {
       expect(f.base).toBe(i + 1);
       expect(f.value).toBe(i + 1);
-      expect(f.effect).toBeNull();
+      expect(f.effects).toEqual([]);
     });
   });
 
@@ -22,22 +22,23 @@ describe('forge — modèle de dé', () => {
     expect(isFaceForged(null)).toBe(false);
   });
 
-  it('clampFaceValue borne le déplacement à [0, 6] (entier)', () => {
+  it('clampFaceValue borne le déplacement à [0, 12] (entier)', () => {
     expect(clampFaceValue(-2)).toBe(0);
     expect(clampFaceValue(0)).toBe(0);
     expect(clampFaceValue(4)).toBe(4);
-    expect(clampFaceValue(9)).toBe(6);
+    expect(clampFaceValue(9)).toBe(9);
+    expect(clampFaceValue(15)).toBe(12);
     expect(clampFaceValue(3.7)).toBe(4);
     expect(clampFaceValue('abc')).toBe(0);
   });
 
   it("normalizeDieFaces complète à 6 faces et préserve l'adresse (base = position)", () => {
-    const partial = [{ value: 0, effect: { type: 'egide' } }]; // 1 seul slot fourni
+    const partial = [{ value: 0, effect: { type: 'egide' } }]; // 1 seul slot fourni (forme héritée)
     const faces = normalizeDieFaces(partial);
     expect(faces).toHaveLength(DIE_SLOTS);
-    expect(faces[0]).toEqual({ base: 1, value: 0, effect: { type: 'egide' } });
+    expect(faces[0]).toEqual({ base: 1, value: 0, effects: [{ type: 'egide' }] }); // migré vers effects[]
     // les slots manquants reprennent le standard
-    expect(faces[5]).toEqual({ base: 6, value: 6, effect: null });
+    expect(faces[5]).toEqual({ base: 6, value: 6, effects: [] });
   });
 
   it("normalizeDieFaces force l'adresse même si la donnée tente de la falsifier", () => {

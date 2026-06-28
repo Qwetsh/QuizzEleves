@@ -32,16 +32,18 @@ function PipPattern({ n }) {
   );
 }
 
+// Transforms des 6 côtés du cube pour une demi-arête donnée (px depuis le centre).
+const SIDE_TRANSFORM = (half) => ({
+  front:  `rotateY(0deg) translateZ(${half}px)`,
+  back:   `rotateY(180deg) translateZ(${half}px)`,
+  right:  `rotateY(90deg) translateZ(${half}px)`,
+  left:   `rotateY(-90deg) translateZ(${half}px)`,
+  top:    `rotateX(90deg) translateZ(${half}px)`,
+  bottom: `rotateX(-90deg) translateZ(${half}px)`,
+});
+
 function DiceFace({ pips, side, size, number, face }) {
-  const half = size / 2;
-  const transforms = {
-    front:  `rotateY(0deg) translateZ(${half}px)`,
-    back:   `rotateY(180deg) translateZ(${half}px)`,
-    right:  `rotateY(90deg) translateZ(${half}px)`,
-    left:   `rotateY(-90deg) translateZ(${half}px)`,
-    top:    `rotateX(90deg) translateZ(${half}px)`,
-    bottom: `rotateX(-90deg) translateZ(${half}px)`,
-  };
+  const transforms = SIDE_TRANSFORM(size / 2);
   return (
     <div
       className="dice3d-face"
@@ -60,7 +62,7 @@ function DiceFace({ pips, side, size, number, face }) {
   );
 }
 
-export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false, faces = null }) {
+export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false, faces = null, idleSpin = false }) {
   const T = useT();
   // Dé personnalisé (Forge) : chaque face du cube porte sa face forgée. Sinon,
   // au-delà d'un D6 (legacy), on écrit le nombre sur la face avant.
@@ -70,6 +72,10 @@ export default function Dice3D({ value = 1, rolling = false, size = 96, onClick,
   const spins = rolling ? 4 : 0;
   const rotX = target.x + spins * 360 + (rolling ? 720 : 0);
   const rotY = target.y + spins * 360 + (rolling ? -720 : 0);
+  // Rotation continue « vitrine » (Forge) : tant qu'on ne lance pas, le cube tumble
+  // en boucle pour exposer le dé propre à l'équipe. Pilotée par CSS (.is-idle) ; on
+  // n'impose alors aucun transform inline pour ne pas brider l'animation.
+  const idle = idleSpin && !rolling;
 
   return (
     <div
@@ -81,14 +87,16 @@ export default function Dice3D({ value = 1, rolling = false, size = 96, onClick,
     >
       <div className="dice3d-shadow" style={{ width: size * 0.85 }} />
       <div
-        className="dice3d-cube"
+        className={'dice3d-cube' + (idle ? ' is-idle' : '')}
         style={{
           width: size,
           height: size,
-          transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)`,
-          transition: rolling
-            ? 'transform 1100ms cubic-bezier(.18,.7,.34,1.02)'
-            : 'transform 480ms cubic-bezier(.34,1.56,.64,1)',
+          ...(idle ? {} : {
+            transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)`,
+            transition: rolling
+              ? 'transform 1100ms cubic-bezier(.18,.7,.34,1.02)'
+              : 'transform 480ms cubic-bezier(.34,1.56,.64,1)',
+          }),
         }}
       >
         <DiceFace pips={1} side="front"  size={size} number={numeric ? value : null} face={f ? f[0] : null} />

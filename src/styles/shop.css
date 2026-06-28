@@ -19,8 +19,10 @@
   display: flex;
   flex-direction: column;
   gap: 46px;
-  /* le padding haut laisse passer le fanion d'équipe (inv-teamtag) */
-  padding: 60px 12px 12px;
+  /* PAS de padding haut : le dégagement du fanion d'équipe est porté par la marge
+     de .shop-tabs, sinon la barre sticky laisse une zone où les cartes défilent
+     AU-DESSUS d'elle. */
+  padding: 0 12px 12px;
 }
 .shop-scroll::-webkit-scrollbar { width: 11px; }
 .shop-scroll::-webkit-scrollbar-track {
@@ -41,12 +43,14 @@
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin: -6px 7px 6px;
+  /* marge haute = dégagement du fanion d'équipe (ex-padding du scroll) ; au scroll
+     la barre colle à top:0 et rien ne passe au-dessus. */
+  margin: 54px 7px 6px;
   padding: 8px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(30, 18, 5, 0.5), rgba(20, 10, 2, 0.62));
-  box-shadow: inset 0 1px 0 rgba(255, 250, 230, 0.12), 0 4px 12px rgba(20, 10, 2, 0.4);
-  backdrop-filter: blur(3px);
+  /* OPAQUE : les cartes scrollent DERRIÈRE la barre (sinon elles transparaissent). */
+  background: linear-gradient(180deg, var(--stone-1), var(--stone-3));
+  box-shadow: inset 0 1px 0 rgba(255, 250, 230, 0.18), 0 6px 14px rgba(20, 10, 2, 0.5);
 }
 .shop-tab {
   flex: 1 1 0;
@@ -152,7 +156,7 @@
 /* Rangée d'articles (scroll horizontal masqué via .scroll-hidden) */
 .shop-row {
   display: flex;
-  gap: 16px;
+  gap: 11px;
   overflow-x: auto;
   padding: 8px 4px 6px;
 }
@@ -224,6 +228,88 @@
 }
 .shop-card-warn.is-danger { color: #a33215; }
 .shop-card-next { color: #3a3416; font-weight: 700; }
+
+/* ---------- Carte d'OBJET « façon carte à collectionner » ---------- */
+.shop-itemcard {
+  flex: 0 0 188px;
+  position: relative;
+  display: flex; flex-direction: column;
+  min-height: 290px;
+  padding: 9px 8px 8px;
+  border-radius: 14px;
+  border: 3px solid #17100a;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.2  0 0 0 0 0.08  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    linear-gradient(180deg, #f4e7c9 0%, #ecdcb4 55%, #e2cfa1 100%);
+  box-shadow: 0 6px 16px rgba(20, 12, 4, 0.42), inset 0 0 0 1.5px rgba(255, 250, 235, 0.55), inset 0 0 28px rgba(150, 110, 50, 0.14);
+}
+
+/* Bannières (titre en haut, description en bas) */
+.sic-banner-top, .sic-banner-bot {
+  position: relative; text-align: center; border-radius: 7px;
+  background: linear-gradient(180deg, #ddbd80, #c49a50);
+  border: 1px solid #6e4f23;
+  box-shadow: inset 0 1px 0 rgba(255, 246, 218, 0.65), inset 0 -2px 4px rgba(90, 60, 20, 0.28), 0 2px 5px rgba(50, 32, 10, 0.3);
+}
+.sic-banner-top { padding: 5px 9px 6px; }
+.sic-banner-bot { padding: 7px 9px; text-align: left; }
+.sic-name { font-family: var(--font-display); text-transform: uppercase; font-size: 14px; line-height: 1.08; letter-spacing: 0.02em; color: #4a2c0f; text-shadow: 0 1px 0 rgba(255, 244, 212, 0.55); }
+.sic-sub { font-family: var(--font-display); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b481c; margin-top: 1px; }
+
+/* Médaillon d'or (prix) — pièce métallique avec reflet et brillance tournante */
+.sic-coin {
+  position: absolute; top: 7px; right: 7px; z-index: 3;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; text-align: center;
+  font-family: var(--font-display); font-size: 16px; color: #5a3c0e;
+  text-shadow: 0 1px 0 rgba(255, 246, 205, 0.65);
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255, 255, 240, 0.92), rgba(255, 255, 240, 0) 40%),
+    conic-gradient(from 130deg, #b07f2a, #ffe9a0 22%, #c8902f 42%, #fff3c4 58%, #b8821f 76%, #ffe49a 90%, #b07f2a);
+  border: 2px solid #7a561c;
+  box-shadow: 0 2px 6px rgba(40, 26, 8, 0.5), inset 0 0 0 1px rgba(255, 240, 190, 0.6), inset 0 -3px 5px rgba(120, 80, 20, 0.55);
+}
+
+/* Visuel central */
+.sic-art {
+  position: relative; flex: 1; min-height: 104px; margin: 8px 2px;
+  display: grid; place-items: center; border-radius: 8px; overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, #fbf3df, #e8d6ad 78%);
+  box-shadow: inset 0 2px 8px rgba(90, 60, 20, 0.25), inset 0 0 0 1px rgba(120, 90, 40, 0.2);
+}
+.sic-art::before { /* halo de rareté derrière l'objet */
+  content: ''; position: absolute; width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rar, #888) 38%, transparent), transparent 68%);
+}
+.sic-img { position: relative; max-width: 84%; max-height: 116px; object-fit: contain; filter: drop-shadow(0 8px 6px rgba(20, 12, 4, 0.45)); }
+.sic-emoji { position: relative; font-size: 62px; filter: drop-shadow(0 8px 6px rgba(20, 12, 4, 0.4)); }
+
+.sic-desc { font-size: 11px; line-height: 1.3; color: #46350f; }
+
+/* Petit ⓘ discret en bas à droite du visuel → déplie le détail des effets */
+.sic-info {
+  position: absolute; bottom: 6px; right: 6px; z-index: 4;
+  width: 21px; height: 21px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 12px; font-style: italic; line-height: 1; color: #5a4424;
+  cursor: pointer; background: rgba(248, 240, 218, 0.88); border: 1px solid rgba(122, 94, 58, 0.5);
+  box-shadow: 0 1px 3px rgba(40, 26, 8, 0.3);
+  transition: background .15s, transform .1s;
+}
+.sic-info:hover { background: #fffdf6; }
+.sic-info:active { transform: scale(0.9); }
+.sic-fx { margin: 5px 0 0; padding: 0 0 0 15px; font-size: 10.5px; line-height: 1.35; color: #5a4626; }
+.sic-banner-bot .shop-card-warn { margin-top: 4px; font-style: italic; color: rgba(74, 67, 31, 0.8); }
+.sic-banner-bot .shop-card-warn.is-danger { color: #a33215; }
+.sic-buy { margin-top: 7px; width: 100%; padding: 7px 8px; font-size: 13px; }
+
+/* Variante Marché Noir (thème sombre) */
+.shop--marche-noir .shop-itemcard { border-color: #21123a; background: linear-gradient(180deg, #3a2358, #281640); box-shadow: 0 6px 16px rgba(10, 4, 20, 0.5), inset 0 0 0 1.5px rgba(176, 140, 230, 0.25); }
+.shop--marche-noir .sic-banner-top, .shop--marche-noir .sic-banner-bot { background: linear-gradient(180deg, #5a3f8a, #3f2a66); border-color: #7a5ab0; box-shadow: inset 0 1px 0 rgba(220, 200, 255, 0.3), 0 2px 5px rgba(10, 4, 20, 0.4); }
+.shop--marche-noir .sic-name { color: #f0e7fb; text-shadow: none; }
+.shop--marche-noir .sic-sub { color: #cbb6e8; }
+.shop--marche-noir .sic-art { background: radial-gradient(circle at 50% 42%, #31204f, #241638 78%); box-shadow: inset 0 2px 9px rgba(0, 0, 0, 0.4); }
+.shop--marche-noir .sic-desc { color: #cdbfe0; }
 
 /* Pastille de niveau (Niv. 1 → 2) */
 .shop-lvl {

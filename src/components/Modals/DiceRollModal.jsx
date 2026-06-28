@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
 import { extOn } from '../../extensions/registry';
-import { getDieFaces } from '../../logic/forge';
+import { getDieFaces, faceEffects } from '../../logic/forge';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { soundDice } from '../../logic/sounds';
 import '../../styles/dice-roll-modal.css';
@@ -98,7 +98,7 @@ export default function DiceRollModal() {
   const faces = forgeOn && team ? getDieFaces(team) : null;
   const landed = faces && diceValue ? faces[((diceValue - 1) % 6 + 6) % 6] : null;
   const moveVal = landed ? landed.value : diceValue;
-  const landedMeta = landed?.effect?.type ? FORGE_EFFECTS[landed.effect.type] : null;
+  const landedIcons = faceEffects(landed).map((e) => FORGE_EFFECTS[e.type]?.icon).filter(Boolean);
 
   useEffect(() => {
     if (!showDiceModal) return;
@@ -163,7 +163,7 @@ export default function DiceRollModal() {
           {(phase === 'reveal' || phase === 'outro') && (
             <div className="dice-modal-value-badge">
               <span className="dice-modal-value-num">{moveVal}</span>
-              {landedMeta && <span style={{ fontSize: 22, marginLeft: 4 }}>{landedMeta.icon}</span>}
+              {landedIcons.length > 0 && <span style={{ fontSize: 22, marginLeft: 4 }}>{landedIcons.join('')}</span>}
             </div>
           )}
         </div>

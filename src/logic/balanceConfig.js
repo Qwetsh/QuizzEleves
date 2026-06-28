@@ -69,10 +69,47 @@ const DEFAULT_FORGE = {
     butin:           { tiers: [0.5, 'guaranteed'],     costs: [2, 6] },   // 🎁 bonus de loot sur bonne réponse (+50% chance / garanti)
     relance:         { tiers: [true],                  costs: [4] },       // 🎲 relance le dé (seule la dernière face compte)
   },
-  // Boutique (Phase 2) : prix de départ et poids de rareté par bande de puissance.
-  // 6 bandes de puissance P : [1-2, 3-4, 5-6, 7-8, 9-10, 11-12].
+  // Boutique : la vitrine pioche dans le CATALOGUE ci-dessous, pondéré par rareté
+  // (plus de génération procédurale). priceByBand/rarityByBand conservés pour la
+  // rétro-compat mais inutilisés par la sélection.
   priceByBand: [25, 60, 120, 250, 400, 650],
   rarityByBand: [10, 10, 6, 3, 3, 1],
+  shopWeight: { commun: 10, rare: 4, legendaire: 1 }, // poids de tirage en vitrine
+  // Catalogue curé de faces forgeables (éditable dans l'éditeur). Chaque face
+  // cible un slot précis (1→6) et ne se forge que là. `value` = déplacement,
+  // `effect` = { type, tier } réutilisant FORGE.effects (valeurs des paliers).
+  catalog: [
+    // — Slot 1 —
+    { key: 's1-sprint',    name: 'Sprint',           name_en: 'Sprint',         rarity: 'commun',     price: 60,  slot: 1, value: 6, effect: null },
+    { key: 's1-prime0',    name: 'Petite prime',     name_en: 'Small bounty',   rarity: 'commun',     price: 50,  slot: 1, value: 2, effect: { type: 'prime', tier: 0 } },
+    { key: 's1-recharge1', name: 'Recharge ++',      name_en: 'Recharge ++',    rarity: 'rare',       price: 180, slot: 1, value: 1, effect: { type: 'recharge', tier: 1 } },
+    { key: 's1-relance',   name: 'Relance',          name_en: 'Reroll',         rarity: 'rare',       price: 150, slot: 1, value: 1, effect: { type: 'relance', tier: 0 } },
+    // — Slot 2 —
+    { key: 's2-foulee',    name: 'Foulée',           name_en: 'Stride',         rarity: 'commun',     price: 45,  slot: 2, value: 5, effect: null },
+    { key: 's2-repit0',    name: 'Répit',            name_en: 'Respite',        rarity: 'commun',     price: 55,  slot: 2, value: 3, effect: { type: 'repit', tier: 0 } },
+    { key: 's2-aubaine0',  name: 'Aubaine',          name_en: 'Windfall',       rarity: 'rare',       price: 160, slot: 2, value: 2, effect: { type: 'aubaine', tier: 0 } },
+    { key: 's2-egide2',    name: 'Égide absolue',    name_en: 'Absolute aegis', rarity: 'legendaire', price: 480, slot: 2, value: 0, effect: { type: 'egide', tier: 2 } },
+    // — Slot 3 —
+    { key: 's3-bond',      name: 'Bond',             name_en: 'Leap',           rarity: 'commun',     price: 60,  slot: 3, value: 6, effect: null },
+    { key: 's3-indice0',   name: 'Indice',           name_en: 'Hint',           rarity: 'commun',     price: 60,  slot: 3, value: 3, effect: { type: 'indice', tier: 0 } },
+    { key: 's3-prime1',    name: 'Prime',            name_en: 'Bounty',         rarity: 'rare',       price: 200, slot: 3, value: 2, effect: { type: 'prime', tier: 1 } },
+    { key: 's3-garde',     name: 'Garde de série',   name_en: 'Streak guard',   rarity: 'rare',       price: 220, slot: 3, value: 2, effect: { type: 'gardeSerie', tier: 0 } },
+    // — Slot 4 —
+    { key: 's4-trot',      name: 'Trot',             name_en: 'Trot',           rarity: 'commun',     price: 35,  slot: 4, value: 4, effect: null },
+    { key: 's4-egide0',    name: 'Égide',            name_en: 'Aegis',          rarity: 'commun',     price: 65,  slot: 4, value: 3, effect: { type: 'egide', tier: 0 } },
+    { key: 's4-butin0',    name: 'Butin',            name_en: 'Spoils',         rarity: 'rare',       price: 170, slot: 4, value: 2, effect: { type: 'butin', tier: 0 } },
+    { key: 's4-recharge2', name: 'Recharge totale',  name_en: 'Full recharge',  rarity: 'legendaire', price: 450, slot: 4, value: 0, effect: { type: 'recharge', tier: 2 } },
+    // — Slot 5 —
+    { key: 's5-galop',     name: 'Galop',            name_en: 'Gallop',         rarity: 'commun',     price: 45,  slot: 5, value: 5, effect: null },
+    { key: 's5-repit1',    name: 'Long répit',       name_en: 'Long respite',   rarity: 'rare',       price: 150, slot: 5, value: 2, effect: { type: 'repit', tier: 1 } },
+    { key: 's5-qfraiche',  name: 'Question fraîche', name_en: 'Fresh question', rarity: 'rare',       price: 190, slot: 5, value: 1, effect: { type: 'questionFraiche', tier: 0 } },
+    { key: 's5-aubaine2',  name: 'Aubaine royale',   name_en: 'Royal windfall', rarity: 'legendaire', price: 520, slot: 5, value: 1, effect: { type: 'aubaine', tier: 2 } },
+    // — Slot 6 —
+    { key: 's6-saut',      name: 'Grand saut',       name_en: 'Great jump',     rarity: 'commun',     price: 60,  slot: 6, value: 6, effect: null },
+    { key: 's6-indice1',   name: 'Double indice',    name_en: 'Double hint',    rarity: 'rare',       price: 210, slot: 6, value: 2, effect: { type: 'indice', tier: 1 } },
+    { key: 's6-prime2',    name: 'Grande prime',     name_en: 'Great bounty',   rarity: 'legendaire', price: 500, slot: 6, value: 1, effect: { type: 'prime', tier: 2 } },
+    { key: 's6-butin1',    name: 'Butin garanti',    name_en: 'Sure spoils',    rarity: 'legendaire', price: 600, slot: 6, value: 0, effect: { type: 'butin', tier: 1 } },
+  ],
 };
 export const FORGE = clone(DEFAULT_FORGE);
 
@@ -113,10 +150,16 @@ function resetToDefaults() {
   LOOT.ingredientMultiDrop = { ...DEFAULT_LOOT.ingredientMultiDrop };
   // Forge : reset profond (sous-objets effects/relance + tableaux).
   Object.assign(FORGE, clone(DEFAULT_FORGE));
-  // Sets : restaure name/bonus2/bonus3 d'origine (clone profond).
+  // Sets : supprime les sets CUSTOM créés par overrides (absents des défauts),
+  // puis restaure name/icon/color/bonus d'origine des sets de base (clone profond).
+  for (const k of Object.keys(SETS)) { if (!DEFAULT_SETS[k]) delete SETS[k]; }
   for (const [k, d] of Object.entries(DEFAULT_SETS)) {
     if (!SETS[k]) continue;
     SETS[k].name = d.name;
+    if (d.name_en !== undefined) SETS[k].name_en = d.name_en;
+    SETS[k].icon = d.icon;
+    SETS[k].color = d.color;
+    delete SETS[k].size;
     SETS[k].bonus2 = clone(d.bonus2 || []);
     SETS[k].bonus3 = clone(d.bonus3 || []);
   }
@@ -159,11 +202,20 @@ export function applyBalance(overrides) {
   // Forge : fusion récursive (paliers d'effets, coûts, prix/rareté de bande).
   if (ov.forge) deepAssign(FORGE, ov.forge);
 
-  // Bonus de sets modifiés (name / bonus2 / bonus3).
+  // Sets : modifications des sets de base ET CRÉATION de sets personnalisés
+  // (override portant `custom:true` → la clé est ajoutée à SETS).
   for (const [k, o] of Object.entries(ov.sets || {})) {
-    const s = SETS[k];
-    if (!s || !o) continue;
+    if (!o) continue;
+    let s = SETS[k];
+    if (!s) {
+      if (!o.custom) continue; // clé inconnue non-custom → ignorer
+      s = SETS[k] = { name: o.name || k, bonus2: [], bonus3: [] };
+    }
     if (o.name != null) s.name = o.name;
+    if (o.name_en != null) s.name_en = o.name_en;
+    if (o.icon != null) s.icon = o.icon;
+    if (o.color != null) s.color = o.color;
+    if (o.size != null) s.size = o.size;
     if (Array.isArray(o.bonus2)) s.bonus2 = clone(o.bonus2);
     if (Array.isArray(o.bonus3)) s.bonus3 = clone(o.bonus3);
   }

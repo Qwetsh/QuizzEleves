@@ -1,3 +1,7 @@
+/* Polices « parchemin » (Cinzel = capitales gravées pour les titres, Cormorant
+   Garamond = corps de manuscrit). Repli serif si hors ligne. */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&display=swap');
+
 /* Cérémonie d'inscription de l'Autel du Scribe (animation). Importé par ScribeView
    → présent au mobile ET sur le TBI (où alchemy-mobile.css n'est pas chargé). */
 @keyframes scribe-quill {
@@ -46,3 +50,147 @@
   border: 3px solid rgba(200,160,255,.85); animation: scribe-ring 1.1s ease-out forwards; }
 .scribe-scroll { font-size: 78px; animation: scribe-rise .7s ease-out both;
   filter: drop-shadow(0 0 26px rgba(176,122,240,.95)); }
+
+/* ============================================================
+   AUTEL DU SCRIBE — refonte « parchemin » de l'onglet de création
+   ============================================================ */
+.scribe-root {
+  --s-ink: #3b2a16; --s-ink-soft: #6f5634; --s-accent: #6e3fae; --s-accent2: #9b6fd0;
+  --s-edge: rgba(120, 85, 30, 0.30);
+  --font-title: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --font-body: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-family: var(--font-body); color: var(--s-ink);
+  /* --scribe-inset = hauteur réservée pour une barre fixe sous le composant
+     (barre d'onglets mobile). 0 sur le TBI (la modale n'a pas de barre). */
+  height: calc(100% - var(--scribe-inset, 0px)); display: flex; flex-direction: column; position: relative;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 250, 235, 0.9), transparent 60%),
+    radial-gradient(140% 130% at 100% 115%, rgba(150, 110, 50, 0.12), transparent 55%),
+    linear-gradient(180deg, #f7ecd2, #efe0bd);
+}
+.scribe-body { flex: 1; overflow-y: auto; padding: 14px 18px 16px; }
+
+.scribe-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; padding-right: 30px; }
+.scribe-title { font-family: var(--font-title); font-weight: 700; font-size: 25px; letter-spacing: 0.02em; color: #5a3a86; display: flex; align-items: center; gap: 8px; }
+.scribe-stats { display: flex; gap: 8px; }
+.scribe-stat { font-family: var(--font-body); font-weight: 700; font-size: 16px; border-radius: 999px; padding: 3px 12px; border: 1.5px solid; display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+.scribe-stat.gold { background: #fff6e0; border-color: #e3c178; color: #7c5a1c; }
+.scribe-stat.scroll { background: #f3ebfb; border-color: #cbb1ee; color: var(--s-accent); }
+.scribe-intro { font-size: 16px; line-height: 1.35; color: var(--s-ink-soft); font-style: italic; margin-bottom: 12px; }
+
+/* Le grand parchemin (zone de composition) — se DÉROULE à l'ouverture (montage). */
+.scribe-sheet {
+  position: relative; border-radius: 10px 14px 11px 16px; padding: 16px 16px 14px;
+  animation: scribe-unroll 0.62s cubic-bezier(.22, .8, .3, 1) both;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 33px, rgba(120, 85, 30, 0.05) 33px, rgba(120, 85, 30, 0.05) 34px),
+    linear-gradient(180deg, #fcf5e3, #f0e2c2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 40px rgba(150, 110, 50, 0.10), 0 8px 22px rgba(120, 85, 30, 0.16);
+  border: 1px solid var(--s-edge);
+}
+.scribe-sheet::before, .scribe-sheet::after {
+  content: ''; position: absolute; left: 8px; right: 8px; height: 6px; opacity: 0.5;
+  background: radial-gradient(circle at 6px 50%, var(--s-edge) 0 1.6px, transparent 2.2px) repeat-x; background-size: 12px 6px;
+}
+.scribe-sheet::before { top: -3px; } .scribe-sheet::after { bottom: -3px; }
+.scribe-empty { text-align: center; color: #a98c5c; font-style: italic; font-size: 17px; padding: 22px 0; }
+
+/* Carte d'un effet posé */
+.scribe-part { position: relative; border-radius: 12px; padding: 11px 13px 12px; margin-bottom: 9px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 252, 243, 0.7));
+  border: 1.5px solid var(--s-edge); box-shadow: 0 2px 6px rgba(120, 85, 30, 0.08);
+  animation: scribe-part-in 0.32s cubic-bezier(.2, .7, .3, 1.2) both; }
+.scribe-part-head { display: flex; align-items: center; gap: 9px; }
+.scribe-part-icon { font-size: 22px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18)); }
+.scribe-part-name { font-family: var(--font-title); font-weight: 600; font-size: 17px; color: #4a3a20; }
+.scribe-part-pw { margin-left: auto; margin-right: 24px; font-size: 12.5px; font-weight: 700; color: var(--s-accent); }
+.scribe-part-desc { font-size: 15.5px; line-height: 1.3; color: var(--s-ink-soft); font-style: italic; margin: 5px 0 8px; }
+.scribe-x { position: absolute; top: 7px; right: 7px; width: 26px; height: 26px; border-radius: 50%; border: none;
+  background: #efe4cf; color: #8a6a3a; font-size: 16px; cursor: pointer; transition: background .15s, transform .15s; }
+.scribe-x:hover { background: #e6d3b0; transform: rotate(90deg); }
+
+.scribe-add { width: 100%; padding: 11px 0; border-radius: 12px; border: 2px dashed color-mix(in srgb, var(--s-accent) 55%, transparent);
+  background: transparent; color: var(--s-accent); font-family: var(--font-title); font-weight: 600; font-size: 16px; cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s; }
+.scribe-add:hover { background: rgba(110, 63, 174, 0.06); border-color: var(--s-accent); }
+.scribe-add:active { transform: scale(0.98); }
+
+/* Jauge de puissance */
+.scribe-power-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--s-ink-soft); margin: 12px 2px 4px; font-weight: 600; }
+.scribe-bar { height: 8px; border-radius: 5px; background: rgba(90, 60, 20, 0.14); overflow: hidden; }
+.scribe-bar > i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--s-accent), var(--s-accent2)); transition: width .35s ease, background .2s; }
+.scribe-bar.over > i { background: #c0392b; }
+.scribe-warn { font-size: 13px; color: #c0392b; margin-top: 5px; font-weight: 600; }
+
+/* Chips, stepper, select */
+.scribe-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.scribe-chip { padding: 6px 12px; border-radius: 999px; cursor: pointer; font-family: var(--font-body); font-size: 15px; font-weight: 600;
+  border: 1.5px solid var(--s-edge); background: #fffdf7; color: var(--s-ink-soft); transition: all .15s; }
+.scribe-chip:hover { border-color: var(--s-accent2); }
+.scribe-chip.on { background: var(--s-accent); border-color: var(--s-accent); color: #fff; box-shadow: 0 2px 8px rgba(110, 63, 174, 0.3); }
+.scribe-chip.sm { padding: 4px 10px; font-size: 14px; }
+.scribe-stepper { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.scribe-step-btn { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--s-edge); background: #fffdf7;
+  font-size: 21px; font-weight: 800; color: var(--s-ink-soft); cursor: pointer; transition: background .15s, transform .1s; }
+.scribe-step-btn:hover:not(:disabled) { background: #f6eed9; }
+.scribe-step-btn:active:not(:disabled) { transform: scale(0.92); }
+.scribe-step-btn:disabled { opacity: 0.4; cursor: default; }
+.scribe-step-val { min-width: 64px; text-align: center; font-family: var(--font-title); font-weight: 600; font-size: 19px; color: #4a3a20; }
+.scribe-select { margin-top: 8px; width: 100%; padding: 8px 10px; border-radius: 9px; border: 1.5px solid var(--s-edge);
+  background: #fffefb; font-family: var(--font-body); font-size: 15.5px; color: var(--s-ink); }
+
+/* Pied : gravure */
+.scribe-foot { flex-shrink: 0; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--s-edge);
+  background: linear-gradient(180deg, rgba(247, 236, 210, 0.6), rgba(243, 230, 200, 0.96)); }
+.scribe-foot-warn { font-size: 14px; color: #c0392b; font-weight: 700; text-align: center; margin-bottom: 7px; }
+.scribe-ink { width: 100%; border: none; border-radius: 14px; padding: 14px 0; font-family: var(--font-title); font-weight: 600;
+  font-size: 19px; letter-spacing: 0.02em; cursor: pointer; transition: transform .12s, box-shadow .2s, filter .2s; }
+.scribe-ink.ready { background: linear-gradient(180deg, #9b6fd0, #6e3fae); color: #fff; box-shadow: 0 6px 18px rgba(110, 63, 174, 0.42); }
+.scribe-ink.ready:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.scribe-ink.ready:active { transform: translateY(1px); }
+.scribe-ink.off { background: linear-gradient(180deg, #e6dcc6, #d6c8a4); color: #a08a5e; cursor: default; }
+
+/* Sélecteur d'effet (feuille qui monte) */
+.scribe-picker-bg { position: fixed; inset: 0; z-index: 65; background: rgba(20, 12, 4, 0.55); display: flex; align-items: flex-end; animation: scribe-fade .2s ease both; }
+.scribe-picker { width: 100%; max-height: 82vh; overflow-y: auto; background: linear-gradient(180deg, #fffefb, #f1e2c4);
+  border-radius: 20px 20px 0 0; padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); animation: scribe-sheet-up .28s cubic-bezier(.2, .7, .3, 1.05) both; }
+.scribe-picker-title { font-family: var(--font-title); font-weight: 700; font-size: 20px; color: #5a3a86; margin-bottom: 8px; }
+.scribe-picker-cat { font-family: var(--font-title); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; color: #9b7e4e; margin: 12px 0 6px; }
+.scribe-pick-row { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; border-radius: 11px;
+  border: 1.5px solid var(--s-edge); background: #fffefb; cursor: pointer; text-align: left; margin-bottom: 7px;
+  transition: background .15s, transform .1s, border-color .15s; }
+.scribe-pick-row:hover { background: #fbf3e1; border-color: var(--s-accent2); }
+.scribe-pick-row:active { transform: scale(0.99); }
+.scribe-pick-ico { font-size: 24px; flex-shrink: 0; width: 30px; text-align: center; }
+.scribe-pick-name { font-family: var(--font-title); font-weight: 600; font-size: 16px; color: #4a3a20; }
+.scribe-pick-desc { font-size: 14px; color: var(--s-ink-soft); font-style: italic; line-height: 1.25; }
+.scribe-pick-plus { margin-left: auto; font-size: 22px; color: var(--s-accent); flex-shrink: 0; }
+
+@keyframes scribe-part-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes scribe-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scribe-sheet-up { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+
+/* Déroulé de parchemin : la feuille se révèle du haut vers le bas, un « rouleau »
+   suit le bord qui se déplie. */
+@keyframes scribe-unroll {
+  from { clip-path: inset(0 0 100% 0 round 14px); }
+  to   { clip-path: inset(0 0 0 0 round 14px); }
+}
+@keyframes scribe-roll-down {
+  0%   { top: 0%; opacity: 0; }
+  12%  { opacity: 0.95; }
+  85%  { opacity: 0.95; }
+  100% { top: 100%; opacity: 0; }
+}
+.scribe-roll {
+  position: absolute; left: -3px; right: -3px; height: 16px; z-index: 4; pointer-events: none;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #e0c081 0%, #bd964f 45%, #6e4f27 100%);
+  box-shadow: 0 9px 18px rgba(70, 45, 15, 0.4), inset 0 1px 0 rgba(255, 245, 220, 0.65);
+  animation: scribe-roll-down 0.62s cubic-bezier(.22, .8, .3, 1) both;
+}
+/* Respect des préférences d'accessibilité : pas d'animation de déroulé. */
+@media (prefers-reduced-motion: reduce) {
+  .scribe-sheet { animation: none; }
+  .scribe-roll { display: none; }
+}

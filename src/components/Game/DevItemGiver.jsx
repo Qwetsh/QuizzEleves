@@ -22,9 +22,23 @@ const BTN_STYLE = {
   fontSize: 14, color: 'var(--ink-700)', cursor: 'pointer',
 };
 
+// Famille « logique » d'un objet pour le filtre (équip = slot d'équipement).
+const itemFamily = (it) => it.family || (it.slot === 'consumable' ? 'consumable' : 'equip');
+const RAR_FILTERS = [['all', 'Toutes'], ['commun', 'Commun'], ['rare', 'Rare'], ['legendaire', 'Légendaire']];
+const FAM_FILTERS = [['all', 'Toutes'], ['equip', 'Équipement'], ['consumable', 'Consommable'], ['ingredient', 'Ingrédient'], ['potion', 'Potion'], ['parchment', 'Parchemin']];
+
+const chipStyle = (on) => ({
+  padding: '4px 11px', borderRadius: 999, cursor: 'pointer', fontSize: 12.5,
+  border: on ? '2px solid #8a6418' : '1.5px solid rgba(110,78,16,0.3)',
+  background: on ? 'rgba(184,134,44,0.18)' : 'rgba(255,255,255,0.7)',
+  color: 'var(--ink-800)', fontWeight: on ? 700 : 500,
+});
+
 export default function DevItemGiver() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
+  const [rar, setRar] = useState('all');
+  const [fam, setFam] = useState('all');
   const [given, setGiven] = useState(null); // clé donnée récemment (feedback visuel)
   const devGiveItem = useGameStore((s) => s.devGiveItem);
   const teams = useGameStore((s) => s.teams);
@@ -32,7 +46,9 @@ export default function DevItemGiver() {
   const team = teams[currentTeam];
 
   const give = (key) => { devGiveItem(key); setGiven(key); setTimeout(() => setGiven((g) => (g === key ? null : g)), 900); };
-  const matches = (it) => !q || locName(it).toLowerCase().includes(q.toLowerCase());
+  const matches = (it) => (!q || locName(it).toLowerCase().includes(q.toLowerCase()))
+    && (rar === 'all' || it.rarity === rar)
+    && (fam === 'all' || itemFamily(it) === fam);
 
   return (
     <>
@@ -48,6 +64,20 @@ export default function DevItemGiver() {
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 Rechercher…" autoFocus
                 style={{ flex: 1, maxWidth: 280, padding: '7px 12px', borderRadius: 10, border: 'none', fontSize: 14 }} />
               <button onClick={() => setOpen(false)} className="btn btn--ghost btn--sm" style={{ marginLeft: 'auto' }}>{'✕'} Fermer</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid rgba(110,78,16,0.18)', background: 'rgba(255,250,240,0.6)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Rareté</span>
+                {RAR_FILTERS.map(([k, lbl]) => (
+                  <button key={k} onClick={() => setRar(k)} style={chipStyle(rar === k)}>{lbl}</button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>Famille</span>
+                {FAM_FILTERS.map(([k, lbl]) => (
+                  <button key={k} onClick={() => setFam(k)} style={chipStyle(fam === k)}>{lbl}</button>
+                ))}
+              </div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
               <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 10 }}>

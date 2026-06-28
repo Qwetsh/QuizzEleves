@@ -7,12 +7,14 @@ import PowerButtons from './Sidebar/PowerButtons';
 import ConsumableBar from './Sidebar/ConsumableBar';
 import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
+import InfoPopover from './InfoPopover';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
 import TradeConsumer from './TradeConsumer';
 import StatsArchiver from './StatsArchiver';
 import TestLinksPanel from './TestLinksPanel';
 import DevItemGiver from './DevItemGiver';
+import DevFaceGiver from './DevFaceGiver';
 import { OFFLINE } from '../../logic/offline';
 import { bagUnitCount } from '../../store/itemHandlers';
 import { extOn } from '../../extensions/registry';
@@ -25,6 +27,8 @@ import ShopPromptModal from '../Modals/ShopPromptModal';
 import DuelChoiceModal from '../Modals/DuelChoiceModal';
 import InventoryModal from '../Modals/InventoryModal';
 import ScribeModal from '../Modals/ScribeModal';
+import AlchemyModal from '../Modals/AlchemyModal';
+import ForgeModal from '../Modals/ForgeWorkshop';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ForgeCeremony from './ForgeCeremony';
 import ChargePickerModal from '../Modals/ChargePickerModal';
@@ -61,9 +65,12 @@ export default function GameLayout() {
   const openShop = useGameStore((s) => s.openShop);
   const openInventory = useGameStore((s) => s.openInventory);
   const openScribe = useGameStore((s) => s.openScribe);
+  const openAlchemy = useGameStore((s) => s.openAlchemy);
   const devAddMoney = useGameStore((s) => s.devAddMoney);
   const itemsOn = useGameStore((s) => s.itemsEnabled());
   const scribeOn = useGameStore((s) => extOn(s.extensions, 'enchant'));
+  const alchemyOn = useGameStore((s) => extOn(s.extensions, 'alchemy'));
+  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
 
@@ -137,12 +144,21 @@ export default function GameLayout() {
               </button>
             )}
 
-            {/* Bouton dev : pieces gratuites pour tester les achats (localhost uniquement) */}
-            {import.meta.env.DEV && (
+            {/* Atelier d'alchimie (extension Alchimie) : distiller des potions sur le TBI */}
+            {itemsOn && alchemyOn && (
+              <button onClick={openAlchemy} aria-label={T('game.openAlchemy')} title={T('game.openAlchemy')}
+                style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 18px', borderRadius: 18, border: '2px solid #6fbf8c', background: 'linear-gradient(180deg,#3f9d6b,#2c7a4f)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 16, cursor: 'pointer', boxShadow: '0 6px 16px rgba(44,122,79,0.45), inset 0 1px 0 rgba(255,255,255,0.25)' }}>
+                <span style={{ fontSize: 26 }}>{'\u{2697}\u{FE0F}'}</span>{T('game.alchBtn')}
+              </button>
+            )}
+
+            {/* Boutons dev : pieces gratuites pour tester les achats (localhost uniquement) */}
+            {import.meta.env.DEV && [10, 100, 1000].map((n) => (
               <button
-                onClick={() => devAddMoney(10)}
-                aria-label="Dev : ajouter 10 pièces"
-                title="Dev — ajoute 10 pièces à l'équipe active"
+                key={n}
+                onClick={() => devAddMoney(n)}
+                aria-label={`Dev : ajouter ${n} pièces`}
+                title={`Dev — ajoute ${n} pièces à l'équipe active`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '10px 16px',
@@ -155,10 +171,11 @@ export default function GameLayout() {
                   cursor: 'pointer',
                 }}
               >
-                {"\u{1F6E0}️"} +10 <span className="coin" />
+                {"\u{1F6E0}️"} +{n} <span className="coin" />
               </button>
-            )}
+            ))}
             {import.meta.env.DEV && itemsOn && <DevItemGiver />}
+            {import.meta.env.DEV && forgeOn && <DevFaceGiver />}
           </div>
         )}
       </div>
@@ -274,11 +291,16 @@ export default function GameLayout() {
       <ShopPromptModal />
       <InventoryModal />
       <ScribeModal />
+      <AlchemyModal />
+      {forgeOn && <ForgeModal />}
       <FightModal />
       <DuelChoiceModal />
       <LootReveal />
       <StarterChest />
       <TrapInspectModal />
+
+      {/* Fiche d'info flottante « façon BG3 » (effets HUD + mots-clés du journal) */}
+      <InfoPopover />
     </div>
   );
 }

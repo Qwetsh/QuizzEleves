@@ -142,8 +142,9 @@ export default function InventoryModal() {
   const equipment = team?.equipment || { head: null, body: null, feet: null };
   const bag = normalizeBag(team?.bag);
 
-  const cellItem = (key) =>
-    key.startsWith('equip:') ? equipment[key.slice(6)] : cellKey(bag[+key.slice(4)]);
+  // Valeur BRUTE d'une case (peut être une instance enchantée { key, enchants }).
+  const cellRaw = (key) =>
+    key.startsWith('equip:') ? equipment[key.slice(6)] : bag[+key.slice(4)];
 
   const hitTest = (x, y) => {
     for (const [k, b] of Object.entries(slotRects.current)) {
@@ -161,7 +162,8 @@ export default function InventoryModal() {
     if (dragRef.current) return;
     e.preventDefault();
     e.stopPropagation();
-    const itemKey = cellItem(key);
+    const raw = cellRaw(key);
+    const itemKey = cellKey(raw); // normalise les instances enchantées → clé string
     const item = ITEMS[itemKey];
     const el = slotEls.current[key];
     if (!item || !el) return;
@@ -190,7 +192,7 @@ export default function InventoryModal() {
       if (!started) {
         // Clic simple : popover d'actions au-dessus de la case
         setDrag(null);
-        setPopover({ cellKey: key, itemKey, x: r.left + r.width / 2, y: r.top });
+        setPopover({ cellKey: key, itemKey, enchants: cellEnchants(raw), x: r.left + r.width / 2, y: r.top });
         return;
       }
       const hk = hitTest(ev.clientX, ev.clientY);

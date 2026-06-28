@@ -42,6 +42,7 @@ export default function SetBonusInfo({ item, team }) {
   if (!set) return null; // l'objet n'appartient à aucun set : rien à afficher
 
   const count = equippedSetCounts(team)[setKey] || 0;
+  const size = set.size || 3;
   const lines2 = (set.bonus2 || []).map(describeEffect).filter(Boolean);
   const lines3 = (set.bonus3 || []).map(describeEffect).filter(Boolean);
   const c = set.color || '#8a6d3a';
@@ -71,10 +72,10 @@ export default function SetBonusInfo({ item, team }) {
       <div className="setinfo-head">
         <span className="setinfo-icon">{set.icon}</span>
         <span className="setinfo-name">{locName(set)}</span>
-        <span className="setinfo-count">{count}<span className="setinfo-count-max">/3</span></span>
+        <span className="setinfo-count">{count}<span className="setinfo-count-max">/{size}</span></span>
       </div>
       <div className="setinfo-pips" aria-label={T('modal.set.piecesEquipped', { n: count })}>
-        {[0, 1, 2].map((i) => (
+        {Array.from({ length: size }).map((_, i) => (
           <span key={i} className={'setinfo-pip' + (i < count ? ' on' : '')} />
         ))}
       </div>

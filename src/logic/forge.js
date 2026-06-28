@@ -19,24 +19,46 @@
 // ============================================================
 
 export const DIE_SLOTS = 6;
+// Nombre maximum d'effets cumulables sur une même face.
+export const MAX_FACE_EFFECTS = 3;
+
+// Liste NORMALISÉE des effets d'une face (0→3). Rétro-compatible : lit la forme
+// MODERNE `effects: [{type,tier}, …]` OU l'ancienne `effect: {type,tier}|null`
+// (saves/catalogue d'avant le multi-effets). Source unique pour tout le moteur.
+export function faceEffects(face) {
+  if (!face) return [];
+  if (Array.isArray(face.effects)) return face.effects.filter((e) => e && e.type).slice(0, MAX_FACE_EFFECTS);
+  if (face.effect && face.effect.type) return [face.effect];
+  return [];
+}
+
+// Signature de contenu d'une face (valeur + effets) : sert aux comparaisons et à
+// la synchro optimiste mobile, indépendamment de la forme (effect/effects).
+export function faceSig(face) {
+  return `${clampFaceValue(face?.value)}|${faceEffects(face).map((e) => `${e.type}:${e.tier ?? 0}`).join(',')}`;
+}
 
 // Dé standard d'une équipe neuve : value === base, aucun effet.
 export function defaultDieFaces() {
-  return Array.from({ length: DIE_SLOTS }, (_, i) => ({ base: i + 1, value: i + 1, effect: null }));
+  return Array.from({ length: DIE_SLOTS }, (_, i) => ({ base: i + 1, value: i + 1, effects: [] }));
 }
 
 // Une face est-elle « forgée » (≠ face standard) ? Sert à demander confirmation
 // avant écrasement (une face vierge s'écrase sans confirmation, cf. spec §7).
 export function isFaceForged(face) {
   if (!face) return false;
-  return face.value !== face.base || face.effect != null;
+  return face.value !== face.base || faceEffects(face).length > 0;
 }
 
-// Borne une valeur de déplacement de face à [0, 6] (entier).
+// Valeur de déplacement maximale d'une face (le dé garde ses 6 slots ; seule la
+// valeur peut monter plus haut).
+export const MAX_FACE_VALUE = 12;
+
+// Borne une valeur de déplacement de face à [0, MAX_FACE_VALUE] (entier).
 export function clampFaceValue(v) {
   const n = Math.round(Number(v));
   if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(6, n));
+  return Math.max(0, Math.min(MAX_FACE_VALUE, n));
 }
 
 // Normalise / migre un dé (saves anciennes, données partielles, payload mobile)
@@ -50,7 +72,7 @@ export function normalizeDieFaces(faces) {
         out[i] = {
           base: i + 1, // l'adresse est TOUJOURS la position du slot (immuable)
           value: Number.isFinite(f.value) ? clampFaceValue(f.value) : out[i].value,
-          effect: f.effect ?? null,
+          effects: faceEffects(f), // normalise effect|effects → tableau (0→3)
         };
       }
     }

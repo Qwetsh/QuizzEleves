@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { POWERS } from '../../data/powers';
 import { SUBJECTS } from '../../data/subjects';
 import { loc, locName, locDesc } from '../../i18n/content';
@@ -7,8 +7,13 @@ import { cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { itemImg } from '../../logic/itemAssets';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
+import { useInfoTrigger } from './useInfoTrigger';
 import { useT } from '../../i18n';
 import '../../styles/team-strip-hud.css';
+
+// Descripteur de fiche pour un effet : délègue à une entité si l'effet la cible
+// (set, matière, terme), sinon fiche ad hoc « effect » porteuse de son texte.
+const fxDescriptor = (fx) => fx.link || { type: 'effect', name: fx.name, desc: fx.desc, icon: fx.icon, color: fx.color };
 
 // Type → icône + clé i18n du libellé de case (résolu via T au rendu).
 const TILE_TYPES = {
@@ -146,85 +151,39 @@ function StatChips({ team, withRate = true }) {
   );
 }
 
-// Buffs/protections actifs (bouclier, fumigène, +temps, rafale, défi) — pastilles
-// compactes dans la bande. Source : getTeamEffects (tone 'buff').
-function TeamBuffs({ team }) {
-  const buffs = getTeamEffects(team).filter((e) => e.tone === 'buff');
-  if (!buffs.length) return null;
+// Un effet en chip (carte active) : icône + libellé court (+ compteur). Survol/
+// tap → fiche d'info. Chaque chip est son propre composant (useId stable).
+function FxChip({ fx }) {
+  const trigger = useInfoTrigger(fxDescriptor(fx));
   return (
-    <div className="ts-buffs" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-      {buffs.map((b) => (
-        <span key={b.key} title={b.label} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 1,
-          padding: '1px 6px', borderRadius: 999, fontSize: 13, lineHeight: 1.4,
-          background: `${b.color}22`, border: `1px solid ${b.color}66`,
-        }}>
-          {b.icon}{b.n ? <small style={{ fontWeight: 700 }}>{b.n}</small> : ''}
-        </span>
-      ))}
-    </div>
+    <button type="button" className={`ts-fxchip ts-fxchip--${fx.tone}`} style={{ '--fx': fx.color }} {...trigger}>
+      <span className="ts-fxchip-ico">{fx.icon}</span>
+      <span className="ts-fxchip-name">{fx.name}</span>
+      {fx.n ? <span className="ts-fxchip-n">×{fx.n}</span> : null}
+    </button>
   );
 }
 
-// Malus en attente (question imposée, timer réduit, malédictions…) — affichés
-// en ICÔNES seules (pastilles rouges) pour ne pas décaler la fiche quand il y
-// en a beaucoup. Le détail (libellés) s'affiche dans un popover AU CLIC.
-// Source : getTeamEffects (tone 'malus').
-function TeamMalus({ team }) {
-  const T = useT();
-  const malus = getTeamEffects(team).filter((e) => e.tone === 'malus');
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    window.addEventListener('pointerdown', onDown);
-    return () => window.removeEventListener('pointerdown', onDown);
-  }, [open]);
-  if (!malus.length) return null;
+// Un effet en pastille-icône (cartes inactives) : icône seule (+ compteur).
+function FxDot({ fx }) {
+  const trigger = useInfoTrigger(fxDescriptor(fx));
   return (
-    <div ref={ref} className="ts-malus" style={{ position: 'relative', display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
-      {malus.map((m) => (
-        <button
-          key={m.key}
-          type="button"
-          title={m.label}
-          onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-            minWidth: 24, height: 24, padding: m.n ? '0 6px' : 0,
-            borderRadius: 999, fontSize: 14, lineHeight: 1, cursor: 'pointer',
-            color: '#7a1320', background: '#f7d7d2', border: '1.5px solid #c9472f',
-            boxShadow: '0 1px 2px rgba(201,71,47,0.3)',
-          }}
-        >
-          <span>{m.icon}</span>{m.n ? <small style={{ fontWeight: 700, fontSize: 11 }}>{m.n}</small> : ''}
-        </button>
-      ))}
-      {open && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, zIndex: 130,
-            minWidth: 170, maxWidth: 250, padding: '8px 10px', borderRadius: 10,
-            background: '#fffaf7', border: '1.5px solid #c9472f',
-            boxShadow: '0 8px 22px rgba(46,31,16,0.30)',
-            display: 'flex', flexDirection: 'column', gap: 6,
-          }}
-        >
-          <div style={{ fontSize: 10.5, fontWeight: 800, color: '#7a1320', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {T('game.activeMalus', { n: malus.length })}
-          </div>
-          {malus.map((m) => (
-            <div key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12.5, color: 'var(--ink-800)', lineHeight: 1.3 }}>
-              <span style={{ fontSize: 15, flexShrink: 0 }}>{m.icon}</span>
-              <span>{m.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <button type="button" className={`ts-fxdot ts-fxdot--${fx.tone}`} style={{ '--fx': fx.color }} {...trigger}>
+      <span>{fx.icon}</span>{fx.n ? <small>{fx.n}</small> : null}
+    </button>
   );
+}
+
+// Bande d'effets actifs (buffs + malus) — placée dans le « vide » central de la
+// carte. variant 'active' = chips icône+libellé ; 'mini' = icônes seules.
+function TeamEffects({ team, variant = 'active' }) {
+  const T = useT();
+  const fx = getTeamEffects(team, T.lang);
+  if (!fx.length) return null;
+  if (variant === 'mini') {
+    return <div className="ts-fxband ts-fxband--mini">{fx.map((e) => <FxDot key={e.key} fx={e} />)}</div>;
+  }
+  return <div className="ts-fxband">{fx.map((e) => <FxChip key={e.key} fx={e} />)}</div>;
 }
 
 function TeamLocation({ team }) {
@@ -281,8 +240,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
         <div className="ts-pop-rank">{rank}/{total}</div>
       </div>
       <StatChips team={team} />
-      <TeamBuffs team={team} />
-      <TeamMalus team={team} />
+      <TeamEffects team={team} variant="active" />
       <div className="ts-pop-section">
         <div className="ts-pop-label">{T('game.section.equipment')}</div>
         {Object.keys(SLOTS).map((slot) => {
@@ -336,9 +294,8 @@ function ActiveCard({ team, rank, total }) {
         </div>
         <StatChips team={team} />
         <EquipmentStrip team={team} />
-        <TeamBuffs team={team} />
-        <TeamMalus team={team} />
       </div>
+      <TeamEffects team={team} variant="active" />
       <div className="ts-card-powers scroll-hidden">
         {pKeys.map((key) => (
           <PowerBadge key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0}
@@ -370,8 +327,7 @@ function CompactCard({ team, rank, total, open, onToggle }) {
           <span className="coin ts-stat-coin" /><span className="ts-stat-num">{team.money ?? 0}</span>
         </div>
         <EquipmentStrip team={team} className="ts-mini-eq" />
-        <TeamBuffs team={team} />
-        <TeamMalus team={team} />
+        <TeamEffects team={team} variant="mini" />
       </div>
       <div className="ts-mini-powers">
         {pKeys.map((key) => (

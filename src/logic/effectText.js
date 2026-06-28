@@ -159,6 +159,7 @@ function describeLegacy(fx, lang) {
     case 'reflectChance': txt = en ? `${v}% chance to reflect a negative effect onto the attacker` : `${v}% de chance de renvoyer un effet négatif sur l'attaquant`; break;
     case 'reculReduction': txt = en ? `setback reduced by ${v} ${spaceW(fx.value, lang)}` : `recul subi réduit de ${v} ${spaceW(fx.value, lang)}`; break;
     case 'reculReductionPct': txt = en ? `setback reduced by ${v}%` : `recul subi réduit de ${v}%`; break;
+    case 'diceMalus': txt = en ? `advances ${v} ${spaceW(fx.value, lang)} less on each roll` : `avance de ${v} ${spaceW(fx.value, lang)} de moins à chaque lancer`; break;
     case 'hardcoreChance': txt = en ? `${v}% chance your question is Hardcore` : `${v}% de chance que ta question soit en Hardcore`; break;
     case 'tempeteImmune': txt = en ? 'immune to the Storm' : `immunité à la Tempête`; break;
     case 'duelImmune': txt = en ? 'immune to duels' : `immunité aux duels`; break;

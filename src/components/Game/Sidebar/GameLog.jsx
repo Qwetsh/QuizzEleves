@@ -1,35 +1,41 @@
 import { useRef, useEffect, useState } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { logText, logDetail, signed } from '../../../logic/logFormat';
+import { tokenizeText, getGlossaryIndex } from '../../../logic/glossary';
+import Keyword from '../Keyword';
 import { useT } from '../../../i18n';
+import '../../../styles/info-card.css';
 
-// Une entrée : texte + éventuel détail dépliable (facteurs d'un gain/recul).
-function LogEntry({ entry }) {
-  const T = useT();
+// Rend un texte de journal en segments : texte brut + mots-clés cliquables
+// (objets, pouvoirs, sets, matières, termes de mécanique) repérés par le glossaire.
+function LogText({ text, index }) {
+  const segs = tokenizeText(text, index);
+  return (
+    <>
+      {segs.map((s, i) => (s.type
+        ? <Keyword key={i} descriptor={{ type: s.type, key: s.key }}>{s.text}</Keyword>
+        : <span key={i}>{s.text}</span>
+      ))}
+    </>
+  );
+}
+
+// Une entrée : texte (mots-clés cliquables) + éventuel détail dépliable.
+function LogEntry({ entry, index }) {
   const text = logText(entry);
   const detail = logDetail(entry);
   const [open, setOpen] = useState(false);
 
   return (
-    <div
-      style={{
-        padding: '5px 0',
-        borderBottom: '1px dashed rgba(122, 94, 58, 0.18)',
-        lineHeight: 1.4,
-        fontSize: 13,
-      }}
-    >
-      {detail ? (
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          title={open ? T('game.hideDetail') : T('game.showDetail')}
-          style={{
-            display: 'flex', alignItems: 'flex-start', gap: 5, width: '100%',
-            background: 'none', border: 'none', padding: 0, margin: 0,
-            font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer',
-          }}
-        >
+    <div style={{ padding: '5px 0', borderBottom: '1px dashed rgba(122, 94, 58, 0.18)', lineHeight: 1.4, fontSize: 13 }}>
+      <div
+        onClick={detail ? () => setOpen((o) => !o) : undefined}
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: 5,
+          cursor: detail ? 'pointer' : 'default',
+        }}
+      >
+        {detail && (
           <span
             aria-hidden="true"
             style={{
@@ -39,11 +45,9 @@ function LogEntry({ entry }) {
           >
             {'▶'}
           </span>
-          <span>{text}</span>
-        </button>
-      ) : (
-        <span>{text}</span>
-      )}
+        )}
+        <span><LogText text={text} index={index} /></span>
+      </div>
 
       {detail && open && (
         <div style={{ margin: '4px 0 2px 15px', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -72,7 +76,11 @@ function LogEntry({ entry }) {
 export default function GameLog() {
   const T = useT();
   const log = useGameStore((s) => s.log);
+  const itemsVersion = useGameStore((s) => s.itemsVersion);
   const endRef = useRef(null);
+  // Index de glossaire reconstruit selon la langue + le catalogue d'objets
+  // (mémoïsé dans glossary.js → recalcul seulement si l'un change).
+  const index = getGlossaryIndex(T.lang, itemsVersion);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,7 +97,7 @@ export default function GameLog() {
     >
       {log.length === 0 && <div style={{ color: 'var(--ink-400)' }}>{T('game.gameStarting')}</div>}
       {log.map((entry, i) => (
-        <LogEntry key={`log-${i}-${logText(entry).slice(0, 20)}`} entry={entry} />
+        <LogEntry key={`log-${i}-${logText(entry).slice(0, 20)}`} entry={entry} index={index} />
       ))}
       <div ref={endRef} />
     </div>

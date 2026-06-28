@@ -10,8 +10,8 @@ import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { defaultExtensions, extOn } from '../extensions/registry.js';
-import { defaultDieFaces, getDieFaces, clampFaceValue, DIE_SLOTS } from '../logic/forge.js';
-import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, generateSlotFaces, rollSlotFace, faceShortLabel, FORGE_RESOLVED, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
+import { defaultDieFaces, getDieFaces, clampFaceValue, faceEffects, DIE_SLOTS } from '../logic/forge.js';
+import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock, pickReplacementFace, faceShortLabel, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
@@ -624,7 +624,7 @@ export const useGameStore = create((set, get) => ({
       shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
       shopStockTurns: 0,
       // Forge : vitrine ORGANISÉE PAR SLOT (une offre par slot 1→6, effets résolus only).
-      shopFaceStock: forgeOn ? generateSlotFaces(Math.random, FORGE_RESOLVED) : [],
+      shopFaceStock: forgeOn ? pickFaceStock() : [],
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       powerSetupIndex: 0, powerSetupCategory: 'def',
@@ -748,11 +748,17 @@ export const useGameStore = create((set, get) => ({
     const face = getDieFaces(team)[((value - 1) % 6 + 6) % 6];
     const moveValue = clampFaceValue(face.value);
     const bonus = buffValue(team, 'diceBonus');
-    const eff = moveValue + bonus;
+    // Malus de dé (passif d'équipement diceMalus) : réduit l'avancée de N cases à
+    // CHAQUE lancer, sans recul ni aller-retour (≠ reculReduction qui n'amortit que
+    // les reculs subis). Plancher à 0 : un malus ≥ valeur fait rester sur place.
+    const malus = getEffectValue(team, 'diceMalus');
+    const eff = Math.max(0, moveValue + bonus - malus);
     set({ preRollPos: team.pos, preRollValue: eff, freeActivation: false });
     addLog(bonus > 0
       ? tg('log.store.roll.bonus', { emoji: team.emoji, name: team.name, value: moveValue, bonus, eff })
-      : tg('log.store.roll', { emoji: team.emoji, name: team.name, value: moveValue }));
+      : malus > 0
+        ? tg('log.store.roll.malus', { emoji: team.emoji, name: team.name, value: moveValue, malus, eff })
+        : tg('log.store.roll', { emoji: team.emoji, name: team.name, value: moveValue }));
     // Effets de la face : 🎲 lancer (Prime…) appliqués maintenant ; ⏱️ avant
     // question (Égide…) armés pour ce tour (pipeline §6).
     const forgeRoll = resolveFaceAtRoll(team, face);
@@ -1838,6 +1844,20 @@ export const useGameStore = create((set, get) => ({
   // --- Dev : donne un objet à l'équipe active pour le tester (localhost) ---
   devGiveItem: (key) => { if (get().teams.length) itemH.grantItem(set, get, get().currentTeam, key); },
 
+  // --- Dev : donne une FACE de dé à la réserve de l'équipe active (localhost) ---
+  devGiveFace: (face) => {
+    const { teams, currentTeam, addLog } = get();
+    if (!teams.length || !face) return;
+    const team = teams[currentTeam];
+    const faceStock = [...(team.faceStock || [])];
+    if (faceStock.length >= FACE_STOCK_MAX) return;
+    faceStock.push({ value: clampFaceValue(face.value), effects: faceEffects(face), slot: face.slot });
+    const nt = [...teams];
+    nt[currentTeam] = { ...team, faceStock };
+    addLog(`\u{1F6E0}\u{FE0F} ${team.emoji} ${team.name} — [dev] face ${faceShortLabel(face)} (slot ${face.slot}) ajoutée à la réserve.`);
+    set({ teams: nt });
+  },
+
   // --- Dev : simulateur de combat (localhost uniquement, voir Setup) ---
   devStartFight: (subject, forceDefault = false) => {
     const { setupTeams, boardParams, level, useBrevet } = get();
@@ -1952,6 +1972,27 @@ export const useGameStore = create((set, get) => ({
   showScribe: false,
   openScribe: () => set({ showScribe: true }),
   closeScribe: () => set({ showScribe: false }),
+
+  // --- Atelier d'alchimie sur le TBI (extension alchemy) : même craft que le
+  // mobile, appliqué DIRECTEMENT pour l'équipe active (craftPotionFor). ---
+  showAlchemy: false,
+  openAlchemy: () => { if (extOn(get().extensions, 'alchemy')) set({ showAlchemy: true }); },
+  closeAlchemy: () => set({ showAlchemy: false }),
+  // Distille 3 ingrédients (par CLÉS) en résolvant chacun vers une case DISTINCTE
+  // du sac positionnel du TBI (comme l'intent mobile). Renvoie le résultat de craft.
+  craftPotionFor: (teamIdx, keys) => {
+    const t = get().teams[teamIdx];
+    if (!t) return { ok: false };
+    const bag = itemH.normalizeBag(t.bag);
+    const used = [];
+    const resolve = (k) => { const i = bag.findIndex((c, j) => !used.includes(j) && itemH.cellKey(c) === k); if (i >= 0) used.push(i); return i; };
+    return itemH.craftPotion(set, get, teamIdx, (keys || []).map(resolve));
+  },
+
+  // --- Forge de dés : atelier ouvert depuis le dé 3D du HUD (extension forge) ---
+  showForge: false,
+  openForge: () => { if (extOn(get().extensions, 'forge')) set({ showForge: true }); },
+  closeForge: () => set({ showForge: false }),
   craftParchmentFor: (teamIdx, parts) => {
     const t = get().teams[teamIdx];
     if (!t) return { ok: false };
@@ -1983,12 +2024,13 @@ export const useGameStore = create((set, get) => ({
     const faceStock = [...(team.faceStock || [])];
     if ((team.money || 0) < price || faceStock.length >= FACE_STOCK_MAX) return;
     // La face conserve son SLOT cible : elle ne pourra être forgée que là.
-    faceStock.push({ value: f.value, effect: f.effect || null, slot: f.slot });
+    faceStock.push({ value: f.value, effects: faceEffects(f), slot: f.slot });
     const nt = [...st.teams];
     nt[idx] = { ...team, money: team.money - price, faceStock };
     const newStock = [...stock];
-    // Renouvelle l'offre DU MÊME slot (vitrine organisée par slot).
-    const repl = rollSlotFace(f.slot, Math.random, FORGE_RESOLVED);
+    // Renouvelle l'emplacement acheté par une autre face du catalogue (pondérée
+    // par rareté, absente du stock courant) — comme la boutique d'objets.
+    const repl = pickReplacementFace(newStock.filter((_, i) => i !== faceIndex), Math.random);
     newStock[faceIndex] = repl || newStock[faceIndex];
     st.addLog(tg('log.store.buyFace', { emoji: team.emoji, name: team.name, label: faceShortLabel(f), price }));
     set({ teams: nt, shopFaceStock: newStock });
@@ -1997,7 +2039,9 @@ export const useGameStore = create((set, get) => ({
   // Forge : pose une face de la réserve (stockIndex) sur un slot du dé (slotIndex).
   // L'ADRESSE du slot (base) est immuable ; on remplace sa couche forge. Une face
   // écrasée est PERDUE (pas de recyclage) — la confirmation est gérée côté UI.
-  forgeFace: (slotIndex, stockIndex, teamIndex) => {
+  // `fromIntent` (forge initiée depuis le TÉLÉPHONE) : on saute la cérémonie TBI,
+  // l'animation de coulée se joue sur le téléphone de l'élève (cf. MobileApp).
+  forgeFace: (slotIndex, stockIndex, teamIndex, fromIntent = false) => {
     const st = get();
     if (!extOn(st.extensions, 'forge')) return;
     const idx = teamIndex ?? st.currentTeam;
@@ -2012,13 +2056,15 @@ export const useGameStore = create((set, get) => ({
     if (target < 0 || target >= DIE_SLOTS) return;
     if (slotIndex != null && slotIndex !== target) return; // garde : slot non concordant
     const faces = getDieFaces(team).map((face, i) => (
-      i === target ? { base: i + 1, value: clampFaceValue(f.value), effect: f.effect || null } : face
+      i === target ? { base: i + 1, value: clampFaceValue(f.value), effects: faceEffects(f) } : face
     ));
     const nt = [...st.teams];
     nt[idx] = { ...team, dieFaces: faces, faceStock: stock.filter((_, i) => i !== stockIndex) };
     st.addLog(tg('log.store.forgeFace', { emoji: team.emoji, name: team.name, base: target + 1, label: faceShortLabel(f) }));
     // Cérémonie de forge (overlay TBI) : marteau/enclume/étincelles + son.
-    set({ teams: nt, forgeCeremony: { teamIdx: idx, base: target + 1, face: { value: clampFaceValue(f.value), effect: f.effect || null } } });
+    // Sautée pour les forges venant du téléphone (l'animation est sur le tél).
+    const ceremony = fromIntent ? {} : { forgeCeremony: { teamIdx: idx, base: target + 1, face: { value: clampFaceValue(f.value), effects: faceEffects(f) } } };
+    set({ teams: nt, ...ceremony });
     saveGame(get());
   },
   clearForgeCeremony: () => set({ forgeCeremony: null }),
@@ -2087,7 +2133,8 @@ export const useGameStore = create((set, get) => ({
       get().buyFace(payload.faceIndex, idx);
     } else if (type === 'forgeFace') {
       // Forge : pose d'une face de la réserve sur un slot du dé (atelier mobile).
-      get().forgeFace(payload.slotIndex, payload.stockIndex, idx);
+      // fromIntent=true → pas de cérémonie TBI (l'animation joue sur le téléphone).
+      get().forgeFace(payload.slotIndex, payload.stockIndex, idx, true);
     } else if (type === 'buyPower') {
       // Déblocage d'un nouveau pouvoir.
       powerH.buyNewPower(set, get, payload.key, idx);

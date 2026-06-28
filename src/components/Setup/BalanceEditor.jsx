@@ -17,6 +17,8 @@ import { fetchRecipeRows, saveRecipeRow, deleteRecipeRow, refreshRecipes } from 
 import { BASE_RECIPES } from '../../data/recipes';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
+import { faceEffects, MAX_FACE_EFFECTS, MAX_FACE_VALUE } from '../../logic/forge';
+import FaceTile from '../Game/FaceTile';
 import { useGameStore } from '../../store/gameStore';
 import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger } from './EffectBuilder';
 import AlchemyRecipeForm, { recipeLine } from './AlchemyRecipeForm';
@@ -40,6 +42,7 @@ const rand4 = () => Math.random().toString(36).slice(2, 6);
 const EFFECT_LABELS = {
   timerBonus: 'Timer (+s)', indiceBoost: 'Indice (+rép. éliminées)', moneyPerCorrect: 'Pièces / bonne réponse',
   taxReduction: 'Impôts/taxes (−%)', stealProtection: 'Anti-vol (−%)', reculReduction: 'Recul subi (−cases)', reculReductionPct: 'Recul subi (−%)',
+  diceMalus: 'Malus de dé (−cases / lancer)',
   tempeteImmune: 'Immunité Tempête', oubliProtect: "Anti Trou de l'oubli", fightStealBonus: 'Vol de duel (+pièces)',
   duelImmune: 'Immunité aux duels',
   hardcoreChance: 'Question Hardcore (%)',
@@ -57,14 +60,14 @@ const EFFECT_UNIT = {
   moneyPerCorrect: ' 🪙', fightStealBonus: ' 🪙', gainMoney: ' 🪙', gainMoneyAll: ' 🪙',
   taxReduction: ' %', stealProtection: ' %', reculReductionPct: ' %', hardcoreChance: ' %',
   lootBonusConsumable: ' %', lootBonusEquipment: ' %', lootBonusSubject: ' %', reflectChance: ' %',
-  reculReduction: ' case(s)', moveForward: ' case(s)',
+  reculReduction: ' case(s)', moveForward: ' case(s)', diceMalus: ' case(s)',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath', 'itemStealImmune', 'goldStealImmune', 'reflectChance'];
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'diceMalus', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath', 'itemStealImmune', 'goldStealImmune', 'reflectChance'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([
   'gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext',
-  'timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'fightStealBonus',
+  'timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'diceMalus', 'fightStealBonus',
   'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject',
 ]);
 // Effets binaires (immunités / déclencheurs simples) : pas de quantité.
@@ -132,6 +135,149 @@ function Stepper({ value, onChange, min = 0, max = 999, step = 1 }) {
       />
       <button onClick={() => onChange(Math.min(max, value + step))} disabled={value >= max}>{'+'}</button>
     </span>
+  );
+}
+
+// Éditeur de CATALOGUE de faces (onglet Forge), en MAÎTRE-DÉTAIL : la liste des
+// faces à gauche, l'édition de la face sélectionnée à droite. Remplace l'ancien
+// onglet surchargé — la génération aléatoire ayant disparu, il ne reste que les
+// faces du catalogue (+ réglages contextuels : valeur de palier, enchaînement
+// de la Relance). NB : `row()` renvoie du JSX (pas un sous-composant) pour ne pas
+// remonter les champs à chaque frappe (perte de focus).
+const FORGE_RAR = [['commun', 'Commune', '#7c9a5a'], ['rare', 'Rare', '#7a5ad4'], ['legendaire', 'Légendaire', '#d4762e']];
+function ForgeCatalogEditor({ ov, setOv, setStatus }) {
+  const F = DEFAULTS.forge;
+  const catalog = ov.forge?.catalog ?? F.catalog ?? [];
+  const [sel, setSel] = useState(0);
+  const idx = Math.min(sel, catalog.length - 1);
+  const face = catalog[idx] || null;
+
+  const setCat = (arr) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), catalog: arr } })); };
+  const updFace = (patch) => setCat(catalog.map((f, j) => (j === idx ? { ...f, ...patch } : f)));
+  const uid = () => `face-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
+  const addFace = () => { const arr = [...catalog, { key: uid(), name: 'Nouvelle face', name_en: 'New face', rarity: 'commun', price: 50, slot: 1, value: 3, effects: [], enabled: true }]; setCat(arr); setSel(arr.length - 1); };
+  const dupFace = () => { if (!face) return; const arr = [...catalog.slice(0, idx + 1), { ...face, key: uid(), name: `${face.name} (copie)` }, ...catalog.slice(idx + 1)]; setCat(arr); setSel(idx + 1); };
+  const delFace = () => { if (!face) return; setCat(catalog.filter((_, j) => j !== idx)); setSel(Math.max(0, idx - 1)); };
+
+  // Valeur d'un palier d'effet (COMMUNE à toutes les faces qui l'utilisent).
+  const tiers = (type) => (ov.forge?.effects?.[type]?.tiers ?? F.effects[type]?.tiers ?? []);
+  const setTier = (type, ti, v) => { setStatus(null); setOv((p) => { const eff = { ...(p.forge?.effects || {}) }; const cur = eff[type]?.tiers ?? F.effects[type].tiers; const arr = [...cur]; arr[ti] = v; eff[type] = { ...(eff[type] || {}), tiers: arr }; return { ...p, forge: { ...(p.forge || {}), effects: eff } }; }); };
+  const relGet = () => (ov.forge?.relance?.enchainement ?? F.relance.enchainement);
+  const setRel = (v) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), relance: { ...F.relance, ...(p.forge?.relance || {}), enchainement: v } } })); };
+
+  // Effets de la face sélectionnée (0→3). Écrit toujours `effects` (et retire la
+  // forme héritée `effect`) pour rester sur le modèle moderne.
+  const effs = faceEffects(face);
+  const setEffs = (arr) => updFace({ effects: arr, effect: undefined });
+  const updEff = (i, patch) => setEffs(effs.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+  const addEff = () => { if (effs.length < MAX_FACE_EFFECTS) setEffs([...effs, { type: Object.keys(F.effects)[0], tier: 0 }]); };
+  const delEff = (i) => setEffs(effs.filter((_, j) => j !== i));
+
+  const rarMeta = (r) => FORGE_RAR.find((x) => x[0] === r) || FORGE_RAR[0];
+  const row = (label, children) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+      <span className="bal-label" style={{ width: 110, flexShrink: 0 }}>{label}</span>{children}
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', height: '100%', minHeight: 0 }}>
+      {/* Colonne gauche : catalogue */}
+      <div style={{ width: 248, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '100%', overflow: 'auto' }}>
+        <button className="btn btn--green" onClick={addFace} style={{ width: '100%' }}>+ Nouvelle face</button>
+        {catalog.length === 0 && <div className="bal-default">Aucune face. Ajoutez-en une.</div>}
+        {catalog.map((f, i) => (
+          <button key={f.key || i} type="button" onClick={() => setSel(i)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 8, cursor: 'pointer',
+              border: i === idx ? '2px solid #7a5ad4' : '1px solid rgba(122,94,58,0.2)',
+              background: i === idx ? 'rgba(122,90,212,0.08)' : '#fff', textAlign: 'left', opacity: f.enabled === false ? 0.5 : 1 }}>
+            <FaceTile face={f} size={38} slotTag={f.slot} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name || '(sans nom)'}</span>
+              <span className="bal-default" style={{ fontSize: 11 }}>slot {f.slot} · <span style={{ color: rarMeta(f.rarity)[2] }}>{rarMeta(f.rarity)[1]}</span>{f.enabled === false ? ' · off' : ''}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Colonne droite : détail de la face sélectionnée */}
+      <div style={{ flex: 1, minWidth: 0, maxHeight: '100%', overflow: 'auto' }}>
+        {!face ? (
+          <div className="bal-default" style={{ padding: 20 }}>Sélectionnez une face à gauche, ou créez-en une nouvelle.</div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <FaceTile face={face} size={88} slotTag={face.slot} />
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{face.name || '(sans nom)'}</div>
+                <div className="bal-default">{effs.length ? effs.map((e) => `${FORGE_EFFECTS[e.type]?.icon} ${FORGE_EFFECTS[e.type]?.fr}`).join(' · ') : 'Face de course (sans effet)'}</div>
+              </div>
+            </div>
+
+            {row('Nom', <input className="qed-input" style={{ flex: 1, minWidth: 160 }} value={face.name || ''} onChange={(e) => updFace({ name: e.target.value })} />)}
+            {row('Nom (EN)', <input className="qed-input" style={{ flex: 1, minWidth: 160 }} value={face.name_en || ''} onChange={(e) => updFace({ name_en: e.target.value })} />)}
+            {row('Rareté', (
+              <select className="qed-input" value={face.rarity || 'commun'} onChange={(e) => updFace({ rarity: e.target.value })}>
+                {FORGE_RAR.map(([k, lbl]) => <option key={k} value={k}>{lbl}</option>)}
+              </select>
+            ))}
+            {row('Slot cible', (<>
+              <select className="qed-input" value={face.slot || 1} onChange={(e) => updFace({ slot: parseInt(e.target.value, 10) })}>
+                {[1, 2, 3, 4, 5, 6].map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <span className="bal-default">forgeable uniquement sur ce slot</span>
+            </>))}
+            {row('Avance', (<>
+              <Stepper value={face.value ?? 0} onChange={(v) => updFace({ value: Math.max(0, Math.min(MAX_FACE_VALUE, v)) })} min={0} max={MAX_FACE_VALUE} />
+              <span className="bal-default">cases au lancer (0 = pas de recul si raté · max {MAX_FACE_VALUE})</span>
+            </>))}
+            {row('Prix', (<>
+              <input type="number" className="qed-input" style={{ width: 90 }} value={face.price ?? 0} onChange={(e) => updFace({ price: Math.max(0, parseInt(e.target.value, 10) || 0) })} />
+              <span className="bal-default">{'\u{1FA99}'} en boutique</span>
+            </>))}
+            {/* Effets (0→3) : chacun = type + palier (+ valeur du palier éditable). */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                <span className="bal-label" style={{ width: 110, flexShrink: 0 }}>Effets</span>
+                <span className="bal-default">{effs.length}/{MAX_FACE_EFFECTS}</span>
+                <button className="btn btn--sm" disabled={effs.length >= MAX_FACE_EFFECTS} onClick={addEff}>+ Ajouter un effet</button>
+              </div>
+              {effs.length === 0 && <div className="bal-default" style={{ marginLeft: 120 }}>Aucun effet — face de course pure.</div>}
+              {effs.map((e, i) => {
+                const tv = tiers(e.type)[e.tier ?? 0];
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginLeft: 120, marginBottom: 6 }}>
+                    <select className="qed-input" value={e.type} onChange={(ev) => updEff(i, { type: ev.target.value, tier: 0 })}>
+                      {Object.keys(F.effects).map((t) => <option key={t} value={t}>{FORGE_EFFECTS[t]?.icon} {FORGE_EFFECTS[t]?.fr || t}</option>)}
+                    </select>
+                    <select className="qed-input" value={e.tier ?? 0} onChange={(ev) => updEff(i, { tier: parseInt(ev.target.value, 10) })}>
+                      {tiers(e.type).map((_, ti) => <option key={ti} value={ti}>palier {ti + 1}</option>)}
+                    </select>
+                    {typeof tv === 'number'
+                      ? (<><span className="bal-default">valeur</span><input type="number" step="0.5" className="qed-input" style={{ width: 78 }} value={tv} onChange={(ev) => setTier(e.type, e.tier ?? 0, parseFloat(ev.target.value) || 0)} /></>)
+                      : (<span className="bal-default">valeur : <b>{String(tv)}</b></span>)}
+                    <button className="btn btn--ghost btn--sm" onClick={() => delEff(i)} title="Retirer cet effet">{'\u{1F5D1}'}</button>
+                  </div>
+                );
+              })}
+              {effs.some((e) => e.type === 'relance') && (
+                <div style={{ marginLeft: 120, marginTop: 4 }}>
+                  <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={relGet()} onChange={(e) => setRel(e.target.checked)} /> une Relance peut re-relancer</label>
+                </div>
+              )}
+            </div>
+            {row('Activée', (
+              <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={face.enabled !== false} onChange={(e) => updFace({ enabled: e.target.checked })} /> proposée en boutique</label>
+            ))}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 18, borderTop: '1px solid rgba(122,94,58,0.15)', paddingTop: 14 }}>
+              <button className="btn btn--ghost btn--sm" onClick={dupFace}>{'⧉'} Dupliquer</button>
+              <button className="btn btn--ghost btn--sm" onClick={delFace} style={{ color: '#b5341f' }}>{'\u{1F5D1}'} Supprimer</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -373,6 +519,26 @@ export default function BalanceEditor({ onClose }) {
     });
   };
   const resetSet = (k) => { setStatus(null); setOv((prev) => { const sets = { ...(prev.sets || {}) }; delete sets[k]; return { ...prev, sets }; }); };
+  // Création / suppression de sets PERSONNALISÉS (clé hors catalogue de base).
+  const isCustomSet = (k) => !!k && !DEFAULTS.sets[k];
+  const setSize = (k) => setVal(k, 'size') ?? 3;
+  // Sets custom pas encore fusionnés dans SETS (avant Enregistrer) → liste/menus.
+  const customSetEntries = Object.entries(ov.sets || {})
+    .filter(([k, o]) => o?.custom && !SETS[k])
+    .map(([k, o]) => [k, { icon: o.icon || '⚜️', name: o.name || k, color: o.color }]);
+  const setEntries = [...Object.entries(SETS), ...customSetEntries];
+  const addSet = () => {
+    const k = 'set_' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+    setStatus(null);
+    setOv((prev) => ({ ...prev, sets: { ...(prev.sets || {}), [k]: { custom: true, name: 'Nouveau set', name_en: 'New set', icon: '⚜️', color: '#a8771a', size: 2, bonus2: [], bonus3: [] } } }));
+    setSelSet(k);
+  };
+  const deleteSet = (k) => {
+    if (!window.confirm('Supprimer ce set ? Les objets assignés perdront leur appartenance.')) return;
+    setStatus(null);
+    setOv((prev) => { const sets = { ...(prev.sets || {}) }; delete sets[k]; return { ...prev, sets }; });
+    setSelSet(Object.keys(SETS)[0] || null);
+  };
 
   // --- Loot ---
   const lootVal = (k) => ov.loot?.[k] ?? DEFAULTS.loot[k];
@@ -674,41 +840,67 @@ export default function BalanceEditor({ onClose }) {
         ) : tab === 'sets' ? (
           <div className="qed-body">
             <div className="qed-list">
-              {Object.entries(SETS).map(([k, s]) => (
+              {setEntries.map(([k, s]) => (
                 <button key={k} className={`qed-item ${selSet === k ? 'is-active' : ''}`} onClick={() => { setSelSet(k); setStatus(null); }}>
-                  <span style={{ fontSize: 20, width: 26, textAlign: 'center' }}>{s.icon}</span>
+                  <span style={{ fontSize: 20, width: 26, textAlign: 'center' }}>{setVal(k, 'icon') || s.icon}</span>
                   <span style={{ flex: 1 }}>{setVal(k, 'name') || s.name}</span>
-                  {ov.sets?.[k] && <span className="qed-item-tag" title="Modifié">{'✎'}</span>}
+                  {isCustomSet(k)
+                    ? <span className="qed-item-tag" title="Set personnalisé">{'✦'}</span>
+                    : (ov.sets?.[k] && <span className="qed-item-tag" title="Modifié">{'✎'}</span>)}
                 </button>
               ))}
+              <button className="btn btn--green btn--sm" style={{ margin: '8px 6px 2px' }} onClick={addSet}>{'+'} Nouveau set</button>
             </div>
             <div className="bal-detail">
               <div className="bal-detail-scroll">
                 {(() => {
-                  const k = selSet; const s = SETS[k]; if (!s) return null;
+                  const k = selSet; if (!k) return null;
+                  if (!SETS[k] && !ov.sets?.[k]?.custom) return null;
+                  const size = setSize(k);
                   const members = (rows || []).filter((r) => r.set_key === k);
                   return (
                     <>
                       <div className="bal-card bal-card--mini">
-                        <span style={{ fontSize: 36 }}>{s.icon}</span>
+                        <input className="qed-input" style={{ width: 50, fontSize: 24, textAlign: 'center', padding: 4 }} value={setVal(k, 'icon') || ''} onChange={(e) => setSetField(k, 'icon', e.target.value)} title="Icône (emoji)" />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <input className="qed-input" value={setVal(k, 'name') || ''} onChange={(e) => setSetField(k, 'name', e.target.value)} />
+                          <input className="qed-input" value={setVal(k, 'name') || ''} onChange={(e) => setSetField(k, 'name', e.target.value)} placeholder="Nom du set" />
                           <div className="bal-default" style={{ marginTop: 4 }}>
-                            {members.length} pièce{members.length > 1 ? 's' : ''} assignée{members.length > 1 ? 's' : ''}{members.length ? ` : ${members.map((r) => r.name).join(', ')}` : ' (assigne des objets via leur onglet Infos → Set)'}
+                            {members.length}/{size} pièce{size > 1 ? 's' : ''}{members.length ? ` : ${members.map((r) => r.name).join(', ')}` : ' (assigne des objets via leur onglet Infos → Set)'}
                           </div>
                         </div>
+                        <input type="color" value={setVal(k, 'color') || '#a8771a'} onChange={(e) => setSetField(k, 'color', e.target.value)} title="Couleur du set" style={{ width: 34, height: 34, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
                       </div>
+
+                      <div className="bal-row" style={{ marginTop: 6 }}>
+                        <span className="bal-label" style={{ width: 72 }}>Nom (EN)</span>
+                        <input className="qed-input" style={{ flex: 1 }} value={setVal(k, 'name_en') || ''} onChange={(e) => setSetField(k, 'name_en', e.target.value)} placeholder="English name" />
+                      </div>
+
+                      <div className="bal-row" style={{ marginTop: 8 }}>
+                        <span className="bal-label" style={{ width: 72 }}>Taille</span>
+                        {[2, 3].map((n) => (
+                          <button key={n} type="button" className={`btn btn--sm ${size === n ? 'btn--green' : 'btn--ghost'}`} onClick={() => setSetField(k, 'size', n)}>{n} objets</button>
+                        ))}
+                        <span className="bal-default">nombre de pièces du set</span>
+                      </div>
+
                       <div className="qed-label" style={{ marginTop: 12 }}>{'\u{1F948}'} Bonus à 2 pièces équipées</div>
                       <SetBonusEditor effects={setVal(k, 'bonus2') || []} onChange={(e) => setSetField(k, 'bonus2', e)} />
-                      <div className="qed-label" style={{ marginTop: 14 }}>{'\u{1F947}'} Bonus à 3 pièces équipées</div>
-                      <SetBonusEditor effects={setVal(k, 'bonus3') || []} onChange={(e) => setSetField(k, 'bonus3', e)} />
+                      {size >= 3 && (
+                        <>
+                          <div className="qed-label" style={{ marginTop: 14 }}>{'\u{1F947}'} Bonus à 3 pièces équipées</div>
+                          <SetBonusEditor effects={setVal(k, 'bonus3') || []} onChange={(e) => setSetField(k, 'bonus3', e)} />
+                        </>
+                      )}
                     </>
                   );
                 })()}
               </div>
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
-                <button className="btn btn--ghost" onClick={() => resetSet(selSet)} disabled={!ov.sets?.[selSet]}>{'↺'} Valeurs d'origine</button>
+                {isCustomSet(selSet)
+                  ? <button className="btn btn--ghost" onClick={() => deleteSet(selSet)}>{'🗑'} Supprimer le set</button>
+                  : <button className="btn btn--ghost" onClick={() => resetSet(selSet)} disabled={!ov.sets?.[selSet]}>{'↺'} Valeurs d'origine</button>}
                 {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
                 {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>
@@ -788,59 +980,7 @@ export default function BalanceEditor({ onClose }) {
           <div className="qed-body">
             <div className="bal-detail">
               <div className="bal-detail-scroll">
-                {(() => {
-                  const F = DEFAULTS.forge;
-                  const fGet = (k) => ov.forge?.[k] ?? F[k];
-                  const setF = (k, v) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), [k]: v } })); };
-                  const relGet = () => (ov.forge?.relance?.enchainement ?? F.relance.enchainement);
-                  const setRel = (v) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), relance: { ...F.relance, ...(p.forge?.relance || {}), enchainement: v } } })); };
-                  const arrGet = (k) => (ov.forge?.[k] ?? F[k]);
-                  const setArr = (k, i, v) => { setStatus(null); const arr = [...arrGet(k)]; arr[i] = v; setF(k, arr); };
-                  const tiersGet = (type) => (ov.forge?.effects?.[type]?.tiers ?? F.effects[type].tiers);
-                  const setTier = (type, i, v) => {
-                    setStatus(null);
-                    setOv((p) => {
-                      const eff = { ...(p.forge?.effects || {}) };
-                      const cur = eff[type]?.tiers ?? F.effects[type].tiers;
-                      const arr = [...cur]; arr[i] = v;
-                      eff[type] = { ...(eff[type] || {}), tiers: arr };
-                      return { ...p, forge: { ...(p.forge || {}), effects: eff } };
-                    });
-                  };
-                  const BANDS = ['1-2', '3-4', '5-6', '7-8', '9-10', '11-12'];
-                  return (
-                    <>
-                      <div className="qed-label" style={{ marginBottom: 10 }}>{'\u{1F3B2}'} Forge de dés — réglages</div>
-                      <div className="bal-row"><span className="bal-label" style={{ width: 240 }}>Puissance max d'une face</span>
-                        <Stepper value={fGet('budgetMax')} onChange={(v) => setF('budgetMax', v)} min={1} max={12} /><span className="bal-default">défaut {F.budgetMax}</span></div>
-                      <div className="bal-row"><span className="bal-label" style={{ width: 240 }}>Relance : enchaînement</span>
-                        <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><input type="checkbox" checked={relGet()} onChange={(e) => setRel(e.target.checked)} /> une face Relance peut re-relancer</label></div>
-
-                      <div className="qed-label" style={{ margin: '16px 0 8px' }}>Bandes de puissance — prix & rareté</div>
-                      {BANDS.map((b, i) => (
-                        <div className="bal-row" key={b}><span className="bal-label" style={{ width: 110 }}>P {b}</span>
-                          <span className="bal-default">prix</span><input type="number" className="qed-input" style={{ width: 80 }} value={arrGet('priceByBand')[i]} onChange={(e) => setArr('priceByBand', i, Math.max(0, parseInt(e.target.value, 10) || 0))} />
-                          <span className="bal-default">rareté</span><input type="number" className="qed-input" style={{ width: 70 }} value={arrGet('rarityByBand')[i]} onChange={(e) => setArr('rarityByBand', i, Math.max(0, parseInt(e.target.value, 10) || 0))} />
-                        </div>
-                      ))}
-
-                      <div className="qed-label" style={{ margin: '16px 0 8px' }}>Effets — valeurs des paliers</div>
-                      {Object.keys(F.effects).map((type) => {
-                        const meta = FORGE_EFFECTS[type];
-                        return (
-                          <div className="bal-row" key={type} style={{ gap: 8, flexWrap: 'wrap' }}>
-                            <span className="bal-label" style={{ width: 160 }}>{meta?.icon} {meta?.fr || type}</span>
-                            {tiersGet(type).map((t, i) => (
-                              typeof t === 'number'
-                                ? <input key={i} type="number" className="qed-input" style={{ width: 70 }} step="0.5" value={t} onChange={(e) => setTier(type, i, parseFloat(e.target.value) || 0)} />
-                                : <span key={i} className="bal-default" style={{ padding: '4px 8px', border: '1px dashed rgba(122,94,58,0.3)', borderRadius: 6 }}>{String(t)}</span>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </>
-                  );
-                })()}
+                <ForgeCatalogEditor ov={ov} setOv={setOv} setStatus={setStatus} />
               </div>
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
@@ -1148,7 +1288,7 @@ export default function BalanceEditor({ onClose }) {
                           <span className="bal-label">Set</span>
                           <select className="qed-select" style={{ width: 200 }} value={draft.set || ''} onChange={(ev) => set({ set: ev.target.value })}>
                             <option value="">— aucun —</option>
-                            {Object.entries(SETS).map(([k, s]) => <option key={k} value={k}>{s.icon} {s.name}</option>)}
+                            {setEntries.map(([k, s]) => <option key={k} value={k}>{setVal(k, 'icon') || s.icon} {setVal(k, 'name') || s.name}</option>)}
                           </select>
                           <span className="bal-default">bonus à 2/3 pièces équipées</span>
                         </div>

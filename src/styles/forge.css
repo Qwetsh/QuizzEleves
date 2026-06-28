@@ -107,6 +107,92 @@
 }
 .facetile-pip.on { background: #fffef2; box-shadow: 0 0 3px rgba(255, 255, 255, 0.7); }
 
+/* ============================================================
+   ATELIER DE FORGE — modale TBI (même visuel que mobile, layout grand écran).
+   Réutilise les classes .forge-mob-* (creuset, réserve, modale, ghost) ; ici on
+   ne définit que le CHROME desktop (panneau de lave contenu + 2 colonnes).
+   ============================================================ */
+.forge-desk-overlay {
+  position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center;
+  padding: 18px; background: rgba(12, 6, 4, 0.66); backdrop-filter: blur(3px);
+}
+.forge-desk {
+  position: relative; width: min(1000px, 96vw); height: min(88vh, 760px); overflow: hidden;
+  border-radius: 20px; display: flex; flex-direction: column; color: #f2e7d3;
+  border: 1px solid rgba(255, 150, 60, 0.18); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  /* Mur de briques en appareil à la française (briques décalées d'une rangée sur
+     deux) via une tuile SVG 108×92 : joints sombres + léger relief clair. Le foyer
+     (dégradés rouges) tinte par-dessus. */
+  background:
+    radial-gradient(circle at 22% 12%, rgba(150, 58, 33, 0.42), transparent 40%),
+    radial-gradient(circle at 80% 22%, rgba(96, 38, 28, 0.38), transparent 44%),
+    radial-gradient(circle at 58% 74%, rgba(128, 46, 23, 0.34), transparent 54%),
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='108'%20height='92'%3E%3Cg%20fill='rgba(8,3,2,0.55)'%3E%3Crect%20width='108'%20height='3'/%3E%3Crect%20y='45'%20width='108'%20height='3'/%3E%3Crect%20width='3'%20height='46'/%3E%3Crect%20x='54'%20y='46'%20width='3'%20height='46'/%3E%3C/g%3E%3Cg%20fill='rgba(255,180,110,0.06)'%3E%3Crect%20y='3'%20width='108'%20height='2'/%3E%3Crect%20y='48'%20width='108'%20height='2'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #4a241a 0%, #582a1c 45%, #5c2a18 72%, #341910 100%);
+}
+.forge-desk::after { /* halo de foyer, CONTENU dans le panneau (pas fixed) */
+  content: ''; position: absolute; left: 50%; bottom: -70px; transform: translateX(-50%);
+  width: 62%; height: 250px; border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, rgba(255, 120, 20, 0.4), rgba(255, 70, 0, 0.1) 56%, transparent 76%);
+  animation: fmob-heat 2.8s ease-in-out infinite;
+}
+.forge-desk-embers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.forge-desk-x {
+  position: absolute; top: 12px; right: 14px; z-index: 5; width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: rgba(255, 170, 90, 0.16); color: #ffce7a; font-size: 18px; cursor: pointer;
+  transition: background .15s;
+}
+.forge-desk-x:hover { background: rgba(255, 170, 90, 0.3); }
+.forge-desk-head { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 18px 18px 4px; position: relative; z-index: 2; }
+.forge-desk-title { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: 1px; color: #ffce7a; text-shadow: 0 2px 10px rgba(255, 120, 30, 0.5); }
+.forge-desk-gold { background: rgba(255, 200, 110, 0.14); border: 1px solid rgba(255, 200, 110, 0.4); color: #ffce7a; border-radius: 999px; padding: 4px 14px; font-weight: 800; font-family: var(--font-display); }
+.forge-desk-body { flex: 1; min-height: 0; display: flex; gap: 24px; padding: 8px 24px 24px; position: relative; z-index: 2; align-items: flex-start; }
+.forge-desk-left { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: center; }
+.forge-desk-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 18px; max-height: 100%; overflow-y: auto; padding-right: 4px; }
+.forge-desk-sec-title { font-family: var(--font-display); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: rgba(242, 231, 211, 0.6); margin-bottom: 6px; }
+.forge-desk-buy-list { display: flex; flex-direction: column; gap: 8px; }
+.forge-desk-buy-row {
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28); border: 1px solid color-mix(in srgb, var(--fam, #ff9a3a) 35%, rgba(255, 180, 90, 0.18));
+}
+.forge-desk-buy-info { flex: 1; min-width: 0; }
+.forge-desk-buy-slot { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: rgba(242, 231, 211, 0.55); }
+.forge-desk-buy-eff { font-size: 14px; color: #f2e7d3; overflow: hidden; text-overflow: ellipsis; }
+
+/* Éclaboussure de lave à la pose d'une face (gouttes projetées depuis le moule). */
+.forge-splash { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.forge-splash-drop {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff2c6, #ffae3a 48%, #d8401a 82%);
+  box-shadow: 0 0 9px rgba(255, 140, 40, 0.95), 0 0 3px rgba(255, 225, 160, 0.9);
+  animation: forge-splash-fly 0.72s cubic-bezier(.25, .6, .3, 1) both;
+}
+@keyframes forge-splash-fly {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  18%  { opacity: 1; }
+  62%  { opacity: 0.95; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.15); opacity: 0; }
+}
+
+/* Multi-effets (2-3) : le ruban devient acier neutre et porte une rangée de
+   pastilles, chacune à la couleur de SA famille (var --fam propre à la pastille). */
+.facetile--multi .facetile-ribbon {
+  background: linear-gradient(180deg, #d3d8e0, #9aa1ad);
+  gap: calc(var(--s, 64px) * 0.04);
+}
+.facetile-chips { display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--s, 64px) * 0.05); }
+.facetile-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: calc(var(--s, 64px) * 0.27); height: calc(var(--s, 64px) * 0.27);
+  border-radius: 50%; line-height: 1;
+  font-size: calc(var(--s, 64px) * 0.15);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fam, #9aa1ad) 60%, #ffffff), var(--fam, #9aa1ad));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 0 4px color-mix(in srgb, var(--fam, #9aa1ad) 45%, #000),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
 /* Variante « nue » pour les faces du dé 3D (métal, sans ombre portée propre). */
 .facetile--flat {
   border: none;

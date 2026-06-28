@@ -24,6 +24,8 @@ export default {
   'log.store.frozen':            { fr: '🧊 {emoji} {name} est gelé : tour sauté !', en: '🧊 {emoji} {name} is frozen: turn skipped!' },
   'log.store.roll.bonus':        { fr: '{emoji} {name} lance le dé : {value} (+{bonus} bonus) → avance de {eff} !',
                                    en: '{emoji} {name} rolls the die: {value} (+{bonus} bonus) → advances {eff}!' },
+  'log.store.roll.malus':        { fr: '{emoji} {name} lance le dé : {value} (−{malus} malus) → avance de {eff} !',
+                                   en: '{emoji} {name} rolls the die: {value} (−{malus} malus) → advances {eff}!' },
   'log.store.roll':              { fr: '{emoji} {name} lance le dé : {value}', en: '{emoji} {name} rolls the die: {value}' },
   'log.store.pilote':            { fr: '🧭 Pilote : choisis ta voie !', en: '🧭 Pilot: choose your path!' },
   'log.store.randomPath':        { fr: '🎲 Voie choisie au hasard !', en: '🎲 Path chosen at random!' },

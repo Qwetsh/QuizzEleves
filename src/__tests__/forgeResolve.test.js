@@ -2,7 +2,7 @@
 // dans la chaîne de recul (max avec le Bouclier, jamais la somme — spec §6.3).
 import { describe, it, expect, afterEach } from 'vitest';
 import { applyBalance } from '../logic/balanceConfig.js';
-import { resolveFaceAtRoll, aegisReduction, facePower, buildFaceOfPower, rollShopFace, generateFaceStock, generateSlotFaces, faceRollEngineActions, isRelanceFace, FORGE_RESOLVED } from '../logic/forgeEffects.js';
+import { resolveFaceAtRoll, aegisReduction, facePower, faceRollEngineActions, isRelanceFace, FORGE_RESOLVED } from '../logic/forgeEffects.js';
 import { applyRecul, resolveWrongAnswer } from '../logic/turnHelpers.js';
 
 const BOARD = (() => {
@@ -120,44 +120,11 @@ describe('Forge — armement des effets au lancer', () => {
   });
 });
 
-describe('Forge — puissance & générateur de faces', () => {
+describe('Forge — puissance de face', () => {
   it('facePower = valeur + coût de l\'effet', () => {
     expect(facePower({ value: 5, effect: null })).toBe(5);
     expect(facePower({ value: 3, effect: { type: 'prime', tier: 1 } })).toBe(7); // 3 + coût 4
     expect(facePower({ value: 6, effect: { type: 'egide', tier: 2 } })).toBe(12); // 6 + coût 6
-  });
-
-  it('buildFaceOfPower produit une face de la puissance demandée (P = 1..12)', () => {
-    for (let P = 1; P <= 12; P++) {
-      const f = buildFaceOfPower(P, () => 0);
-      expect(f).not.toBeNull();
-      expect(facePower(f)).toBe(P);
-      expect(f.value).toBeGreaterThanOrEqual(0);
-      expect(f.value).toBeLessThanOrEqual(6);
-    }
-  });
-
-  it('rollShopFace : puissance dans [1,12] + un prix', () => {
-    const f = rollShopFace(() => 0);
-    expect(f.power).toBeGreaterThanOrEqual(1);
-    expect(f.power).toBeLessThanOrEqual(12);
-    expect(typeof f.price).toBe('number');
-  });
-
-  it('generateFaceStock renvoie le nombre de faces demandé', () => {
-    expect(generateFaceStock(8, () => 0)).toHaveLength(8);
-  });
-
-  it('generateSlotFaces : une offre par slot (1→6), chacune étiquetée de son slot', () => {
-    const stock = generateSlotFaces(() => 0);
-    expect(stock).toHaveLength(6);
-    stock.forEach((f, i) => expect(f.slot).toBe(i + 1));
-  });
-
-  it('enabledTypes restreint les effets proposés', () => {
-    // puissance 8 sans effet autorisé : impossible en face « course » pure (max 6)
-    // → la seule option reste une face à effet ; si aucun effet permis, null.
-    expect(buildFaceOfPower(8, () => 0, [])).toBeNull();
   });
 });
 
@@ -166,5 +133,40 @@ describe('Forge — face valeur 0 = pas de recul', () => {
     const r = resolveWrongAnswer(team(), BOARD, 'X', 0);
     expect(r.updatedTeam.pos).toBe('n10');
     expect(r.updatedTeam.wrong).toBe(1);
+  });
+});
+
+describe('Forge — faces multi-effets (jusqu\'à 3)', () => {
+  it('facePower somme les coûts de tous les effets', () => {
+    // 2 (avance) + coût(prime,1)=4 + coût(egide,0)=2 = 8
+    expect(facePower({ value: 2, effects: [{ type: 'prime', tier: 1 }, { type: 'egide', tier: 0 }] })).toBe(8);
+  });
+
+  it('deux Prime cumulent l\'or, une Prime + un Répit arment les deux', () => {
+    const r = resolveFaceAtRoll(team({ money: 0 }), { effects: [{ type: 'prime', tier: 0 }, { type: 'prime', tier: 1 }] });
+    expect(r.patch.money).toBe(35); // 10 + 25
+    const r2 = resolveFaceAtRoll(team({ money: 0 }), { effects: [{ type: 'prime', tier: 0 }, { type: 'repit', tier: 1 }] });
+    expect(r2.patch.money).toBe(10);
+    expect(r2.patch.forgeRepit).toBe(10);
+  });
+
+  it('deux Égide fusionnent en prenant la plus forte (cancel l\'emporte)', () => {
+    const r = resolveFaceAtRoll(team(), { effects: [{ type: 'egide', tier: 0 }, { type: 'egide', tier: 2 }] });
+    expect(r.patch.forgeAegis).toBe('cancel');
+  });
+
+  it('faceRollEngineActions renvoie une action par Recharge', () => {
+    const acts = faceRollEngineActions({ effects: [{ type: 'recharge', tier: 0 }, { type: 'recharge', tier: 2 }] });
+    expect(acts).toEqual([{ action: 'gainCharge', n: 1 }, { action: 'gainCharge', n: 'full' }]);
+  });
+
+  it('isRelanceFace détecte une Relance dans le tableau d\'effets', () => {
+    expect(isRelanceFace({ effects: [{ type: 'prime', tier: 0 }, { type: 'relance', tier: 0 }] })).toBe(true);
+    expect(isRelanceFace({ effects: [{ type: 'prime', tier: 0 }] })).toBe(false);
+  });
+
+  it('la forme héritée `effect` (singulier) reste résolue', () => {
+    const r = resolveFaceAtRoll(team({ money: 0 }), { effect: { type: 'prime', tier: 1 } });
+    expect(r.patch.money).toBe(25);
   });
 });

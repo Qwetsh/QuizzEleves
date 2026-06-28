@@ -10,20 +10,25 @@ import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { sellPrice } from '../../store/itemHandlers';
+import { mergedItem } from '../../logic/itemEffects';
 import { soundClick } from '../../logic/sounds';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import SetBonusInfo from './SetBonusInfo';
 
-// pop : { cellKey: 'bag:N' | 'equip:slot', itemKey }
+// pop : { cellKey: 'bag:N' | 'equip:slot', itemKey, enchants? }
 export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
   const T = useT();
   const team = useGameStore((s) => s.teams[s.currentTeam]);
-  const item = ITEMS[pop.itemKey];
-  if (!item) return null;
+  if (!ITEMS[pop.itemKey]) return null;
+  // Objet enchanté : on FUSIONNE les enchantements pour que la fiche affiche AUSSI
+  // les effets ajoutés (✦), pas seulement ceux de l'objet de base.
+  const item = pop.enchants?.length ? mergedItem({ key: pop.itemKey, enchants: pop.enchants }) : ITEMS[pop.itemKey];
   const rar = RARITIES[item.rarity];
   const img = itemImg(item);
-  const fx = itemEffectLines(item);
+  // Effet d'un ingrédient d'alchimie : caché (???) tant que l'équipe ne l'a pas
+  // découvert (utilisé seul) — cohérent avec l'app mobile.
+  const fx = itemEffectLines(item, { key: pop.itemKey, knownIngredients: team?.knownIngredients });
   const canUse = pop.cellKey.startsWith('bag:') && item.slot === 'consumable';
   const slotName = item.slot === 'consumable' ? T('modal.item.consumable') : SLOTS[item.slot]?.name;
   return createPortal(

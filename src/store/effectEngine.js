@@ -7,7 +7,7 @@
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
 import { moveForward } from '../logic/pathfinding.js';
-import { reducedSteal, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect } from '../logic/itemEffects.js';
+import { reducedSteal, applyStealProtection, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect } from '../logic/itemEffects.js';
 import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
@@ -293,14 +293,16 @@ function applyMoney(set, get, action, ctx, indices) {
     for (const i of indices) {
       if (i === stealRecipient) continue;
       const victim = nt[i];
-      // Immunité au vol d'or : rien n'est pris (indication au journal/toast).
+      // Immunité au vol d'or : tirée UNE SEULE FOIS ici. On enchaîne ensuite sur
+      // applyStealProtection (pourcentage seul) plutôt que reducedSteal, qui
+      // re-testerait l'immunité et rejouerait sa probabilité (double tirage).
       if (isGoldStealImmune(victim)) {
         addLog(tg('log.fx.goldImmune', { emoji: victim.emoji, name: victim.name }));
         announce(set, get, '🔒', tg('log.fx.goldImmune.toast', { name: victim.name }), '#c8911f');
         continue;
       }
       const raw = Math.min(amountFor(victim), victim.money ?? 0);
-      const stolen = reducedSteal(victim, raw);
+      const stolen = applyStealProtection(victim, raw);
       nt[i] = { ...victim, money: Math.max(0, (victim.money ?? 0) - stolen) };
       nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) + stolen };
       // Détail : montant visé, protection éventuelle de la victime, butin réel.

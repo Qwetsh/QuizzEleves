@@ -16,3 +16,6 @@ scripts/generated/translated.json
 
 # Sauvegardes DB locales (restauration)
 backups/
+
+# Captures temporaires de design (DesignSync / tests visuels)
+.tmp-*

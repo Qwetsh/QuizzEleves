@@ -231,6 +231,15 @@ export function reducedSteal(victim, amount) {
   // Immunité au vol d'or (flag dédié ou protection 100 %) : rien volé. Couvre
   // tous les sites de vol qui passent par ici (duel, événement volArgent, moteur).
   if (isGoldStealImmune(victim)) return 0;
+  return applyStealProtection(victim, amount);
+}
+
+/**
+ * Réduction par POURCENTAGE seule (stealProtection), SANS le test d'immunité.
+ * Pour les appelants qui ont DÉJÀ évalué `isGoldStealImmune` (le moteur d'effets) :
+ * évite de re-jouer la probabilité de l'immunité une seconde fois (double tirage).
+ */
+export function applyStealProtection(victim, amount) {
   const protection = Math.min(100, getEffectValue(victim, 'stealProtection'));
   return Math.max(0, Math.floor(amount * (1 - protection / 100)));
 }

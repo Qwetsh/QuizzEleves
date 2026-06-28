@@ -474,11 +474,23 @@
   transform-style: preserve-3d;
   will-change: transform;
 }
+/* Rotation continue « vitrine » (Forge) : tumble lent en boucle pour exposer les
+   faces forgées du dé de l'équipe courante. */
+.dice3d-cube.is-idle {
+  animation: dice3d-idle 15s linear infinite;
+}
+@keyframes dice3d-idle {
+  from { transform: rotateX(0deg)   rotateY(0deg); }
+  to   { transform: rotateX(360deg) rotateY(720deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice3d-cube.is-idle { animation: none; }
+}
 .dice3d-face {
   position: absolute;
   inset: 0;
   background: linear-gradient(155deg, #fffefb 0%, #f4ead5 60%, #d7bf85 100%);
-  border-radius: 14%;
+  border-radius: 0;
   box-shadow:
     inset 0 0 0 2px rgba(122, 94, 58, 0.18),
     inset 0 4px 0 rgba(255,255,255,0.6),

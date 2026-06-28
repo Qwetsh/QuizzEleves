@@ -9,6 +9,7 @@
 //   taxReduction     -N % sur les impôts et taxes subis
 //   stealProtection  -N % sur les pièces qu'on te vole
 //   reculReduction   -N cases sur les reculs subis (mauvaise réponse, Foudre, défaite de duel)
+//   diceMalus        -N cases sur l'avancée à CHAQUE lancer (handicap, plancher 0 case)
 //   tempeteImmune    immunisé contre la Tempête
 //   oubliProtect     le Trou de l'oubli devient un recul de 3 cases
 //   fightStealBonus  +N pièces volées quand tu gagnes un duel (choix "voler")

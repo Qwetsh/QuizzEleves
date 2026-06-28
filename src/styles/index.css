@@ -280,7 +280,11 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; letter-spac
    réservées) → la coupe tombe net sur 6 quelle que soit la longueur des noms. */
 .hud-conso-grid {
   display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
-  max-height: 204px; overflow-y: auto; overflow-x: hidden;
+  /* Marge intérieure : laisse respirer l'agrandissement au survol (sinon le bord
+     haut des objets de la 1re rangée est rogné par l'overflow et semble passer
+     sous le titre). max-height compensée d'autant pour garder ~2 rangées. */
+  padding: 6px 6px 4px;
+  max-height: 214px; overflow-y: auto; overflow-x: hidden;
   scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink-500) 45%, transparent) transparent;
 }
 .hud-conso-grid::-webkit-scrollbar { width: 6px; }

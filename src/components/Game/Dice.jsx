@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { canUsePowerInContext } from '../../logic/powerActivator';
 import { useT } from '../../i18n';
+import { extOn } from '../../extensions/registry';
+import { getDieFaces } from '../../logic/forge';
 import Dice3D from './Dice3D';
 
 export default function Dice() {
@@ -17,6 +19,7 @@ export default function Dice() {
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const usePower = useGameStore((s) => s.usePower);
+  const openForge = useGameStore((s) => s.openForge);
 
   const pendingLanding = useGameStore((s) => s.pendingLanding);
   // Une séquence d'effet d'objet en cours (choix de case, d6, cible...) bloque le dé.
@@ -24,8 +27,13 @@ export default function Dice() {
   const showChargePicker = useGameStore((s) => s.showChargePicker);
   const showTargetPicker = useGameStore((s) => s.showTargetPicker);
   const showDuelChoice = useGameStore((s) => s.showDuelChoice);
+  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice;
   const team = teams[currentTeam];
+  // Extension Forge : on montre le dé PROPRE à l'équipe qui passe (faces forgées),
+  // en rotation continue puisque chaque dé diffère. Sans l'extension : visuel
+  // standard inchangé (dé générique figé).
+  const faces = forgeOn && team ? getDieFaces(team) : null;
   const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding, pendingActions };
   const canRelance = team?.powers?.relance?.charges > 0 && canUsePowerInContext('relance', ctx);
 
@@ -35,15 +43,16 @@ export default function Dice() {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <Dice3D
-        value={diceValue || 1}
-        rolling={false}
-        size={88}
-        disabled={disabled}
-      />
+      {forgeOn ? (
+        <div onClick={openForge} role="button" title={T('game.openForge')} style={{ cursor: 'pointer' }}>
+          <Dice3D value={diceValue || 1} rolling={false} idleSpin faces={faces} size={88} disabled={disabled} />
+        </div>
+      ) : (
+        <Dice3D value={diceValue || 1} rolling={false} faces={faces} size={88} disabled={disabled} />
+      )}
 
       <div style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: pendingLanding ? 'var(--gold-600)' : 'var(--ink-500)' }}>
-        {rolling ? T('game.diceSpinning') : pendingLanding ? (canRelance ? T('game.rerollPossible') : T('game.onTheWay')) : (disabled ? '' : T('game.clickToRoll'))}
+        {rolling ? T('game.diceSpinning') : pendingLanding ? (canRelance ? T('game.rerollPossible') : T('game.onTheWay')) : ''}
       </div>
 
       <button

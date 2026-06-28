@@ -28,9 +28,12 @@ describe('Forge — buyFace', () => {
     const t = S().teams[0];
     expect(t.money).toBe(75);
     expect(t.faceStock).toHaveLength(1);
-    expect(t.faceStock[0]).toEqual({ value: 3, effect: null, slot: 1 }); // slot cible conservé
-    expect(S().shopFaceStock).toHaveLength(1); // offre du slot renouvelée
-    expect(S().shopFaceStock[0].slot).toBe(1);
+    expect(t.faceStock[0]).toEqual({ value: 3, effects: [], slot: 1 }); // slot cible conservé
+    expect(S().shopFaceStock).toHaveLength(1); // emplacement renouvelé depuis le catalogue
+    const repl = S().shopFaceStock[0];
+    expect(repl.key).toBeTruthy();              // une vraie face du catalogue
+    expect(repl.slot).toBeGreaterThanOrEqual(1);
+    expect(repl.slot).toBeLessThanOrEqual(6);
   });
 
   it('refuse si l\'or est insuffisant', () => {
@@ -52,7 +55,7 @@ describe('Forge — forgeFace (face liée à son slot)', () => {
     useGameStore.setState({ teams: [baseTeam({ faceStock: [{ value: 0, effect: { type: 'egide', tier: 2 }, slot: 3 }] })] });
     S().forgeFace(2, 0); // slot index 2 = base 3 = slot cible de la face
     const faces = getDieFaces(S().teams[0]);
-    expect(faces[2]).toEqual({ base: 3, value: 0, effect: { type: 'egide', tier: 2 } });
+    expect(faces[2]).toEqual({ base: 3, value: 0, effects: [{ type: 'egide', tier: 2 }] });
     expect(S().teams[0].faceStock).toHaveLength(0);
   });
 
