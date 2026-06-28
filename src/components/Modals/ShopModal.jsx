@@ -77,7 +77,8 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
         const item = ITEMS[key];
         if (!item) return null;
         return (
-          <ItemCard key={`${key}-${idx}`} item={item} bag={bag} equipment={equipment} money={team.money}
+          <ItemCard key={`${key}-${idx}`} item={item} itemKey={key} knownIngredients={team.knownIngredients}
+            bag={bag} equipment={equipment} money={team.money}
             discount={discount} onBuy={() => { soundClick(); onBuyItem(key); }} T={T} />
         );
       })}
@@ -86,7 +87,7 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
 }
 
 /* ---------- Carte d'un objet (visuel « carte à collectionner ») ---------- */
-function ItemCard({ item, bag, equipment, money, discount, onBuy, T }) {
+function ItemCard({ item, itemKey, knownIngredients, bag, equipment, money, discount, onBuy, T }) {
   const [fxOpen, setFxOpen] = useState(false);
   const rarityColor = RARITIES[item.rarity]?.color || '#888';
   const isConsumable = item.slot === 'consumable';
@@ -95,7 +96,8 @@ function ItemCard({ item, bag, equipment, money, discount, onBuy, T }) {
   const bagFull = needsBagRoom && bag.filter(Boolean).length >= BAG_SIZE;
   const price = discount < 1 ? Math.max(1, Math.round(item.price * discount)) : item.price;
   const canBuy = money >= price && !bagFull;
-  const fx = itemEffectLines(item);
+  // Ingrédient d'alchimie : effet caché (???) tant que l'équipe ne l'a pas découvert.
+  const fx = itemEffectLines(item, { key: itemKey, knownIngredients });
   const img = itemImg(item);
   const slotName = isConsumable ? T('modal.item.consumable') : SLOTS[item.slot]?.name;
 
