@@ -149,13 +149,16 @@ function ForgeCatalogEditor({ ov, setOv, setStatus }) {
   const F = DEFAULTS.forge;
   const catalog = ov.forge?.catalog ?? F.catalog ?? [];
   const [sel, setSel] = useState(0);
+  const [fSlot, setFSlot] = useState('all'); // filtre slot : 'all' | 1..6
+  const [fRar, setFRar] = useState('all');   // filtre rareté : 'all' | clé
   const idx = Math.min(sel, catalog.length - 1);
   const face = catalog[idx] || null;
+  const matchFilter = (f) => (fSlot === 'all' || f.slot === fSlot) && (fRar === 'all' || f.rarity === fRar);
 
   const setCat = (arr) => { setStatus(null); setOv((p) => ({ ...p, forge: { ...(p.forge || {}), catalog: arr } })); };
   const updFace = (patch) => setCat(catalog.map((f, j) => (j === idx ? { ...f, ...patch } : f)));
   const uid = () => `face-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
-  const addFace = () => { const arr = [...catalog, { key: uid(), name: 'Nouvelle face', name_en: 'New face', rarity: 'commun', price: 50, slot: 1, value: 3, effects: [], enabled: true }]; setCat(arr); setSel(arr.length - 1); };
+  const addFace = () => { const arr = [...catalog, { key: uid(), name: 'Nouvelle face', name_en: 'New face', rarity: fRar !== 'all' ? fRar : 'commun', price: 50, slot: typeof fSlot === 'number' ? fSlot : 1, value: 3, effects: [], enabled: true }]; setCat(arr); setSel(arr.length - 1); };
   const dupFace = () => { if (!face) return; const arr = [...catalog.slice(0, idx + 1), { ...face, key: uid(), name: `${face.name} (copie)` }, ...catalog.slice(idx + 1)]; setCat(arr); setSel(idx + 1); };
   const delFace = () => { if (!face) return; setCat(catalog.filter((_, j) => j !== idx)); setSel(Math.max(0, idx - 1)); };
 
@@ -185,8 +188,35 @@ function ForgeCatalogEditor({ ov, setOv, setStatus }) {
       {/* Colonne gauche : catalogue */}
       <div style={{ width: 248, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '100%', overflow: 'auto' }}>
         <button className="btn btn--green" onClick={addFace} style={{ width: '100%' }}>+ Nouvelle face</button>
+
+        {/* Filtres : slot + rareté */}
+        {(() => {
+          const chip = (on, onClick, label, key) => (
+            <button key={key} type="button" onClick={onClick} style={{
+              padding: '3px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 12,
+              border: on ? '2px solid #7a5ad4' : '1px solid rgba(122,94,58,0.3)',
+              background: on ? 'rgba(122,90,212,0.12)' : '#fff', color: 'var(--ink-800)', fontWeight: on ? 700 : 500,
+            }}>{label}</button>
+          );
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '2px 0 4px', borderBottom: '1px solid rgba(122,94,58,0.15)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                <span className="bal-default" style={{ fontSize: 11, width: 38 }}>Slot</span>
+                {chip(fSlot === 'all', () => setFSlot('all'), 'Tous', 'all')}
+                {[1, 2, 3, 4, 5, 6].map((s) => chip(fSlot === s, () => setFSlot(s), s, s))}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                <span className="bal-default" style={{ fontSize: 11, width: 38 }}>Rareté</span>
+                {chip(fRar === 'all', () => setFRar('all'), 'Toutes', 'all')}
+                {FORGE_RAR.map(([k, lbl]) => chip(fRar === k, () => setFRar(k), lbl, k))}
+              </div>
+            </div>
+          );
+        })()}
+
         {catalog.length === 0 && <div className="bal-default">Aucune face. Ajoutez-en une.</div>}
-        {catalog.map((f, i) => (
+        {catalog.length > 0 && !catalog.some(matchFilter) && <div className="bal-default" style={{ fontSize: 12 }}>Aucune face pour ce filtre.</div>}
+        {catalog.map((f, i) => (matchFilter(f) ? (
           <button key={f.key || i} type="button" onClick={() => setSel(i)}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 8, cursor: 'pointer',
               border: i === idx ? '2px solid #7a5ad4' : '1px solid rgba(122,94,58,0.2)',
@@ -197,7 +227,7 @@ function ForgeCatalogEditor({ ov, setOv, setStatus }) {
               <span className="bal-default" style={{ fontSize: 11 }}>slot {f.slot} · <span style={{ color: rarMeta(f.rarity)[2] }}>{rarMeta(f.rarity)[1]}</span>{f.enabled === false ? ' · off' : ''}</span>
             </span>
           </button>
-        ))}
+        ) : null))}
       </div>
 
       {/* Colonne droite : détail de la face sélectionnée */}
