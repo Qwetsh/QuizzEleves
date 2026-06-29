@@ -27,6 +27,8 @@ export default {
   'log.store.roll.malus':        { fr: '{emoji} {name} lance le dé : {value} (−{malus} malus) → avance de {eff} !',
                                    en: '{emoji} {name} rolls the die: {value} (−{malus} malus) → advances {eff}!' },
   'log.store.roll':              { fr: '{emoji} {name} lance le dé : {value}', en: '{emoji} {name} rolls the die: {value}' },
+  'log.store.roll.wind':         { fr: '{emoji} {name} lance le dé : {value} (🌬️ vent {factor}) → avance de {eff} !',
+                                   en: '{emoji} {name} rolls the die: {value} (🌬️ wind {factor}) → advances {eff}!' },
   'log.store.pilote':            { fr: '🧭 Pilote : choisis ta voie !', en: '🧭 Pilot: choose your path!' },
   'log.store.randomPath':        { fr: '🎲 Voie choisie au hasard !', en: '🎲 Path chosen at random!' },
   'log.store.choosePath':        { fr: '↔️ Choisis une voie !', en: '↔️ Choose a path!' },
@@ -86,6 +88,10 @@ export default {
   'log.store.buyFace':           { fr: '🎲 {emoji} {name} achète une face : {label} ({price} 💰).', en: '🎲 {emoji} {name} buys a die face: {label} ({price} 💰).' },
   'log.store.forgeFace':         { fr: '🔨 {emoji} {name} forge la face n°{base} : {label}.', en: '🔨 {emoji} {name} forges face #{base}: {label}.' },
   'log.store.relanceFace':       { fr: '🎲 {emoji} {name} relance (face Forge) → {value} !', en: '🎲 {emoji} {name} rerolls (forged face) → {value}!' },
+  'log.store.metierChosen':      { fr: '⚒️ {emoji} {name} embrasse le métier de {metier} !', en: '⚒️ {emoji} {name} takes up the {metier} trade!' },
+  'log.store.forgeServiceStart': { fr: '🔨 {pe} {pn} ouvre sa forge pour le dé de {ce} {cn}…', en: '🔨 {pe} {pn} opens the forge for {ce} {cn}\'s die…' },
+  'log.store.forgeServiceDone':  { fr: '🔨 {pe} {pn} a forgé {n} face(s) sur le dé de {ce} {cn} (payé) !', en: '🔨 {pe} {pn} forged {n} face(s) onto {ce} {cn}\'s die (paid)!' },
+  'log.store.forgeServiceCancel':{ fr: '🔨 Forge annulée entre {pe} {pn} et {ce} {cn}.', en: '🔨 Forging cancelled between {pe} {pn} and {ce} {cn}.' },
   'log.store.freshQuestion':     { fr: '🔄 {emoji} {name} écarte la question et en pioche une autre.', en: '🔄 {emoji} {name} discards the question and draws another.' },
 
   // --- Timeout ---

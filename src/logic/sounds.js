@@ -157,6 +157,21 @@ export function soundThunder() {
   setTimeout(() => playTone(70, 0.6, 'sawtooth', 0.18), 80);
 }
 
+// Vent (météo ambiante) : souffle continu = bruit blanc passe-bas modulé.
+export function soundWind() {
+  playNoise(1.1, 0.16, { type: 'lowpass', freq: 520, q: 0.5 });
+  setTimeout(() => playNoise(0.9, 0.13, { type: 'lowpass', freq: 700, q: 0.4 }), 250);
+  setTimeout(() => playNoise(0.7, 0.1, { type: 'bandpass', freq: 900, q: 0.8 }), 550);
+}
+
+// Séisme (météo) : grondement très grave + roulement de bruit basse fréquence.
+export function soundQuake() {
+  playNoise(1.3, 0.42, { type: 'lowpass', freq: 120, q: 0.9 });
+  playTone(45, 1.1, 'sawtooth', 0.22);
+  setTimeout(() => playTone(38, 0.9, 'sawtooth', 0.18), 300);
+  setTimeout(() => playNoise(0.5, 0.3, { type: 'lowpass', freq: 90, q: 1 }), 600);
+}
+
 // Whoosh court d'activation de pouvoir
 export function soundPower() {
   playTone(420, 0.18, 'sawtooth', 0.14);

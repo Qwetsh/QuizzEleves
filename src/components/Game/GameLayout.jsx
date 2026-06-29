@@ -11,6 +11,7 @@ import InfoPopover from './InfoPopover';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
 import TradeConsumer from './TradeConsumer';
+import ForgeServiceOverlay from './ForgeServiceOverlay';
 import StatsArchiver from './StatsArchiver';
 import TestLinksPanel from './TestLinksPanel';
 import DevItemGiver from './DevItemGiver';
@@ -18,6 +19,7 @@ import DevFaceGiver from './DevFaceGiver';
 import { OFFLINE } from '../../logic/offline';
 import { bagUnitCount } from '../../store/itemHandlers';
 import { extOn } from '../../extensions/registry';
+import { craftEnabledFor } from '../../logic/metier';
 import QuestionModal from '../Modals/QuestionModal';
 import EventModal from '../Modals/EventModal';
 import TargetPickerModal from '../Modals/TargetPickerModal';
@@ -31,11 +33,14 @@ import AlchemyModal from '../Modals/AlchemyModal';
 import ForgeModal from '../Modals/ForgeWorkshop';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ForgeCeremony from './ForgeCeremony';
+import WeatherOverlay from './WeatherOverlay';
+import WeatherBanner from './WeatherBanner';
 import ChargePickerModal from '../Modals/ChargePickerModal';
 import SpecPickerModal from '../Modals/SpecPickerModal';
 import EnchantPickerModal from '../Modals/EnchantPickerModal';
 import LootReveal from '../Modals/LootReveal';
 import StarterChest from '../Modals/StarterChest';
+import MetierPickerModal from '../Modals/MetierPickerModal';
 import FightModal from '../Fight/FightModal';
 import FlyingCoins from './FlyingCoins';
 import LightningStrike from './LightningStrike';
@@ -68,9 +73,13 @@ export default function GameLayout() {
   const openAlchemy = useGameStore((s) => s.openAlchemy);
   const devAddMoney = useGameStore((s) => s.devAddMoney);
   const itemsOn = useGameStore((s) => s.itemsEnabled());
-  const scribeOn = useGameStore((s) => extOn(s.extensions, 'enchant'));
-  const alchemyOn = useGameStore((s) => extOn(s.extensions, 'alchemy'));
-  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
+  // Crafts gatés PAR ÉQUIPE ACTIVE : avec l'extension « Métiers », chaque équipe
+  // ne pratique que son artisanat (sinon comportement historique : tout ouvert).
+  const scribeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'enchant'));
+  const alchemyOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'alchemy'));
+  const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
+  const weatherOn = useGameStore((s) => extOn(s.extensions, 'weather'));
+  const triggerWeather = useGameStore((s) => s.triggerWeather);
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
 
@@ -81,6 +90,9 @@ export default function GameLayout() {
       {/* Board area — leaves space for right HUD and bottom bar */}
       <div className="flex-1 relative" style={{ marginRight: 320, marginBottom: 148 }}>
         <BoardSVG />
+
+        {/* Bandeau météo (préavis / météo ambiante en cours) — pilule centrée */}
+        {weatherOn && <WeatherBanner />}
 
         {/* Top bar overlay — current team */}
         {team && (
@@ -176,6 +188,13 @@ export default function GameLayout() {
             ))}
             {import.meta.env.DEV && itemsOn && <DevItemGiver />}
             {import.meta.env.DEV && forgeOn && <DevFaceGiver />}
+            {import.meta.env.DEV && weatherOn && ['ventContraire', 'ventArriere', 'soleil', 'orage', 'pluieAcide', 'seisme', 'pluieMaudite'].map((id) => (
+              <button key={id} onClick={() => triggerWeather(id, { forced: true })}
+                title={`Dev — déclenche la météo « ${id} »`} aria-label={`Dev météo ${id}`}
+                style={{ padding: '8px 12px', borderRadius: 999, border: '2px dashed rgba(70,100,150,0.5)', background: 'rgba(240,246,255,0.85)', fontSize: 13, color: 'var(--ink-700)', cursor: 'pointer' }}>
+                🌦️ {id}
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -279,6 +298,7 @@ export default function GameLayout() {
 
       {/* Modals */}
       <ForgeCeremony />
+      <WeatherOverlay />
       <DiceRollModal />
       <QuestionModal />
       <EventModal />
@@ -297,6 +317,8 @@ export default function GameLayout() {
       <DuelChoiceModal />
       <LootReveal />
       <StarterChest />
+      <MetierPickerModal />
+      <ForgeServiceOverlay />
       <TrapInspectModal />
 
       {/* Fiche d'info flottante « façon BG3 » (effets HUD + mots-clés du journal) */}

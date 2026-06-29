@@ -9,10 +9,12 @@ import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, po
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
 import { itemImg } from '../../logic/itemAssets';
-import { itemEffectLines } from '../../logic/effectText';
+import { itemEffectLines, enchantEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import AlchemyView from './AlchemyView';
 import { extOn } from '../../extensions/registry';
+import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
+import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
 import { getDieFaces, isFaceForged, clampFaceValue, faceEffects, faceSig } from '../../logic/forge';
 import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, faceEffectDescriptions } from '../../logic/forgeEffects';
 import FaceTile from '../Game/FaceTile';
@@ -243,10 +245,22 @@ function EquipSlot({ itemKey, slot, onTap, enchanted = 0, T = tFor(false) }) {
   );
 }
 
+// Enchants publiés par le TBI pour un emplacement équipé (specs complètes). Repli
+// robuste : un ancien payload peut encore envoyer un simple compteur (nombre) →
+// on renvoie alors une liste vide (pas de détail tant que le TBI n'a pas republié).
+function slotEnchants(team, slot) {
+  const e = slot ? team?.enchants?.[slot] : null;
+  return Array.isArray(e) ? e : [];
+}
+function slotEnchantCount(team, slot) {
+  const e = slot ? team?.enchants?.[slot] : null;
+  return Array.isArray(e) ? e.length : (Number(e) || 0);
+}
+
 // Panneau de détail (bottom sheet) au tap d'un objet : desc + EFFETS lisibles,
 // + actions d'édition (mode téléphone, sur SA propre équipe, hors verrou).
 //   loc : { kind:'equip', slot } | { kind:'bag', key } | { kind:'shop' }
-function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = tFor(false) }) {
+function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, enchants, T = tFor(false) }) {
   const item = ITEMS[itemKey];
   if (!item) return null;
   const canEdit = owned && !locked && loc && loc.kind !== 'shop';
@@ -254,6 +268,11 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = t
   const color = RARITIES[item.rarity]?.color || '#888';
   // Effet d'un ingrédient caché tant que l'équipe ne l'a pas goûté.
   const fx = itemEffectLines(item, { key: itemKey, knownIngredients: team?.knownIngredients || [] });
+  // Enchantement : specs ajoutées par un parchemin gravé. Source = prop explicite
+  // sinon dérivé de la pièce équipée (team.enchants[slot]). Affichées à part pour
+  // qu'on distingue ce que le parchemin a ajouté (utile au moment d'un troc).
+  const enchList = enchants ?? slotEnchants(team, loc?.kind === 'equip' ? loc.slot : null);
+  const enchantFx = enchantEffectLines(enchList);
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 22, padding: '18px 18px 20px', boxShadow: '0 16px 44px rgba(0,0,0,0.45)', border: '1px solid rgba(122,94,58,0.25)' }}>
@@ -284,6 +303,23 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = t
               {fx.map((l, i) => (
                 <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: 'var(--ink-800)', lineHeight: 1.4 }}>
                   <span style={{ color, flexShrink: 0, fontWeight: 700 }}>{'▸'}</span><span>{l}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {enchantFx.length > 0 && (
+          <div style={{
+            background: 'rgba(141,92,214,0.1)', border: '1px solid rgba(141,92,214,0.34)',
+            borderRadius: 12, padding: '10px 12px', marginTop: 8,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#7a4fc0', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {'✦'} {T('mobile.enchantEffects')}
+            </div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {enchantFx.map((l, i) => (
+                <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: 'var(--ink-800)', lineHeight: 1.4 }}>
+                  <span style={{ color: '#8d5cd6', flexShrink: 0, fontWeight: 700 }}>{'✦'}</span><span>{l}</span>
                 </li>
               ))}
             </ul>
@@ -637,7 +673,9 @@ function ShopView({ session, teamIdx, owned, code, token }) {
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
   const itemsOn = extOn(session.extensions, 'equipment');
-  const forgeOn = extOn(session.extensions, 'forge');
+  // Faces de dé : visibles en boutique seulement si l'équipe peut forger (métier
+  // forgeron, ou extension Métiers inactive).
+  const forgeOn = craftEnabledFor(session.extensions, t, 'forge');
   const shopKeys = itemsOn ? (session.shop || []).filter((k) => ITEMS[k]) : [];
   const shopFaces = forgeOn ? (session.shopFaces || []) : [];
   // Achat bloqué seulement si c'est mon tour ET qu'une résolution est en cours.
@@ -1076,7 +1114,7 @@ function TeamView({ session, teamIdx, owned, code, token }) {
       {itemsOn && (
       <section className="mob-section">
         <h2 className="mob-section-title">{T('mobile.equipment')}</h2>
-        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} enchanted={t.enchants?.[slot] || 0} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} T={T} />)}
+        {Object.keys(SLOTS).map((slot) => <EquipSlot key={slot} itemKey={t.equipment?.[slot]} slot={slot} enchanted={slotEnchantCount(t, slot)} onTap={() => setSheet({ itemKey: t.equipment?.[slot], loc: { kind: 'equip', slot } })} T={T} />)}
       </section>
       )}
 
@@ -1126,6 +1164,49 @@ function tradeDoneText(spec, T = tFor(false)) {
   const eq = (spec?.equip || []).length;
   if (eq) parts.push(T.plural('mobile.equipmentCount', eq));
   return parts.length ? parts.join(' + ') : T('mobile.nothing');
+}
+
+// Objets concrets d'un côté d'offre (sac + équipement porté), résolus depuis
+// l'équipe QUI LES POSSÈDE (`srcTeam`) pour récupérer la clé et, pour une pièce
+// équipée, ses enchants. Sert à rendre chaque objet CLIQUABLE dans une offre.
+function offerItemList(spec, srcTeam) {
+  const out = [];
+  for (const k of (spec?.bag || [])) { const key = typeof k === 'string' ? k : k?.key; if (ITEMS[key]) out.push({ itemKey: key, enchants: [] }); }
+  for (const s of (spec?.equip || [])) {
+    const v = srcTeam?.equipment?.[s];
+    const key = typeof v === 'string' ? v : v?.key;
+    if (key && ITEMS[key]) out.push({ itemKey: key, enchants: slotEnchants(srcTeam, s) });
+  }
+  return out;
+}
+
+// Pastilles d'objets d'une offre : chaque objet est un bouton qui ouvre sa fiche
+// (effets + enchantement), pour que l'équipe DESTINATAIRE puisse inspecter ce
+// qu'on lui propose. Marqueur ✦ si la pièce porte un enchantement.
+function OfferItems({ spec, srcTeam, onInfo }) {
+  const items = offerItemList(spec, srcTeam);
+  if (!items.length) return null;
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+      {items.map((it, i) => {
+        const item = ITEMS[it.itemKey];
+        return (
+          <button key={i} type="button" className="mob-offer-chip"
+            onClick={() => onInfo({ itemKey: it.itemKey, team: srcTeam, enchants: it.enchants })}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px',
+              borderRadius: 999, border: '1px solid rgba(122,94,58,0.3)', background: '#fffefb',
+              fontSize: 12.5, cursor: 'pointer', color: 'var(--ink-800,#3a2c16)',
+            }}>
+            <span>{item.icon}</span>
+            <span style={{ fontWeight: 600 }}>{locName(item)}</span>
+            {it.enchants.length > 0 && <span style={{ color: '#8d5cd6', fontWeight: 700 }}>✦</span>}
+            <span style={{ opacity: 0.55, fontSize: 13 }}>ⓘ</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 // Bandeau de confirmation « échange conclu », du point de vue de mon équipe.
@@ -1202,9 +1283,15 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   const [want, setWant] = useState(norm(initial?.want));
   const [peace, setPeace] = useState(false); // échange libre : + promesse de paix
   const [againstIdx, setAgainstIdx] = useState(null); // coalition : cible commune
-  const [info, setInfo] = useState(null); // { itemKey, team } : fiche d'objet ouverte
+  const [info, setInfo] = useState(null); // { itemKey, team, enchants? } : fiche d'objet ouverte
   const target = toIdx != null ? session.teams[toIdx] : null;
-  const isFree = !hasDiplo || kind === 'free';
+  // Prestation de forgeage : proposable seulement si MOI j'ai accès à la forge
+  // (métier forgeron, ou extension Métiers inactive). Je « donne » le service et
+  // je « veux » un paiement (or/objets du client).
+  const meCanForge = craftEnabledFor(session.extensions, me, 'forge');
+  const showKinds = hasDiplo || meCanForge;
+  const isForge = kind === 'forge';
+  const isFree = !showKinds || kind === 'free';
   const isCounter = !!initial;
   // Coalition : la cible commune est une 3ᵉ équipe (ni moi, ni l'allié `toIdx`).
   const canCoalition = session.teams.length >= 3;
@@ -1223,14 +1310,22 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   // et l'attaque commune (coalition) s'il existe une 3ᵉ équipe à viser.
   const KINDS = [
     { key: 'free', label: T('mobile.freeDeal'), desc: T('mobile.freeDealDesc') },
-    { key: 'extort', label: T('mobile.extort'), desc: T('mobile.extortDesc') },
-    { key: 'gift', label: T('mobile.gift'), desc: T('mobile.giftDesc') },
-    { key: 'mutual', label: T('mobile.mutual'), desc: T('mobile.mutualDesc') },
-    ...(canCoalition ? [{ key: 'coalition', label: T('mobile.coalition'), desc: T('mobile.coalitionDesc') }] : []),
+    ...(hasDiplo ? [
+      { key: 'extort', label: T('mobile.extort'), desc: T('mobile.extortDesc') },
+      { key: 'gift', label: T('mobile.gift'), desc: T('mobile.giftDesc') },
+      { key: 'mutual', label: T('mobile.mutual'), desc: T('mobile.mutualDesc') },
+      ...(canCoalition ? [{ key: 'coalition', label: T('mobile.coalition'), desc: T('mobile.coalitionDesc') }] : []),
+    ] : []),
+    ...(meCanForge ? [{ key: 'forge', label: T('mobile.forgeDeal'), desc: T('mobile.forgeDealDesc') }] : []),
   ];
 
   const build = () => {
     const pact = { turns };
+    // Forgeage : je donne le service (give.forge), je veux un paiement (want).
+    if (isForge) {
+      const w = {}; if (want.gold > 0) w.gold = want.gold; if (want.bag.length) w.bag = want.bag; if (want.equip.length) w.equip = want.equip;
+      return { give: { forge: true }, want: w };
+    }
     if (hasDiplo && kind === 'extort') return { give: { pact }, want: { gold: Math.max(0, demand) } };
     if (hasDiplo && kind === 'gift') return { give: { pact }, want: {} };
     if (hasDiplo && kind === 'mutual') return { give: { pact }, want: { pact } };
@@ -1246,7 +1341,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   };
   const built = build();
   const has = (s) => !!(s.pact || s.coalition || s.gold || s.bag?.length || s.equip?.length);
-  const valid = toIdx != null && (kind !== 'coalition' || against != null) && (has(built.give) || has(built.want));
+  const valid = toIdx != null && (isForge || ((kind !== 'coalition' || against != null) && (has(built.give) || has(built.want))));
   const usesPact = hasDiplo && (kind !== 'free' || peace);
 
   // `cap` = plafond DUR (l'or que JE donne : on ne peut pas donner ce qu'on n'a
@@ -1276,7 +1371,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
       ))}
       {equipSlots(team).map((s) => (
         <TradeItemRow key={`e${s}`} itemKey={team.equipment[s]} worn on={spec.equip.includes(s)} T={T}
-          onToggle={() => toggle(spec, set, 'equip', s)} onInfo={() => setInfo({ itemKey: team.equipment[s], team })} />
+          onToggle={() => toggle(spec, set, 'equip', s)} onInfo={() => setInfo({ itemKey: team.equipment[s], team, enchants: slotEnchants(team, s) })} />
       ))}
     </div>
   );
@@ -1340,6 +1435,15 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
           </>
         )}
 
+        {/* Prestation de forgeage : je fixe le PRIX (ce que le client me paie). Le
+            service de forge s'ouvrira pour les deux équipes une fois le deal accepté. */}
+        {isForge && target && (
+          <>
+            <div style={{ fontSize: 12.5, color: 'var(--ink-600)', margin: '10px 0 2px' }}>{T('mobile.forgePriceHint', { who: target.name })}</div>
+            {panel(T('mobile.forgePrice'), target, want, setWant, false)}
+          </>
+        )}
+
         {usesPact && (
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{kind === 'coalition' ? T('mobile.coalitionDuration') : T('mobile.pactDuration')}</div>
@@ -1362,7 +1466,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
       </div>
     </div>
     {info?.itemKey && (
-      <ItemSheet itemKey={info.itemKey} loc={null} team={info.team}
+      <ItemSheet itemKey={info.itemKey} loc={null} team={info.team} enchants={info.enchants}
         owned={false} locked={false} onAction={() => {}} onClose={() => setInfo(null)} T={T} />
     )}
    </>
@@ -1378,6 +1482,7 @@ function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true
   const T = tFor(session?.englishMode);
   const [deal, setDeal] = useState(false); // compositeur de deal (troc + pacte)
   const [counter, setCounter] = useState(null); // offre reçue qu'on contre (ou null)
+  const [info, setInfo] = useState(null); // { itemKey, team, enchants } : fiche d'un objet d'offre
   const me = session.teams[teamIdx];
 
   // Une offre n'est visible que si l'extension correspondante est active : les
@@ -1421,7 +1526,9 @@ function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true
           <div key={tr.id} className="mob-trade-card">
             <div className="mob-trade-from">{T('mobile.from', { who: nameOf(tr.from_idx) })}</div>
             <div className="mob-trade-line"><b>{T('mobile.youReceiveLine')}</b> {schemeText(tr.give, equipOfTeam(tr.from_idx), false, T, nameOf)}</div>
+            <OfferItems spec={tr.give} srcTeam={session.teams[tr.from_idx]} onInfo={setInfo} />
             <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {schemeText(tr.want, equipOfTeam(teamIdx), true, T, nameOf)}</div>
+            <OfferItems spec={tr.want} srcTeam={me} onInfo={setInfo} />
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button className="mob-btn mob-btn--gold" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'accepted').catch(() => {})}>{T('mobile.accept')}</button>
               <button className="mob-btn mob-btn--ghost" style={{ flex: 1, minWidth: 0 }} onClick={() => setTradeStatus(tr.id, 'declined').catch(() => {})}>{T('mobile.decline')}</button>
@@ -1441,7 +1548,9 @@ function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true
           <div key={tr.id} className="mob-trade-card">
             <div className="mob-trade-from">{T('mobile.toWaiting', { who: nameOf(tr.to_idx) })}</div>
             <div className="mob-trade-line"><b>{T('mobile.youGiveLine')}</b> {schemeText(tr.give, equipOfTeam(teamIdx), true, T, nameOf)}</div>
+            <OfferItems spec={tr.give} srcTeam={me} onInfo={setInfo} />
             <div className="mob-trade-line"><b>{T('mobile.youWantLine')}</b> {schemeText(tr.want, equipOfTeam(tr.to_idx), false, T, nameOf)}</div>
+            <OfferItems spec={tr.want} srcTeam={session.teams[tr.to_idx]} onInfo={setInfo} />
             <button className="mob-btn mob-btn--ghost" style={{ marginTop: 8 }} onClick={() => deleteTrade(tr.id).catch(() => {})}>{T('common.cancel')}</button>
           </div>
         ))}
@@ -1463,6 +1572,10 @@ function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true
             if (counter) setTradeStatus(counter.id, 'declined').catch(() => {});
             setDeal(false); setCounter(null);
           }} />
+      )}
+      {info?.itemKey && (
+        <ItemSheet itemKey={info.itemKey} loc={null} team={info.team} enchants={info.enchants}
+          owned={false} locked={false} onAction={() => {}} onClose={() => setInfo(null)} T={T} />
       )}
     </div>
   );
@@ -1737,6 +1850,21 @@ function AdminPanel({ code, session, onClose }) {
         <button className="mob-btn mob-btn--ghost" style={{ minWidth: 0, padding: '8px 16px' }} onClick={onClose}>{T('common.close')}</button>
       </div>
 
+      {/* Météo : le prof force une météo précise sur tout le plateau (spectacle). */}
+      {extOn(session.extensions, 'weather') && (
+        <div style={{ border: '2px solid #4a6da8', borderRadius: 14, padding: 12, marginBottom: 12, background: '#fffefb' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#34507e', marginBottom: 8 }}>{'🌦️'} {T('mobile.adminWeather')}</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {WEATHER_KEYS.map((id) => (
+              <button key={id} onClick={() => send('adminWeather', { id })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 999, border: '1.5px solid rgba(74,109,168,0.4)', background: '#eef4ff', color: '#34507e', fontWeight: 700, cursor: 'pointer', fontSize: 12.5 }}>
+                {weatherIcon(id)} {weatherName(id, T.lang)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {teams.length === 0 && <div className="mob-empty">{T('mobile.noTeamYet')}</div>}
 
       {teams.map((t) => {
@@ -1842,6 +1970,173 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, hasForg
       {hasForge && <Tab id="forge" icon={'🔨'} label={T('mobile.tabForge')} />}
       <Tab id="history" icon={'\u{1F4DC}'} label={T('mobile.tabHistory')} />
     </nav>
+  );
+}
+
+// Vue de PRESTATION DE FORGEAGE (troc + forge) : overlay collaboratif affiché sur
+// les téléphones du forgeron (provider) et du client. Le forgeron pose ses faces
+// (réserve mise en escrow) sur le dé du CLIENT ; double validation → pose + paiement.
+function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
+  const fs = session.forgeService;
+  const provider = fs && session.teams[fs.providerIdx];
+  const customer = fs && session.teams[fs.customerIdx];
+  if (!fs || !provider || !customer) return null;
+  const isProvider = teamIdx === fs.providerIdx;
+  const isCustomer = teamIdx === fs.customerIdx;
+  if (!isProvider && !isCustomer) return null; // un tiers ne voit pas la session
+  const canAct = owned && !!token;
+  const placements = fs.placements || {};
+  const placedStock = new Set(Object.values(placements).map(Number));
+  const baseFaces = getDieFaces(customer);
+  const draft = baseFaces.map((f, i) => {
+    const si = placements[i];
+    if (si == null) return { face: f, drafted: false };
+    const sf = fs.providerStock[si];
+    return { face: { base: i + 1, value: clampFaceValue(sf.value), effects: faceEffects(sf) }, drafted: true };
+  });
+  const available = (fs.providerStock || []).map((f, i) => ({ f, i })).filter(({ i }) => !placedStock.has(i));
+  const placedCount = placedStock.size;
+
+  const place = (stockIndex) => { if (isProvider && canAct) sendIntent(code, token, 'forgeServicePlace', { stockIndex }).catch(() => {}); };
+  const remove = (slotIndex) => { if (isProvider && canAct) sendIntent(code, token, 'forgeServiceRemove', { slotIndex }).catch(() => {}); };
+  const validate = () => { if (canAct) sendIntent(code, token, 'forgeServiceValidate', {}).catch(() => {}); };
+  const cancel = () => { if (canAct) sendIntent(code, token, 'forgeServiceCancel', {}).catch(() => {}); };
+
+  const myOk = isProvider ? fs.providerOk : fs.customerOk;
+  const otherOk = isProvider ? fs.customerOk : fs.providerOk;
+  const colorOf = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
+
+  const faceBox = (face, { drafted = false, slot = null, onClick = null, key } = {}) => {
+    const eff = faceEffects(face);
+    const c = colorOf(face);
+    return (
+      <button key={key} onClick={onClick || undefined} disabled={!onClick}
+        style={{
+          width: 64, height: 70, borderRadius: 12, border: `2px solid ${drafted ? '#ffcf6a' : c}`,
+          background: drafted ? 'linear-gradient(180deg,#3a2a12,#241809)' : 'linear-gradient(180deg,#2a2114,#1b150c)',
+          color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+          cursor: onClick ? 'pointer' : 'default', position: 'relative', boxShadow: drafted ? '0 0 10px rgba(255,200,90,0.4)' : 'none',
+        }}>
+        {slot != null && <span style={{ position: 'absolute', top: 3, left: 5, fontSize: 9, opacity: 0.7 }}>#{slot}</span>}
+        <span style={{ fontSize: 24, fontWeight: 800, fontFamily: 'var(--font-display, sans-serif)' }}>{clampFaceValue(face.value)}</span>
+        <span style={{ display: 'flex', gap: 2, height: 7 }}>
+          {eff.map((e, k) => { const m = FORGE_EFFECTS[e.type]; const col = (m && FORGE_FAMILY_COLOR[m.family]) || '#caa45f'; return <span key={k} style={{ width: 7, height: 7, borderRadius: '50%', background: col }} />; })}
+        </span>
+      </button>
+    );
+  };
+
+  // Rappel du prix (ce que le client paie).
+  const price = fs.price || {};
+  const priceBits = [];
+  if (price.gold) priceBits.push(`🪙 ${price.gold}`);
+  for (const k of (price.bag || [])) if (ITEMS[k]) priceBits.push(ITEMS[k].icon || '📦');
+  for (const s of (price.equip || [])) { const k = customer.equipment?.[s]; if (k && ITEMS[k]) priceBits.push(ITEMS[k].icon || '🛡️'); }
+  const priceText = priceBits.length ? priceBits.join('  ') : T('mobile.forgeFree');
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 82, overflowY: 'auto', background: 'rgba(12,8,3,0.96)', backdropFilter: 'blur(3px)', padding: '20px 16px 28px', color: '#f3e9d3' }}>
+      <div style={{ maxWidth: 460, margin: '0 auto' }}>
+        <div style={{ fontSize: 34, textAlign: 'center' }}>🔨</div>
+        <div style={{ fontFamily: 'var(--font-display, sans-serif)', fontSize: 21, textAlign: 'center', color: '#ffe9b8' }}>
+          {isProvider ? T('mobile.forgeSvcProviderTitle', { who: `${customer.emoji} ${customer.name}` })
+                      : T('mobile.forgeSvcCustomerTitle', { who: `${provider.emoji} ${provider.name}` })}
+        </div>
+        <div style={{ fontSize: 13, textAlign: 'center', marginTop: 4, color: '#caa45f' }}>
+          {isProvider ? T('mobile.forgeSvcProviderHint') : T('mobile.forgeSvcCustomerHint')}
+        </div>
+
+        {/* Dé du client (brouillon) */}
+        <div style={{ fontSize: 13, fontWeight: 700, margin: '16px 0 6px' }}>{T('mobile.forgeSvcDie', { who: customer.name })}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, justifyItems: 'center' }}>
+          {draft.map((d, i) => faceBox(d.face, {
+            key: `s${i}`, drafted: d.drafted, slot: i + 1,
+            onClick: (isProvider && canAct && d.drafted) ? () => remove(i) : null,
+          }))}
+        </div>
+        {isProvider && <div style={{ fontSize: 11, color: '#8a734f', textAlign: 'center', marginTop: 4 }}>{T('mobile.forgeSvcTapRemove')}</div>}
+
+        {/* Réserve du forgeron (faces à poser) — seulement côté forgeron */}
+        {isProvider && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 700, margin: '16px 0 6px' }}>{T('mobile.forgeSvcReserve')}</div>
+            {available.length === 0
+              ? <div style={{ fontSize: 12, color: '#8a734f' }}>{T('mobile.forgeSvcReserveEmpty')}</div>
+              : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {available.map(({ f, i }) => faceBox(f, { key: `r${i}`, slot: f.slot, onClick: canAct ? () => place(i) : null }))}
+                </div>}
+          </>
+        )}
+
+        {/* Prix */}
+        <div style={{ marginTop: 16, padding: '10px 12px', borderRadius: 12, background: 'rgba(255,220,150,0.08)', border: '1px solid rgba(232,169,88,0.3)' }}>
+          <div style={{ fontSize: 12, color: '#caa45f' }}>{T('mobile.forgeSvcPrice')}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{priceText}</div>
+        </div>
+
+        {/* Validation */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 18, margin: '14px 0 10px', fontSize: 13 }}>
+          <span>{provider.emoji} {fs.providerOk ? '✅' : '⏳'}</span>
+          <span>{customer.emoji} {fs.customerOk ? '✅' : '⏳'}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="mob-btn mob-btn--gold" style={{ flex: 2 }} disabled={!canAct || myOk || (isProvider && placedCount === 0)}
+            onClick={validate}>
+            {myOk ? T('mobile.forgeSvcValidated') : T('mobile.forgeSvcValidate')}
+          </button>
+          <button className="mob-btn mob-btn--ghost" style={{ flex: 1 }} disabled={!canAct} onClick={cancel}>{T('common.cancel')}</button>
+        </div>
+        {otherOk && !myOk && <div style={{ fontSize: 12, textAlign: 'center', marginTop: 8, color: '#ffd27a' }}>{T('mobile.forgeSvcWaitingYou')}</div>}
+        {myOk && !otherOk && <div style={{ fontSize: 12, textAlign: 'center', marginTop: 8, color: '#caa45f' }}>{T('mobile.forgeSvcWaitingOther')}</div>}
+      </div>
+    </div>
+  );
+}
+
+// Overlay bloquant « choisis ton métier » (extension « Métiers ») : affiché sur le
+// téléphone du propriétaire au 1er tour tant que le métier n'est pas fixé. Envoie
+// un intent `chooseMetier` ; l'overlay disparaît quand la session reflète le choix.
+function MetierPickerMobile({ team, en, T, onPick }) {
+  const lang = en ? 'en' : 'fr';
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 80, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 16, padding: 22,
+      background: 'rgba(14,9,3,0.92)', backdropFilter: 'blur(3px)',
+    }}>
+      <div style={{ fontSize: 40 }}>⚒️</div>
+      <div style={{ fontFamily: 'var(--font-display, sans-serif)', fontSize: 22, color: '#ffe9b8', textAlign: 'center' }}>
+        {T('mobile.metierTitle', { emoji: team.emoji, name: team.name })}
+      </div>
+      <div style={{ fontSize: 14, color: '#f3e9d3', textAlign: 'center', maxWidth: 360 }}>
+        {T('mobile.metierChoose')}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 380, marginTop: 6 }}>
+        {METIERS.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => onPick(m.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', width: '100%',
+              padding: '14px 16px', borderRadius: 16, cursor: 'pointer',
+              border: `2px solid ${m.color}`, background: `${m.color}1f`, color: '#fff',
+            }}
+          >
+            <span style={{
+              width: 50, height: 50, flexShrink: 0, borderRadius: 13, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: 28,
+              background: `linear-gradient(180deg, ${m.color}, ${m.color}cc)`,
+              boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.4)',
+            }}>{m.icon}</span>
+            <span style={{ minWidth: 0 }}>
+              <span style={{ display: 'block', fontFamily: 'var(--font-display, sans-serif)', fontSize: 18 }}>{metierName(m, lang)}</span>
+              <span style={{ display: 'block', fontSize: 12.5, opacity: 0.92, lineHeight: 1.3 }}>{metierDesc(m, lang)}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 11.5, color: '#caa45f', textAlign: 'center' }}>{T('mobile.metierLocked')}</div>
+    </div>
   );
 }
 
@@ -2016,7 +2311,10 @@ export default function MobileApp() {
   } else if (teamIdx == null || !session.teams?.[teamIdx]) {
     content = <TeamPicker session={session} onPick={chooseTeam} />;
   } else {
-    const hasForge = extOn(session.extensions, 'forge');
+    const team = session.teams[teamIdx];
+    // Crafts gatés PAR MÉTIER : avec l'extension « Métiers », l'équipe ne pratique
+    // que son artisanat (sinon comportement historique : tout ouvert).
+    const hasForge = craftEnabledFor(session.extensions, team, 'forge');
     // La Boutique réunit objets (extension Équipement) ET faces de dé (extension
     // Forge) : présente si l'une OU l'autre est active.
     const hasShop = extOn(session.extensions, 'equipment') || hasForge;
@@ -2026,8 +2324,8 @@ export default function MobileApp() {
     // troquer à sa place (sinon il validerait le troc d'un autre groupe).
     const hasTrade = extOn(session.extensions, 'trade') && owned && !!token;
     const hasDiplo = extOn(session.extensions, 'diplomacy') && owned && !!token;
-    const hasAlchemy = extOn(session.extensions, 'alchemy') && owned && !!token;
-    const hasScribe = extOn(session.extensions, 'enchant') && owned && !!token;
+    const hasAlchemy = craftEnabledFor(session.extensions, team, 'alchemy') && owned && !!token;
+    const hasScribe = craftEnabledFor(session.extensions, team, 'enchant') && owned && !!token;
     // L'onglet « Troc » réunit trocs ouverts et complots : présent si l'une OU
     // l'autre extension est active.
     const hasExchange = hasTrade || hasDiplo;
@@ -2039,10 +2337,22 @@ export default function MobileApp() {
       : tab === 'forge' && hasForge ? <ForgeView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
+    // Choix de métier (extension « Métiers ») : overlay bloquant tant que le
+    // propriétaire n'a pas choisi. Le TBI fait foi ; on envoie un intent.
+    const metierToChoose = owned && !!token && metierPending(session.extensions, team);
     content = (
       <>
         {view}
         <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} hasScribe={hasScribe} hasForge={hasForge} tradeAlert={tradeAlert} T={T} />
+        {metierToChoose && (
+          <MetierPickerMobile
+            team={team} en={!!session?.englishMode} T={T}
+            onPick={(craft) => sendIntent(code, token, 'chooseMetier', { craft }).catch(() => {})}
+          />
+        )}
+        {session.forgeService
+          && (session.forgeService.providerIdx === teamIdx || session.forgeService.customerIdx === teamIdx)
+          && <ForgeServiceView session={session} teamIdx={teamIdx} code={code} token={token} owned={owned} T={T} />}
       </>
     );
   }

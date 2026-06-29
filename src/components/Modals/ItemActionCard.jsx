@@ -10,10 +10,9 @@ import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { sellPrice } from '../../store/itemHandlers';
-import { mergedItem } from '../../logic/itemEffects';
 import { soundClick } from '../../logic/sounds';
 import { itemImg } from '../../logic/itemAssets';
-import { itemEffectLines } from '../../logic/effectText';
+import { itemEffectLines, enchantEffectLines } from '../../logic/effectText';
 import SetBonusInfo from './SetBonusInfo';
 
 // pop : { cellKey: 'bag:N' | 'equip:slot', itemKey, enchants? }
@@ -21,14 +20,16 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
   const T = useT();
   const team = useGameStore((s) => s.teams[s.currentTeam]);
   if (!ITEMS[pop.itemKey]) return null;
-  // Objet enchanté : on FUSIONNE les enchantements pour que la fiche affiche AUSSI
-  // les effets ajoutés (✦), pas seulement ceux de l'objet de base.
-  const item = pop.enchants?.length ? mergedItem({ key: pop.itemKey, enchants: pop.enchants }) : ITEMS[pop.itemKey];
+  const item = ITEMS[pop.itemKey];
   const rar = RARITIES[item.rarity];
   const img = itemImg(item);
   // Effet d'un ingrédient d'alchimie : caché (???) tant que l'équipe ne l'a pas
   // découvert (utilisé seul) — cohérent avec l'app mobile.
   const fx = itemEffectLines(item, { key: pop.itemKey, knownIngredients: team?.knownIngredients || [] });
+  // Objet enchanté : les effets du parchemin gravé sont affichés DISTINCTEMENT
+  // des effets de l'objet de base (bloc « ✦ Enchantement » dédié), pour qu'on
+  // voie ce que le parchemin a ajouté.
+  const enchantFx = enchantEffectLines(pop.enchants || []);
   const canUse = pop.cellKey.startsWith('bag:') && item.slot === 'consumable';
   const slotName = item.slot === 'consumable' ? T('modal.item.consumable') : SLOTS[item.slot]?.name;
   return createPortal(
@@ -49,9 +50,17 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
             <>
               <div className="inv-card-fxlabel">{T('modal.item.effects')}</div>
               {fx.map((l, i) => (
-                <div key={i} className="inv-card-fxrow"><span className="ic">✦</span><span>{l}</span></div>
+                <div key={i} className="inv-card-fxrow"><span className="ic">◆</span><span>{l}</span></div>
               ))}
             </>
+          )}
+          {enchantFx.length > 0 && (
+            <div className="inv-card-enchant">
+              <div className="inv-card-fxlabel inv-card-fxlabel--enchant">{T('modal.item.enchantEffects')}</div>
+              {enchantFx.map((l, i) => (
+                <div key={i} className="inv-card-fxrow inv-card-fxrow--enchant"><span className="ic">✦</span><span>{l}</span></div>
+              ))}
+            </div>
           )}
           <SetBonusInfo item={item} team={team} />
           <div className="inv-card-actions">

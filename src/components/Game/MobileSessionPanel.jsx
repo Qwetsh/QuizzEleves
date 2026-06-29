@@ -18,6 +18,8 @@ export default function MobileSessionPanel() {
   // Journal analytique : alimente l'onglet mobile « anciennes questions ».
   const gameStats = useGameStore((s) => s.gameStats);
   const englishMode = useGameStore((s) => s.englishMode);
+  // Prestation de forgeage en cours (diffusée aux 2 mobiles concernés).
+  const forgeService = useGameStore((s) => s.forgeService);
   // « Hacking » : l'état piraté est porté par chaque équipe (t.hackedTurns) et
   // donc déjà répercuté via `teams` dans le payload — rien de plus à abonner.
   // Code de session partagé (créé ici en mode tableau, ou par le lobby en mode
@@ -36,16 +38,16 @@ export default function MobileSessionPanel() {
   // (débounce léger pour grouper les rafales de mise à jour).
   useEffect(() => {
     if (!code) return;
-    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
+    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService });
     const id = setTimeout(() => { publishSession(code, payload).catch(() => {}); }, 250);
     return () => clearTimeout(id);
-  }, [code, teams, currentTeam, finished, shopStock, shopFaceStock, log, extensions, locked, englishMode, gameStats]);
+  }, [code, teams, currentTeam, finished, shopStock, shopFaceStock, log, extensions, locked, englishMode, gameStats, forgeService]);
 
   async function activate() {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats });
+      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService });
       setSessionCode(await createSession(payload));
       setOpen(true);
     } catch (e) { setError(e.message || 'Connexion impossible'); }

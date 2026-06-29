@@ -699,6 +699,26 @@
   line-height: 1.35;
 }
 .inv-card-fxrow .ic { color: var(--gold-600, #b8862c); font-size: 13px; line-height: 1.4; }
+
+/* Bloc « ✦ Enchantement » : effets ajoutés par un parchemin gravé, distingués
+   des effets de base par une teinte « magie » (violet/arcane). */
+.inv-card-enchant {
+  margin-top: 12px;
+  padding: 4px 10px 9px;
+  border-radius: 13px;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(141, 92, 214, 0.1), rgba(141, 92, 214, 0.02));
+  border: 1px solid rgba(141, 92, 214, 0.28);
+}
+.inv-card-fxlabel--enchant { color: #6a3fb0; }
+.inv-card-fxlabel--enchant::after {
+  background: linear-gradient(90deg, #8d5cd6, transparent);
+}
+.inv-card-fxrow--enchant {
+  background: linear-gradient(90deg, rgba(141, 92, 214, 0.2), rgba(141, 92, 214, 0.05));
+  border-left-color: #8d5cd6;
+}
+.inv-card-fxrow--enchant .ic { color: #8d5cd6; }
+
 .inv-card-actions { display: flex; gap: 8px; margin-top: 15px; }
 .inv-card-btn {
   flex: 1;

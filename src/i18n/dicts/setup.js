@@ -129,6 +129,12 @@ export default {
 
   // --- ExtensionsChecklist.jsx ---
   'setup.extensionsTitle': { fr: '🧩 Extensions de jeu', en: '🧩 Game extensions' },
+  'setup.extensionsHint': {
+    fr: 'Cliquez une affiche pour activer/désactiver. Survolez (ou touchez) pour lire son explication.',
+    en: 'Click a poster to enable/disable it. Hover (or tap) to read its details.',
+  },
+  'setup.extRequires': { fr: 'Nécessite :', en: 'Requires:' },
+  'setup.comingSoon': { fr: 'À venir', en: 'Coming soon' },
 
   // --- StarterChestConfig.jsx ---
   'setup.chestCatConsumable': { fr: 'Consommables', en: 'Consumables' },

@@ -4,6 +4,7 @@ import { itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { validateParchment, ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
+import { metierAllows } from '../logic/metier.js';
 import { saveGame } from './persistence.js';
 import { runEffects, consumableActions, announce } from './effectEngine.js';
 import { tg, tgPlural } from '../i18n';
@@ -242,6 +243,8 @@ export function buyItem(set, get, itemKey, teamIndex) {
   const team = teams[idx];
   const item = ITEMS[itemKey];
   if (!team) return;
+  // Pluie maudite (météo) : achats bloqués pendant X tours.
+  if (team.shopBlockedTurns > 0) return;
   // Mode Marché Noir : stock + remise portés par showShop ; sinon boutique normale.
   const mn = showShop && typeof showShop === 'object' && showShop.marcheNoir;
   const stock = mn ? (showShop.stock || []) : shopStock;
@@ -500,6 +503,8 @@ export function enchantWith(set, get, teamIdx, bagIndex, slot) {
   const { teams } = get();
   const team = teams[teamIdx];
   if (!team) return { ok: false, reason: 'équipe invalide' };
+  // Métiers : seul l'Enchanteur peut appliquer un parchemin (sinon, troc requis).
+  if (!metierAllows(get().extensions, team, 'enchant')) return { ok: false, reason: 'métier' };
   const bag = normalizeBag(team.bag);
   const pKey = cellKey(bag[bagIndex]);
   const parch = ITEMS[pKey];
@@ -537,6 +542,8 @@ export function craftParchment(set, get, teamIdx, blankIndex, parts) {
   const { teams } = get();
   const team = teams[teamIdx];
   if (!team) return { ok: false, reason: 'équipe invalide' };
+  // Métiers : seul l'Enchanteur grave des parchemins à l'Autel du Scribe.
+  if (!metierAllows(get().extensions, team, 'enchant')) return { ok: false, reason: 'métier' };
   const bag = normalizeBag(team.bag);
   const blank = ITEMS[cellKey(bag[blankIndex])];
   if (!blank || blank.family !== 'parchment' || !blank.blank) return { ok: false, reason: 'pas un parchemin vierge' };
@@ -572,6 +579,8 @@ export function craftPotion(set, get, teamIdx, indices) {
   const { teams, addLog } = get();
   const team = teams[teamIdx];
   if (!team) return { ok: false, reason: 'équipe invalide' };
+  // Métiers : seul l'Alchimiste distille des potions (sinon, troc requis).
+  if (!metierAllows(get().extensions, team, 'alchemy')) return { ok: false, reason: 'métier' };
   const bag = normalizeBag(team.bag);
   const idx = [...new Set((indices || []).map(Number))].filter((i) => Number.isInteger(i) && i >= 0 && i < bag.length);
   if (idx.length !== 3) return { ok: false, reason: '3 ingrédients distincts requis' };

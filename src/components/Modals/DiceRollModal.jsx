@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
-import { extOn } from '../../extensions/registry';
+import { craftEnabledFor } from '../../logic/metier';
 import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { buffValue, getEffectValue } from '../../logic/itemEffects';
@@ -87,7 +87,7 @@ export default function DiceRollModal() {
   const diceValue = useGameStore((s) => s.diceValue);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
-  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
+  const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
   const completeDiceRoll = useGameStore((s) => s.completeDiceRoll);
 
   const [phase, setPhase] = useState('intro');

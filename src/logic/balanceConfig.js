@@ -113,7 +113,53 @@ const DEFAULT_FORGE = {
 };
 export const FORGE = clone(DEFAULT_FORGE);
 
-export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS, forge: DEFAULT_FORGE };
+// --- Événements de terrain (extension « weather ») : tout est calibrable ---
+// Points de départ issus de la spec (à équilibrer en jouant). La logique lit
+// WEATHER.* (voir weatherHandlers.js) ; l'éditeur exposera ces valeurs.
+const DEFAULT_WEATHER = {
+  // Cadence : tirage tous les min..max tours, JAMAIS avant `min` tours d'écart
+  // depuis la dernière météo (cooldown). Probabilité montant à 1 au tour `max`.
+  cadence: { min: 3, max: 5 },
+  // Poids de rareté par météo (tirage pondéré). Une météo absente / poids 0 ne
+  // sort jamais en automatique (mais reste forçable en admin). Le séisme et la
+  // pluie maudite sont câblés en Phases 2/3 → poids 0 par défaut pour l'instant.
+  weights: {
+    ventContraire: 4, ventArriere: 4, soleil: 4,
+    orage: 1, pluieAcide: 1, seisme: 1, pluieMaudite: 1,
+  },
+  // Préavis (1 tour à l'avance) par météo : override du défaut du catalogue.
+  preavis: {
+    ventContraire: false, ventArriere: false, soleil: false,
+    orage: true, pluieAcide: true, seisme: true, pluieMaudite: true,
+  },
+  // Durée (tours) des météos AMBIANTES.
+  durations: { ventContraire: 2, ventArriere: 2 },
+  // Vent : facteur appliqué à la valeur FINALE de déplacement (après dé/Relance).
+  vent: { contraireFactor: 0.5, arriereFactor: 2 },
+  // Soleil : nombre de charges rechargées par équipe (plafonné à MAX_CHARGES).
+  soleil: { charge: 1 },
+  // Orage : recul (dé) des équipes touchées + proportion de cases frappées.
+  orage: { die: 'd10', tileRatio: 0.2 },
+  // Pluie acide : or perdu si l'équipe ne porte aucun équipement.
+  pluieAcide: { gold: 15 },
+  // Séisme (Phase 2) : nombre de secousses (ticks) × 1 déplacement aléatoire.
+  seisme: { ticks: 6 },
+  // Pluie maudite (Phase 3) : pool de malédictions tirées au hasard (poids).
+  pluieMaudite: {
+    pool: {
+      blockPowers: { weight: 1, turns: 1 },
+      blockConsumables: { weight: 1, turns: 1 },
+      blockShop: { weight: 1, turns: 1 },
+      forceHardcore: { weight: 1 },
+      curseTimer: { weight: 1, divisor: 2, interval: 2 },
+      loseItem: { weight: 1 },
+      loseGold: { weight: 1, die: 'd10' },
+    },
+  },
+};
+export const WEATHER = clone(DEFAULT_WEATHER);
+
+export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS, forge: DEFAULT_FORGE, weather: DEFAULT_WEATHER };
 
 const LS_KEY = 'quete_balance_overrides_v1';
 
@@ -150,6 +196,8 @@ function resetToDefaults() {
   LOOT.ingredientMultiDrop = { ...DEFAULT_LOOT.ingredientMultiDrop };
   // Forge : reset profond (sous-objets effects/relance + tableaux).
   Object.assign(FORGE, clone(DEFAULT_FORGE));
+  // Météo : reset profond (sous-objets cadence/weights/pool…).
+  Object.assign(WEATHER, clone(DEFAULT_WEATHER));
   // Sets : supprime les sets CUSTOM créés par overrides (absents des défauts),
   // puis restaure name/icon/color/bonus d'origine des sets de base (clone profond).
   for (const k of Object.keys(SETS)) { if (!DEFAULT_SETS[k]) delete SETS[k]; }
@@ -201,6 +249,9 @@ export function applyBalance(overrides) {
 
   // Forge : fusion récursive (paliers d'effets, coûts, prix/rareté de bande).
   if (ov.forge) deepAssign(FORGE, ov.forge);
+
+  // Météo : fusion récursive (cadence, poids, durées, facteurs, pool…).
+  if (ov.weather) deepAssign(WEATHER, ov.weather);
 
   // Sets : modifications des sets de base ET CRÉATION de sets personnalisés
   // (override portant `custom:true` → la clé est ajoutée à SETS).

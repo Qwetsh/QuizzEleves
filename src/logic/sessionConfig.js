@@ -37,7 +37,7 @@ export function joinUrl(code) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock, shopFaceStock = [], log, extensions, locked = false, lv2Mode = false, englishMode = false, gameStats = null }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, shopFaceStock = [], log, extensions, locked = false, lv2Mode = false, englishMode = false, gameStats = null, forgeService = null }) {
   // Historique de questions par équipe (onglet mobile « anciennes questions ») :
   // dérivé du journal analytique, compacté aux derniers ~20 par équipe et aux
   // seuls champs utiles à la revue. Le mobile filtre ensuite sur SON équipe.
@@ -64,6 +64,9 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
     englishMode: !!englishMode, // localisation anglaise (le mobile traduit son UI)
     shop: (shopStock || []).filter(Boolean), // clés du stock boutique (lecture mobile)
     shopFaces: forgeOn ? (shopFaceStock || []).filter(Boolean) : [], // vitrine de faces (Forge)
+    // Prestation de forgeage en cours (session collaborative) : diffusée aux 2
+    // mobiles concernés (le forgeron forge, le client suit) ; null sinon.
+    forgeService: forgeService || null,
     // Historique : on n'envoie que les dernières entrées (l'onglet mobile les
     // affiche du plus récent au plus ancien). Les entrées structurées
     // { text, detail } sont aplaties en texte (le mobile lit des chaînes).
@@ -89,25 +92,33 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
       doubleActive: !!t.doubleActive,
       doubleExtra: t.doubleExtra || 0,
       sablierActif: !!t.sablierActif,
+      // Pluie maudite (météo) : achats bloqués pendant X tours (info mobile).
+      shopBlockedTurns: t.shopBlockedTurns || 0,
       wager: t.wager ? true : null,
       buffs: (t.buffs || []).map((b) => ({ type: b.type, turns: b.turns, n: b.n, subject: b.subject })),
       // Pactes de non-agression actifs (« Complots ») : promesses de NE PAS attaquer.
       promises: (t.promises || []).map((p) => ({ to: p.to, turns: p.turns })),
       // Coalitions (« attaques communes ») : on vise une même cible avec un allié.
       coalitions: (t.coalitions || []).map((c) => ({ with: c.with, against: c.against, turns: c.turns })),
-      // Équipement publié en CLÉS (le mobile lit des clés) + compteur d'enchants
-      // par emplacement (Enchantement) pour un éventuel marqueur ✦.
+      // Équipement publié en CLÉS (le mobile lit des clés) + specs d'enchant
+      // par emplacement (Enchantement). Les specs COMPLÈTES (pas juste un
+      // compteur) permettent au mobile d'afficher le détail des effets ajoutés
+      // par un parchemin gravé (marqueur ✦ + bloc « Enchantement », utile pour
+      // vérifier ce qu'on échange lors d'un troc).
       equipment: Object.fromEntries(['head', 'body', 'feet'].map((s) => {
         const v = t.equipment?.[s];
         return [s, typeof v === 'string' ? v : (v?.key ?? null)];
       })),
       enchants: Object.fromEntries(['head', 'body', 'feet'].map((s) => {
         const v = t.equipment?.[s];
-        return [s, (v && typeof v === 'object' && Array.isArray(v.enchants)) ? v.enchants.length : 0];
+        return [s, (v && typeof v === 'object' && Array.isArray(v.enchants)) ? v.enchants : []];
       })),
       bag: (t.bag || []).filter(Boolean),
       powers: t.powers || {},
       powerDef: t.powerDef, powerOff: t.powerOff,
+      // Métier choisi (extension « Métiers ») : pilote le gating des onglets craft
+      // côté mobile + l'affichage du sélecteur (null = pas encore choisi).
+      metier: t.metier || null,
       // Alchimie : grimoire de l'équipe (ingrédients goûtés + recettes trouvées).
       knownIngredients: t.knownIngredients || [],
       knownRecipes: t.knownRecipes || [],

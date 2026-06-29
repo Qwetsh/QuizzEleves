@@ -1,6 +1,6 @@
 // Traduction lisible des effets (joueurs + éditeur).
 import { describe, it, expect } from 'vitest';
-import { describeItemEffects, describeEffect, amountLabel, itemEffectLines } from '../logic/effectText.js';
+import { describeItemEffects, describeEffect, amountLabel, itemEffectLines, enchantEffectLines } from '../logic/effectText.js';
 
 describe('effectText', () => {
   it('amountLabel : nombre / dé / échelle', () => {
@@ -51,5 +51,13 @@ describe('effectText', () => {
   it('itemEffectLines : descExpert prime (une ligne = une puce)', () => {
     const item = { descExpert: 'Ligne A\n  Ligne B  \n\n', effects: [{ type: 'timerBonus', value: 5 }] };
     expect(itemEffectLines(item)).toEqual(['Ligne A', 'Ligne B']);
+  });
+
+  it('enchantEffectLines : décrit uniquement les enchants (distinct de la base)', () => {
+    const enchants = [{ type: 'reculReduction', value: 2 }, { kind: 'trigger', on: 'correct', do: [{ action: 'gainCharge' }] }];
+    const lines = enchantEffectLines(enchants);
+    expect(lines).toHaveLength(2);
+    expect(enchantEffectLines([])).toEqual([]);
+    expect(enchantEffectLines(undefined)).toEqual([]);
   });
 });

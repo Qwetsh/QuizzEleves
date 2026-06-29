@@ -19,6 +19,7 @@ import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { tierLevelsFor } from '../../logic/powerEffects';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { faceEffects, MAX_FACE_EFFECTS, MAX_FACE_VALUE } from '../../logic/forge';
+import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
 import FaceTile from '../Game/FaceTile';
 import { useGameStore } from '../../store/gameStore';
 import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger } from './EffectBuilder';
@@ -34,6 +35,7 @@ const TABS = [
   { key: 'powers', label: '⚡ Pouvoirs' },
   { key: 'loot', label: '\u{1F3B0} Loot' },
   { key: 'forge', label: '\u{1F3B2} Forge' },
+  { key: 'weather', label: '🌦️ Météo' },
 ];
 
 // Modèle d'une recette en cours d'édition (onglet Alchimie).
@@ -137,6 +139,83 @@ function Stepper({ value, onChange, min = 0, max = 999, step = 1 }) {
       />
       <button onClick={() => onChange(Math.min(max, value + step))} disabled={value >= max}>{'+'}</button>
     </span>
+  );
+}
+
+// Éditeur de l'onglet « Météo » (extension weather) : overrides de balanceConfig
+// .WEATHER (cadence, poids/préavis par météo, valeurs de chaque météo, pool de
+// la pluie maudite). Tout est éditable, rien en dur.
+function WeatherTab({ ov, setOv, setStatus }) {
+  const D = DEFAULTS.weather;
+  const w = ov.weather || {};
+  // Setter générique : clone l'override météo, applique la mutation, re-pose.
+  const edit = (mut) => { setStatus(null); setOv((p) => { const nw = JSON.parse(JSON.stringify(p.weather || {})); mut(nw); return { ...p, weather: nw }; }); };
+  const sub = (sec) => ({ ...D[sec], ...(w[sec] || {}) });
+  const cad = sub('cadence');
+  const vent = sub('vent');
+  const num = (val, onChange, { step = 1, min = 0, max = 9999, width = 80 } = {}) => (
+    <input type="number" className="qed-input" style={{ width }} step={step} min={min} max={max}
+      value={val} onChange={(e) => onChange(Math.max(min, Math.min(max, parseFloat(e.target.value) || 0)))} />
+  );
+  return (
+    <>
+      <div className="qed-label" style={{ marginBottom: 10 }}>Cadence du tirage</div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>Écart minimum (cooldown, tours)</span>
+        <Stepper value={cad.min} onChange={(v) => edit((nw) => { nw.cadence = { ...cad, min: v }; })} min={1} max={20} />
+        <span className="bal-default">défaut : {D.cadence.min}</span></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>Écart maximum (tirage garanti)</span>
+        <Stepper value={cad.max} onChange={(v) => edit((nw) => { nw.cadence = { ...cad, max: v }; })} min={1} max={20} />
+        <span className="bal-default">défaut : {D.cadence.max}</span></div>
+
+      <div className="qed-label" style={{ margin: '16px 0 8px' }}>Météos — poids de tirage & préavis</div>
+      {WEATHER_KEYS.map((id) => {
+        const weight = w.weights?.[id] ?? D.weights[id] ?? 0;
+        const pre = w.preavis?.[id] ?? D.preavis[id] ?? false;
+        return (
+          <div className="bal-row" key={id} style={{ gap: 10, flexWrap: 'wrap' }}>
+            <span className="bal-label" style={{ width: 220 }}>{weatherIcon(id)} {weatherName(id, 'fr')}</span>
+            <span className="bal-default">poids</span>
+            <Stepper value={weight} onChange={(v) => edit((nw) => { nw.weights = { ...(nw.weights || {}), [id]: v }; })} min={0} max={50} />
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <input type="checkbox" checked={!!pre} onChange={(e) => edit((nw) => { nw.preavis = { ...(nw.preavis || {}), [id]: e.target.checked }; })} />
+              <span className="bal-default">préavis (1 tour avant)</span>
+            </label>
+          </div>
+        );
+      })}
+
+      <div className="qed-label" style={{ margin: '16px 0 8px' }}>Valeurs des météos</div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>🌬️ Vent — durée ambiante (tours)</span>
+        <Stepper value={sub('durations').ventContraire} onChange={(v) => edit((nw) => { nw.durations = { ...sub('durations'), ventContraire: v, ventArriere: v }; })} min={1} max={9} />
+        <span className="bal-default">(les deux vents)</span></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>🌬️ Vent contraire — facteur (÷)</span>
+        {num(vent.contraireFactor, (v) => edit((nw) => { nw.vent = { ...vent, contraireFactor: v }; }), { step: 0.1, min: 0.1, max: 1 })}
+        <span className="bal-default">défaut : {D.vent.contraireFactor}</span></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>🌬️ Vent arrière — facteur (×)</span>
+        {num(vent.arriereFactor, (v) => edit((nw) => { nw.vent = { ...vent, arriereFactor: v }; }), { step: 0.5, min: 1, max: 5 })}
+        <span className="bal-default">défaut : {D.vent.arriereFactor}</span></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>☀️ Soleil — charges rechargées</span>
+        <Stepper value={sub('soleil').charge} onChange={(v) => edit((nw) => { nw.soleil = { ...sub('soleil'), charge: v }; })} min={1} max={5} /></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>⛈️ Orage — % de cases frappées</span>
+        {num(sub('orage').tileRatio, (v) => edit((nw) => { nw.orage = { ...sub('orage'), tileRatio: v }; }), { step: 0.05, min: 0, max: 1 })}
+        <span className="bal-default">= {Math.round(sub('orage').tileRatio * 100)}%</span></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>🌧️ Pluie acide — or perdu (sans équip.)</span>
+        <Stepper value={sub('pluieAcide').gold} onChange={(v) => edit((nw) => { nw.pluieAcide = { ...sub('pluieAcide'), gold: v }; })} min={0} max={200} /></div>
+      <div className="bal-row"><span className="bal-label" style={{ width: 290 }}>🌍 Séisme — nombre de secousses</span>
+        <Stepper value={sub('seisme').ticks} onChange={(v) => edit((nw) => { nw.seisme = { ...sub('seisme'), ticks: v }; })} min={1} max={12} /></div>
+
+      <div className="qed-label" style={{ margin: '16px 0 8px' }}>🌧️ Pluie maudite — pool de malédictions (poids)</div>
+      {(() => {
+        const pool = { ...(D.pluieMaudite.pool), ...(w.pluieMaudite?.pool || {}) };
+        const LBL = { blockPowers: 'Bloquer les pouvoirs', blockConsumables: 'Bloquer les consommables', blockShop: 'Bloquer les achats', forceHardcore: 'Question Hardcore (tous)', curseTimer: 'Sablier + réponses mélangées', loseItem: 'Perte d’un objet', loseGold: 'Perte d’or (dé par équipe)' };
+        return Object.keys(D.pluieMaudite.pool).map((cz) => (
+          <div className="bal-row" key={cz}>
+            <span className="bal-label" style={{ width: 290 }}>{LBL[cz] || cz}</span>
+            <Stepper value={pool[cz]?.weight ?? 0} onChange={(v) => edit((nw) => { const pm = nw.pluieMaudite || {}; const pp = { ...(D.pluieMaudite.pool), ...(pm.pool || {}) }; pp[cz] = { ...pp[cz], weight: v }; nw.pluieMaudite = { ...pm, pool: pp }; })} min={0} max={20} />
+          </div>
+        ));
+      })()}
+    </>
   );
 }
 
@@ -705,6 +784,7 @@ export default function BalanceEditor({ onClose }) {
               : tab === 'powers' ? `${Object.keys(ov.powers || {}).length} pouvoir(s) modifié(s)`
               : tab === 'sets' ? `${Object.keys(SETS).length} sets`
               : tab === 'forge' ? `${Object.keys(ov.forge || {}).length} réglage(s) Forge`
+              : tab === 'weather' ? `${Object.keys(ov.weather || {}).length} réglage(s) Météo`
               : `${Object.keys(ov.loot || {}).length} réglage(s) modifié(s)`}
             {status && <span style={{ marginLeft: 6, color: status.startsWith('Erreur') || status.includes('échec') ? '#ffd9d0' : '#d6ffe0' }}>· {status}</span>}
           </span>
@@ -1017,6 +1097,20 @@ export default function BalanceEditor({ onClose }) {
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
                 <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, forge: {} }))}>{'↺'} Valeurs d'origine</button>
+                {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
+                {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
+              </div>
+            </div>
+          </div>
+        ) : tab === 'weather' ? (
+          <div className="qed-body">
+            <div className="bal-detail">
+              <div className="bal-detail-scroll">
+                <WeatherTab ov={ov} setOv={setOv} setStatus={setStatus} />
+              </div>
+              <div className="bal-detail-foot">
+                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
+                <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, weather: {} }))}>{'↺'} Valeurs d'origine</button>
                 {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
                 {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>

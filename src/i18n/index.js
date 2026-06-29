@@ -21,11 +21,13 @@ import logPowers from './dicts/logPowers.js';
 import logItems from './dicts/logItems.js';
 import logFight from './dicts/logFight.js';
 import logTurn from './dicts/logTurn.js';
+import weather from './dicts/weather.js';
 
 // DICT[key] = { fr, en } (ou { fr:[sing,plur], en:[sing,plur] } pour les pluriels).
 export const DICT = {
   ...common, ...setup, ...game, ...modals, ...mobile, ...fight,
   ...logStore, ...logEffects, ...logEvents, ...logPowers, ...logItems, ...logFight, ...logTurn,
+  ...weather,
 };
 
 const interpolate = (s, vars) => (vars

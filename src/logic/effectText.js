@@ -247,6 +247,14 @@ export function describeItemEffects(item, lang = getLang()) {
   return (item?.effects || []).map((fx) => describeEffect(fx, lang)).filter(Boolean);
 }
 
+// Lignes décrivant UNIQUEMENT les enchantements ajoutés à une pièce (parchemin
+// gravé). Permet d'afficher les effets du parchemin DISTINCTEMENT de ceux de
+// l'objet de base. `enchants` = liste de specs moteur (passif {type,value} ou
+// {kind:'trigger'}).
+export function enchantEffectLines(enchants, lang = getLang()) {
+  return (Array.isArray(enchants) ? enchants : []).map((fx) => describeEffect(fx, lang)).filter(Boolean);
+}
+
 // Lignes affichées sous « Détail de l'effet » : descExpert (manuel) prime, sinon
 // auto-généré. opts.lang force la langue (sinon getLang()). Source unique pour le jeu.
 export function itemEffectLines(item, opts = {}) {

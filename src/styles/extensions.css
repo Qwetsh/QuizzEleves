@@ -1,0 +1,242 @@
+/* ============================================================
+   Galerie de sélection des EXTENSIONS (affiches dessinées)
+   Utilisée par ExtensionsChecklist.jsx — chaque affiche est un
+   sélecteur (clic = activer/désactiver) ; survol OU focus révèle
+   joliment l'explication de l'extension.
+   ============================================================ */
+
+.ext-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.ext-card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  background: #1c1408;
+  border: 2px solid rgba(122, 94, 58, 0.3);
+  box-shadow: 0 2px 8px rgba(40, 28, 10, 0.18);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  outline: none;
+}
+
+.ext-card:hover,
+.ext-card:focus-visible {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 26px rgba(40, 28, 10, 0.32);
+}
+
+.ext-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: filter 0.25s ease, transform 0.4s ease;
+}
+
+.ext-card:hover .ext-card__img,
+.ext-card:focus-within .ext-card__img {
+  transform: scale(1.04);
+}
+
+/* --- État DÉSACTIVÉ : grisé et assombri --- */
+.ext-card.is-off {
+  border-color: rgba(122, 94, 58, 0.22);
+  box-shadow: 0 1px 5px rgba(40, 28, 10, 0.12);
+}
+.ext-card.is-off .ext-card__img {
+  filter: grayscale(0.85) brightness(0.62) contrast(0.95);
+}
+.ext-card.is-off::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 14, 6, 0.34);
+  pointer-events: none;
+}
+
+/* --- État « À VENIR » : aperçu non sélectionnable --- */
+.ext-card.is-soon {
+  cursor: default;
+  border-color: rgba(122, 94, 58, 0.25);
+}
+.ext-card.is-soon:hover,
+.ext-card.is-soon:focus-visible {
+  transform: none; /* pas d'effet d'élévation : carte non interactive */
+  box-shadow: 0 2px 8px rgba(40, 28, 10, 0.18);
+}
+.ext-card.is-soon .ext-card__img {
+  filter: grayscale(0.45) brightness(0.7) contrast(0.96);
+}
+.ext-card.is-soon:hover .ext-card__img { transform: none; }
+.ext-card.is-soon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 14, 6, 0.4);
+  pointer-events: none;
+}
+/* Bandeau « À venir » au bas de l'affiche (ne masque pas le titre dessiné en haut) */
+.ext-card__soon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 9px 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #ffe9b8;
+  background: linear-gradient(to top, rgba(14, 9, 3, 0.96), rgba(14, 9, 3, 0.72));
+  border-top: 1px solid rgba(232, 169, 88, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+/* --- État ACTIVÉ : liseré doré lumineux --- */
+.ext-card.is-on {
+  border-color: var(--gold-500, #e8a958);
+  box-shadow: 0 0 0 2px rgba(232, 169, 88, 0.45), 0 10px 24px rgba(40, 28, 10, 0.3),
+    0 0 22px rgba(232, 169, 88, 0.35);
+}
+
+/* --- Pastille d'état (coin haut-droit) --- */
+.ext-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  backdrop-filter: blur(2px);
+  transition: all 0.2s ease;
+}
+.ext-card.is-on .ext-card__badge {
+  background: var(--gold-500, #e8a958);
+  color: #2a1c0a;
+  border: 2px solid #fff7e6;
+  box-shadow: 0 2px 8px rgba(40, 28, 10, 0.4);
+}
+.ext-card.is-off .ext-card__badge {
+  background: rgba(20, 14, 6, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+}
+
+/* --- Cartouche « dépendance » : petite plaque dorée gravée façon cadre --- */
+.ext-card__dep {
+  position: absolute;
+  bottom: 9px;
+  left: 9px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #3a2810;
+  padding: 4px 9px 4px 7px;
+  border-radius: 7px;
+  background: linear-gradient(160deg, #ffe9b0 0%, #e9b35d 55%, #c8893a 100%);
+  border: 1px solid rgba(110, 72, 26, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -1px 2px rgba(110, 72, 26, 0.4), 0 2px 5px rgba(20, 14, 6, 0.45);
+  text-shadow: 0 1px 0 rgba(255, 248, 230, 0.4);
+  transition: opacity 0.25s ease;
+}
+.ext-card__dep svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 0 rgba(255, 248, 230, 0.35));
+}
+.ext-card:hover .ext-card__dep,
+.ext-card:focus-within .ext-card__dep {
+  opacity: 0;
+}
+
+/* --- Volet d'explication (révélé au survol / focus) --- */
+.ext-card__desc {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 14px 13px 12px;
+  color: #fdf6e6;
+  background: linear-gradient(
+    to top,
+    rgba(14, 9, 3, 0.96) 0%,
+    rgba(14, 9, 3, 0.92) 55%,
+    rgba(14, 9, 3, 0) 100%
+  );
+  transform: translateY(101%);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.25s ease;
+  max-height: 78%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ext-card:hover .ext-card__desc,
+.ext-card:focus-within .ext-card__desc {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.ext-card__desc-title {
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  color: #ffe9b8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.ext-card__desc-text {
+  font-size: 11.5px;
+  line-height: 1.42;
+  color: #f3e9d3;
+}
+.ext-card__desc-dep {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffd27a;
+}
+.ext-card__desc-dep svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .ext-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}

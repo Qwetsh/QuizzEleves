@@ -136,6 +136,11 @@ export default {
   'modal.spec.title': { fr: '{name} — Niveau {tier} !', en: '{name} — Level {tier}!' },
   'modal.spec.choose': { fr: 'Choisis ta voie (définitif) :', en: 'Choose your path (final):' },
 
+  // ---- MetierPickerModal (extension « Métiers ») ----
+  'modal.metier.title': { fr: '{emoji} {name} — choisis ton métier', en: '{emoji} {name} — choose your trade' },
+  'modal.metier.choose': { fr: 'Un seul artisanat pour toute la partie. Choix définitif !', en: 'A single craft for the whole game. Final choice!' },
+  'modal.metier.locked': { fr: '🔒 Une fois choisi, le métier ne peut plus changer.', en: '🔒 Once chosen, your trade can no longer change.' },
+
   // ---- EnchantPickerModal ----
   'modal.enchant.onWhich': { fr: 'Sur quelle pièce ?', en: 'On which piece?' },
 
@@ -171,6 +176,7 @@ export default {
   // ---- ItemActionCard ----
   'modal.item.consumable': { fr: 'Consommable', en: 'Consumable' },
   'modal.item.effects': { fr: '⚡ Effets', en: '⚡ Effects' },
+  'modal.item.enchantEffects': { fr: '✦ Enchantement', en: '✦ Enchantment' },
   'modal.item.use': { fr: 'Utiliser', en: 'Use' },
   'modal.item.sell': { fr: '♻️ Revendre +{n}', en: '♻️ Sell +{n}' },
 };

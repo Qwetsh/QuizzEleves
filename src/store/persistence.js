@@ -7,6 +7,9 @@ const SAVE_FIELDS = [
   'shopStock', 'shopStockTurns', 'shopFaceStock',
   'starterChestConfig', 'starterGold',
   'gameStats', 'statsArchived', 'classLabel',
+  // Météo : état ambiant + préavis + compteurs de cadence (l'overlay transitoire
+  // weatherCeremony n'est PAS persisté — il est recréé au prochain déclenchement).
+  'weather', 'weatherNotice', 'turnCount', 'lastWeatherTurn',
 ];
 
 /**

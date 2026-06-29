@@ -10,6 +10,9 @@ export default {
   'game.scribeBtn': { fr: 'Autel', en: 'Altar' },
   'game.openAlchemy': { fr: 'Ouvrir l\'atelier d\'alchimie', en: 'Open the alchemy workshop' },
   'game.alchBtn': { fr: 'Alchimie', en: 'Alchemy' },
+  // Overlay TBI d'une prestation de forgeage en cours
+  'game.forgeSvcTitle': { fr: '{p} forge le dé de {c}', en: '{p} is forging {c}\'s die' },
+  'game.forgeSvcCancel': { fr: 'Annuler la forge', en: 'Cancel forging' },
   'game.title': { fr: 'Quête des Matières', en: 'Subject Quest' },
   'game.boardGame': { fr: 'Jeu de plateau', en: 'Board game' },
   'game.journal': { fr: 'Journal', en: 'Log' },

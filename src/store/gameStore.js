@@ -9,8 +9,9 @@ import { moveForward, moveBack } from '../logic/pathfinding.js';
 import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
-import { defaultExtensions, extOn } from '../extensions/registry.js';
-import { defaultDieFaces, getDieFaces, clampFaceValue, faceEffects, DIE_SLOTS } from '../logic/forge.js';
+import { defaultExtensions, extOn, applyExtensionToggle } from '../extensions/registry.js';
+import { craftEnabledFor, metierActive, metierPending, METIER_IDS, METIER_BY_ID, metierName } from '../logic/metier.js';
+import { defaultDieFaces, getDieFaces, clampFaceValue, faceEffects, DIE_SLOTS, isForgeServiceTrade } from '../logic/forge.js';
 import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock, pickReplacementFace, faceShortLabel, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
@@ -23,12 +24,13 @@ import * as powerH from './powerHandlers.js';
 import * as fightH from './fightHandlers.js';
 import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
+import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
 import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, isItemStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
-import { tg, tgPlural } from '../i18n';
+import { tg, tgPlural, getLang } from '../i18n';
 import { loc } from '../i18n/content';
 import { hasPactSpec, isDiploTrade, pactTurns, withPromise, tickPromises, hasCoalitionSpec, coalitionTurns, withCoalition, tickCoalitions } from '../logic/pacts.js';
 
@@ -156,6 +158,8 @@ const TURN_RESET = {
   indiceHidden: [],
   freeActivation: false,
   showChargePicker: false,
+  // Sélecteur de métier (extension « metier ») : re-évalué à chaque début de tour.
+  showMetierPicker: false,
   // Moteur d'effets composable (objets) : file + interrupts transitoires
   pendingActions: null,
   showTilePicker: null,
@@ -172,6 +176,45 @@ const TURN_RESET = {
   forcedSubject: null,
   deferredTurnEnd: null,
 };
+
+// Retire une « spec » d'offre (or + objets sac + équipement) d'une équipe ; renvoie
+// { team, items, gold } ou null si impossible (or/objet absent). Partagé par le
+// troc (applyTrade) et le PAIEMENT de la prestation de forgeage (applyForgeService).
+// Préserve les enchantements (instances { key, enchants }).
+function takeSpecFrom(team, spec = {}) {
+  const t = { ...team };
+  const items = [];
+  const gold = Math.max(0, Math.trunc(spec.gold || 0));
+  if ((t.money || 0) < gold) return null;
+  t.money = (t.money || 0) - gold;
+  const bag = itemH.normalizeBag(t.bag);
+  for (const key of (spec.bag || [])) {
+    const i = bag.findIndex((c) => itemH.cellKey(c) === key && ITEMS[key]);
+    if (i < 0) return null;
+    const n = itemH.cellN(bag[i]);
+    const ench = itemH.cellEnchants(bag[i]);
+    bag[i] = n > 1 ? itemH.mkCell(key, n - 1) : null;
+    items.push(ench.length ? { key, enchants: ench } : key);
+  }
+  t.bag = bag;
+  const equip = { ...(t.equipment || {}) };
+  for (const slot of (spec.equip || [])) {
+    const ek = itemH.cellKey(equip[slot]);
+    if (!ek || !ITEMS[ek]) return null;
+    items.push(equip[slot]);
+    equip[slot] = null;
+  }
+  t.equipment = equip;
+  return { team: t, items, gold };
+}
+
+// Donne or + objets à une équipe (équipement reçu va au sac ; sac plein → revente
+// auto via placeItem).
+function giveSpecTo(team, items, gold) {
+  let t = { ...team, money: (team.money || 0) + (gold || 0) };
+  for (const key of items) { t = itemH.placeItem(t, key).team; }
+  return t;
+}
 
 export const useGameStore = create((set, get) => ({
   // --- Phase ---
@@ -292,7 +335,9 @@ export const useGameStore = create((set, get) => ({
     // Verrou : on ne bascule une extension qu'au Setup (élimine les états
     // incohérents en pleine partie : objets équipés orphelins, stock, events…).
     if (get().phase !== 'setup') return;
-    set((s) => ({ extensions: { ...s.extensions, [id]: !extOn(s.extensions, id) } }));
+    set((s) => ({
+      extensions: applyExtensionToggle(s.extensions, id, !extOn(s.extensions, id)),
+    }));
   },
   // Helper interne : l'extension « objets/équipement » est-elle active ?
   itemsEnabled: () => extOn(get().extensions, 'equipment'),
@@ -411,6 +456,18 @@ export const useGameStore = create((set, get) => ({
   // Tableau pour supporter plusieurs pions en mouvement (tempete, echange...).
   movePath: null,
 
+  // --- Événements de terrain (« météo », extension `weather`) ---
+  // weather        : météo AMBIANTE en cours { id, nature:'ambient', turnsLeft, factor } | null
+  // weatherNotice  : préavis (1 tour à l'avance) { id } | null
+  // weatherCeremony: overlay transitoire en cours { id, icon, ... } | null (auto-fermé)
+  // turnCount      : compteur global de tours (sert à la cadence météo)
+  // lastWeatherTurn: turnCount du dernier déclenchement (cooldown)
+  weather: null,
+  weatherNotice: null,
+  weatherCeremony: null,
+  turnCount: 0,
+  lastWeatherTurn: 0,
+
   // --- Power selection ---
   powerSetupIndex: 0,
   powerSetupCategory: 'def',
@@ -512,6 +569,37 @@ export const useGameStore = create((set, get) => ({
       items: names.length ? tg('log.store.starterChest.items', { names: names.join(', ') }) : tg('log.store.starterChest.empty'),
     }));
     get().checkMoneyMilestone(currentTeam); // les pièces volent (FlyingCoins) au changement d'or
+    get().triggerMetierPicker(); // enchaîne le choix de métier juste après le coffre
+    if (get().phase === 'game') saveGame(get());
+  },
+
+  // --- Métiers (extension « metier ») : une équipe choisit UN métier à son 1er
+  // tour, juste après le coffre de bienvenue, puis ne pratique plus QUE cet
+  // artisanat (forge / alchimie / enchantement). Choix DÉFINITIF (verrou). ---
+  // Ouvre le sélecteur pour l'équipe active si l'extension est active et qu'elle
+  // n'a pas encore choisi. No-op sinon (extension coupée ou métier déjà fixé).
+  triggerMetierPicker: () => {
+    const { teams, currentTeam, extensions } = get();
+    if (metierPending(extensions, teams[currentTeam])) set({ showMetierPicker: true });
+  },
+  // Fixe DÉFINITIVEMENT le métier d'une équipe. TBI : équipe active ; mobile :
+  // `teamIndex` (intent du propriétaire). Ignoré si déjà choisi (verrou) ou métier
+  // invalide. Ferme la modale uniquement si c'est l'équipe active du TBI.
+  chooseMetier: (craft, teamIndex) => {
+    const st = get();
+    const idx = teamIndex ?? st.currentTeam;
+    const team = st.teams[idx];
+    if (!team || team.metier) return;             // déjà choisi → verrou
+    if (!METIER_IDS.includes(craft)) return;       // métier inconnu
+    if (!metierActive(st.extensions)) return;      // extension coupée
+    const nt = [...st.teams];
+    nt[idx] = { ...team, metier: craft };
+    const closing = idx === st.currentTeam ? { showMetierPicker: false } : {};
+    set({ teams: nt, ...closing });
+    const m = METIER_BY_ID[craft];
+    st.addLog(tg('log.store.metierChosen', {
+      emoji: team.emoji, name: team.name, metier: m ? metierName(m, getLang()) : craft,
+    }));
     if (get().phase === 'game') saveGame(get());
   },
 
@@ -610,6 +698,9 @@ export const useGameStore = create((set, get) => ({
       // le masquage « ❓ Effet inconnu » s'applique dès le 1er tour (sinon le champ
       // n'apparaît qu'à la 1re distillation et l'effet fuite entre-temps).
       knownIngredients: [],
+      // Métier (extension « metier ») : choisi au 1er tour, verrouillé ensuite.
+      // null = pas encore choisi (ou extension inactive → jamais demandé).
+      metier: null,
       // Forge de dés : dé standard 1→6 + stock de faces achetées (vide au départ).
       ...(forgeOn ? { dieFaces: defaultDieFaces(), faceStock: [] } : {}),
     }));
@@ -634,6 +725,8 @@ export const useGameStore = create((set, get) => ({
       shopFaceStock: forgeOn ? pickFaceStock() : [],
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      // Météo : partie neuve → aucun état, compteurs à zéro.
+      weather: null, weatherNotice: null, weatherCeremony: null, turnCount: 0, lastWeatherTurn: 0,
       powerSetupIndex: 0, powerSetupCategory: 'def',
     });
   },
@@ -681,6 +774,8 @@ export const useGameStore = create((set, get) => ({
     const starterGold = resolveStarterGold(get().starterChestConfig || defaultStarterChestConfig());
     set({ teams: finalTeams, phase: 'game', starterGold });
     get().triggerStarterChest();
+    // Pas de coffre (désactivé/déjà ouvert) → proposer le métier directement.
+    if (!get().showStarterChest) get().triggerMetierPicker();
   },
 
   // Démarre la partie à partir des équipes du lobby (mode téléphone). Construit
@@ -699,8 +794,8 @@ export const useGameStore = create((set, get) => ({
 
   // --- Dice ---
   rollDice: () => {
-    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest, showDuelChoice, teams, currentTeam } = get();
-    if (finished || rolling || showDiceModal || showFight || showStarterChest || showDuelChoice) return;
+    const { finished, rolling, showDiceModal, showFight, pendingActions, pendingLanding, awaitingChoice, showQuestion, showEvent, showStarterChest, showMetierPicker, showDuelChoice, teams, currentTeam } = get();
+    if (finished || rolling || showDiceModal || showFight || showStarterChest || showMetierPicker || showDuelChoice) return;
     // Bloque le dé pendant une séquence d'effet (choix de case/cible/d6...) ou
     // tant que le tour n'est pas résolu (atterrissage, jonction, question).
     if (pendingActions || pendingLanding || awaitingChoice || showQuestion || showEvent) return;
@@ -769,13 +864,21 @@ export const useGameStore = create((set, get) => ({
     // CHAQUE lancer, sans recul ni aller-retour (≠ reculReduction qui n'amortit que
     // les reculs subis). Plancher à 0 : un malus ≥ valeur fait rester sur place.
     const malus = getEffectValue(team, 'diceMalus');
-    const eff = Math.max(0, moveValue + bonus - malus);
+    // Météo « vent » (ambiante) : ×/÷ sur la valeur FINALE de déplacement (après
+    // dé, Relance, bonus/malus). Facteur 1 si pas de vent / extension coupée.
+    const windFactor = extOn(get().extensions, 'weather') ? weatherH.weatherMoveFactor(get) : 1;
+    const eff = Math.max(0, Math.round((moveValue + bonus - malus) * windFactor));
     set({ preRollPos: team.pos, preRollValue: eff, freeActivation: false });
-    addLog(bonus > 0
-      ? tg('log.store.roll.bonus', { emoji: team.emoji, name: team.name, value: moveValue, bonus, eff })
-      : malus > 0
-        ? tg('log.store.roll.malus', { emoji: team.emoji, name: team.name, value: moveValue, malus, eff })
-        : tg('log.store.roll', { emoji: team.emoji, name: team.name, value: moveValue }));
+    // Météo « vent » : le déplacement effectif (eff) diffère de la valeur du dé →
+    // le journal doit montrer l'avancée RÉELLE (et pas seulement la valeur brute).
+    const windLabel = windFactor !== 1 ? (windFactor < 1 ? `÷${+(1 / windFactor).toFixed(2)}` : `×${+windFactor.toFixed(2)}`) : null;
+    addLog(windLabel
+      ? tg('log.store.roll.wind', { emoji: team.emoji, name: team.name, value: moveValue, factor: windLabel, eff })
+      : bonus > 0
+        ? tg('log.store.roll.bonus', { emoji: team.emoji, name: team.name, value: moveValue, bonus, eff })
+        : malus > 0
+          ? tg('log.store.roll.malus', { emoji: team.emoji, name: team.name, value: moveValue, malus, eff })
+          : tg('log.store.roll', { emoji: team.emoji, name: team.name, value: moveValue }));
     // Effets de la face : 🎲 lancer (Prime…) appliqués maintenant ; ⏱️ avant
     // question (Égide…) armés pour ce tour (pipeline §6).
     const forgeRoll = resolveFaceAtRoll(team, face);
@@ -2064,6 +2167,12 @@ export const useGameStore = create((set, get) => ({
   openShop: () => {
     const { finished, rolling, showQuestion, showEvent, showFight, awaitingChoice, teams, currentTeam } = get();
     if (finished || rolling || showQuestion || showEvent || showFight || awaitingChoice) return;
+    // Pluie maudite (météo) : la boutique est fermée pendant X tours.
+    if (teams[currentTeam]?.shopBlockedTurns > 0) {
+      const t = teams[currentTeam];
+      get().addLog(tgPlural('log.weather.shopBlocked', t.shopBlockedTurns, { emoji: t.emoji, name: t.name, n: t.shopBlockedTurns }));
+      return;
+    }
     // Visiter la boutique remet à zéro le compteur du prompt de l'équipe active.
     const nt = teams.slice();
     if (nt[currentTeam]) nt[currentTeam] = { ...nt[currentTeam], turnsSinceShop: 0 };
@@ -2102,13 +2211,13 @@ export const useGameStore = create((set, get) => ({
   // `parts` = 1-2 effets configurés (cf. enchantPalette). Résout le 1er parchemin
   // vierge du sac. Renvoie le résultat de craftParchment ({ ok, reason? }).
   showScribe: false,
-  openScribe: () => set({ showScribe: true }),
+  openScribe: () => { if (craftEnabledFor(get().extensions, get().teams[get().currentTeam], 'enchant')) set({ showScribe: true }); },
   closeScribe: () => set({ showScribe: false }),
 
   // --- Atelier d'alchimie sur le TBI (extension alchemy) : même craft que le
   // mobile, appliqué DIRECTEMENT pour l'équipe active (craftPotionFor). ---
   showAlchemy: false,
-  openAlchemy: () => { if (extOn(get().extensions, 'alchemy')) set({ showAlchemy: true }); },
+  openAlchemy: () => { if (craftEnabledFor(get().extensions, get().teams[get().currentTeam], 'alchemy')) set({ showAlchemy: true }); },
   closeAlchemy: () => set({ showAlchemy: false }),
   // Distille 3 ingrédients (par CLÉS) en résolvant chacun vers une case DISTINCTE
   // du sac positionnel du TBI (comme l'intent mobile). Renvoie le résultat de craft.
@@ -2123,7 +2232,7 @@ export const useGameStore = create((set, get) => ({
 
   // --- Forge de dés : atelier ouvert depuis le dé 3D du HUD (extension forge) ---
   showForge: false,
-  openForge: () => { if (extOn(get().extensions, 'forge')) set({ showForge: true }); },
+  openForge: () => { if (craftEnabledFor(get().extensions, get().teams[get().currentTeam], 'forge')) set({ showForge: true }); },
   closeForge: () => set({ showForge: false }),
   craftParchmentFor: (teamIdx, parts) => {
     const t = get().teams[teamIdx];
@@ -2146,9 +2255,9 @@ export const useGameStore = create((set, get) => ({
   // renouvelle l'emplacement acheté (comme les objets). teamIndex optionnel (mobile).
   buyFace: (faceIndex, teamIndex) => {
     const st = get();
-    if (!extOn(st.extensions, 'forge')) return;
     const idx = teamIndex ?? st.currentTeam;
     const team = st.teams[idx];
+    if (!craftEnabledFor(st.extensions, team, 'forge')) return; // métier ≠ forgeron
     const stock = st.shopFaceStock || [];
     const f = stock[faceIndex];
     if (!team || !f) return;
@@ -2175,10 +2284,10 @@ export const useGameStore = create((set, get) => ({
   // l'animation de coulée se joue sur le téléphone de l'élève (cf. MobileApp).
   forgeFace: (slotIndex, stockIndex, teamIndex, fromIntent = false) => {
     const st = get();
-    if (!extOn(st.extensions, 'forge')) return;
     const idx = teamIndex ?? st.currentTeam;
     const team = st.teams[idx];
     if (!team) return;
+    if (!craftEnabledFor(st.extensions, team, 'forge')) return; // métier ≠ forgeron
     const stock = team.faceStock || [];
     const f = stock[stockIndex];
     if (!f) return;
@@ -2215,6 +2324,13 @@ export const useGameStore = create((set, get) => ({
     const st = get();
     const idx = st.teams.findIndex((t) => t.token && t.token === token);
     if (idx < 0) return; // jeton inconnu (équipe retirée ?)
+    // Prestation de forgeage : la session collaborative est PARALLÈLE à la partie —
+    // on traite ses intents AVANT le verrou de résolution (sinon le forgeron, s'il
+    // est l'équipe active, ne pourrait pas forger pendant son propre tour).
+    if (type === 'forgeServicePlace') { get().forgeServicePlace(payload.slotIndex, payload.stockIndex, idx); return; }
+    if (type === 'forgeServiceRemove') { get().forgeServiceRemove(payload.slotIndex, idx); return; }
+    if (type === 'forgeServiceValidate') { get().forgeServiceValidate(idx); return; }
+    if (type === 'forgeServiceCancel') { get().forgeServiceCancel(idx); return; }
     const resolving = !!(st.showQuestion || st.showEvent || st.showFight || st.showDuelChoice
       || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
     // Bloqué si partie finie, ou si c'est l'équipe ACTIVE en pleine résolution.
@@ -2283,6 +2399,9 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'shieldImmunity') {
       // Ultime « Immunité totale » (Bouclier L10) déclenché depuis le téléphone.
       powerH.useShieldImmunity(set, get, idx);
+    } else if (type === 'chooseMetier') {
+      // Métiers : le propriétaire choisit son métier depuis le téléphone.
+      get().chooseMetier(payload.craft, idx);
     }
   },
 
@@ -2312,45 +2431,11 @@ export const useGameStore = create((set, get) => ({
       || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
     if ((A === st.currentTeam || B === st.currentTeam) && resolving) return { ok: false, reason: 'résolution en cours' };
 
-    // Retire `spec` d'une équipe (or + objets sac + équipement) ; null si impossible.
-    const takeFrom = (team, spec = {}) => {
-      const t = { ...team };
-      const items = [];
-      const gold = Math.max(0, Math.trunc(spec.gold || 0));
-      if ((t.money || 0) < gold) return null;
-      t.money = (t.money || 0) - gold;
-      const bag = itemH.normalizeBag(t.bag);
-      for (const key of (spec.bag || [])) {
-        const i = bag.findIndex((c) => itemH.cellKey(c) === key && ITEMS[key]);
-        if (i < 0) return null;
-        const n = itemH.cellN(bag[i]);
-        const ench = itemH.cellEnchants(bag[i]); // préserve un objet enchanté
-        bag[i] = n > 1 ? itemH.mkCell(key, n - 1) : null;
-        items.push(ench.length ? { key, enchants: ench } : key);
-      }
-      t.bag = bag;
-      const equip = { ...(t.equipment || {}) };
-      for (const slot of (spec.equip || [])) {
-        const ek = itemH.cellKey(equip[slot]); // tolère une instance { key, enchants }
-        if (!ek || !ITEMS[ek]) return null;
-        items.push(equip[slot]); // transfère l'instance entière (avec ses enchants)
-        equip[slot] = null;
-      }
-      t.equipment = equip;
-      return { team: t, items, gold };
-    };
-    // Donne or + objets (équipement reçu va dans le sac ; sac plein → revente auto).
-    const giveTo = (team, items, gold) => {
-      let t = { ...team, money: (team.money || 0) + (gold || 0) };
-      for (const key of items) { t = itemH.placeItem(t, key).team; }
-      return t;
-    };
-
-    const ra = takeFrom(st.teams[A], trade.give);
-    const rb = takeFrom(st.teams[B], trade.want);
+    const ra = takeSpecFrom(st.teams[A], trade.give);
+    const rb = takeSpecFrom(st.teams[B], trade.want);
     if (!ra || !rb) return { ok: false, reason: 'objets ou or indisponibles' };
-    let ta = giveTo(ra.team, rb.items, rb.gold); // A reçoit ce que B donnait (want)
-    let tb = giveTo(rb.team, ra.items, ra.gold); // B reçoit ce que A donnait (give)
+    let ta = giveSpecTo(ra.team, rb.items, rb.gold); // A reçoit ce que B donnait (want)
+    let tb = giveSpecTo(rb.team, ra.items, ra.gold); // B reçoit ce que A donnait (give)
     // Diplomatie (« Complots ») : un terme `pact` engage le DONNEUR à ne pas
     // attaquer le receveur pendant N tours (promesse BRISABLE — cf. trahison).
     const secret = isDiploTrade(trade);
@@ -2371,12 +2456,148 @@ export const useGameStore = create((set, get) => ({
     return { ok: true };
   },
 
+  // --- Prestation de FORGEAGE (troc + forge) : session collaborative à 2 ---
+  // Un forgeron propose dans un deal de forger des faces sur le dé d'une autre
+  // équipe. À l'acceptation, le TBI ouvre cette session (état diffusé aux 2
+  // mobiles) : la réserve de faces du forgeron est mise en ESCROW, il place ses
+  // faces sur le dé du CLIENT (brouillon réversible), puis double validation →
+  // pose définitive + paiement. Annulation → réserve rendue, aucun paiement.
+  forgeService: null,
+  // Démarre la session depuis une offre `trade` ACCEPTÉE (appelé par TradeConsumer).
+  startForgeService: (trade) => {
+    const st = get();
+    if (st.finished || st.forgeService) return { ok: false, reason: 'occupé' };
+    const providerIdx = trade?.from_idx, customerIdx = trade?.to_idx;
+    const provider = st.teams[providerIdx], customer = st.teams[customerIdx];
+    if (!provider || !customer || providerIdx === customerIdx) return { ok: false, reason: 'équipe invalide' };
+    if (!craftEnabledFor(st.extensions, provider, 'forge')) return { ok: false, reason: 'pas forgeron' };
+    const providerStock = [...(provider.faceStock || [])];
+    if (!providerStock.length) return { ok: false, reason: 'aucune face en réserve' };
+    const nt = [...st.teams];
+    nt[providerIdx] = { ...provider, faceStock: [] }; // escrow : la réserve part en atelier
+    set({
+      teams: nt,
+      forgeService: {
+        providerIdx, customerIdx,
+        price: trade.want || {},        // ce que le client paie (or/objets)
+        providerStock,                  // faces escrow (réserve du forgeron au départ)
+        placements: {},                 // { [slotIndex]: stockIndex } — brouillon
+        providerOk: false, customerOk: false,
+      },
+    });
+    st.addLog(tg('log.store.forgeServiceStart', {
+      pe: provider.emoji, pn: provider.name, ce: customer.emoji, cn: customer.name,
+    }));
+    if (get().phase === 'game') saveGame(get());
+    return { ok: true };
+  },
+  // Le forgeron pose une face de sa réserve (escrow) sur son slot cible du dé client.
+  forgeServicePlace: (slotIndex, stockIndex, teamIndex) => {
+    const st = get();
+    const fs = st.forgeService;
+    if (!fs || teamIndex !== fs.providerIdx) return;
+    const face = fs.providerStock[stockIndex];
+    if (!face) return;
+    const target = face.slot ? face.slot - 1 : slotIndex; // face liée à son slot
+    if (target == null || target < 0 || target >= DIE_SLOTS) return;
+    // Une face de la réserve ne se pose qu'une fois : on retire son ancienne pose
+    // éventuelle, puis on l'affecte au slot cible (en remplaçant ce qui s'y trouvait).
+    const placements = {};
+    for (const [s, si] of Object.entries(fs.placements || {})) {
+      if (si !== stockIndex && Number(s) !== target) placements[s] = si;
+    }
+    placements[target] = stockIndex;
+    set({ forgeService: { ...fs, placements, providerOk: false, customerOk: false } });
+  },
+  // Le forgeron retire la face brouillon d'un slot (revient à la face d'origine).
+  forgeServiceRemove: (slotIndex, teamIndex) => {
+    const st = get();
+    const fs = st.forgeService;
+    if (!fs || teamIndex !== fs.providerIdx) return;
+    const placements = { ...(fs.placements || {}) };
+    delete placements[slotIndex];
+    set({ forgeService: { ...fs, placements, providerOk: false, customerOk: false } });
+  },
+  // Validation d'une partie (forgeron ou client). Quand les DEUX valident → pose.
+  forgeServiceValidate: (teamIndex) => {
+    const st = get();
+    const fs = st.forgeService;
+    if (!fs) return;
+    let next = fs;
+    if (teamIndex === fs.providerIdx) next = { ...fs, providerOk: true };
+    else if (teamIndex === fs.customerIdx) next = { ...fs, customerOk: true };
+    else return;
+    if (next.providerOk && next.customerOk) { set({ forgeService: next }); get().applyForgeService(); }
+    else set({ forgeService: next });
+  },
+  // Annulation (par l'une des 2 parties) : la réserve escrow est RENDUE au forgeron,
+  // aucune face posée, aucun paiement.
+  forgeServiceCancel: (teamIndex) => {
+    const st = get();
+    const fs = st.forgeService;
+    if (!fs) return;
+    if (teamIndex != null && teamIndex !== fs.providerIdx && teamIndex !== fs.customerIdx) return;
+    const nt = [...st.teams];
+    const prov = nt[fs.providerIdx];
+    if (prov) nt[fs.providerIdx] = { ...prov, faceStock: [...(prov.faceStock || []), ...fs.providerStock] };
+    set({ teams: nt, forgeService: null });
+    const customer = st.teams[fs.customerIdx];
+    if (prov && customer) st.addLog(tg('log.store.forgeServiceCancel', { pe: prov.emoji, pn: prov.name, ce: customer.emoji, cn: customer.name }));
+    if (get().phase === 'game') saveGame(get());
+  },
+  // Pose DÉFINITIVE (double validation atteinte) : faces sur le dé client, faces
+  // non posées rendues au forgeron, paiement transféré. Atomique.
+  applyForgeService: () => {
+    const st = get();
+    const fs = st.forgeService;
+    if (!fs) return { ok: false };
+    const provider = st.teams[fs.providerIdx];
+    const customer = st.teams[fs.customerIdx];
+    if (!provider || !customer) { set({ forgeService: null }); return { ok: false }; }
+    // Paiement (client → forgeron). Échec atomique si le client ne peut plus payer :
+    // on GARDE la session ouverte (les parties pourront annuler).
+    const pay = takeSpecFrom(customer, fs.price || {});
+    if (!pay) return { ok: false, reason: 'paiement impossible' };
+    const placements = fs.placements || {};
+    const placedStock = new Set(Object.values(placements).map(Number));
+    const faces = getDieFaces(customer).map((face, i) => {
+      const si = placements[i];
+      if (si == null) return face;
+      const f = fs.providerStock[si];
+      return { base: i + 1, value: clampFaceValue(f.value), effects: faceEffects(f) };
+    });
+    const returned = fs.providerStock.filter((_, i) => !placedStock.has(i)); // faces non posées
+    const custTeam = { ...pay.team, dieFaces: faces };
+    let provTeam = giveSpecTo(provider, pay.items, pay.gold);
+    provTeam = { ...provTeam, faceStock: [...(provTeam.faceStock || []), ...returned] };
+    const nt = [...st.teams];
+    nt[fs.providerIdx] = provTeam;
+    nt[fs.customerIdx] = custTeam;
+    set({ teams: nt, forgeService: null });
+    st.addLog(tg('log.store.forgeServiceDone', {
+      pe: provider.emoji, pn: provider.name, ce: customer.emoji, cn: customer.name,
+      n: placedStock.size,
+    }));
+    get().checkMoneyMilestone(fs.providerIdx); get().checkMoneyMilestone(fs.customerIdx);
+    if (get().phase === 'game') saveGame(get());
+    return { ok: true };
+  },
+
   // --- Intentions ADMIN (interface prof sur téléphone, code 54150) ---
   // Contrôle total : agit sur N'IMPORTE quelle équipe (par index), SANS verrou.
   // Types : adminMoney {teamIdx, delta} · adminGiveItem {teamIdx, key, n?} ·
   // adminRemoveEquip {teamIdx, slot} · adminRemoveBag {teamIdx, key}.
   applyAdminIntent: (type, payload = {}) => {
     const st = get();
+    // Météo : intent sans équipe cible (s'applique à tout le plateau). Traité
+    // AVANT la garde d'équipe. Forçage immédiat (spectacle), sans préavis.
+    if (type === 'adminWeather') {
+      if (extOn(get().extensions, 'weather') && payload.id) {
+        weatherH.triggerWeather(set, get, payload.id, { forced: true });
+        if (get().phase === 'game') saveGame(get());
+      }
+      return;
+    }
     const idx = Number(payload.teamIdx);
     const team = st.teams[idx];
     if (!team) return;
@@ -2417,6 +2638,15 @@ export const useGameStore = create((set, get) => ({
     }
     if (get().phase === 'game') saveGame(get());
   },
+
+  // --- Événements de terrain (« météo ») : actions exposées ---
+  // Déclenche une météo précise (DEV/admin TBI). `forced` saute le préavis.
+  triggerWeather: (id, opts = {}) => {
+    weatherH.triggerWeather(set, get, id, opts);
+    if (get().phase === 'game') saveGame(get());
+  },
+  // Ferme l'overlay de cérémonie météo (appelé par WeatherOverlay en fin d'anim).
+  closeWeatherCeremony: () => set({ weatherCeremony: null }),
 
 
   // --- Moteur d'effets composable (objets) : routeurs des interruptions ---
@@ -2651,6 +2881,15 @@ export const useGameStore = create((set, get) => ({
       if (left <= 0) addLog(tg('log.store.consumablesUnblocked', { emoji: cbc.emoji, name: cbc.name }));
     }
 
+    // Blocage des ACHATS (Pluie maudite) : 1 tour de moins quand l'équipe regagne la main.
+    const cbs = nt[newCurrent];
+    if (cbs?.shopBlockedTurns > 0) {
+      const left = cbs.shopBlockedTurns - 1;
+      if (nt === get().teams) nt = [...nt];
+      nt[newCurrent] = left > 0 ? { ...cbs, shopBlockedTurns: left } : { ...cbs, shopBlockedTurns: undefined };
+      if (left <= 0) addLog(tg('log.weather.shopUnblocked', { emoji: cbs.emoji, name: cbs.name }));
+    }
+
     // « Hacking » (événement mode téléphone) : la cinématique « app piratée »
     // est VISIBLE en continu dès le déclenchement (tant que hackedTurns > 0, cf.
     // BottomBar/MobileApp). Quand l'équipe piratée REGAGNE la main, c'est la
@@ -2716,8 +2955,16 @@ export const useGameStore = create((set, get) => ({
       }
     }
 
-    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET, showShopPrompt: hackOverlay ? false : showShopPrompt, hackOverlay });
-    if (!hackOverlay) get().triggerStarterChest(); // coffre de départ au 1er tour de cette équipe
+    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET, showShopPrompt: hackOverlay ? false : showShopPrompt, hackOverlay, turnCount: (get().turnCount || 0) + 1 });
+    if (!hackOverlay) {
+      get().triggerStarterChest(); // coffre de départ au 1er tour de cette équipe
+      // Choix de métier au 1er tour : si pas de coffre, on l'enchaîne directement
+      // (sinon il s'ouvre à la fermeture du coffre, cf. closeStarterChest).
+      if (!get().showStarterChest) get().triggerMetierPicker();
+    }
+    // Événements de terrain (« météo ») : tirage périodique « entre deux tours »
+    // (aucune question/événement ouvert ici). No-op si l'extension est coupée.
+    weatherH.maybeDrawWeather(set, get);
     if (get().phase === 'game') saveGame(get());
   },
 
@@ -2733,13 +2980,25 @@ export const useGameStore = create((set, get) => ({
       movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       showStarterChest: false, lastStarterReward: null, hackOverlay: null,
+      // Météo : l'overlay transitoire ne survit pas à un reload (l'état ambiant
+      // et le préavis, eux, sont persistés et restaurés via ...saved).
+      weatherCeremony: null,
     });
+    // Météo : champs absents des vieilles sauvegardes → défauts.
+    if (saved.weather === undefined) set({ weather: null });
+    if (saved.weatherNotice === undefined) set({ weatherNotice: null });
+    if (saved.turnCount == null) set({ turnCount: 0 });
+    if (saved.lastWeatherTurn == null) set({ lastWeatherTurn: 0 });
     // Coffre de départ : config absente (vieilles saves) → défaut ; or non résolu
     // (saves antérieures à la config) → on le résout depuis la config.
     if (saved.starterChestConfig == null) set({ starterChestConfig: defaultStarterChestConfig() });
     if (saved.starterGold == null) set({ starterGold: resolveStarterGold(get().starterChestConfig) });
     // Coffre de départ : si l'équipe courante ne l'a pas encore ouvert, le reproposer.
-    if (get().phase === 'game') get().triggerStarterChest();
+    // Sinon (coffre déjà pris/désactivé), reproposer un éventuel choix de métier.
+    if (get().phase === 'game') {
+      get().triggerStarterChest();
+      if (!get().showStarterChest) get().triggerMetierPicker();
+    }
     // Sauvegardes anterieures au systeme d'objets : le CHAMP est absent.
     // Un tableau vide est un etat legitime (tout decoche au setup / etal vide)
     // et doit etre respecte — d'ou le test sur la presence, pas sur la longueur.
@@ -2801,6 +3060,7 @@ export const useGameStore = create((set, get) => ({
       rolling: false, ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       hackOverlay: null,
+      weather: null, weatherNotice: null, weatherCeremony: null, turnCount: 0, lastWeatherTurn: 0,
       nbTeams: 3, setupTeams: createDefaultTeams(3),
       extensions: defaultExtensions(),
       enabledEvents: Object.keys(EVENTS),

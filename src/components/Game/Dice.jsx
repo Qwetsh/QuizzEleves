@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { canUsePowerInContext } from '../../logic/powerActivator';
 import { useT } from '../../i18n';
-import { extOn } from '../../extensions/registry';
+import { craftEnabledFor } from '../../logic/metier';
 import { getDieFaces } from '../../logic/forge';
 import Dice3D from './Dice3D';
 
@@ -29,7 +29,9 @@ export default function Dice() {
   const showDuelChoice = useGameStore((s) => s.showDuelChoice);
   // « Hacking » : le tour piraté s'auto-résout (cinématique HUD) → dé verrouillé.
   const hackOverlay = useGameStore((s) => s.hackOverlay);
-  const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
+  // Forge cliquable seulement si l'équipe active peut forger (métier forgeron, ou
+  // extension Métiers inactive → tout le monde).
+  const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice || !!hackOverlay;
   const team = teams[currentTeam];
   // Extension Forge : on montre le dé PROPRE à l'équipe qui passe (faces forgées),

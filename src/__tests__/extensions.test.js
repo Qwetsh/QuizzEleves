@@ -1,7 +1,7 @@
 // Tests du système d'extensions (modules activables/désactivables).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
-import { defaultExtensions, extOn, EXTENSIONS } from '../extensions/registry.js';
+import { defaultExtensions, extOn, EXTENSIONS, applyExtensionToggle } from '../extensions/registry.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
 import { EVENTS } from '../data/events.js';
 
@@ -41,6 +41,47 @@ describe('sélecteur d’événements selon l’extension objets', () => {
   });
   it('pool entièrement item + objets coupés → null (pas de crash)', () => {
     expect(pickRandomEvent(itemKeys, { itemsEnabled: false })).toBeNull();
+  });
+});
+
+describe('dépendances entre extensions (cascade)', () => {
+  const all = () => Object.fromEntries(EXTENSIONS.map((e) => [e.id, true]));
+
+  it('activer Complots active sa dépendance Troc (et la chaîne)', () => {
+    const base = { ...all(), diplomacy: false, trade: false, equipment: false };
+    const next = applyExtensionToggle(base, 'diplomacy', true);
+    expect(extOn(next, 'diplomacy')).toBe(true);
+    expect(extOn(next, 'trade')).toBe(true); // dépendance directe
+    expect(extOn(next, 'equipment')).toBe(true); // dépendance transitive (trade→equipment)
+  });
+
+  it('désactiver Troc désactive Complots (dépendant)', () => {
+    const base = { ...all() };
+    const next = applyExtensionToggle(base, 'trade', false);
+    expect(extOn(next, 'trade')).toBe(false);
+    expect(extOn(next, 'diplomacy')).toBe(false);
+  });
+
+  it('désactiver Objets coupe toute la chaîne dépendante', () => {
+    const next = applyExtensionToggle(all(), 'equipment', false);
+    for (const id of ['equipment', 'trade', 'diplomacy', 'alchemy', 'enchant']) {
+      expect(extOn(next, id)).toBe(false);
+    }
+    // une extension indépendante reste active
+    expect(extOn(next, 'forge')).toBe(true);
+  });
+
+  it('invariant : aucune extension active sans ses dépendances', () => {
+    for (const e of EXTENSIONS) {
+      const next = applyExtensionToggle(defaultExtensions(), e.id, true);
+      for (const id of Object.keys(next)) {
+        if (extOn(next, id)) {
+          for (const req of EXTENSIONS.find((x) => x.id === id)?.requires || []) {
+            expect(extOn(next, req)).toBe(true);
+          }
+        }
+      }
+    }
   });
 });
 

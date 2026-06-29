@@ -22,6 +22,12 @@ export const DIE_SLOTS = 6;
 // Nombre maximum d'effets cumulables sur une même face.
 export const MAX_FACE_EFFECTS = 3;
 
+// Une offre de troc (ligne quete_trades) est-elle une PRESTATION DE FORGEAGE ?
+// Le forgeron (from_idx) « donne » un service (give.forge) et « veut » un paiement
+// (want : or/objets). À l'acceptation, le TBI n'applique pas un transfert direct
+// mais ouvre une session de forge collaborative (cf. startForgeService).
+export const isForgeServiceTrade = (trade) => !!(trade && trade.give && trade.give.forge);
+
 // Liste NORMALISÉE des effets d'une face (0→3). Rétro-compatible : lit la forme
 // MODERNE `effects: [{type,tier}, …]` OU l'ancienne `effect: {type,tier}|null`
 // (saves/catalogue d'avant le multi-effets). Source unique pour tout le moteur.
