@@ -232,6 +232,55 @@ describe('Indice — arbre (résolveur)', () => {
   });
 });
 
+describe('Indice — effets en jeu (store)', () => {
+  const S = () => useGameStore.getState();
+  const setup = (over) => useGameStore.setState({
+    phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+    extensions: { equipment: true, mastery: true }, indiceUsed: false, indiceUses: 0, indiceHidden: [],
+    showQuestion: { question: { a: ['A', 'B', 'C', 'D'], c: 1 }, subject: 'maths' },
+    teams: [teamWith('indice', over)],
+  });
+
+  it('2ᵉ élimination probabiliste : éliminée si le tirage passe (L2, mock < 25 %)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    setup({ level: 2, charges: 1 });
+    S().useIndice();
+    expect(S().indiceHidden).toHaveLength(2);
+    vi.restoreAllMocks();
+  });
+
+  it('L6 : 2 éliminations garanties', () => {
+    setup({ level: 6, charges: 1 });
+    S().useIndice();
+    expect(S().indiceHidden).toHaveLength(2);
+  });
+
+  it('Indices en chaîne (L7) : indiceUsed reste faux tant que les 2 usages ne sont pas épuisés', () => {
+    setup({ level: 7, spec5: 'chain', charges: 3 });
+    S().useIndice();
+    expect(S().indiceUsed).toBe(false); // 1/2
+    S().useIndice();
+    expect(S().indiceUsed).toBe(true);  // 2/2
+  });
+
+  it('Objet légendaire (ultime) : arme le drapeau à l’usage de l’indice', () => {
+    setup({ level: 10, spec10: 'legendary', charges: 1 });
+    S().useIndice();
+    expect(S().teams[0].indiceLegendaryArmed).toBe(true);
+  });
+
+  it('Sagesse partagée (ultime, passif) : élimine 1 réponse à l’ouverture, sans charge', () => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true },
+      questions: { maths: [{ q: '?', a: ['A', 'B', 'C', 'D'], c: 1 }] }, askedQuestions: {},
+      teams: [teamWith('indice', { level: 10, spec10: 'wisdom', charges: 0 })],
+    });
+    S().askQuestion('maths');
+    expect(S().indiceHidden).toHaveLength(1);
+  });
+});
+
 describe('branches Bouclier câblées (or)', () => {
   it('Rempart doré (L5) : forfait d’or à l’usage du bouclier', () => {
     const t = teamWith('bouclier', { level: 5, spec5: 'gold', charges: 1 });

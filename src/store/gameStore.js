@@ -1237,14 +1237,18 @@ export const useGameStore = create((set, get) => ({
     // appel (ex. 'd3' a 100% => 1 a 3 reponses retirees ; un 3 les retire toutes).
     const indiceBoost = getEffectValue(team, 'indiceBoost');
     const forgeHide = team.forgeIndice || 0; // Indice (Forge) armé au lancer
+    // Sagesse partagée (Indice ultime, passif) : élimine GRATUITEMENT 1 mauvaise
+    // réponse au début de chaque question (sans dépenser de charge).
+    const wisdom = (extOn(get().extensions, 'mastery') && team.powers?.indice?.spec10 === 'wisdom') ? 1 : 0;
+    const passiveHide = indiceBoost + forgeHide + wisdom;
     let indiceHidden = [];
-    if (indiceBoost + forgeHide > 0) {
+    if (passiveHide > 0) {
       const wrong = q.a.map((_, i) => i).filter((i) => i !== q.c);
       for (let i = wrong.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
       }
-      indiceHidden = wrong.slice(0, Math.min(indiceBoost + forgeHide, wrong.length));
+      indiceHidden = wrong.slice(0, Math.min(passiveHide, wrong.length));
       // Le log d'équipement ne couvre que sa part ; l'Indice de Forge a déjà été
       // annoncé à l'armement (au lancer).
       if (indiceBoost > 0) {
@@ -1261,7 +1265,7 @@ export const useGameStore = create((set, get) => ({
     set({
       showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
-      indiceUsed: false, indiceHidden, rerollUsed: false,
+      indiceUsed: false, indiceUses: 0, indiceHidden, rerollUsed: false,
     });
 
     // Déclencheur d'équipement « quand je tombe sur une question de [thèmes] » :
@@ -1366,7 +1370,7 @@ export const useGameStore = create((set, get) => ({
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu ;
       // les bonus de loot arm\u00e9s par la Relance chanceuse sont consomm\u00e9s (pas de loot ici).
       // Garde de série (face Forge) : la série ne casse pas sur cette erreur.
-      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: team.forgeStreakGuard ? (team.streak || 0) : 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: team.forgeStreakGuard ? (team.streak || 0) : 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined, indiceLegendaryArmed: undefined };
       // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes les \u00e9quipes \u00bb du surplus (auto).
       // Une \u00e9quipe immunis\u00e9e est \u00e9pargn\u00e9e ; une Bombe fumig\u00e8ne esquive (et se consomme).
       const surgeMoves = [];
@@ -1538,6 +1542,15 @@ export const useGameStore = create((set, get) => ({
       if (lootTeam.forgeButin === 'guaranteed' && !drops.length) {
         const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
         if (k) drops.push(k);
+      }
+      // Objet légendaire (Indice ultime) : bonne réponse après un indice → octroie
+      // un équipement LÉGENDAIRE garanti. Le drapeau est consommé ici.
+      if (lootTeam.indiceLegendaryArmed) {
+        const kl = itemH.pickLootItem(1, enabledForLoot, { category: 'equipment' });
+        if (kl) drops.push(kl);
+        const nt = [...get().teams];
+        nt[currentTeam] = { ...nt[currentTeam], indiceLegendaryArmed: undefined };
+        set({ teams: nt });
       }
       const revealQueue = [];
       if (drops.length) {

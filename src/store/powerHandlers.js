@@ -91,19 +91,20 @@ export function useIndice(set, get) {
   const fresh = wrongIndices.filter((i) => !already.includes(i));
   // count (cœur) + extraHide (Clairvoyance). 50/50 ne laisse que 2 réponses ;
   // Omniscience (revealAnswer) ne laisse que la bonne.
-  let want = (effect.count ?? 2) + (effect.extraHide || 0);
-  if (effect.keepTwo) want = Math.max(want, wrongIndices.length - 1);
-  if (effect.revealAnswer) want = wrongIndices.length;
+  // 1 élimination (count=1), + une 2e avec probabilité secondChance (25/50/75 %)
+  // tant que le coeur n'en garantit pas 2 ; dès L6 count=2 (sûres).
+  let want = effect.count ?? 1;
+  if ((effect.count ?? 1) < 2 && effect.secondChance && Math.random() < effect.secondChance) want += 1;
+  // Indices en chaine (palier max) : ne garder que la bonne reponse.
+  if (effect.chainHints && (effect.chainHintUses || 0) >= 99) want = wrongIndices.length;
   const hideMore = Math.min(want, fresh.length);
   const hidden = [...already, ...fresh.slice(0, hideMore)];
   // Bonus de temps : palier + Sérénité (timerMult) + Maître du temps (noTimer).
-  let bonusTime = effect.bonusTime || 0;
-  if (effect.timerMult) bonusTime += Math.round(30 * (effect.timerMult - 1));
-  if (effect.noTimer) bonusTime += 999;
+  const bonusTime = effect.hintTimeBonus || 0; // Maitrise du temps (voie) : +N s au clic
 
   // Rien \u00e0 \u00e9liminer en plus (\u00e9quipement a d\u00e9j\u00e0 tout masqu\u00e9) ET pas de bonus de
   // temps : on NE consomme PAS la charge (sinon perte s\u00e8che).
-  if (hideMore === 0 && bonusTime <= 0 && !effect.bonusMoneyOnCorrect) {
+  if (hideMore === 0 && bonusTime <= 0 && !effect.hintLoot && !effect.legendaryOnHint) {
     addLog(tg('log.pw.indiceAllGone', { emoji: team.emoji, name: team.name }));
     return;
   }
@@ -113,23 +114,24 @@ export function useIndice(set, get) {
 
   const newTeams = [...teams];
   newTeams[currentTeam] = result.updatedTeam;
-  // Omniscience (L10) : coûte 1 charge de plus.
-  if (effect.revealAnswer) {
-    const extra = consumePowerCharge(newTeams[currentTeam], 'indice');
-    if (extra) newTeams[currentTeam] = extra.updatedTeam;
-  }
+  // Objet legendaire (ultime) : arme pour cette question (octroye si bonne reponse).
+  if (effect.legendaryOnHint) newTeams[currentTeam] = { ...newTeams[currentTeam], indiceLegendaryArmed: true };
+  // Indices en chaine (voie) : plusieurs usages/question ; on ne verrouille
+  // `indiceUsed` qu'une fois le nombre d'usages atteint.
+  const uses = (get().indiceUses || 0) + 1;
+  const maxUses = effect.chainHints ? Math.max(1, effect.chainHintUses || 1) : 1;
 
-  const indiceBonus = effect.bonusTime > 0 ? tg('log.pw.bonusTime', { n: effect.bonusTime }) : '';
+  const indiceBonus = bonusTime > 0 ? tg('log.pw.bonusTime', { n: bonusTime }) : '';
   const indicePower = locName(POWERS.indice);
   addLog(tgPlural('log.pw.indiceUse', hideMore, { emoji: team.emoji, name: team.name, power: indicePower, level, n: hideMore, bonus: indiceBonus }));
-  set({ teams: newTeams, indiceUsed: true, indiceHidden: hidden });
+  set({ teams: newTeams, indiceUsed: uses >= maxUses, indiceUses: uses, indiceHidden: hidden });
   get().recordStat?.('powerUses', { teamIdx: currentTeam, powerKey: 'indice', targetIdx: null });
   announce(set, get, '💡', tgPlural('log.pw.indiceToast', hideMore, { power: indicePower, n: hideMore, bonus: indiceBonus }), POWERS.indice?.color || '#e8b117');
 
   // Bonus de temps (palier + Sérénité + Maître du temps) et Antisèche (or si bonne réponse).
   const patchQ = {};
   if (bonusTime > 0) patchQ.bonusTime = (get().showQuestion?.bonusTime || 0) + bonusTime;
-  if (effect.bonusMoneyOnCorrect) patchQ.indiceBonusMoney = effect.bonusMoneyOnCorrect;
+  if (effect.hintLoot && effect.hintGold) patchQ.indiceBonusMoney = (get().showQuestion?.indiceBonusMoney || 0) + effect.hintGold;
   if (Object.keys(patchQ).length) set({ showQuestion: { ...get().showQuestion, ...patchQ } });
 }
 

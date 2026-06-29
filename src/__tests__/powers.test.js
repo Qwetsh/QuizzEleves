@@ -120,17 +120,21 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
   });
 
   it('niv.2 : +1 question extra (5 % d’une de plus)', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.9); // > 5 % → pas de question bonus
     castDouble(2);
     expect(team(1).doubleExtra).toBe(1); // spec : L2 = +1 question (+ chance bonus)
     expect(team(1).sablierActif).toBe(false);
+    vi.restoreAllMocks();
   });
 
   it('niv.3 : +2 questions extra', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.9); // > 5 % → pas de question bonus
     castDouble(3);
     expect(team(1).doubleExtra).toBe(2);
     // La Double ne divise plus le timer (le timer commun est la voie « Temps commun »).
     expect(team(1).doubleTimerDivisor).toBeUndefined();
     expect(team(1).sablierActif).toBe(false);
+    vi.restoreAllMocks();
   });
 
   it('cumul Double + Double : les questions extra s’additionnent', () => {
