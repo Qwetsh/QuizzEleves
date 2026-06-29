@@ -1182,7 +1182,9 @@ export const useGameStore = create((set, get) => ({
     // Modeleur de l'espace (Sablier voie) : intervalle de réarrangement des réponses
     // (one-shot, consommé avec le Sablier).
     const modeleur = team.modeleurInterval || null;
-    if (team.sablierActif) {
+    // Sablier + Modeleur sont posés ensemble par le cast, mais on nettoie chacun
+    // dès qu'il est présent (robuste même si l'un manque).
+    if (team.sablierActif || team.modeleurInterval) {
       const nt = [...get().teams];
       nt[currentTeam] = { ...nt[currentTeam], sablierActif: false, sablierDivisor: undefined, modeleurInterval: undefined };
       set({ teams: nt });
