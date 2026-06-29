@@ -31,12 +31,15 @@ export function equippedSetCounts(team) {
 }
 
 // Sets actifs (≥ 2 pièces) avec le palier atteint — pour l'affichage.
+// `set.size` (2 ou 3, défaut 3) plafonne le palier : un set déclaré « Taille 2 »
+// ne monte jamais au palier 3, même si 3 pièces sont équipées (l'éditeur masque
+// alors bonus3 sans purger d'éventuelles données héritées).
 export function activeSets(team) {
   const counts = equippedSetCounts(team);
   const out = [];
   for (const [key, n] of Object.entries(counts)) {
     const s = SETS[key];
-    if (s && n >= 2) out.push({ key, set: s, count: n, tier: n >= 3 ? 3 : 2 });
+    if (s && n >= 2) out.push({ key, set: s, count: n, tier: (n >= 3 && (s.size || 3) >= 3) ? 3 : 2 });
   }
   return out;
 }
@@ -51,7 +54,8 @@ export function activeSetEffects(team) {
     const s = SETS[key];
     if (!s) continue;
     if (n >= 2) out.push(...(s.bonus2 || []));
-    if (n >= 3) out.push(...(s.bonus3 || []));
+    // bonus3 seulement si le set autorise le palier 3 (taille déclarée ≥ 3).
+    if (n >= 3 && (s.size || 3) >= 3) out.push(...(s.bonus3 || []));
   }
   return out;
 }

@@ -100,8 +100,6 @@ export default {
   'mobile.forgeForgeOn': { fr: "Forger sur l'emplacement {n}", en: 'Forge onto slot {n}' },
   'mobile.forgeWillReplace': { fr: 'Remplacera la face déjà forgée sur cet emplacement.', en: 'Will replace the face already forged on this slot.' },
   'mobile.faceSlotShort': { fr: 'Slot {n}', en: 'Slot {n}' },
-  'mobile.forgeCreuset': { fr: 'Le creuset · {n}/6 emplacements forgés', en: 'The crucible · {n}/6 slots forged' },
-  'mobile.forgeAllDone': { fr: 'Dé entièrement forgé ⚒', en: 'Die fully forged ⚒' },
   'mobile.forgeConfirm': { fr: 'Écraser', en: 'Overwrite' },
   'mobile.forgeCancel': { fr: 'Annuler', en: 'Cancel' },
   'mobile.forgeReadonly': { fr: "Lecture seule · forge depuis le téléphone de l'équipe.", en: "Read-only · forge from the team's phone." },

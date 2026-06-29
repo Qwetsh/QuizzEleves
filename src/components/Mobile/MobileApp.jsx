@@ -8,7 +8,6 @@ import { POWERS, MAX_CHARGES } from '../../data/powers';
 import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost, resolvePowerEffect } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
-import { RECIPES, matchRecipe } from '../../data/recipes';
 import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
@@ -253,7 +252,7 @@ function ItemSheet({ itemKey, loc, team, owned, locked, onAction, onClose, T = t
   const isConsumable = item.slot === 'consumable';
   const color = RARITIES[item.rarity]?.color || '#888';
   // Effet d'un ingrédient caché tant que l'équipe ne l'a pas goûté.
-  const fx = itemEffectLines(item, { key: itemKey, knownIngredients: team?.knownIngredients });
+  const fx = itemEffectLines(item, { key: itemKey, knownIngredients: team?.knownIngredients || [] });
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(20,12,4,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, maxHeight: '82vh', overflowY: 'auto', background: 'linear-gradient(180deg,#fffefb,#f4e8cf)', borderRadius: 22, padding: '18px 18px 20px', boxShadow: '0 16px 44px rgba(0,0,0,0.45)', border: '1px solid rgba(122,94,58,0.25)' }}>

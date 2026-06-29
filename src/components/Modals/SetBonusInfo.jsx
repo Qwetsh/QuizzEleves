@@ -72,7 +72,7 @@ export default function SetBonusInfo({ item, team }) {
       <div className="setinfo-head">
         <span className="setinfo-icon">{set.icon}</span>
         <span className="setinfo-name">{locName(set)}</span>
-        <span className="setinfo-count">{count}<span className="setinfo-count-max">/{size}</span></span>
+        <span className="setinfo-count">{Math.min(count, size)}<span className="setinfo-count-max">/{size}</span></span>
       </div>
       <div className="setinfo-pips" aria-label={T('modal.set.piecesEquipped', { n: count })}>
         {Array.from({ length: size }).map((_, i) => (
@@ -80,7 +80,7 @@ export default function SetBonusInfo({ item, team }) {
         ))}
       </div>
       <Tier n={2} count={count} lines={lines2} />
-      <Tier n={3} count={count} lines={lines3} />
+      {size >= 3 && <Tier n={3} count={count} lines={lines3} />}
     </div>
   );
 }

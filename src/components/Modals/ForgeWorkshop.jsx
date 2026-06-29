@@ -111,7 +111,7 @@ export default function ForgeModal() {
         <button className="forge-desk-x" onClick={() => { soundClick(); closeForge(); }} aria-label={T('common.close')}>✕</button>
 
         <div className="forge-desk-head">
-          <span className="forge-desk-title">🔨 {en ? 'DIE FORGE' : 'FORGE DE DÉS'}</span>
+          <span className="forge-desk-title">🔨 {T('modal.forge.title')}</span>
           <span className="forge-desk-gold">🪙 {gold}</span>
         </div>
 

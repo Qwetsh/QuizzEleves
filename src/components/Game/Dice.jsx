@@ -44,7 +44,15 @@ export default function Dice() {
   return (
     <div className="flex flex-col items-center gap-3">
       {forgeOn ? (
-        <div onClick={openForge} role="button" title={T('game.openForge')} style={{ cursor: 'pointer' }}>
+        // Quand le dé est désactivé (lancer en cours, choix de voie, etc.) il est
+        // grisé : on neutralise aussi le clic d'ouverture de la Forge pour ne pas
+        // donner un contrôle qui PARAÎT inactif mais répond quand même.
+        <div
+          onClick={disabled ? undefined : openForge}
+          role={disabled ? undefined : 'button'}
+          title={disabled ? undefined : T('game.openForge')}
+          style={{ cursor: disabled ? 'default' : 'pointer' }}
+        >
           <Dice3D value={diceValue || 1} rolling={false} idleSpin faces={faces} size={88} disabled={disabled} />
         </div>
       ) : (

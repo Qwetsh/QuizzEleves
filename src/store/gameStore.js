@@ -603,6 +603,10 @@ export const useGameStore = create((set, get) => ({
       lv2: lv2On ? (t.lv2 || 'espagnol') : null,
       equipment: { head: null, body: null, feet: null },
       bag: Array(itemH.BAG_SIZE).fill(null),
+      // Ingrédients d'alchimie déjà utilisés (effet révélé). Initialisé ici pour que
+      // le masquage « ❓ Effet inconnu » s'applique dès le 1er tour (sinon le champ
+      // n'apparaît qu'à la 1re distillation et l'effet fuite entre-temps).
+      knownIngredients: [],
       // Forge de dés : dé standard 1→6 + stock de faces achetées (vide au départ).
       ...(forgeOn ? { dieFaces: defaultDieFaces(), faceStock: [] } : {}),
     }));
@@ -724,8 +728,18 @@ export const useGameStore = create((set, get) => ({
       const n = get().relanceCount || 0;
       if (isRelanceFace(face) && (n === 0 || (FORGE.relance?.enchainement && n < 6))) {
         const nv = Math.floor(Math.random() * 6) + 1;
+        // Faces multi-effets : une Relance peut être co-localisée avec d'autres
+        // effets de lancer (éditeur). On applique ici les effets « par patch »
+        // (Prime, Égide/Indice/Répit/Aubaine/Butin armés…) AVANT de relancer,
+        // sinon ils disparaîtraient (handleDiceResult n'est jamais appelé pour la
+        // face-Relance). NB : la Recharge (gainCharge) reste non appliquée pour une
+        // face-Relance car son sélecteur TBI entrerait en conflit avec la ré-animation.
+        const forgeRoll = resolveFaceAtRoll(team, face);
+        const nt = [...teams];
+        nt[currentTeam] = { ...team, ...forgeRoll.patch };
+        forgeRoll.logs.forEach((l) => get().addLog(l));
         get().addLog(tg('log.store.relanceFace', { emoji: team.emoji, name: team.name, value: clampFaceValue(faces[nv - 1].value) }));
-        set({ diceValue: nv, relanceCount: n + 1, rolling: true }); // showDiceModal reste true → ré-animation
+        set({ teams: nt, diceValue: nv, relanceCount: n + 1, rolling: true }); // showDiceModal reste true → ré-animation
         return;
       }
     }

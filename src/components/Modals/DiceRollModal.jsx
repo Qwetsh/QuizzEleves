@@ -3,8 +3,9 @@ import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
 import { extOn } from '../../extensions/registry';
-import { getDieFaces, faceEffects } from '../../logic/forge';
+import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
+import { buffValue, getEffectValue } from '../../logic/itemEffects';
 import { soundDice } from '../../logic/sounds';
 import '../../styles/dice-roll-modal.css';
 
@@ -97,7 +98,13 @@ export default function DiceRollModal() {
   // donne la VALEUR de déplacement et l'effet à révéler (≠ adresse du slot).
   const faces = forgeOn && team ? getDieFaces(team) : null;
   const landed = faces && diceValue ? faces[((diceValue - 1) % 6 + 6) % 6] : null;
-  const moveVal = landed ? landed.value : diceValue;
+  // Cases réellement parcourues = valeur de face (bornée) + bonus de dé − malus de
+  // dé, plancher 0 — IDENTIQUE à handleDiceResult, pour ne pas annoncer un nombre
+  // de cases différent du déplacement effectif quand un buff/passif est actif.
+  const faceVal = landed ? clampFaceValue(landed.value) : diceValue;
+  const moveVal = team
+    ? Math.max(0, faceVal + buffValue(team, 'diceBonus') - getEffectValue(team, 'diceMalus'))
+    : faceVal;
   const landedIcons = faceEffects(landed).map((e) => FORGE_EFFECTS[e.type]?.icon).filter(Boolean);
 
   useEffect(() => {

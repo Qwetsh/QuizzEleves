@@ -3,7 +3,6 @@ import { ITEMS } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
 import { cellKey, cellN } from '../../store/itemHandlers';
 import { soundPower, soundCharge } from '../../logic/sounds';
-import { tFor } from '../../i18n';
 import { locName } from '../../i18n/content';
 import '../../styles/scribe.css';
 import {

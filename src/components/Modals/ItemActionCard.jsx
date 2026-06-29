@@ -28,7 +28,7 @@ export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
   const img = itemImg(item);
   // Effet d'un ingrédient d'alchimie : caché (???) tant que l'équipe ne l'a pas
   // découvert (utilisé seul) — cohérent avec l'app mobile.
-  const fx = itemEffectLines(item, { key: pop.itemKey, knownIngredients: team?.knownIngredients });
+  const fx = itemEffectLines(item, { key: pop.itemKey, knownIngredients: team?.knownIngredients || [] });
   const canUse = pop.cellKey.startsWith('bag:') && item.slot === 'consumable';
   const slotName = item.slot === 'consumable' ? T('modal.item.consumable') : SLOTS[item.slot]?.name;
   return createPortal(

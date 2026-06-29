@@ -43,16 +43,21 @@ function InfoPopoverInner({ info, entry, onClose }) {
   useEffect(() => {
     const onDown = (e) => { if (!e.target.closest?.('[data-info-anchor]')) onClose(); };
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    const onScroll = () => onClose();
+    // L'auto-scroll programmatique du journal (scrollIntoView à chaque nouvelle
+    // ligne) émet des événements 'scroll' captés ici : on les ignore pour ne pas
+    // fermer une fiche épinglée à chaque action de jeu. Un vrai défilement de la
+    // page/plateau (cible ailleurs) ferme bien la fiche, car l'ancre bouge.
+    const onScroll = (e) => { if (e.target?.closest?.('[data-log-scroll]')) return; onClose(); };
+    const onResize = () => onClose();
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('keydown', onKey);
     window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
     };
   }, [onClose]);
 

@@ -154,9 +154,10 @@ export function getTeamEffects(team, lang = getLang()) {
   for (const a of activeSets(team)) {
     const sn = locName(a.set, lang) || a.key;
     const sz = a.set.size || 3;
+    const cnt = Math.min(a.count, sz); // un set Taille 2 ne montre jamais « 3/2 »
     push({ key: `set-${a.key}`, tone: 'buff', icon: a.set.icon || '⚜️', color: a.set.color || '#a8771a', link: { type: 'set', key: a.key },
       name: L(lang, `Set ${sn}`, `${sn} set`),
-      desc: L(lang, `Set ${sn} ${a.count}/${sz} pièces équipées`, `${sn} set: ${a.count}/${sz} pieces equipped`) });
+      desc: L(lang, `Set ${sn} ${cnt}/${sz} pièces équipées`, `${sn} set: ${cnt}/${sz} pieces equipped`) });
   }
 
   return out;

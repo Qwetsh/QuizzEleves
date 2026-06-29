@@ -77,7 +77,7 @@ function ItemStall({ team, items, onBuyItem, discount = 1, banner, note }) {
         const item = ITEMS[key];
         if (!item) return null;
         return (
-          <ItemCard key={`${key}-${idx}`} item={item} itemKey={key} knownIngredients={team.knownIngredients}
+          <ItemCard key={`${key}-${idx}`} item={item} itemKey={key} knownIngredients={team.knownIngredients || []}
             bag={bag} equipment={equipment} money={team.money}
             discount={discount} onBuy={() => { soundClick(); onBuyItem(key); }} T={T} />
         );
@@ -122,7 +122,9 @@ function ItemCard({ item, itemKey, knownIngredients, bag, equipment, money, disc
 
       <div className="sic-banner-bot">
         <div className="sic-desc">{locDesc(item)}</div>
-        {bagFull && <div className="shop-card-warn is-danger">{T('modal.shop.bagFull')}</div>}
+        {bagFull
+          ? <div className="shop-card-warn is-danger">{T('modal.shop.bagFull')}</div>
+          : slotTaken && <div className="shop-card-warn">{T('modal.shop.slotTaken', { slot: slotName })}</div>}
       </div>
 
       <button className="shop-buy sic-buy" disabled={!canBuy} onClick={onBuy}>

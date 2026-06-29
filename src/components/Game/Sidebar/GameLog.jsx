@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo, memo } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { logText, logDetail, signed } from '../../../logic/logFormat';
 import { tokenizeText, getGlossaryIndex } from '../../../logic/glossary';
@@ -9,7 +9,10 @@ import '../../../styles/info-card.css';
 // Rend un texte de journal en segments : texte brut + mots-clés cliquables
 // (objets, pouvoirs, sets, matières, termes de mécanique) repérés par le glossaire.
 function LogText({ text, index }) {
-  const segs = tokenizeText(text, index);
+  // L'index ne change pas en cours de partie (langue/catalogue stables) : on
+  // mémoïse la tokenisation par entrée pour éviter de re-tokeniser tout
+  // l'historique à chaque nouvelle ligne de journal.
+  const segs = useMemo(() => tokenizeText(text, index), [text, index]);
   return (
     <>
       {segs.map((s, i) => (s.type
@@ -21,7 +24,9 @@ function LogText({ text, index }) {
 }
 
 // Une entrée : texte (mots-clés cliquables) + éventuel détail dépliable.
-function LogEntry({ entry, index }) {
+// Mémoïsée (memo) : entry/index étant stables par référence, une nouvelle ligne
+// ne re-rend pas (ni ne re-tokenise) les entrées existantes.
+const LogEntry = memo(function LogEntry({ entry, index }) {
   const text = logText(entry);
   const detail = logDetail(entry);
   const [open, setOpen] = useState(false);
@@ -71,7 +76,7 @@ function LogEntry({ entry, index }) {
       )}
     </div>
   );
-}
+});
 
 export default function GameLog() {
   const T = useT();
@@ -88,6 +93,7 @@ export default function GameLog() {
 
   return (
     <div
+      data-log-scroll
       style={{
         fontSize: 13, color: 'var(--ink-700)',
         flex: 1, minHeight: 0,
