@@ -173,14 +173,27 @@ describe('branches Foudre câblées', () => {
     after();
   });
 
-  it('Renvoi au départ (ultime, à 5 charges) : envoie la cible au départ et coûte 5 charges', () => {
+  it('Renvoi au départ (ultime, bouton dédié) : envoie la cible au départ et coûte 5 charges', () => {
     base([
       teamWith('foudre', { level: 10, spec10: 'banishStart', charges: 5 }),
       { ...teamWith('foudre'), pos: 'n8', powers: {} },
     ]);
+    // Le bouton dédié ouvre le picker en mode banish.
+    useGameStore.setState({ showTargetPicker: { powerKey: 'foudre', banish: true } });
     S().applyOffensivePower(1);
     expect(S().teams[1].pos).toBe('depart');
     expect(S().teams[0].powers.foudre.charges).toBe(0);
+    after();
+  });
+
+  it('Sablier brisé (ultime, bouton dédié) : plafonne le timer max des autres, coûte 5 charges', () => {
+    base([
+      teamWith('sablier', { level: 10, spec10: 'broken', charges: 5 }),
+      { ...teamWith('foudre'), pos: 'n8', powers: {} },
+    ], 'sablier');
+    S().useSablierBroken();
+    expect(S().teams[1].maxTimerCap).toBe(7);
+    expect(S().teams[0].powers.sablier.charges).toBe(0);
     after();
   });
 

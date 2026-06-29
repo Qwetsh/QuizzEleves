@@ -361,8 +361,8 @@ export default function QuestionModal() {
           </div>
 
           {/* Choices - 2x2 grid */}
-          <div className="grid gap-3 p-5 grid-cols-1 sm:grid-cols-2">
-            {(order || question.a.map((_, i) => i)).map((idx) => {
+          <div className={'grid gap-3 p-5 grid-cols-1 sm:grid-cols-2' + (modeleur ? ' quiz-modeleur' : '')}>
+            {(order || question.a.map((_, i) => i)).map((idx, pos) => {
               const shown = ansText(idx); // texte affiché (EN si dispo, sinon FR)
               if (indiceHidden.includes(idx)) {
                 return <EliminatedAnswer key={idx} idx={idx} answer={shown} />;
@@ -389,14 +389,16 @@ export default function QuestionModal() {
               }
 
               const letter = String.fromCharCode(65 + idx);
+              // Modeleur : ondulation « bourré » en vague, déphasée par position.
+              const modeleurStyle = modeleur ? { animationDelay: `${(pos % 4) * 0.4}s`, animationDuration: `${1.4 + (modeleur - 2) * 0.25}s` } : null;
               return (
                 <button
                   key={idx}
-                  className="tm-choice"
+                  className={'tm-choice' + (modeleur ? ' tm-choice--modeleur' : '')}
                   onClick={() => handleAnswer(idx)}
                   disabled={revealed}
                   aria-label={`Option ${letter}: ${shown}`}
-                  style={choiceStyle || undefined}
+                  style={(choiceStyle || modeleurStyle) ? { ...choiceStyle, ...modeleurStyle } : undefined}
                 >
                   <span className="tm-choice-letter" style={letterStyle || undefined}>
                     {letter}

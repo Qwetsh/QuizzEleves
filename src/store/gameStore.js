@@ -2048,6 +2048,9 @@ export const useGameStore = create((set, get) => ({
   useRelanceSwap: () => powerH.useRelanceSwap(set, get),
   useShieldImmunity: () => powerH.useShieldImmunity(set, get),
   useClairvoyance: () => powerH.useClairvoyance(set, get),
+  useSablierBroken: () => powerH.useSablierBroken(set, get),
+  // Ouvre le sélecteur de cible en mode « Renvoi au départ » (Foudre ultime).
+  openFoudreBanish: () => { if (!get().finished) set({ showTargetPicker: { powerKey: 'foudre', banish: true } }); },
   applyOffensivePower: (ti) => powerH.applyOffensivePower(set, get, ti),
   cancelTargetPicker: () => powerH.cancelTargetPicker(set, get),
 

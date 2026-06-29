@@ -1,6 +1,6 @@
 import { useGameStore } from '../../../store/gameStore';
 import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
-import { relanceSwapInfo, shieldImmunityInfo, clairvoyanceInfo } from '../../../store/powerHandlers';
+import { relanceSwapInfo, shieldImmunityInfo, clairvoyanceInfo, foudreBanishInfo, sablierBrokenInfo } from '../../../store/powerHandlers';
 import { POWERS } from '../../../data/powers';
 import { useT } from '../../../i18n';
 import { locName } from '../../../i18n/content';
@@ -54,6 +54,15 @@ export default function PowerButtons() {
   const clair = clairvoyanceInfo(useGameStore.getState, currentTeam);
   const showClair = clair?.canUse && !powersBlocked && !!showQuestion && !team.clairvoyanceTurn && !finished;
   const indiceColor = POWERS.indice?.color || '#e8b117';
+  // Ultimes offensifs actifs (5 charges) : mêmes conditions de fenêtre que les
+  // autres offensifs (à son tour, hors question/lancer/picker).
+  const offWindow = !powersBlocked && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
+  const banish = foudreBanishInfo(useGameStore.getState, currentTeam);
+  const showBanish = banish?.canUse && offWindow;
+  const foudreColor = POWERS.foudre?.color || '#e85d6b';
+  const broken = sablierBrokenInfo(useGameStore.getState, currentTeam);
+  const showBroken = broken?.canUse && offWindow;
+  const sablierColor = POWERS.sablier?.color || '#a83e7f';
 
   return (
     <div className="flex flex-col items-center gap-3 mt-3">
@@ -77,6 +86,28 @@ export default function PowerButtons() {
             <span className="power-cast-count">{immune.cost}</span>
           </span>
           <span className="power-cast-name">{T('game.shieldImmunity')}</span>
+        </button>
+      )}
+      {showBanish && (
+        <button onClick={() => useGameStore.getState().openFoudreBanish()}
+          className="power-cast-btn" style={{ '--cast-color': foudreColor }}
+          title={T('game.foudreBanishHint', { cost: banish.cost })}>
+          <span className="power-cast-disc">
+            <span className="power-cast-icon">⏮️</span>
+            <span className="power-cast-count">{banish.cost}</span>
+          </span>
+          <span className="power-cast-name">{T('game.foudreBanish')}</span>
+        </button>
+      )}
+      {showBroken && (
+        <button onClick={() => useGameStore.getState().useSablierBroken()}
+          className="power-cast-btn" style={{ '--cast-color': sablierColor }}
+          title={T('game.sablierBrokenHint', { cost: broken.cost, floor: broken.floor })}>
+          <span className="power-cast-disc">
+            <span className="power-cast-icon">⏱️</span>
+            <span className="power-cast-count">{broken.cost}</span>
+          </span>
+          <span className="power-cast-name">{T('game.sablierBroken')}</span>
         </button>
       )}
       {showClair && (

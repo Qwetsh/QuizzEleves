@@ -35,6 +35,8 @@ export default {
   'log.pw.immuneCast':      { fr: '🛡️ {emoji} {name} active l’Immunité totale ({turns} tours) !', en: '🛡️ {emoji} {name} activates Total Immunity ({turns} turns)!' },
   'log.pw.clairvoyance':    { fr: '🔮 {emoji} {name} active la Clairvoyance : la bonne réponse est révélée ce tour !', en: '🔮 {emoji} {name} activates Clairvoyance: the correct answer is revealed this turn!' },
   'log.pw.clairvoyanceToast': { fr: '🔮 Clairvoyance !', en: '🔮 Clairvoyance!' },
+  'log.pw.sablierBrokenCast': { fr: '⏱️ {emoji} {name} brise le sablier : timer max des autres réduit à {n}s !', en: '⏱️ {emoji} {name} breaks the hourglass: others’ max timer reduced to {n}s!' },
+  'log.pw.sablierBrokenToast': { fr: '⏱️ Sablier brisé — {n}s max', en: '⏱️ Broken hourglass — {n}s max' },
   'log.pw.surgePush':       { fr: '⏩ Sur-réduction : {vemoji} {vname} recule de {n} !', en: '⏩ Overcharge: {vemoji} {vname} pushed back {n}!' },
   'log.pw.goldVault':       { fr: '🏦 Banque fortifiée : l’or de {emoji} {name} est protégé.', en: '🏦 Fortified vault: {emoji} {name}’s gold is protected.' },
 

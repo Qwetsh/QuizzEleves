@@ -52,6 +52,10 @@ export default {
   'game.shieldImmunityHint': { fr: 'Dépense {cost} charges → immunité {turns} tours', en: 'Spend {cost} charges → immunity for {turns} turns' },
   'game.clairvoyance': { fr: 'Clairvoyance', en: 'Clairvoyance' },
   'game.clairvoyanceHint': { fr: 'Dépense {cost} charges → révèle la bonne réponse ce tour', en: 'Spend {cost} charges → reveal the correct answer this turn' },
+  'game.foudreBanish': { fr: 'Renvoi au départ', en: 'Banish to start' },
+  'game.foudreBanishHint': { fr: 'Dépense {cost} charges → renvoie une équipe au départ', en: 'Spend {cost} charges → send a team back to the start' },
+  'game.sablierBroken': { fr: 'Sablier brisé', en: 'Broken hourglass' },
+  'game.sablierBrokenHint': { fr: 'Dépense {cost} charges → timer max des autres réduit à {floor}s', en: 'Spend {cost} charges → other teams’ max timer reduced to {floor}s' },
 
   // --- ConsumableBar ---
   'game.itemsToUse': { fr: 'Objets à utiliser', en: 'Items to use' },

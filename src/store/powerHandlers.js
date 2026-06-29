@@ -380,6 +380,56 @@ export function useClairvoyance(set, get, teamIndex) {
   if (get().phase === 'game') saveGame(get());
 }
 
+// Renvoie {cost, charges, canUse} si l'ultime « Renvoi au départ » (Foudre L10)
+// est disponible (voie choisie + assez de charges), sinon null.
+export function foudreBanishInfo(get, teamIndex) {
+  if (!masteryActive(get)) return null;
+  const team = get().teams[teamIndex];
+  const fl = team?.powers?.foudre;
+  if (!fl) return null;
+  const eff = resolvePowerEffect(team, 'foudre', true);
+  if (!eff.banishStart) return null;
+  const cost = eff.activeCost || 5;
+  return { cost, charges: fl.charges ?? 0, canUse: (fl.charges ?? 0) >= cost };
+}
+
+// Renvoie {cost, floor, charges, canUse} si l'ultime « Sablier brisé » (Sablier L10)
+// est disponible, sinon null.
+export function sablierBrokenInfo(get, teamIndex) {
+  if (!masteryActive(get)) return null;
+  const team = get().teams[teamIndex];
+  const sl = team?.powers?.sablier;
+  if (!sl) return null;
+  const eff = resolvePowerEffect(team, 'sablier', true);
+  if (!eff.brokenTimer) return null;
+  const cost = eff.activeCost || 5;
+  return { cost, floor: eff.brokenFloor || 7, charges: sl.charges ?? 0, canUse: (sl.charges ?? 0) >= cost };
+}
+
+// Ultime actif « Sablier brisé » : dépense `cost` charges → plafonne (permanent) le
+// timer MAX des autres équipes au plancher `floor`. Bouton dédié (pas de cible).
+export function useSablierBroken(set, get, teamIndex) {
+  const { teams, currentTeam, addLog } = get();
+  const i = teamIndex == null ? currentTeam : teamIndex;
+  if (i !== currentTeam || get().finished) return;
+  if (teams[i]?.silencedNextTurn) { addLog(tg('log.pw.silenced', { emoji: teams[i].emoji, name: teams[i].name })); return; }
+  const info = sablierBrokenInfo(get, i);
+  if (!info || !info.canUse) return;
+  const nt = [...teams];
+  const me = nt[i];
+  nt[i] = { ...me, powers: { ...me.powers, sablier: { ...me.powers.sablier, charges: me.powers.sablier.charges - info.cost } } };
+  for (let j = 0; j < nt.length; j++) {
+    if (j === i || (nt[j].totalImmuneTurns ?? 0) > 0) continue; // immunité totale épargne
+    nt[j] = { ...nt[j], maxTimerCap: Math.min(nt[j].maxTimerCap ?? 999, info.floor) };
+  }
+  set({ teams: nt });
+  soundPower();
+  addLog(tg('log.pw.sablierBrokenCast', { emoji: me.emoji, name: me.name, n: info.floor }));
+  announce(set, get, '⏱️', tg('log.pw.sablierBrokenToast', { n: info.floor }), POWERS.sablier?.color || '#a83e7f');
+  get().recordStat?.('powerUses', { teamIdx: i, powerKey: 'sablier', targetIdx: null });
+  if (get().phase === 'game') saveGame(get());
+}
+
 export function applyOffensivePower(set, get, targetTeamIndex) {
   const { teams, currentTeam, board, showTargetPicker, addLog } = get();
   if (!showTargetPicker) return;
@@ -426,10 +476,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     // Recul de la/les cible(s), atténué par leur équipement et leur Bouclier (Égide).
     const masteryOn = masteryActive(get);
     // Surcharge (L5) : consomme 1 charge de Foudre suppl\u00E9mentaire.
-    // « Renvoi au départ » (ultime, à 5 charges) : envoie la/les cible(s) au DÉPART
-    // au lieu du recul, et coûte `activeCost` charges au lieu d'1.
+    // « Renvoi au départ » (ultime) : déclenché par SON bouton dédié (le picker
+    // est ouvert avec banish:true), pas automatiquement. Envoie au DÉPART au lieu
+    // du recul et coûte `activeCost` charges au lieu d'1.
     const chargesBefore = team.powers?.foudre?.charges ?? 0;
-    const banishMode = !!effect.banishStart && chargesBefore >= (effect.activeCost || 5);
+    const banishMode = !!effect.banishStart && !!showTargetPicker.banish && chargesBefore >= (effect.activeCost || 5);
     if (banishMode) {
       const cur = newTeams[currentTeam].powers.foudre;
       newTeams[currentTeam] = { ...newTeams[currentTeam], powers: { ...newTeams[currentTeam].powers, foudre: { ...cur, charges: Math.max(0, chargesBefore - (effect.activeCost || 5)) } } };
@@ -580,13 +631,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       addLog(tg('log.pw.sablierSelf', { emoji: team.emoji, name: team.name, power: sablierName, n: bonus }));
       announce(set, get, '⏳', tg('log.pw.sablierSelfToast', { n: bonus }), POWERS[powerKey].color);
     } else {
-      // « Sablier brisé » (ultime, à 5 charges) : plafonne définitivement le timer
-      // MAX des autres équipes (plancher `brokenFloor`). Coûte `activeCost` charges.
-      const chargesBefore = team.powers?.sablier?.charges ?? 0;
-      const brokenMode = !!effect.brokenTimer && chargesBefore >= (effect.activeCost || 5);
+      // Sablier brisé (ultime) a SON bouton dédié (useSablierBroken) — le cast
+      // normal ne le déclenche plus automatiquement.
       const sablierOpp = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
-      // Tempête de sable (L10) : toutes les autres ; Sablier brisé : toutes ; sinon la cible.
-      const sablierTargets = (effect.allOthers || brokenMode) ? new Set(sablierOpp) : new Set([targetTeamIndex]);
+      // Tempête de sable (L10) : toutes les autres ; sinon la cible choisie.
+      const sablierTargets = effect.allOthers ? new Set(sablierOpp) : new Set([targetTeamIndex]);
       let removedTime = 0;
       for (const ti of sablierTargets) {
         if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
@@ -597,12 +646,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
           sablierActif: true, sablierDivisor: divisor,
           ...(effect.modeleur ? { modeleurInterval: effect.modeleurInterval || 4 } : {}),
           ...(effect.larcin ? { larcinBy: currentTeam, larcinChance: effect.larcinChance || 0 } : {}),
-          ...(brokenMode ? { maxTimerCap: Math.min(newTeams[ti].maxTimerCap ?? 999, effect.brokenFloor || 7) } : {}),
         };
-      }
-      if (brokenMode) {
-        const cur = newTeams[currentTeam].powers.sablier;
-        newTeams[currentTeam] = { ...newTeams[currentTeam], powers: { ...newTeams[currentTeam].powers, sablier: { ...cur, charges: Math.max(0, chargesBefore - (effect.activeCost || 5)) } } };
       }
       // Voleur de sable (voie) : banque du temps retiré × facteur → prochaine question.
       if (effect.sandBank && effect.sandBankFactor) {
@@ -611,7 +655,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       }
       const nS = sablierTargets.size;
       soundPower();
-      const extrasS = `${effect.larcin ? tg('log.pw.sablierLarcin') : ''}${effect.modeleur ? tg('log.pw.sablierModeleur') : ''}${brokenMode ? tg('log.pw.sablierBroken', { n: effect.brokenFloor || 7 }) : ''}`;
+      const extrasS = `${effect.larcin ? tg('log.pw.sablierLarcin') : ''}${effect.modeleur ? tg('log.pw.sablierModeleur') : ''}`;
       addLog(nS > 1
         ? tg('log.pw.sablierUseMany', { emoji: team.emoji, name: team.name, power: sablierName, level, nS, divisor, extras: extrasS })
         : tg('log.pw.sablierUseOne', { emoji: team.emoji, name: team.name, power: sablierName, level, vemoji: target.emoji, vname: target.name, divisor, extras: extrasS }));
