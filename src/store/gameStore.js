@@ -25,7 +25,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, isItemStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural } from '../i18n';
@@ -1263,7 +1263,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     set({
-      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused },
+      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused, timerCap: team.maxTimerCap || null },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false, indiceUses: 0, indiceHidden, rerollUsed: false,
     });
@@ -1287,7 +1287,7 @@ export const useGameStore = create((set, get) => ({
     const effectiveDivisor = timerDivisor || (timerHalved ? 2 : 1);
     // Meme echelle que le timer reellement affiche (QuestionModal) : le bonus
     // de temps d'equipement compte, sinon le ratio depasse 1 et gonfle le gain
-    const maxTime = Math.floor(30 / effectiveDivisor) + (itemBonusTime || 0);
+    const maxTime = Math.min(showQuestion.timerCap || Infinity, Math.floor(30 / effectiveDivisor) + (itemBonusTime || 0));
     // Ratio de temps restant (0..100) fig\u00e9 pour cette r\u00e9ponse : alimente la
     // m\u00e9trique d'\u00e9chelle 'timeleft' (ex. gain = 1\u00d7% temps restant). On l'attache
     // \u00e0 l'\u00e9quipe pour que getEffectValue / les d\u00e9clencheurs puissent la lire.
@@ -1320,6 +1320,9 @@ export const useGameStore = create((set, get) => ({
       qText: question.q, answers: question.a, correctIndex: question.c,
       chosenIndex, correct, timedOut: false, timeLeftRatio: answerTimeRatio,
       explanation: question.e || null,
+      // Marqueurs d'analyse (décision : on MARQUE sans exclure) : question Hardcore
+      // (Double « Corsées » / passif) et réponse révélée (Indice Clairvoyance).
+      hardcore: showQuestion.subject === 'hardcore', revealed: !!showQuestion.revealed,
     });
 
     if (correct) {
@@ -1350,6 +1353,7 @@ export const useGameStore = create((set, get) => ({
       // Chrono partagé : on reporte le temps restant à la prochaine question de la rafale.
       const stPatch = (team.doubleActive && team.doubleSharedTimer) ? { burstTimeLeft: timeLeft } : {};
       newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + payNow, wager: undefined, ...aonPatch, ...stPatch };
+      if (team.larcinBy != null) newTeams[currentTeam] = { ...newTeams[currentTeam], larcinBy: undefined, larcinChance: undefined };
       applyGlaneur(newTeams, payNow); // Glaneur : or non gagné par cette équipe (vitesse < pleine)
       // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
       let gainDetail;
@@ -1422,6 +1426,23 @@ export const useGameStore = create((set, get) => ({
       // Sur-réduction / Forteresse : le « recul » peut être devenu une AVANCE.
       const selfPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: forward ? 'forward' : 'back' }] : [];
       const backPath = [...selfPath, ...surgeMoves].length ? [...selfPath, ...surgeMoves] : null;
+      // Larcin (Sablier voie) : si la cible répond faux, chance de lui voler un
+      // objet du sac (transféré au lanceur). Respecte l'immunité au vol d'objet.
+      if (team.larcinChance && team.larcinBy != null && Math.random() < team.larcinChance && !isItemStealImmune(team)) {
+        const victim = newTeams[currentTeam];
+        const bagIdxs = (victim.bag || []).map((c, i) => (itemH.cellKey(c) ? i : -1)).filter((i) => i >= 0);
+        const thiefIdx = team.larcinBy;
+        if (bagIdxs.length && newTeams[thiefIdx]) {
+          const bi = bagIdxs[Math.floor(Math.random() * bagIdxs.length)];
+          const k = itemH.cellKey(victim.bag[bi]); const n = itemH.cellN(victim.bag[bi]);
+          const newBag = [...victim.bag]; newBag[bi] = n > 1 ? itemH.mkCell(k, n - 1) : null;
+          newTeams[currentTeam] = { ...victim, bag: newBag };
+          const r = itemH.placeItem(newTeams[thiefIdx], k);
+          newTeams[thiefIdx] = r.team;
+          addLog(tg('log.pw.sablierLarcinSteal', { aemoji: newTeams[thiefIdx].emoji, aname: newTeams[thiefIdx].name, item: loc(ITEMS[k], 'name'), vemoji: victim.emoji, vname: victim.name }));
+        }
+      }
+      if (team.larcinBy != null) newTeams[currentTeam] = { ...newTeams[currentTeam], larcinBy: undefined, larcinChance: undefined };
       applyGlaneur(newTeams, 0); // Glaneur : réponse ratée → tout le gain plein est glané
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
       // Avance (Forteresse/Sur-réduction) atteignant l'arrivée → victoire.

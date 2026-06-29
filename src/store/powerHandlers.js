@@ -63,7 +63,9 @@ export function usePower(set, get, powerKey) {
   if (power.category === 'off') {
     if (showQuestion) return;
     if (diceValue && !pendingLanding) return;
-    set({ showTargetPicker: { powerKey } });
+    // Auto-ciblage (Sablier L4+) : autorise à se cibler soi-même (gain de temps).
+    const offEff = powerEffectOf(get, team, powerKey);
+    set({ showTargetPicker: { powerKey, allowSelf: !!offEff.autoTarget } });
     return;
   }
 }

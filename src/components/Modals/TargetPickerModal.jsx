@@ -96,7 +96,19 @@ export default function TargetPickerModal() {
             <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, textAlign: 'center' }}>{T('modal.target.chooseTeam')}</p>
             <div className="space-y-2">
               {teams.map((team, i) => {
-                if (i === currentTeam) return null;
+                // Auto-ciblage (Sablier L4+) : on peut SE cibler (allowSelf).
+                const self = i === currentTeam;
+                if (self && !showTargetPicker.allowSelf) return null;
+                if (self) {
+                  return (
+                    <TeamTargetButton
+                      key={i}
+                      team={team}
+                      note={`(${T('modal.target.self')})`}
+                      onClick={() => selectTarget(i)}
+                    />
+                  );
+                }
                 // Une équipe sous Immunité totale ne peut pas être ciblée par une attaque.
                 const immune = (team.totalImmuneTurns ?? 0) > 0;
                 // Pacte de non-agression : on peut quand même attaquer (promesse

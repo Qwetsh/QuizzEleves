@@ -117,6 +117,7 @@ export default {
   'modal.target.surgeName': { fr: 'Sur-réduction', en: 'Overcharge' },
   'modal.target.surgeDesc': { fr: 'Choisis une équipe à reculer de {n} cases.', en: 'Choose a team to push back {n} squares.' },
   'modal.target.immune': { fr: 'immunisé', en: 'immune' },
+  'modal.target.self': { fr: 'toi — gain de temps', en: 'you — time gain' },
   'modal.target.chooseTeam': { fr: 'Choisir une équipe cible :', en: 'Choose a target team:' },
   // Pacte de non-agression (« Complots ») : avertissement + confirmation de trahison.
   'modal.target.pact': { fr: 'pacte', en: 'pact' },

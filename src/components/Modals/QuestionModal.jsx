@@ -126,7 +126,9 @@ export default function QuestionModal() {
   const confused = showQuestion?.confused; // Confusion (Sablier L5) : énoncé brouillé au départ
   const team = teams[currentTeam];
   const subjectInfo = SUBJECTS[subject] || {};
-  const duration = sharedStart != null ? Math.max(1, sharedStart) : Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime;
+  // Sablier brisé (ultime) : plafonne le timer MAX (showQuestion.timerCap).
+  const timerCap = showQuestion?.timerCap || Infinity;
+  const duration = Math.min(timerCap, sharedStart != null ? Math.max(1, sharedStart) : Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime);
 
   // Rafale de questions (Double cumulable) : « Question X / N » + ambiance maudite
   const multiIndex = showQuestion?.multiIndex;
