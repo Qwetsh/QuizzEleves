@@ -131,6 +131,7 @@ export function describeAction(a, lang = getLang()) {
     }
     case 'blockPowers': return en ? `blocks ${who}'s powers for ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}` : `bloque les pouvoirs de ${who} pendant ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}`;
     case 'blockConsumables': return en ? `blocks ${who}'s consumables for ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}` : `bloque les consommables de ${who} pendant ${amountLabel(a.turns ?? 2, lang)} ${turnW(a.turns ?? 2, lang)}`;
+    case 'hackApp': return en ? `hacks the app: ${who} lose ${amountLabel(a.turns ?? 1, lang)} ${turnW(a.turns ?? 1, lang)}` : `pirate l'app : ${who} perd ${amountLabel(a.turns ?? 1, lang)} ${turnW(a.turns ?? 1, lang)}`;
     case 'loseItem': return en ? `makes ${who} lose an item${a.fallbackGold ? ` (or −${amountLabel(a.fallbackGold, lang)} gold)` : ''}` : `fait perdre un objet à ${who}${a.fallbackGold ? ` (ou −${amountLabel(a.fallbackGold, lang)} or)` : ''}`;
     case 'hideWrong': return en ? `removes ${amountLabel(a.n ?? 1, lang)} ${wrongAnsW(a.n ?? 1, lang)}` : `élimine ${amountLabel(a.n ?? 1, lang)} ${wrongAnsW(a.n ?? 1, lang)}`;
     case 'shieldNext': return en ? `shield (cancels ${amountLabel(a.n ?? 1, lang)} ${setbackW(a.n ?? 1, lang)})` : `bouclier (annule ${amountLabel(a.n ?? 1, lang)} ${setbackW(a.n ?? 1, lang)})`;

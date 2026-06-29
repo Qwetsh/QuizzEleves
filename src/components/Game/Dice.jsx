@@ -27,8 +27,10 @@ export default function Dice() {
   const showChargePicker = useGameStore((s) => s.showChargePicker);
   const showTargetPicker = useGameStore((s) => s.showTargetPicker);
   const showDuelChoice = useGameStore((s) => s.showDuelChoice);
+  // « Hacking » : le tour piraté s'auto-résout (cinématique HUD) → dé verrouillé.
+  const hackOverlay = useGameStore((s) => s.hackOverlay);
   const forgeOn = useGameStore((s) => extOn(s.extensions, 'forge'));
-  const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice;
+  const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice || !!hackOverlay;
   const team = teams[currentTeam];
   // Extension Forge : on montre le dé PROPRE à l'équipe qui passe (faces forgées),
   // en rotation continue puisque chaque dé diffère. Sans l'extension : visuel

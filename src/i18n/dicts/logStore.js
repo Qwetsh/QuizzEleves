@@ -41,6 +41,8 @@ export default {
                                    en: '😅 {emoji} {name} narrowly avoids a trap{label}.' },
   'log.store.trapImmune':        { fr: '🪤🛡️ {emoji} {name} ignore un piège{label} (immunisé·e).',
                                    en: '🪤🛡️ {emoji} {name} ignores a trap{label} (immune).' },
+  'log.store.hackLock':          { fr: '💀🖥️ Application piratée — le tour de {emoji} {name} est verrouillé !',
+                                   en: '💀🖥️ App hacked — {emoji} {name}\'s turn is locked!' },
 
   // --- Duels ---
   'log.store.duelImmune':        { fr: '🛡️ Duel évité : {emoji} {name} est immunisé(e) aux duels.',
@@ -48,6 +50,10 @@ export default {
   'log.store.duelImmuneFoes':    { fr: '🛡️ Duel évité : adversaire(s) immunisé(s).', en: '🛡️ Duel avoided: immune opponent(s).' },
   'log.store.declineDuel':       { fr: '🤝 {emoji} {name} préfère ne pas défier et joue la case.',
                                    en: '🤝 {emoji} {name} prefers not to challenge and plays the space.' },
+  'log.store.orage':             { fr: ['⛈️ Orage : {emoji} {name} recule de {n} case.', '⛈️ Orage : {emoji} {name} recule de {n} cases.'],
+                                   en: ['⛈️ Storm: {emoji} {name} moves back {n} space.', '⛈️ Storm: {emoji} {name} moves back {n} spaces.'] },
+  'log.store.doubleReported':    { fr: '📋 Report : {emoji} {name} doit répondre à {n} question(s) reportée(s).',
+                                   en: '📋 Carry-over: {emoji} {name} must answer {n} carried-over question(s).' },
 
   // --- Événement ---
   'log.store.landEvent':         { fr: '🎁 {emoji} {name} tombe sur : {eicon} {ename}', en: '🎁 {emoji} {name} lands on: {eicon} {ename}' },

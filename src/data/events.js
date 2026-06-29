@@ -41,6 +41,12 @@ const BUILTIN_EVENTS = {
   tempeteMagnetique:{ name: 'Tempete magnetique', name_en: 'Magnetic storm',     icon: '\u{1F9F2}', desc: 'Un champ magnetique brouille tout : la prochaine voie de CHAQUE equipe sera aleatoire !', desc_en: 'A magnetic field scrambles everything: EACH team\'s next path will be random!', category: 'item', optional: false, weight: 0.45,
     actions: [{ action: 'randomPathNext', target: 'all' }] },
 
+  // --- « Hacking » : UNIQUEMENT en mode téléphone (équipes créées au tél.) ---
+  // Pirate l'application : le PROCHAIN tour de l'équipe est perdu sous une
+  // cinématique « app piratée ». Gating `requiresPhone` (eventPicker).
+  hacking:          { name: 'Hacking',           name_en: 'Hacking',            icon: '\u{1F480}', desc: 'Le boss pirate ton application ! Ton prochain tour, l\'écran passe sous son contrôle… et l\'app devient inutilisable jusqu\'à la fin de ce tour.', desc_en: 'The boss hacks your app! On your next turn, the screen falls under his control… and the app becomes unusable until the end of that turn.', category: 'item', optional: false, weight: 0.7, requiresPhone: true,
+    actions: [{ action: 'hackApp', target: 'self', turns: 1, by: 'boss' }] },
+
   // --- Boss : combat contre le professeur (choix du mini-jeu) ---
   bossProf:         { name: 'Boss : le Prof',     name_en: 'Boss: the Teacher',  icon: '\u{1F468}‍\u{1F3EB}', desc: 'Le professeur te barre la route ! Choisis ton mini-jeu et affronte-le. Victoire : +50 pieces et un objet. Defaite : recul d\'1D10 !', desc_en: 'The teacher blocks your way! Choose your mini-game and face him. Victory: +50 coins and an item. Defeat: move back 1D10!', category: 'item', optional: true, weight: 0.3, needsChoice: true },
 

@@ -59,4 +59,18 @@ describe('pickRandomEvent', () => {
     expect(counts.tresor).toBeGreaterThan(iterations * 0.3);
     expect(counts.rejouer).toBeGreaterThan(iterations * 0.3);
   });
+
+  it('« hacking » (requiresPhone) : exclu hors mode téléphone, tiré en mode téléphone', () => {
+    // Sans connectionMode (ou 'board') : l'event est filtré → seul rejouer reste.
+    for (let i = 0; i < 50; i++) {
+      const r = pickRandomEvent(['hacking', 'rejouer'], { connectionMode: 'board' });
+      expect(r.key).toBe('rejouer');
+    }
+    // En mode téléphone : il devient éligible (au moins une fois sur 200 tirages).
+    let seen = false;
+    for (let i = 0; i < 200 && !seen; i++) {
+      if (pickRandomEvent(['hacking', 'rejouer'], { connectionMode: 'phone' }).key === 'hacking') seen = true;
+    }
+    expect(seen).toBe(true);
+  });
 });

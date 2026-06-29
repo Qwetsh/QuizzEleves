@@ -5,7 +5,7 @@ import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES }
 import { POWERS, addCharge, MAX_CHARGES } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { generateDecor } from '../logic/decorGenerator.js';
-import { moveForward } from '../logic/pathfinding.js';
+import { moveForward, moveBack } from '../logic/pathfinding.js';
 import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
@@ -25,7 +25,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural } from '../i18n';
@@ -1046,7 +1046,7 @@ export const useGameStore = create((set, get) => ({
     if (!node) { get().nextTurn(); return; }
 
     if (node.type === 'event') {
-      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled(), extensions: get().extensions });
+      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled(), extensions: get().extensions, connectionMode: get().connectionMode });
       if (picked) {
         addLog(tg('log.store.landEvent', { emoji: team.emoji, name: team.name, eicon: picked.event.icon, ename: loc(picked.event, 'name') }));
         set({ pendingEventQuestion: { subject: node.subject || get().randomBoardSubject() } });
@@ -1131,6 +1131,15 @@ export const useGameStore = create((set, get) => ({
         get().addLog(tg('log.store.hardcore', { emoji: t0.emoji, name: t0.name, pct: hc }));
       }
     }
+    // Questions corsées (Double voie) : chance que CHAQUE question imposée bascule
+    // en Hardcore (doubleHCChance = fraction 0→1, posée par la Double sur la cible).
+    if (!forced && subject !== 'hardcore') {
+      const t0 = get().teams[cur];
+      if (t0?.doubleActive && t0.doubleHCChance && (get().questions.hardcore || []).length && Math.random() < t0.doubleHCChance) {
+        subject = 'hardcore';
+        get().addLog(tg('log.store.hardcore', { emoji: t0.emoji, name: t0.name, pct: Math.round(t0.doubleHCChance * 100) }));
+      }
+    }
     const { questions, askedQuestions, teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const pool = questions[subject] || [];
@@ -1209,7 +1218,8 @@ export const useGameStore = create((set, get) => ({
     {
       const ct2 = get().teams[currentTeam];
       if (ct2.doubleActive && ct2.doubleSharedTimer) {
-        const base = Math.floor(30 / (timerDivisor || 1)) + itemBonusTime;
+        // Temps commun (voie) : chrono partagé, raccourci de `doubleSharedCut` s (plancher 7).
+        const base = Math.max(7, Math.floor(30 / (timerDivisor || 1)) + itemBonusTime - (ct2.doubleSharedCut || 0));
         const first = (ct2.doubleAsked || 1) <= 1 || ct2.burstTimeLeft == null;
         sharedStart = Math.max(0, first ? base : ct2.burstTimeLeft);
         if (first) { const nt = [...get().teams]; nt[currentTeam] = { ...ct2, burstTimeLeft: base }; set({ teams: nt }); }
@@ -1280,6 +1290,22 @@ export const useGameStore = create((set, get) => ({
     const answerTimeRatio = Math.round(Math.max(0, Math.min(1, maxTime > 0 ? timeLeft / maxTime : 0)) * 100);
     const tTeam = { ...team, answerTimeRatio };
 
+    // Glaneur (Sablier ultime, passif) : les pièces « non gagnées » par l'équipe qui
+    // répond (gain < plein) sont glanées par toute équipe portant l'ultime Glaneur.
+    const masteryGlaneur = extOn(get().extensions, 'mastery');
+    const glaneurFull = calculateMoneyGain(maxTime, maxTime);
+    const applyGlaneur = (nt, earned) => {
+      const unwon = Math.max(0, glaneurFull - earned);
+      if (unwon <= 0) return;
+      for (let gi = 0; gi < nt.length; gi++) {
+        if (gi === currentTeam) continue;
+        if (masteryGlaneur && nt[gi]?.powers?.sablier?.spec10 === 'glaneur') {
+          nt[gi] = { ...nt[gi], money: (nt[gi].money || 0) + unwon };
+          addLog(tgPlural('log.pw.glaneur', unwon, { emoji: nt[gi].emoji, name: nt[gi].name, n: unwon }));
+        }
+      }
+    };
+
     // Analytics : trace structurée de la réponse (juste OU fausse). `question`
     // est déjà mélangé (shuffleAnswers) → answers/correctIndex/chosenIndex sont
     // cohérents et rejouables tels quels côté mobile.
@@ -1320,6 +1346,7 @@ export const useGameStore = create((set, get) => ({
       // Chrono partagé : on reporte le temps restant à la prochaine question de la rafale.
       const stPatch = (team.doubleActive && team.doubleSharedTimer) ? { burstTimeLeft: timeLeft } : {};
       newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + payNow, wager: undefined, ...aonPatch, ...stPatch };
+      applyGlaneur(newTeams, payNow); // Glaneur : or non gagné par cette équipe (vitesse < pleine)
       // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
       let gainDetail;
       if (bonusBreak.parts.length > 0) {
@@ -1365,13 +1392,33 @@ export const useGameStore = create((set, get) => ({
 
       // Double/triple: wrong answer stops immediately, clear double state
       if (team.doubleActive) {
-        newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET };
+        const remaining = team.doubleExtra || 0; // questions imposées non répondues
+        // Saboteur (Double voie) : pénalités croissantes en cas d'erreur.
+        if (team.doubleSaboteur >= 1) {
+          let lost = glaneurFull; // niv.1 : perd l'argent qu'elle devait gagner
+          if (team.doubleSaboteur >= 2) lost += remaining * glaneurFull; // niv.2 : + questions non répondues
+          lost = Math.min(lost, newTeams[currentTeam].money || 0);
+          let saboteurRecul = '';
+          if (team.doubleSaboteur >= 3 && remaining > 0) {
+            const extra = remaining * (get().preRollValue ?? 2); // niv.3 : recul × questions restantes
+            const rr = moveBack(get().board, newTeams[currentTeam].pos, extra);
+            newTeams[currentTeam] = { ...newTeams[currentTeam], pos: rr.finalPos };
+            saboteurRecul = tg('log.pw.doubleSaboteurRecul', { n: extra });
+          }
+          newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) - lost };
+          addLog(tg('log.pw.doubleSaboteurHit', { emoji: team.emoji, name: team.name, gold: lost, recul: saboteurRecul }));
+        }
+        // Report (Double ultime) : les questions restantes vont au prochain tour.
+        const reportPatch = (team.doubleReport && remaining > 0) ? { doubleReportPending: remaining } : {};
+        if (team.doubleReport && remaining > 0) addLog(tg('log.pw.doubleReportHit', { emoji: team.emoji, name: team.name, n: remaining }));
+        newTeams[currentTeam] = { ...newTeams[currentTeam], ...BURST_RESET, ...reportPatch };
         addLog(tg('log.store.doubleFailed'));
       }
 
       // Sur-réduction / Forteresse : le « recul » peut être devenu une AVANCE.
       const selfPath = path ? [{ teamIndex: currentTeam, waypoints: path.map((id) => ({ x: get().board[id].x, y: get().board[id].y })), type: forward ? 'forward' : 'back' }] : [];
       const backPath = [...selfPath, ...surgeMoves].length ? [...selfPath, ...surgeMoves] : null;
+      applyGlaneur(newTeams, 0); // Glaneur : réponse ratée → tout le gain plein est glané
       set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], movePath: backPath });
       // Avance (Forteresse/Sur-réduction) atteignant l'arrivée → victoire.
       if (forward && get().checkArrival(currentTeam)) return;
@@ -1693,6 +1740,25 @@ export const useGameStore = create((set, get) => ({
     if (!get().pendingLanding) return;
     set({ pendingLanding: false, freeActivation: false });
     get().handleLanding();
+  },
+
+  // --- « Hacking » (mode téléphone) : tour piraté ---
+  // Cinématique « app piratée » couvrant l'écran tout le tour de l'équipe visée.
+  hackOverlay: null,
+  // Appelé par BottomBar (minuterie de la cellule HUD) à la fin du « beat » de
+  // résolution : on consomme le compteur de hack de l'équipe (fin de la
+  // cinématique), on lève le verrou et on passe au tour suivant (tour perdu).
+  endHackedTurn: () => {
+    const ho = get().hackOverlay;
+    if (!ho) return;
+    const teams = [...get().teams];
+    const t = teams[ho.teamIndex];
+    if (t) {
+      const left = (t.hackedTurns || 0) - 1;
+      teams[ho.teamIndex] = left > 0 ? { ...t, hackedTurns: left } : { ...t, hackedTurns: undefined, hackedBy: undefined };
+    }
+    set({ teams, hackOverlay: null });
+    get().nextTurn();
   },
 
   // --- Dev : ajoute des pieces a l'equipe active (localhost uniquement) ---
@@ -2490,6 +2556,30 @@ export const useGameStore = create((set, get) => ({
       nt[newCurrent] = victim;
     }
 
+    // Orage persistant (Foudre ultime) : au DÉBUT du tour de la cible, elle recule
+    // d'un dé (réduit par l'équipement, PAS par le Bouclier — §9). Non cumulable :
+    // le compteur décroît, expire à 0.
+    const cor = nt[newCurrent];
+    if (cor?.orageRecul?.turns > 0) {
+      if (nt === get().teams) nt = [...nt];
+      const die = cor.orageRecul.die || 'd4';
+      const amt = reducedRecul(cor, resolveAmount(die, cor));
+      const rr = moveBack(get().board, cor.pos, amt);
+      const left = cor.orageRecul.turns - 1;
+      nt[newCurrent] = { ...cor, pos: rr.finalPos, orageRecul: left > 0 ? { ...cor.orageRecul, turns: left } : undefined };
+      addLog(tgPlural('log.store.orage', amt, { emoji: cor.emoji, name: cor.name, n: amt }));
+    }
+
+    // Report (Double ultime) : les questions imposées non répondues (reportées au
+    // tour précédent) s'appliquent maintenant que l'équipe regagne la main.
+    const crep = nt[newCurrent];
+    if (crep?.doubleReportPending > 0) {
+      if (nt === get().teams) nt = [...nt];
+      const extra = Math.min(crep.doubleReportPending, 4);
+      nt[newCurrent] = { ...crep, doubleActive: true, doubleExtra: extra, doubleNoBonus: true, doubleReportPending: undefined };
+      addLog(tg('log.store.doubleReported', { emoji: crep.emoji, name: crep.name, n: extra }));
+    }
+
     // Buffs temporisés (effets de durée des consommables) : 1 tour de moins quand
     // l'équipe REGAGNE la main ; expiration à 0.
     const cb = nt[newCurrent];
@@ -2516,6 +2606,18 @@ export const useGameStore = create((set, get) => ({
       if (nt === get().teams) nt = [...nt];
       nt[newCurrent] = left > 0 ? { ...cbc, consumablesBlockedTurns: left } : { ...cbc, consumablesBlockedTurns: undefined };
       if (left <= 0) addLog(tg('log.store.consumablesUnblocked', { emoji: cbc.emoji, name: cbc.name }));
+    }
+
+    // « Hacking » (événement mode téléphone) : la cinématique « app piratée »
+    // est VISIBLE en continu dès le déclenchement (tant que hackedTurns > 0, cf.
+    // BottomBar/MobileApp). Quand l'équipe piratée REGAGNE la main, c'est la
+    // RÉSOLUTION : on marque hackOverlay (verrou du dé + minuterie de fin dans
+    // BottomBar → endHackedTurn) ; le compteur est consommé à ce moment-là.
+    let hackOverlay = null;
+    const chk = nt[newCurrent];
+    if (chk?.hackedTurns > 0) {
+      hackOverlay = { teamIndex: newCurrent, emoji: chk.emoji, name: chk.name, color: chk.color };
+      addLog(tg('log.store.hackLock', { emoji: chk.emoji, name: chk.name }));
     }
 
     // Pactes & coalitions (« Complots ») : 1 tour de moins quand l'équipe REGAGNE
@@ -2571,8 +2673,8 @@ export const useGameStore = create((set, get) => ({
       }
     }
 
-    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET, showShopPrompt });
-    get().triggerStarterChest(); // coffre de départ au 1er tour de cette équipe
+    set({ currentTeam: newCurrent, teams: nt, ...TURN_RESET, showShopPrompt: hackOverlay ? false : showShopPrompt, hackOverlay });
+    if (!hackOverlay) get().triggerStarterChest(); // coffre de départ au 1er tour de cette équipe
     if (get().phase === 'game') saveGame(get());
   },
 
@@ -2587,7 +2689,7 @@ export const useGameStore = create((set, get) => ({
       ...TURN_RESET,
       movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
-      showStarterChest: false, lastStarterReward: null,
+      showStarterChest: false, lastStarterReward: null, hackOverlay: null,
     });
     // Coffre de départ : config absente (vieilles saves) → défaut ; or non résolu
     // (saves antérieures à la config) → on le résout depuis la config.
@@ -2655,6 +2757,7 @@ export const useGameStore = create((set, get) => ({
       starterChestConfig: defaultStarterChestConfig(), starterGold: null,
       rolling: false, ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      hackOverlay: null,
       nbTeams: 3, setupTeams: createDefaultTeams(3),
       extensions: defaultExtensions(),
       enabledEvents: Object.keys(EVENTS),

@@ -698,10 +698,10 @@ describe('effets passifs : pouvoirs offensifs', () => {
     vi.restoreAllMocks();
   });
 
-  it('Foudre niv.3 recule de 1D10', () => {
+  it('Foudre niv.8 recule de 1D10', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.95); // 1D10 → 10
     const teams = [...S().teams];
-    teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 3 } } };
+    teams[0] = { ...teams[0], powers: { foudre: { charges: 1, level: 8 } } };
     teams[1] = { ...teams[1], pos: 'n8' };
     useGameStore.setState({ teams, showTargetPicker: { powerKey: 'foudre' } });
     S().applyOffensivePower(1);

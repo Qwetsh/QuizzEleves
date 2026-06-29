@@ -73,7 +73,7 @@ describe('niveaux & coûts', () => {
   });
   it('describePowerScale produit un texte lisible', () => {
     expect(describePowerScale('bouclier', 1, true)).toContain('Recul');
-    expect(describePowerScale('foudre', 3, true)).toContain('1D10');
+    expect(describePowerScale('foudre', 8, true)).toContain('1D10'); // L8 = D10
   });
 });
 
@@ -105,7 +105,7 @@ describe('flux store : amélioration jusqu’à L10 + choix de voie', () => {
     for (let i = 0; i < 9; i++) {
       S().upgradePowerLevel('double');
       // au passage L5/L10 un picker s'ouvre : on choisit pour pouvoir continuer
-      if (S().showSpecPicker) S().chooseSpec(S().showSpecPicker.slot === 'spec5' ? 'exam' : 'general');
+      if (S().showSpecPicker) S().chooseSpec(S().showSpecPicker.slot === 'spec5' ? 'corsees' : 'allOthers');
     }
     expect(S().teams[0].powers.double.level).toBe(10);
   });
@@ -161,55 +161,74 @@ describe('branches Foudre câblées', () => {
     after();
   });
 
-  it('Silence (Sablier L5) : pose le drapeau + bloque le pouvoir de la cible', () => {
-    base([teamWith('sablier', { level: 5, spec5: 'silence' }), { ...teamWith('foudre', { charges: 2 }), pos: 'n8' }], 'sablier');
+  it('Pillage (voie, palier L6) : vole ½ × la valeur du dé', () => {
+    base([
+      teamWith('foudre', { level: 6, spec5: 'pillage', charges: 2 }),
+      { ...teamWith('foudre'), pos: 'n10', powers: {}, money: 100 },
+    ]);
     S().applyOffensivePower(1);
-    expect(S().teams[1].silencedNextTurn).toBe(true);
+    // d6 (mock 0.5) = 4 → vol round(4 × 0.5) = 2 ; le lanceur encaisse.
+    expect(S().teams[1].money).toBe(98);
+    expect(S().teams[0].money).toBe(9999 + 2);
     after();
   });
 
-  it('Gel (Sablier L10) : pose skipNextRoll sur la cible', () => {
-    base([teamWith('sablier', { level: 10, spec10: 'freeze' }), { ...teamWith('foudre'), pos: 'n8' }], 'sablier');
+  it('Renvoi au départ (ultime, à 5 charges) : envoie la cible au départ et coûte 5 charges', () => {
+    base([
+      teamWith('foudre', { level: 10, spec10: 'banishStart', charges: 5 }),
+      { ...teamWith('foudre'), pos: 'n8', powers: {} },
+    ]);
     S().applyOffensivePower(1);
-    expect(S().teams[1].skipNextRoll).toBe(true);
+    expect(S().teams[1].pos).toBe('depart');
+    expect(S().teams[0].powers.foudre.charges).toBe(0);
     after();
   });
 
-  it('Confusion (Sablier L5) : pose le drapeau confused sur la cible', () => {
-    base([teamWith('sablier', { level: 5, spec5: 'confuse' }), { ...teamWith('foudre'), pos: 'n8' }], 'sablier');
+  it('Renvoi au départ sous 5 charges : recul classique, pas de renvoi', () => {
+    base([
+      teamWith('foudre', { level: 10, spec10: 'banishStart', charges: 2 }),
+      { ...teamWith('foudre'), pos: 'n8', powers: {} },
+    ]);
     S().applyOffensivePower(1);
-    expect(S().teams[1].confused).toBe(true);
+    expect(S().teams[1].pos).not.toBe('depart'); // recul normal
+    expect(S().teams[0].powers.foudre.charges).toBe(1); // 1 seule charge consommée
     after();
   });
 
-  it('Orage (Foudre L10) : ouvre le sélecteur de case (pose de piège)', () => {
-    base([teamWith('foudre', { level: 10, spec10: 'orage' }), { ...teamWith('foudre'), pos: 'n8' }], 'foudre');
+  it('Orage persistant (ultime) : pose le DoT, qui recule la cible au début de son tour', () => {
+    base([
+      teamWith('foudre', { level: 10, spec10: 'orage', charges: 2 }),
+      { ...teamWith('foudre'), pos: 'n12', powers: {} },
+    ]);
     S().applyOffensivePower(1);
-    expect(S().showTilePicker).toBeTruthy();
+    expect(S().teams[1].orageRecul).toMatchObject({ turns: 2, die: 'd4' });
+    const posAfterCast = S().teams[1].pos; // déjà reculé par la Foudre L10
+    // La main passe à l'équipe 1 : l'orage la fait reculer davantage.
+    useGameStore.setState({ currentTeam: 0 });
+    S().nextTurn();
+    expect(S().currentTeam).toBe(1);
+    expect(S().teams[1].orageRecul.turns).toBe(1); // 1 tour restant
+    expect(BOARD[S().teams[1].pos].x).toBeLessThan(BOARD[posAfterCast].x); // reculé
     after();
   });
 });
 
-describe('branches Indice câblées', () => {
-  const S = () => useGameStore.getState();
-  const setup = (over) => useGameStore.setState({
-    phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
-    extensions: { equipment: true, mastery: true }, indiceUsed: false, indiceHidden: [],
-    showQuestion: { question: { a: ['A', 'B', 'C', 'D'], c: 1 }, subject: 'maths' },
-    teams: [teamWith('indice', over)],
+describe('Indice — arbre (résolveur)', () => {
+  const ind = (over) => resolvePowerEffect(teamWith('indice', over), 'indice', true);
+  it('cœur : 1 élimination + chance d’une 2ᵉ (25→50→75 %), puis 2 sûres dès L6', () => {
+    expect(ind({ level: 1 }).count).toBe(1);
+    expect(ind({ level: 2 }).secondChance).toBe(0.25);
+    expect(ind({ level: 4 }).secondChance).toBe(0.75);
+    expect(ind({ level: 6 }).count).toBe(2);
   });
-
-  it('50/50 (L5) : ne laisse que 2 réponses (2 éliminées sur 3)', () => {
-    setup({ level: 5, spec5: 'fifty', charges: 1 });
-    S().useIndice();
-    expect(S().indiceHidden).toHaveLength(2);
+  it('voie « Maîtrise du temps » : +5 (L7) → +10 (L8) → +15 (L9)', () => {
+    expect(ind({ level: 7, spec5: 'temps' }).hintTimeBonus).toBe(5);
+    expect(ind({ level: 8, spec5: 'temps' }).hintTimeBonus).toBe(10);
+    expect(ind({ level: 9, spec5: 'temps' }).hintTimeBonus).toBe(15);
   });
-
-  it('Omniscience (L10) : élimine toutes les mauvaises (3) et coûte 2 charges', () => {
-    setup({ level: 10, spec10: 'omni', charges: 2 });
-    S().useIndice();
-    expect(S().indiceHidden).toHaveLength(3);
-    expect(S().teams[0].powers.indice.charges).toBe(0); // 2 charges consommées
+  it('ultimes L10 : Clairvoyance (actif 5 ch.) / Sagesse partagée (passif)', () => {
+    expect(ind({ level: 10, spec10: 'clairvoyance' }).activeCost).toBe(5);
+    expect(ind({ level: 10, spec10: 'wisdom' }).sharedWisdom).toBe(true);
   });
 });
 
@@ -314,15 +333,6 @@ describe('Bouclier — ultimes actifs (store)', () => {
     expect(S().teams[1].pos).toBe('n10'); // recul bloqué
   });
 
-  it('Banque fortifiée (L10) : Tempête de Foudre ne vole pas l’or', () => {
-    base([
-      teamWith('foudre', { level: 5, spec5: 'storm' }), // stealGold
-      { ...teamWith('bouclier', { level: 10, spec10: 'goldVault' }), pos: 'n8', money: 100 },
-    ]);
-    S().applyOffensivePower(1);
-    expect(S().teams[1].money).toBe(100); // or protégé
-  });
-
   it('Immunité : Cataclysme (Foudre L10) épargne une équipe immunisée non ciblée', () => {
     base([
       teamWith('foudre', { level: 10, spec10: 'cataclysm' }),
@@ -390,9 +400,10 @@ describe('éditeur d’équilibrage : overrides de l’arbre Maîtrise', () => {
     expect(resolvePowerEffect({ powers: { sablier: { level: 1 } } }, 'sablier', true).divisor).toBe(9);
   });
 
-  it('override d’un effet de branche (L5)', () => {
-    applyBalance({ powers: { foudre: { tree: { branch5: [{}, {}, { effect: { stealGold: 25 } }] } } } });
-    expect(resolvePowerEffect({ powers: { foudre: { level: 5, spec5: 'storm' } } }, 'foudre', true).stealGold).toBe(25);
+  it('override d’un palier de voie per-power (Foudre Pillage, palier à L6)', () => {
+    // Foudre : tierLevels [6,7,9] → tiers[0] s'applique dès le niveau 6.
+    applyBalance({ powers: { foudre: { tree: { branch5: [{ tiers: [{ pillageMult: 9 }] }] } } } });
+    expect(resolvePowerEffect({ powers: { foudre: { level: 6, spec5: 'pillage' } } }, 'foudre', true).pillageMult).toBe(9);
   });
 });
 
@@ -501,19 +512,39 @@ describe('branches Double câblées', () => {
     S().applyOffensivePower(1);
   };
 
-  it('Tout-ou-rien (L10) : banque active + « sans bonus » levé', () => {
-    cast({ level: 10, spec10: 'allin' });
-    expect(S().teams[1].doubleAllOrNothing).toBe(true);
-    expect(S().teams[1].doubleNoBonus).toBe(false);
-  });
-
-  it('Examen surprise (L5) : force une question Hardcore sur la cible', () => {
-    cast({ level: 5, spec5: 'exam' }, { questions: { hardcore: [{ q: '?', a: ['A', 'B', 'C', 'D'], c: 0 }] } });
-    expect(S().teams[1].forcedSubject).toBe('hardcore');
-  });
-
-  it('Chrono partagé (L5) : pose le drapeau doubleSharedTimer', () => {
+  it('Temps commun (L5) : pose le drapeau doubleSharedTimer', () => {
     cast({ level: 5, spec5: 'shared' });
     expect(S().teams[1].doubleSharedTimer).toBe(true);
+  });
+
+  it('Surcharge (ultime) : +2 questions garanties à chaque Double (plafonné)', () => {
+    cast({ level: 10, spec10: 'surcharge' }); // base L10 add=3 + surcharge 2 = 5 → plafond 4
+    expect(S().teams[1].doubleExtra).toBe(4);
+  });
+
+  it('Saboteur (voie, palier L9) : pose le niveau 3 sur la cible', () => {
+    cast({ level: 9, spec5: 'saboteur' });
+    expect(S().teams[1].doubleSaboteur).toBe(3);
+  });
+
+  it('Questions corsées (voie) : pose la chance Hardcore sur la cible', () => {
+    cast({ level: 9, spec5: 'corsees' });
+    expect(S().teams[1].doubleHCChance).toBe(0.15); // palier L9
+  });
+
+  it('Report (ultime) : pose le drapeau report', () => {
+    cast({ level: 10, spec10: 'report' });
+    expect(S().teams[1].doubleReport).toBe(true);
+  });
+
+  it('Cible tout le monde (ultime) : impose la Double à tous les adversaires', () => {
+    useGameStore.setState({
+      phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],
+      extensions: { equipment: true, mastery: true }, showTargetPicker: { powerKey: 'double' },
+      teams: [teamWith('double', { level: 10, spec10: 'allOthers' }), { ...teamWith('foudre'), pos: 'n8', powers: {} }, { ...teamWith('foudre'), pos: 'n6', powers: {} }],
+    });
+    S().applyOffensivePower(1);
+    expect(S().teams[1].doubleActive).toBe(true);
+    expect(S().teams[2].doubleActive).toBe(true); // touché aussi
   });
 });

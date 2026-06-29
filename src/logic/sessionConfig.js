@@ -72,6 +72,11 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
       idx,
       name: t.name, emoji: t.emoji, color: t.color,
       money: t.money ?? 0,
+      // « Hacking » : tant que > 0, le téléphone de CETTE équipe affiche la
+      // cinématique « app piratée » en boucle (jusqu'à la résolution du tour).
+      // `hackedBy` = attribution affichée (« le boss » ou l'équipe lanceuse).
+      hacked: (t.hackedTurns || 0) > 0,
+      hackedBy: t.hackedBy || null,
       correct: t.correct ?? 0, wrong: t.wrong ?? 0,
       pos: t.pos,
       // Effets transitoires (rappel visuel côté élève) — cf. getTeamEffects.

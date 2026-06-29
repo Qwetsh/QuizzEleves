@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchSession, subscribeSession, fetchLobbyTeams, upsertLobbyTeam, randomToken, sendIntent, createTrade, fetchTrades, setTradeStatus, deleteTrade, subscribeTrades } from '../../logic/sessionConfig';
 import { POWERS, MAX_CHARGES } from '../../data/powers';
-import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost, resolvePowerEffect } from '../../logic/powerEffects';
+import { describePowerScale, specSlotForLevel, specOptionsFor, maxPowerLevel, powerUpgradeCost, resolvePowerEffect, tierLevelsFor } from '../../logic/powerEffects';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { SUBJECTS } from '../../data/subjects';
 import { itemImg } from '../../logic/itemAssets';
@@ -16,6 +16,7 @@ import { extOn } from '../../extensions/registry';
 import { getDieFaces, isFaceForged, clampFaceValue, faceEffects, faceSig } from '../../logic/forge';
 import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, faceEffectDescriptions } from '../../logic/forgeEffects';
 import FaceTile from '../Game/FaceTile';
+import HackCinematic from '../Game/HackCinematic';
 import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from '../../logic/pacts';
 import { tFor, setLang } from '../../i18n';
 import { locName, locDesc, loc } from '../../i18n/content';
@@ -364,7 +365,7 @@ function BranchBlock({ powerKey, slot, chosen, reached, level = 1, owned, locked
   const options = specOptionsFor(powerKey, slot);
   if (!options.length) return null;
   const canPick = reached && !chosen && owned && !locked;
-  const tierLevels = [7, 9];
+  const tierLevels = tierLevelsFor(powerKey);
   return (
     <div className="mob-tt-branch">
       <div className="mob-tt-branch-label">{reached ? (chosen ? T('mobile.pathChosen') : T('mobile.choosePath')) : T('mobile.branching')}</div>
@@ -2057,6 +2058,13 @@ export default function MobileApp() {
       {admin && session && <AdminPanel code={code} session={session} onClose={() => setAdmin(false)} />}
       {dealToast && session?.teams && teamIdx != null && (
         <DealToast trade={dealToast} teamIdx={teamIdx} teams={session.teams} onClose={() => setDealToast(null)} T={T} />
+      )}
+      {/* « Hacking » : cinématique plein écran en BOUCLE, UNIQUEMENT sur le
+          téléphone du groupe piraté, dès le déclenchement et jusqu'à la
+          résolution (l'app devient inutilisable). */}
+      {teamIdx != null && session?.teams?.[teamIdx]?.hacked && (
+        <HackCinematic en={!!session.englishMode}
+          victim={session.teams[teamIdx].name} by={session.teams[teamIdx].hackedBy} />
       )}
     </>
   );

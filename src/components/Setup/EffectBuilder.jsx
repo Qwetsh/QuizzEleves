@@ -26,6 +26,7 @@ const ACTIONS = [
   { key: 'curseExtraQuestion', label: '❓ Malédiction : question(s) en +' },
   { key: 'blockPowers', label: '🚫 Bloquer les pouvoirs (X tours)' },
   { key: 'blockConsumables', label: '🚫 Bloquer les consommables (X tours)' },
+  { key: 'hackApp', label: '💀 Hacking : tour(s) perdu(s) + cinématique' },
 ];
 
 // Types d'effet de durée (buff) — voir gameStore (application) et teamStatus (affichage).
@@ -100,6 +101,7 @@ export function describeAction(a) {
     case 'curseExtraQuestion': return `malédiction : +${amountLabel(a.n)} question(s) pour ${who}`;
     case 'blockPowers': return `bloquer les pouvoirs de ${who} pendant ${amountLabel(a.turns)} tour(s)`;
     case 'blockConsumables': return `bloquer les consommables de ${who} pendant ${amountLabel(a.turns)} tour(s)`;
+    case 'hackApp': return `pirater l'app : ${who} perd ${amountLabel(a.turns)} tour(s) (cinématique)`;
     case 'rerollQuestion': {
       const sl = (s) => s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s;
       return typeof a.chance === 'number'
@@ -271,6 +273,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'curseTimer') Object.assign(base, { target: 'all', divisor: 2 });
         if (k === 'curseExtraQuestion') Object.assign(base, { target: 'all', n: 1 });
         if (k === 'blockPowers' || k === 'blockConsumables') Object.assign(base, { target: 'target', turns: 2 });
+        if (k === 'hackApp') Object.assign(base, { target: 'self', turns: 1 });
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -404,6 +407,15 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <AmountInput value={a.turns ?? 2} onChange={(v) => upd({ turns: v })} min={1} scale={false} unit=" tour(s)" />
           <W>tour(s), à</W>
           <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
+      {a.action === 'hackApp' && (
+        <>
+          <W>💀 pirate l'app :</W>
+          <AmountInput value={a.turns ?? 1} onChange={(v) => upd({ turns: v })} min={1} scale={false} unit=" tour(s)" />
+          <W>tour(s) perdu(s), à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
         </>
       )}
 

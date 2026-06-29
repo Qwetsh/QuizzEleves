@@ -38,7 +38,8 @@ export function resolvePowerEffect(team, key, masteryOn = false) {
       // (L7 = palier 1, L9 = palier 2). Chaque palier fusionne par-dessus (écrase le
       // même champ : ex. goldPerRoll 1 → 2 → 3 ; ajoute un champ nouveau sinon).
       if (Array.isArray(b.tiers)) {
-        b.tiers.forEach((tier, i) => { if (tier && lvl >= SPEC5_TIER_LEVELS[i]) eff = { ...eff, ...tier }; });
+        const TL = tree.tierLevels || SPEC5_TIER_LEVELS;
+        b.tiers.forEach((tier, i) => { if (tier && lvl >= TL[i]) eff = { ...eff, ...tier }; });
       }
     }
   }
@@ -49,8 +50,15 @@ export function resolvePowerEffect(team, key, masteryOn = false) {
   return eff;
 }
 
-// Niveaux auxquels s'appliquent les renforts de voie L5 (tiers[0]=L7, tiers[1]=L9).
+// Niveaux auxquels s'appliquent les renforts de voie L5. DÉFAUT [7,9] (2 paliers :
+// Relance/Bouclier). Un pouvoir peut surcharger via `tree.tierLevels` (longueur
+// variable, ex. Foudre [6,7,9] = 3 paliers ; Sablier [6,8,9] ; Double/Indice [7,8,9]).
 export const SPEC5_TIER_LEVELS = [7, 9];
+
+// Niveaux de renfort de voie EFFECTIFS d'un pouvoir (per-power, fallback [7,9]).
+export function tierLevelsFor(key) {
+  return POWERS[key]?.tree?.tierLevels || SPEC5_TIER_LEVELS;
+}
 
 // Niveau maximum selon le mode (10 avec Maîtrise + arbre, sinon 3).
 export function maxPowerLevel(key, masteryOn = false) {
@@ -102,7 +110,7 @@ export function describePowerScale(key, level, masteryOn = false) {
       // (embranchement, renfort de la voie choisie, ou ultime) pour les distinguer.
       if (level === 5) parts.push('embranchement');
       else if (level === 10) parts.push('ultime');
-      else if (level === 7 || level === 9) parts.push('renfort de voie');
+      else if (tierLevelsFor(key).includes(level)) parts.push('renfort de voie');
       return parts.join(' · ');
     }
     case 'reculTarget': return `Recul ${dl(eff.amount)}${eff.flat ? ` +${eff.flat}` : ''}`;

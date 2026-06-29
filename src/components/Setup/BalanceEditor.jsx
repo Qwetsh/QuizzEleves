@@ -16,6 +16,7 @@ import {
 import { fetchRecipeRows, saveRecipeRow, deleteRecipeRow, refreshRecipes } from '../../logic/recipesConfig';
 import { BASE_RECIPES } from '../../data/recipes';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
+import { tierLevelsFor } from '../../logic/powerEffects';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { faceEffects, MAX_FACE_EFFECTS, MAX_FACE_VALUE } from '../../logic/forge';
 import FaceTile from '../Game/FaceTile';
@@ -843,7 +844,7 @@ export default function BalanceEditor({ onClose }) {
                                   {Array.isArray(br.tiers) && br.tiers.map((tier, ti) => (
                                     Object.entries(tier).filter(([, v]) => typeof v === 'number').map(([fxKey, dv]) => (
                                       <div key={`t${ti}-${fxKey}`} className="bal-row">
-                                        <span className="bal-label">↳ niv.{ti === 0 ? 7 : 9} · {FX_LABELS[fxKey] || fxKey}</span>
+                                        <span className="bal-label">↳ niv.{tierLevelsFor(k)[ti] ?? '?'} · {FX_LABELS[fxKey] || fxKey}</span>
                                         <input className="qed-input" style={{ width: 64 }} type="number" step="any" value={treeTier(k, slot, j, ti, fxKey)} onChange={(e) => setTreeTier(k, slot, j, ti, fxKey, e.target.value === '' ? dv : Number(e.target.value))} />
                                         <span className="bal-default">déf. {String(dv)}</span>
                                       </div>

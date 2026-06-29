@@ -125,28 +125,70 @@ export const POWERS = {
       { desc: 'Elimine 2 mauvaises reponses', desc_en: 'Removes 2 wrong answers', effect: { type: 'hideAnswers', count: 2, bonusTime: 0 } },
     ],
     tree: {
-      // Cœur : nombre de mauvaises réponses éliminées (count) + bonus de temps.
+      // Cœur : élimine 1 mauvaise réponse, + une chance croissante d'en éliminer
+      // une 2ᵉ (25→50→75→100 %). À 100 % (L6+), 2 éliminations garanties.
+      // L'élimination ne retire jamais la bonne réponse. Renforts 7/8/9.
       scale: [
-        { type: 'hideAnswers', count: 1, bonusTime: 0 },
-        { type: 'hideAnswers', count: 1, bonusTime: 5 },
-        { type: 'hideAnswers', count: 2, bonusTime: 0 },
-        { type: 'hideAnswers', count: 2, bonusTime: 5 },
-        { type: 'hideAnswers', count: 2, bonusTime: 8 },
-        { type: 'hideAnswers', count: 2, bonusTime: 10 },
-        { type: 'hideAnswers', count: 3, bonusTime: 5 },
-        { type: 'hideAnswers', count: 3, bonusTime: 8 },
-        { type: 'hideAnswers', count: 3, bonusTime: 10 },
-        { type: 'hideAnswers', count: 3, bonusTime: 15 },
+        { type: 'hideAnswers', count: 1, secondChance: 0 },     // L1
+        { type: 'hideAnswers', count: 1, secondChance: 0.25 },  // L2 25%
+        { type: 'hideAnswers', count: 1, secondChance: 0.50 },  // L3 50%
+        { type: 'hideAnswers', count: 1, secondChance: 0.75 },  // L4 75%
+        { type: 'hideAnswers', count: 1, secondChance: 0.75 },  // L5 (embranchement)
+        { type: 'hideAnswers', count: 2, secondChance: 0 },     // L6 100% → 2 sûres
+        { type: 'hideAnswers', count: 2, secondChance: 0 },     // L7 (renfort palier 1)
+        { type: 'hideAnswers', count: 2, secondChance: 0 },     // L8 (renfort palier 2)
+        { type: 'hideAnswers', count: 2, secondChance: 0 },     // L9 (renfort palier 3)
+        { type: 'hideAnswers', count: 2, secondChance: 0 },     // L10 (ultime)
+      ],
+      tierLevels: [7, 8, 9],
+      scaleDesc: [
+        'Élimine 1 mauvaise réponse.',
+        '25 % de chance d’éliminer une 2ᵉ mauvaise réponse.',
+        '50 % de chance d’éliminer une 2ᵉ mauvaise réponse.',
+        '75 % de chance d’éliminer une 2ᵉ mauvaise réponse.',
+        'Tu choisis une voie d’Indice (3 au choix).',
+        '100 % : élimine une 2ᵉ mauvaise réponse à coup sûr (2 au total).',
+        'Ta voie d’Indice gagne son 1ᵉʳ palier.',
+        'Ta voie d’Indice gagne son 2ᵉ palier.',
+        'Ta voie d’Indice gagne son 3ᵉ palier.',
+        'Tu choisis un ultime d’Indice (3 au choix).',
+      ],
+      scaleDesc_en: [
+        'Removes 1 wrong answer.',
+        '25% chance to remove a 2nd wrong answer.',
+        '50% chance to remove a 2nd wrong answer.',
+        '75% chance to remove a 2nd wrong answer.',
+        'Pick a Hint path (3 to choose from).',
+        '100%: removes a 2nd wrong answer for sure (2 total).',
+        'Your Hint path gains its 1st tier.',
+        'Your Hint path gains its 2nd tier.',
+        'Your Hint path gains its 3rd tier.',
+        'Pick an ultimate Hint power (3 to choose from).',
       ],
       branch5: [
-        { key: 'clair', name: 'Clairvoyance', name_en: 'Clairvoyance', icon: '👁️', desc: '−1 mauvaise réponse de plus et révèle le thème à l’avance.', desc_en: '−1 more wrong answer and reveals the theme in advance.', effect: { extraHide: 1, revealTheme: true } },
-        { key: 'serenity', name: 'Sérénité', name_en: 'Serenity', icon: '😌', desc: 'Temps de réponse ×1,5.', desc_en: 'Answer time ×1.5.', effect: { timerMult: 1.5 } },
-        { key: 'fifty', name: '50/50', name_en: '50/50', icon: '⚖️', desc: 'Garde toujours 2 réponses (questions à 4 choix).', desc_en: 'Always keeps 2 answers (4-choice questions).', effect: { keepTwo: true } },
+        { key: 'temps', name: 'Maîtrise du temps', name_en: 'Time Mastery', icon: '⏱️',
+          desc: 'Quand tu cliques sur Indice, ton timer augmente.',
+          desc_en: 'When you click Hint, your timer increases.',
+          effect: { hintTime: true }, tiers: [{ hintTimeBonus: 5 }, { hintTimeBonus: 10 }, { hintTimeBonus: 15 }],
+          tierDesc: ['Niv.7 : +5 s.', 'Niv.8 : +10 s.', 'Niv.9 : +15 s.'],
+          tierDesc_en: ['Lvl.7: +5s.', 'Lvl.8: +10s.', 'Lvl.9: +15s.'] },
+        { key: 'chain', name: 'Indices en chaîne', name_en: 'Chained Hints', icon: '🔁',
+          desc: 'Tu peux utiliser l’indice plusieurs fois sur la même question.',
+          desc_en: 'You can use the hint several times on the same question.',
+          effect: { chainHints: true }, tiers: [{ chainHintUses: 2 }, { chainHintUses: 3 }, { chainHintUses: 99 }],
+          tierDesc: ['Niv.7 : 2ᵉ utilisation.', 'Niv.8 : 3ᵉ utilisation.', 'Niv.9 : jusqu’à ne garder que la bonne.'],
+          tierDesc_en: ['Lvl.7: 2nd use.', 'Lvl.8: 3rd use.', 'Lvl.9: until only the correct one remains.'] },
+        { key: 'loot', name: 'Loot d’or', name_en: 'Gold Loot', icon: '🪙',
+          desc: 'Si tu réponds juste après avoir utilisé un indice, tu gagnes de l’or.',
+          desc_en: 'If you answer correctly after using a hint, you gain gold.',
+          effect: { hintLoot: true }, tiers: [{ hintGold: 5 }, { hintGold: 10 }, { hintGold: 15 }],
+          tierDesc: ['Niv.7 : +5 pièces.', 'Niv.8 : +10 pièces.', 'Niv.9 : +15 pièces.'],
+          tierDesc_en: ['Lvl.7: +5 coins.', 'Lvl.8: +10 coins.', 'Lvl.9: +15 coins.'] },
       ],
       branch10: [
-        { key: 'omni', name: 'Omniscience', name_en: 'Omniscience', icon: '🔮', desc: 'Révèle la bonne réponse (1×/tour, coûte 2 charges).', desc_en: 'Reveals the correct answer (1×/turn, costs 2 charges).', effect: { revealAnswer: true } },
-        { key: 'notimer', name: 'Maître du temps', name_en: 'Time Master', icon: '⏳', desc: 'Aucun timer sur la question (1×/tour).', desc_en: 'No timer on the question (1×/turn).', effect: { noTimer: true } },
-        { key: 'cheat', name: 'Antisèche', name_en: 'Cheat Sheet', icon: '📝', desc: '50/50 garanti + bonus d’or si bonne réponse.', desc_en: 'Guaranteed 50/50 + gold bonus on a correct answer.', effect: { keepTwo: true, bonusMoneyOnCorrect: 5 } },
+        { key: 'legendary', name: 'Objet légendaire', name_en: 'Legendary Item', icon: '🌟', desc: 'Quand tu utilises un indice et que tu réponds juste, tu gagnes un objet légendaire.', desc_en: 'When you use a hint and answer correctly, you gain a legendary item.', effect: { legendaryOnHint: true } },
+        { key: 'clairvoyance', name: 'Clairvoyance', name_en: 'Clairvoyance', icon: '🔮', desc: 'Actif (5 charges) : révèle la bonne réponse à toutes les questions du tour.', desc_en: 'Active (5 charges): reveals the correct answer to all questions this turn.', effect: { clairvoyance: true, activeCost: 5 } },
+        { key: 'wisdom', name: 'Sagesse partagée', name_en: 'Shared Wisdom', icon: '👁️', desc: 'Passif : au début de chaque question, élimine gratuitement 1 mauvaise réponse.', desc_en: 'Passive: at the start of each question, removes 1 wrong answer for free.', effect: { sharedWisdom: true } },
       ],
       upgradeCosts: TREE_COSTS,
     },
@@ -270,28 +312,70 @@ export const POWERS = {
       { desc: 'Recule la cible de 1D10 cases', desc_en: 'Pushes the target back 1D10 squares', effect: { type: 'reculTarget', amount: 'd10' } },
     ],
     tree: {
-      // Cœur : dé de recul. L1-3 = identique aux `levels` (d4/d6/d10).
+      // Cœur : dé de recul (D4→D6→D6+1→D10→D10+1). L3 ajoute « Opportuniste »
+      // (avance d'un D4 si la cible traverse ta case en reculant). Renforts de voie
+      // aux niveaux 6/7/9 (le cœur n'y change pas).
       scale: [
-        { type: 'reculTarget', amount: 'd4' },
-        { type: 'reculTarget', amount: 'd6' },
-        { type: 'reculTarget', amount: 'd10' },
-        { type: 'reculTarget', amount: 'd10', flat: 1 },
-        { type: 'reculTarget', amount: 'd12', flat: 1 },
-        { type: 'reculTarget', amount: 'd12', flat: 2 },
-        { type: 'reculTarget', amount: 'd12', flat: 4 },
-        { type: 'reculTarget', amount: 'd12', flat: 6 },
-        { type: 'reculTarget', amount: 'd12', flat: 8 },
-        { type: 'reculTarget', amount: 'd12', flat: 10 },
+        { type: 'reculTarget', amount: 'd4' },                              // L1
+        { type: 'reculTarget', amount: 'd6' },                              // L2
+        { type: 'reculTarget', amount: 'd6', opportuniste: 'd4' },          // L3 Opportuniste
+        { type: 'reculTarget', amount: 'd6', flat: 1, opportuniste: 'd4' }, // L4 D6+1
+        { type: 'reculTarget', amount: 'd6', flat: 1, opportuniste: 'd4' }, // L5 (embranchement)
+        { type: 'reculTarget', amount: 'd6', flat: 1, opportuniste: 'd4' }, // L6 (renfort palier 1)
+        { type: 'reculTarget', amount: 'd6', flat: 1, opportuniste: 'd4' }, // L7 (renfort palier 2)
+        { type: 'reculTarget', amount: 'd10', opportuniste: 'd4' },         // L8 D10
+        { type: 'reculTarget', amount: 'd10', opportuniste: 'd4' },         // L9 (renfort palier 3)
+        { type: 'reculTarget', amount: 'd10', flat: 1, opportuniste: 'd4' },// L10 (ultime) D10+1
+      ],
+      tierLevels: [6, 7, 9], // 3 paliers de voie délivrés à L6, L7, L9
+      scaleDesc: [
+        'Recule la cible d’un D4.',
+        'Le recul passe à un D6.',
+        'Opportuniste : si la cible traverse ta case en reculant, tu avances d’un D4.',
+        'Le recul passe à D6+1.',
+        'Tu choisis une voie de Foudre (3 au choix).',
+        'Ta voie de Foudre gagne son 1ᵉʳ palier.',
+        'Ta voie de Foudre gagne son 2ᵉ palier.',
+        'Le recul passe à un D10.',
+        'Ta voie de Foudre gagne son 3ᵉ palier.',
+        'Tu choisis un ultime de Foudre ; recul de base porté à D10+1.',
+      ],
+      scaleDesc_en: [
+        'Push the target back by a D4.',
+        'Setback rises to a D6.',
+        'Opportunist: if the target passes through your square while recoiling, you move forward a D4.',
+        'Setback rises to D6+1.',
+        'Pick a Lightning path (3 to choose from).',
+        'Your Lightning path gains its 1st tier.',
+        'Your Lightning path gains its 2nd tier.',
+        'Setback rises to a D10.',
+        'Your Lightning path gains its 3rd tier.',
+        'Pick an ultimate Lightning power; base setback raised to D10+1.',
       ],
       branch5: [
-        { key: 'chain', name: 'Chaîne', name_en: 'Chain', icon: '⛓️', desc: 'Touche aussi l’équipe la mieux placée.', desc_en: 'Also strikes the team in the lead.', effect: { chain: true } },
-        { key: 'surge', name: 'Surcharge', name_en: 'Surge', icon: '💥', desc: 'Recul +50 % mais coûte 1 charge de plus.', desc_en: 'Setback +50% but costs 1 extra charge.', effect: { amountMult: 1.5, extraChargeCost: 1 } },
-        { key: 'storm', name: 'Tempête ciblée', name_en: 'Targeted Storm', icon: '🌩️', desc: 'La cible perd aussi 5 or.', desc_en: 'The target also loses 5 gold.', effect: { stealGold: 5 } },
+        { key: 'pillage', name: 'Pillage', name_en: 'Pillage', icon: '🪙',
+          desc: 'En reculant la cible, tu lui voles de l’or (lié à la valeur du dé).',
+          desc_en: 'As you push the target back, you steal gold from it (tied to the die value).',
+          effect: { pillage: true }, tiers: [{ pillageMult: 0.5 }, { pillageMult: 1 }, { pillageMult: 2 }],
+          tierDesc: ['Niv.6 : vole ½ × la valeur du dé.', 'Niv.7 : vole 1× la valeur du dé.', 'Niv.9 : vole 2× la valeur du dé.'],
+          tierDesc_en: ['Lvl.6: steal ½ × the die value.', 'Lvl.7: steal 1× the die value.', 'Lvl.9: steal 2× the die value.'] },
+        { key: 'poseTrap', name: 'Pose-piège', name_en: 'Trap Layer', icon: '🪤',
+          desc: 'Un piège est posé là où était la cible ; son effet = le recul de ton niveau de Foudre.',
+          desc_en: 'A trap is placed where the target stood; its effect = your current Lightning setback.',
+          effect: { poseTrap: true }, tiers: [{ poseTrapCount: 1 }, { poseTrapCount: 2 }, { poseTrapCount: 3 }],
+          tierDesc: ['Niv.6 : 1 piège (case cible).', 'Niv.7 : +1 piège aléatoire sur le trajet.', 'Niv.9 : +1 piège de plus.'],
+          tierDesc_en: ['Lvl.6: 1 trap (target square).', 'Lvl.7: +1 random trap on the path.', 'Lvl.9: +1 more trap.'] },
+        { key: 'reaction', name: 'Réaction en chaîne', name_en: 'Chain Reaction', icon: '🔗',
+          desc: 'Si la cible recule sur une case occupée, cette équipe recule aussi (tu es immunisé).',
+          desc_en: 'If the target recoils onto an occupied square, that team also recoils (you are immune).',
+          effect: { reaction: true }, tiers: [{ chainRecul: 'd4' }, { chainRecul: 'd6' }, { chainRecul: 'd6', chainFlat: 1 }],
+          tierDesc: ['Niv.6 : recul en chaîne de 1D4.', 'Niv.7 : recul en chaîne de 1D6.', 'Niv.9 : recul en chaîne de 1D6+1.'],
+          tierDesc_en: ['Lvl.6: chain setback of 1D4.', 'Lvl.7: chain setback of 1D6.', 'Lvl.9: chain setback of 1D6+1.'] },
       ],
       branch10: [
-        { key: 'cataclysm', name: 'Cataclysme', name_en: 'Cataclysm', icon: '🌋', desc: 'Recule toutes les autres équipes.', desc_en: 'Pushes back all other teams.', effect: { allOthers: true } },
-        { key: 'banish', name: 'Bannissement', name_en: 'Banishment', icon: '🕳️', desc: 'Renvoie la cible à la dernière jonction.', desc_en: 'Sends the target back to the last junction.', effect: { toPrevJunction: true } },
-        { key: 'orage', name: 'Orage', name_en: 'Thunderstorm', icon: '🌩️', desc: 'Pose un piège-foudre sur une case.', desc_en: 'Places a lightning trap on a square.', effect: { placeTrap: true } },
+        { key: 'cataclysm', name: 'Cataclysme', name_en: 'Cataclysm', icon: '🌩️', desc: 'Cible toutes les équipes sauf toi.', desc_en: 'Targets all teams except you.', effect: { allOthers: true } },
+        { key: 'banishStart', name: 'Renvoi au départ', name_en: 'Banish to Start', icon: '⏮️', desc: 'Actif : dépense 5 charges pour renvoyer une équipe au départ.', desc_en: 'Active: spend 5 charges to send a team back to the start.', effect: { banishStart: true, activeCost: 5 } },
+        { key: 'orage', name: 'Orage persistant', name_en: 'Lingering Storm', icon: '⛈️', desc: 'Pendant 2 tours, au début du tour de la cible, elle recule d’1D4 (non cumulable).', desc_en: 'For 2 turns, at the start of the target’s turn, it recoils 1D4 (does not stack).', effect: { orageTurns: 2, orageDie: 'd4' } },
       ],
       upgradeCosts: TREE_COSTS,
     },
@@ -314,28 +398,69 @@ export const POWERS = {
       { desc: 'Timer divise par 4 (7s)', desc_en: 'Timer divided by 4 (7s)', effect: { type: 'timerReduce', divisor: 4 } },
     ],
     tree: {
-      // Cœur : diviseur du timer. L1-3 = identique aux `levels` (2/3/4).
+      // Cœur : diviseur du timer (÷2 → ÷2,5 → ÷3 → ÷4). L4 ajoute l'auto-ciblage
+      // (te cibler MULTIPLIE le timer au lieu de le diviser). Renforts 6/8/9.
       scale: [
-        { type: 'timerReduce', divisor: 2 },
-        { type: 'timerReduce', divisor: 3 },
-        { type: 'timerReduce', divisor: 4 },
-        { type: 'timerReduce', divisor: 4 },
-        { type: 'timerReduce', divisor: 5 },
-        { type: 'timerReduce', divisor: 5 },
-        { type: 'timerReduce', divisor: 6 },
-        { type: 'timerReduce', divisor: 6 },
-        { type: 'timerReduce', divisor: 7 },
-        { type: 'timerReduce', divisor: 8 },
+        { type: 'timerReduce', divisor: 2 },                       // L1
+        { type: 'timerReduce', divisor: 2.5 },                     // L2
+        { type: 'timerReduce', divisor: 3 },                       // L3
+        { type: 'timerReduce', divisor: 3, autoTarget: true },     // L4 Auto-ciblage
+        { type: 'timerReduce', divisor: 3, autoTarget: true },     // L5 (embranchement)
+        { type: 'timerReduce', divisor: 3, autoTarget: true },     // L6 (renfort palier 1)
+        { type: 'timerReduce', divisor: 4, autoTarget: true },     // L7 ÷4
+        { type: 'timerReduce', divisor: 4, autoTarget: true },     // L8 (renfort palier 2)
+        { type: 'timerReduce', divisor: 4, autoTarget: true },     // L9 (renfort palier 3)
+        { type: 'timerReduce', divisor: 4, autoTarget: true },     // L10 (ultime)
+      ],
+      tierLevels: [6, 8, 9],
+      scaleDesc: [
+        'Divise le timer de la cible par 2.',
+        'Diviseur porté à ÷2,5.',
+        'Diviseur porté à ÷3.',
+        'Auto-ciblage : tu peux te cibler ; le timer est alors multiplié (tu gagnes du temps).',
+        'Tu choisis une voie de Sablier (3 au choix).',
+        'Ta voie de Sablier gagne son 1ᵉʳ palier.',
+        'Diviseur porté à ÷4.',
+        'Ta voie de Sablier gagne son 2ᵉ palier.',
+        'Ta voie de Sablier gagne son 3ᵉ palier.',
+        'Tu choisis un ultime de Sablier (3 au choix).',
+      ],
+      scaleDesc_en: [
+        'Halves the target’s timer.',
+        'Divider raised to ÷2.5.',
+        'Divider raised to ÷3.',
+        'Self-target: you may target yourself; the timer is then multiplied (you gain time).',
+        'Pick an Hourglass path (3 to choose from).',
+        'Your Hourglass path gains its 1st tier.',
+        'Divider raised to ÷4.',
+        'Your Hourglass path gains its 2nd tier.',
+        'Your Hourglass path gains its 3rd tier.',
+        'Pick an ultimate Hourglass power (3 to choose from).',
       ],
       branch5: [
-        { key: 'tax', name: 'Taxe du temps', name_en: 'Time Tax', icon: '💸', desc: 'La cible perd 5 or si elle dépasse le temps.', desc_en: 'The target loses 5 gold if it runs out of time.', effect: { goldPenaltyOnTimeout: 5 } },
-        { key: 'confuse', name: 'Confusion', name_en: 'Confusion', icon: '🌀', desc: 'Masque brièvement l’énoncé.', desc_en: 'Briefly hides the question text.', effect: { confuse: true } },
-        { key: 'silence', name: 'Silence', name_en: 'Silence', icon: '🔇', desc: 'La cible ne peut pas utiliser de pouvoir à son prochain tour.', desc_en: 'The target cannot use a power on its next turn.', effect: { silenceNextTurn: true } },
+        { key: 'larcin', name: 'Larcin', name_en: 'Larceny', icon: '🗡️',
+          desc: 'Si la cible répond faux, chance de lui voler un objet.',
+          desc_en: 'If the target answers wrong, a chance to steal an item from it.',
+          effect: { larcin: true }, tiers: [{ larcinChance: 0.25 }, { larcinChance: 0.5 }, { larcinChance: 0.75 }],
+          tierDesc: ['Niv.6 : 25 % de vol.', 'Niv.8 : 50 % de vol.', 'Niv.9 : 75 % de vol.'],
+          tierDesc_en: ['Lvl.6: 25% steal.', 'Lvl.8: 50% steal.', 'Lvl.9: 75% steal.'] },
+        { key: 'sandbank', name: 'Voleur de sable', name_en: 'Sand Thief', icon: '💨',
+          desc: 'Le temps retiré aux cibles est ajouté au timer de ta prochaine question.',
+          desc_en: 'Time removed from targets is added to your next question’s timer.',
+          effect: { sandBank: true }, tiers: [{ sandBankFactor: 0.5 }, { sandBankFactor: 1 }, { sandBankFactor: 2 }],
+          tierDesc: ['Niv.6 : ½ du temps volé.', 'Niv.8 : 100 % du temps volé.', 'Niv.9 : 2× le temps volé.'],
+          tierDesc_en: ['Lvl.6: ½ of the time stolen.', 'Lvl.8: 100% of the time stolen.', 'Lvl.9: 2× the time stolen.'] },
+        { key: 'modeleur', name: 'Modeleur de l’espace', name_en: 'Space Shaper', icon: '🌀',
+          desc: 'Pour la cible, les réponses changent de place (difficile de cliquer).',
+          desc_en: 'For the target, the answers shift position (hard to click).',
+          effect: { modeleur: true }, tiers: [{ modeleurInterval: 4 }, { modeleurInterval: 3 }, { modeleurInterval: 2 }],
+          tierDesc: ['Niv.6 : changement toutes les 4 s.', 'Niv.8 : toutes les 3 s.', 'Niv.9 : toutes les 2 s.'],
+          tierDesc_en: ['Lvl.6: shuffle every 4s.', 'Lvl.8: every 3s.', 'Lvl.9: every 2s.'] },
       ],
       branch10: [
-        { key: 'freeze', name: 'Gel', name_en: 'Freeze', icon: '🧊', desc: 'La cible saute son prochain lancer.', desc_en: 'The target skips its next roll.', effect: { skipNextRoll: true } },
-        { key: 'stealtime', name: 'Vol de temps', name_en: 'Time Theft', icon: '⏲️', desc: 'Le temps retiré est ajouté à ton prochain tour.', desc_en: 'The time removed is added to your next turn.', effect: { stealTime: true } },
-        { key: 'sandstorm', name: 'Tempête de sable', name_en: 'Sandstorm', icon: '🏜️', desc: 'Timer réduit pour toutes les autres équipes.', desc_en: 'Timer reduced for all other teams.', effect: { allOthers: true } },
+        { key: 'sandstorm', name: 'Tempête de sable', name_en: 'Sandstorm', icon: '🏜️', desc: 'Cible tout le monde sauf toi.', desc_en: 'Targets everyone except you.', effect: { allOthers: true } },
+        { key: 'broken', name: 'Sablier brisé', name_en: 'Broken Hourglass', icon: '⏱️', desc: 'Actif (5 charges) : réduit le timer MAX des autres équipes, jusqu’à un minimum de 7 s.', desc_en: 'Active (5 charges): reduces the MAX timer of other teams, down to a 7s minimum.', effect: { brokenTimer: true, activeCost: 5, brokenFloor: 7 } },
+        { key: 'glaneur', name: 'Glaneur', name_en: 'Gleaner', icon: '🪙', desc: 'Passif : tu gagnes toutes les pièces non gagnées par les autres (erreur ou réponse trop lente).', desc_en: 'Passive: you gain every coin not earned by the others (wrong or too-slow answer).', effect: { glaneur: true } },
       ],
       upgradeCosts: TREE_COSTS,
     },
@@ -358,28 +483,69 @@ export const POWERS = {
       { desc: '+2 questions (cumulable) + timer divise par 2', desc_en: '+2 questions (stackable) + timer halved', effect: { type: 'multiQuestion', add: 2, noBonus: true, timerDivisor: 2 } },
     ],
     tree: {
-      // Cœur : questions ajoutées. L1-3 = identique aux `levels`.
+      // Cœur : questions imposées garanties (1→2→3, plafond ~5 au runtime) +
+      // chance d'imposer une question DE PLUS (5 % → 15 %). Renforts 7/8/9.
       scale: [
-        { type: 'multiQuestion', add: 1, noBonus: true },
-        { type: 'multiQuestion', add: 2, noBonus: true },
-        { type: 'multiQuestion', add: 2, noBonus: true, timerDivisor: 2 },
-        { type: 'multiQuestion', add: 3, noBonus: true, timerDivisor: 2 },
-        { type: 'multiQuestion', add: 3, noBonus: true, timerDivisor: 2 },
-        { type: 'multiQuestion', add: 4, noBonus: true, timerDivisor: 2 },
-        { type: 'multiQuestion', add: 4, noBonus: true, timerDivisor: 2 },
-        { type: 'multiQuestion', add: 5, noBonus: true, timerDivisor: 2 },
-        { type: 'multiQuestion', add: 5, noBonus: true, timerDivisor: 3 },
-        { type: 'multiQuestion', add: 6, noBonus: true, timerDivisor: 3 },
+        { type: 'multiQuestion', add: 1, noBonus: true },                         // L1
+        { type: 'multiQuestion', add: 1, noBonus: true, bonusChance: 0.05 },      // L2 5%
+        { type: 'multiQuestion', add: 2, noBonus: true, bonusChance: 0.05 },      // L3
+        { type: 'multiQuestion', add: 2, noBonus: true, bonusChance: 0.15 },      // L4 15%
+        { type: 'multiQuestion', add: 2, noBonus: true, bonusChance: 0.15 },      // L5 (embranchement)
+        { type: 'multiQuestion', add: 3, noBonus: true, bonusChance: 0.15 },      // L6 +3
+        { type: 'multiQuestion', add: 3, noBonus: true, bonusChance: 0.15 },      // L7 (renfort palier 1)
+        { type: 'multiQuestion', add: 3, noBonus: true, bonusChance: 0.15 },      // L8 (renfort palier 2)
+        { type: 'multiQuestion', add: 3, noBonus: true, bonusChance: 0.15 },      // L9 (renfort palier 3)
+        { type: 'multiQuestion', add: 3, noBonus: true, bonusChance: 0.15 },      // L10 (ultime)
+      ],
+      tierLevels: [7, 8, 9],
+      scaleDesc: [
+        'Impose +1 question à la cible.',
+        '5 % de chance d’imposer une question de plus.',
+        'Impose +2 questions.',
+        'La chance d’une question de plus passe à 15 %.',
+        'Tu choisis une voie de Double (3 au choix).',
+        'Impose +3 questions (plafond ~5).',
+        'Ta voie de Double gagne son 1ᵉʳ palier.',
+        'Ta voie de Double gagne son 2ᵉ palier.',
+        'Ta voie de Double gagne son 3ᵉ palier.',
+        'Tu choisis un ultime de Double (3 au choix).',
+      ],
+      scaleDesc_en: [
+        'Impose +1 question on the target.',
+        '5% chance to impose one more question.',
+        'Impose +2 questions.',
+        'The chance of one more question rises to 15%.',
+        'Pick a Double path (3 to choose from).',
+        'Impose +3 questions (cap ~5).',
+        'Your Double path gains its 1st tier.',
+        'Your Double path gains its 2nd tier.',
+        'Your Double path gains its 3rd tier.',
+        'Pick an ultimate Double power (3 to choose from).',
       ],
       branch5: [
-        { key: 'exam', name: 'Examen surprise', name_en: 'Pop Quiz', icon: '🎓', desc: 'Une question est Hardcore : gros bonus si tout est juste, recul aggravé sinon.', desc_en: 'One question is Hardcore: big bonus if all correct, worse setback otherwise.', effect: { hardcoreOne: true } },
-        { key: 'shared', name: 'Chrono partagé', name_en: 'Shared Timer', icon: '⏳', desc: 'Un seul timer pour toute la rafale, mais +50 % d’or par bonne réponse.', desc_en: 'A single timer for the whole burst, but +50% gold per correct answer.', effect: { sharedTimer: true, goldMult: 1.5 } },
-        { key: 'calm', name: 'Rafale tranquille', name_en: 'Calm Burst', icon: '📚', desc: '+1 question, mais gain par question divisé par 2.', desc_en: '+1 question, but gold per question halved.', effect: { extraAdd: 1, goldDiv: 2 } },
+        { key: 'corsees', name: 'Questions corsées', name_en: 'Tough Questions', icon: '🔥',
+          desc: 'Les questions imposées ont une chance d’être « hard core ».',
+          desc_en: 'The imposed questions have a chance to be "hardcore".',
+          effect: { corsees: true }, tiers: [{ hardcoreChance: 0.05 }, { hardcoreChance: 0.10 }, { hardcoreChance: 0.15 }],
+          tierDesc: ['Niv.7 : 5 % hard core.', 'Niv.8 : 10 % hard core.', 'Niv.9 : 15 % hard core.'],
+          tierDesc_en: ['Lvl.7: 5% hardcore.', 'Lvl.8: 10% hardcore.', 'Lvl.9: 15% hardcore.'] },
+        { key: 'saboteur', name: 'Saboteur', name_en: 'Saboteur', icon: '💸',
+          desc: 'Si la cible répond faux, elle est pénalisée (gain perdu, puis questions non répondues, puis recul).',
+          desc_en: 'If the target answers wrong, it is penalised (lost gain, then unanswered questions, then setback).',
+          effect: { saboteur: true }, tiers: [{ saboteurLevel: 1 }, { saboteurLevel: 2 }, { saboteurLevel: 3 }],
+          tierDesc: ['Niv.7 : perd l’argent qu’elle devait gagner.', 'Niv.8 : perd aussi l’argent des questions non répondues.', 'Niv.9 : et recule ×(questions restantes).'],
+          tierDesc_en: ['Lvl.7: loses the money it would have earned.', 'Lvl.8: also loses the money of unanswered questions.', 'Lvl.9: and recoils ×(remaining questions).'] },
+        { key: 'shared', name: 'Temps commun', name_en: 'Shared Time', icon: '🕐',
+          desc: 'Les questions imposées partagent un seul et même timer.',
+          desc_en: 'The imposed questions share a single timer.',
+          effect: { sharedTimer: true }, tiers: [{ sharedTimerCut: 0 }, { sharedTimerCut: 2 }, { sharedTimerCut: 5 }],
+          tierDesc: ['Niv.7 : timer commun établi.', 'Niv.8 : −2 s sur le timer commun.', 'Niv.9 : −5 s sur le timer commun.'],
+          tierDesc_en: ['Lvl.7: shared timer established.', 'Lvl.8: −2s on the shared timer.', 'Lvl.9: −5s on the shared timer.'] },
       ],
       branch10: [
-        { key: 'general', name: 'Interro générale', name_en: 'General Test', icon: '🏫', desc: 'La cible subit aussi la double au tour suivant.', desc_en: 'The target also takes the double on the following turn.', effect: { reflectToTarget: true } },
-        { key: 'allin', name: 'Tout ou rien', name_en: 'All or Nothing', icon: '🎰', desc: '×2 gains si 100 % réussi, 0 sinon.', desc_en: '×2 gold if 100% correct, 0 otherwise.', effect: { allOrNothing: true } },
-        { key: 'marathon', name: 'Marathon+', name_en: 'Marathon+', icon: '🏃', desc: 'Encore +2 questions + chrono partagé.', desc_en: '+2 more questions + shared timer.', effect: { extraAdd: 2, sharedTimer: true } },
+        { key: 'allOthers', name: 'Cible tout le monde', name_en: 'Target Everyone', icon: '📣', desc: 'La Double touche toutes les équipes sauf toi.', desc_en: 'The Double hits all teams except you.', effect: { allOthers: true } },
+        { key: 'surcharge', name: 'Surcharge', name_en: 'Overload', icon: '📚', desc: 'Chaque Double que tu lances impose 2 questions de plus (définitif).', desc_en: 'Every Double you cast imposes 2 more questions (permanent).', effect: { surchargePermanent: 2 } },
+        { key: 'report', name: 'Report', name_en: 'Carry-over', icon: '📋', desc: 'Si la cible répond faux, les questions restantes sont reportées à son prochain tour.', desc_en: 'If the target answers wrong, the remaining questions are carried to its next turn.', effect: { report: true } },
       ],
       upgradeCosts: TREE_COSTS,
     },

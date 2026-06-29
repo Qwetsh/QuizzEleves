@@ -144,4 +144,7 @@ export default {
                                      en: ['🚫 Consumables blocked for {n} turn!', '🚫 Consumables blocked for {n} turns!'] },
   'log.fx.blockConsumables.toast': { fr: ['🚫 Consommables bloqués ({n} tour)', '🚫 Consommables bloqués ({n} tours)'],
                                      en: ['🚫 Consumables blocked ({n} turn)', '🚫 Consumables blocked ({n} turns)'] },
+  'log.fx.hackApp':           { fr: ['💀 Application piratée ! Prochain tour perdu ({n} tour).', '💀 Application piratée ! Prochains tours perdus ({n} tours).'],
+                                en: ['💀 App hacked! Next turn lost ({n} turn).', '💀 App hacked! Next turns lost ({n} turns).'] },
+  'log.fx.hackApp.toast':     { fr: '💀 SYSTÈME PIRATÉ', en: '💀 SYSTEM HACKED' },
 };

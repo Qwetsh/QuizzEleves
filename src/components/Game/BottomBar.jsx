@@ -9,6 +9,7 @@ import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
 import { useInfoTrigger } from './useInfoTrigger';
 import { useT } from '../../i18n';
+import HackCinematic from './HackCinematic';
 import '../../styles/team-strip-hud.css';
 
 // Descripteur de fiche pour un effet : délègue à une entité si l'effet la cible
@@ -283,6 +284,11 @@ function ActiveCard({ team, rank, total }) {
   const pKeys = powerKeysOf(team);
   return (
     <div className="ts-card ts-card--active is-active" style={{ '--team-accent': team.color }}>
+      {team.hackedTurns > 0 && (
+        <div className="ts-hack-cell">
+          <HackCinematic compact en={T.lang === 'en'} victim={team.name} by={team.hackedBy} />
+        </div>
+      )}
       <div className="ts-card-tab"><span className="ts-card-tab-arrow">{'▶'}</span> {T('game.yourMove')}</div>
       <div className="ts-card-stripe" aria-hidden="true" />
       <Blazon team={team} size={52} />
@@ -318,6 +324,11 @@ function CompactCard({ team, rank, total, open, onToggle }) {
       style={{ '--team-accent': team.color }}
       onClick={onToggle}
     >
+      {team.hackedTurns > 0 && (
+        <div className="ts-hack-cell">
+          <HackCinematic compact en={T.lang === 'en'} victim={team.name} by={team.hackedBy} />
+        </div>
+      )}
       <div className="ts-card-stripe" aria-hidden="true" />
       <Blazon team={team} size={38} />
       <div className="ts-card-rank">{rank}<span>/{total}</span></div>
@@ -343,6 +354,11 @@ export default function BottomBar() {
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const finished = useGameStore((s) => s.finished);
+  // « Hacking » : la cinématique tourne en boucle sur la cellule du groupe piraté
+  // dès le déclenchement (team.hackedTurns > 0). Quand c'est SON tour (résolution,
+  // hackOverlay posé), on laisse un « beat » puis on passe le tour (tour perdu).
+  const hackOverlay = useGameStore((s) => s.hackOverlay);
+  const endHackedTurn = useGameStore((s) => s.endHackedTurn);
   const [openIdx, setOpenIdx] = useState(null);
 
   // Fermer le popover au clic en dehors d'une carte
@@ -352,6 +368,13 @@ export default function BottomBar() {
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [openIdx]);
+
+  // Résolution du tour piraté : ~4,5 s de « tour perdu » puis on enchaîne.
+  useEffect(() => {
+    if (!hackOverlay) return undefined;
+    const id = setTimeout(() => endHackedTurn(), 4500);
+    return () => clearTimeout(id);
+  }, [hackOverlay, endHackedTurn]);
 
   return (
     <div className="team-strip">

@@ -1,7 +1,7 @@
 import { POWERS, MAX_CHARGES, addCharge } from '../data/powers.js';
-import { moveBack, findPrevJunction } from '../logic/pathfinding.js';
+import { moveBack, moveForward, findPrevJunction } from '../logic/pathfinding.js';
 import { consumePowerCharge, applyRecul } from '../logic/turnHelpers.js';
-import { reducedRecul, resolveAmount, diceLabel, rollsReflect } from '../logic/itemEffects.js';
+import { reducedRecul, resolveAmount, diceLabel, rollsReflect, isGoldStealImmune } from '../logic/itemEffects.js';
 import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
 import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
@@ -358,6 +358,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
   const level = team.powers?.[powerKey]?.level ?? 1;
   const effect = powerEffectOf(get, team, powerKey);
   let foudreMove = null;
+  let foudreBoard = null; // board modifié si « Pose-piège » place des pièges
   let lightning = false;
   // Cibles RÉELLEMENT touchées (hors immunité/fumigène) → sert à détecter une
   // trahison de pacte (« Complots ») au moment de l'attaque.
@@ -381,26 +382,20 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     return false;
   };
 
-  if (powerKey === 'foudre' && effect.placeTrap) {
-    // Orage (L10) : pose un piège-foudre sur une case (réutilise le moteur de pièges).
-    set({ teams: newTeams, showTargetPicker: null });
-    addLog(tg('log.pw.orage', { emoji: team.emoji, name: team.name }));
-    runEffects(set, get, [{
-      action: 'placeTrap',
-      trap: { label: 'Orage', icon: '⚡', do: [{ action: 'move', target: 'self', dir: 'back', n: effect.amount || 'd10' }] },
-    }], { source: 'item', sourceTeam: currentTeam });
-    return;
-  }
-
   if (powerKey === 'foudre') {
     // Recul de la/les cible(s), atténué par leur équipement et leur Bouclier (Égide).
     const masteryOn = masteryActive(get);
     // Surcharge (L5) : consomme 1 charge de Foudre suppl\u00E9mentaire.
-    if (effect.extraChargeCost) {
-      const extra = consumePowerCharge(newTeams[currentTeam], 'foudre');
-      if (extra) newTeams[currentTeam] = extra.updatedTeam;
+    // « Renvoi au départ » (ultime, à 5 charges) : envoie la/les cible(s) au DÉPART
+    // au lieu du recul, et coûte `activeCost` charges au lieu d'1.
+    const chargesBefore = team.powers?.foudre?.charges ?? 0;
+    const banishMode = !!effect.banishStart && chargesBefore >= (effect.activeCost || 5);
+    if (banishMode) {
+      const cur = newTeams[currentTeam].powers.foudre;
+      newTeams[currentTeam] = { ...newTeams[currentTeam], powers: { ...newTeams[currentTeam].powers, foudre: { ...cur, charges: Math.max(0, chargesBefore - (effect.activeCost || 5)) } } };
     }
-    const baseRoll = Math.round((resolveAmount(effect.amount ?? 'd4', target) + (effect.flat || 0)) * (effect.amountMult || 1));
+    const dieValue = resolveAmount(effect.amount ?? 'd4', target); // « valeur du dé » (sans le flat)
+    const baseRoll = dieValue + (effect.flat || 0);
     const dieLabel = diceLabel(effect.amount ?? 'd4') + (effect.flat ? ` +${effect.flat}` : '') + (effect.amountMult ? ` \u00D7${effect.amountMult}` : '');
 
     // Cibles : la choisie + (Cataclysme) tous les adversaires + (Cha\u00EEne) la mieux plac\u00E9e.
@@ -414,11 +409,21 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     }
 
     const moves = [];
-    let reflectTotal = 0, stolenTotal = 0;
+    let reflectTotal = 0, stolenTotal = 0, opportunisteAdvance = 0;
+    const chainHits = []; // Réaction en chaîne : reculs propagés (1 passe, attaquant immunisé)
     for (const ti of targets) {
       if (offBlocked(ti)) continue; // immunité / fumigène (par cible, multi inclus)
       hitSet.add(ti);
       let v = newTeams[ti];
+      // Renvoi au départ : retour au départ, pas de recul classique.
+      if (banishMode) {
+        if (v.pos !== 'depart') {
+          const rr0 = moveBack(board, v.pos, 9999);
+          newTeams[ti] = { ...v, pos: rr0.finalPos };
+          if (rr0.path.length > 1) moves.push({ teamIndex: ti, waypoints: rr0.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' });
+        }
+        continue;
+      }
       let rolled = baseRoll;
       const vEff = resolvePowerEffect(v, 'bouclier', masteryOn);
       const vCharges = v.powers?.bouclier?.charges ?? 0;
@@ -437,6 +442,11 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       }
       // Temp\u00EAte cibl\u00E9e : vol d'or \u2014 bloqu\u00E9 par Banque fortifi\u00E9e (goldUnstealable).
       if (effect.stealGold && !vEff.goldUnstealable) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      // Pillage (voie) : vole de l'or = valeur du dé × mult (respecte les immunités au vol d'or).
+      if (effect.pillage && effect.pillageMult && !vEff.goldUnstealable && !isGoldStealImmune(v)) {
+        const s = Math.min(Math.round(dieValue * effect.pillageMult), v.money || 0);
+        if (s > 0) { v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      }
       const amt = reducedRecul(v, rolled);
       // Renvoi (objet/passif « miroir ») : la cible retourne le recul à l'attaquant
       // (réutilise reflectTotal, déjà appliqué à l'attaquant plus bas). Elle ne bouge pas.
@@ -448,15 +458,54 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
         continue;
       }
       // Bannissement (L10) : renvoie à la dernière jonction ; sinon recul classique.
-      let rr;
-      if (effect.toPrevJunction) {
-        const pj = findPrevJunction(board, v.pos);
-        rr = pj && pj !== v.pos ? { finalPos: pj, path: [v.pos, pj] } : moveBack(board, v.pos, amt);
-      } else {
-        rr = moveBack(board, v.pos, amt);
-      }
+      const fromPos = v.pos;
+      const rr = moveBack(board, v.pos, amt);
       newTeams[ti] = { ...v, pos: rr.finalPos };
       if (rr.path.length > 1) moves.push({ teamIndex: ti, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' });
+      // Opportuniste (L3+) : si le trajet de recul passe par MA case, j'avance.
+      if (effect.opportuniste && rr.path.includes(team.pos)) opportunisteAdvance += resolveAmount(effect.opportuniste, team);
+      // Réaction en chaîne (voie) : toute équipe (≠ moi, ≠ cible) sur le trajet recule aussi.
+      if (effect.reaction && effect.chainRecul) {
+        const chainAmt = resolveAmount(effect.chainRecul, v) + (effect.chainFlat || 0);
+        for (const oi of opponents) {
+          if (oi === ti || targets.has(oi)) continue;
+          if (rr.path.includes(newTeams[oi].pos)) chainHits.push({ ti: oi, amt: chainAmt });
+        }
+      }
+      // Pose-piège (voie) : pose des pièges (effet = recul du niveau courant de Foudre).
+      if (effect.poseTrap && effect.poseTrapCount) {
+        foudreBoard = foudreBoard || { ...board };
+        const spots = [fromPos, ...rr.path.slice(1)];
+        let placed = 0;
+        for (const node of spots) {
+          if (placed >= effect.poseTrapCount) break;
+          if (foudreBoard[node] && !foudreBoard[node].trap && node !== 'depart' && board[node].type !== 'arrivee') {
+            foudreBoard[node] = { ...foudreBoard[node], trap: { label: 'Foudre', icon: '⚡', ownerTeam: currentTeam, do: [{ action: 'move', target: 'self', dir: 'back', n: baseRoll }] } };
+            placed++;
+          }
+        }
+      }
+    }
+    // Reculs en chaîne (une seule passe, pas de cascade ; attaquant immunisé).
+    for (const { ti, amt } of chainHits) {
+      if (offBlocked(ti)) continue;
+      const v = newTeams[ti];
+      const a = reducedRecul(v, amt);
+      if (a <= 0) continue;
+      const rr = moveBack(board, v.pos, a);
+      newTeams[ti] = { ...v, pos: rr.finalPos };
+      if (rr.path.length > 1) moves.push({ teamIndex: ti, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'back' });
+      hitSet.add(ti);
+    }
+    // Orage persistant (ultime) : DoT sur les cibles touchées (non cumulable → rafraîchit).
+    if (effect.orageTurns) {
+      for (const ti of hitSet) newTeams[ti] = { ...newTeams[ti], orageRecul: { turns: effect.orageTurns, die: effect.orageDie || 'd4' } };
+    }
+    // Opportuniste : j'avance du total accumulé.
+    if (opportunisteAdvance > 0) {
+      const rr = moveForward(board, newTeams[currentTeam].pos, opportunisteAdvance);
+      newTeams[currentTeam] = { ...newTeams[currentTeam], pos: rr.finalPos };
+      if (rr.path.length > 1) moves.push({ teamIndex: currentTeam, waypoints: rr.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: 'forward' });
     }
     if (stolenTotal > 0) newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) + stolenTotal };
     if (reflectTotal > 0) {
@@ -480,79 +529,98 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       : tg('log.pw.foudreToastOne', { power: foudreName, die: dieLabel, vemoji: target.emoji, vname: target.name }), POWERS[powerKey].color);
   } else if (powerKey === 'sablier') {
     const divisor = effect.divisor ?? 2;
-    // Tempête de sable (L10) : toutes les autres équipes ; sinon la cible choisie.
-    const sablierOpp = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
-    const sablierTargets = effect.allOthers ? new Set(sablierOpp) : new Set([targetTeamIndex]);
-    for (const ti of sablierTargets) {
+    const sablierName = locName(POWERS[powerKey]);
+    // Auto-ciblage (L4) : se cibler soi-même MULTIPLIE le timer (gain de temps).
+    // Implémenté comme un crédit de temps (≈ ×divisor) sur sa prochaine question,
+    // via le canal `timeCredit` déjà consommé par askQuestion.
+    if (effect.autoTarget && targetTeamIndex === currentTeam) {
+      const bonus = Math.max(0, Math.round(30 * (divisor - 1)));
+      newTeams[currentTeam] = { ...newTeams[currentTeam], timeCredit: (newTeams[currentTeam].timeCredit || 0) + bonus };
+      soundPower();
+      addLog(tg('log.pw.sablierSelf', { emoji: team.emoji, name: team.name, power: sablierName, n: bonus }));
+      announce(set, get, '⏳', tg('log.pw.sablierSelfToast', { n: bonus }), POWERS[powerKey].color);
+    } else {
+      // « Sablier brisé » (ultime, à 5 charges) : plafonne définitivement le timer
+      // MAX des autres équipes (plancher `brokenFloor`). Coûte `activeCost` charges.
+      const chargesBefore = team.powers?.sablier?.charges ?? 0;
+      const brokenMode = !!effect.brokenTimer && chargesBefore >= (effect.activeCost || 5);
+      const sablierOpp = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
+      // Tempête de sable (L10) : toutes les autres ; Sablier brisé : toutes ; sinon la cible.
+      const sablierTargets = (effect.allOthers || brokenMode) ? new Set(sablierOpp) : new Set([targetTeamIndex]);
+      let removedTime = 0;
+      for (const ti of sablierTargets) {
+        if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
+        hitSet.add(ti);
+        removedTime += Math.max(0, Math.round(30 - 30 / divisor));
+        newTeams[ti] = {
+          ...newTeams[ti],
+          sablierActif: true, sablierDivisor: divisor,
+          ...(effect.modeleur ? { modeleurInterval: effect.modeleurInterval || 4 } : {}),
+          ...(effect.larcin ? { larcinBy: currentTeam, larcinChance: effect.larcinChance || 0 } : {}),
+          ...(brokenMode ? { maxTimerCap: Math.min(newTeams[ti].maxTimerCap ?? 999, effect.brokenFloor || 7) } : {}),
+        };
+      }
+      if (brokenMode) {
+        const cur = newTeams[currentTeam].powers.sablier;
+        newTeams[currentTeam] = { ...newTeams[currentTeam], powers: { ...newTeams[currentTeam].powers, sablier: { ...cur, charges: Math.max(0, chargesBefore - (effect.activeCost || 5)) } } };
+      }
+      // Voleur de sable (voie) : banque du temps retiré × facteur → prochaine question.
+      if (effect.sandBank && effect.sandBankFactor) {
+        const credit = Math.round(removedTime * effect.sandBankFactor);
+        if (credit > 0) newTeams[currentTeam] = { ...newTeams[currentTeam], timeCredit: (newTeams[currentTeam].timeCredit || 0) + credit };
+      }
+      const nS = sablierTargets.size;
+      soundPower();
+      const extrasS = `${effect.larcin ? tg('log.pw.sablierLarcin') : ''}${effect.modeleur ? tg('log.pw.sablierModeleur') : ''}${brokenMode ? tg('log.pw.sablierBroken', { n: effect.brokenFloor || 7 }) : ''}`;
+      addLog(nS > 1
+        ? tg('log.pw.sablierUseMany', { emoji: team.emoji, name: team.name, power: sablierName, level, nS, divisor, extras: extrasS })
+        : tg('log.pw.sablierUseOne', { emoji: team.emoji, name: team.name, power: sablierName, level, vemoji: target.emoji, vname: target.name, divisor, extras: extrasS }));
+      announce(set, get, '⏱️', nS > 1
+        ? tg('log.pw.sablierToastMany', { power: sablierName, divisor, nS })
+        : tg('log.pw.sablierToastOne', { power: sablierName, divisor, vemoji: target.emoji, vname: target.name }), POWERS[powerKey].color);
+    }
+  } else if (powerKey === 'double') {
+    const doubleName = locName(POWERS[powerKey]);
+    // Cible tout le monde (ultime) : tous les adversaires ; sinon la cible choisie.
+    const dblOpp = newTeams.map((_, i) => i).filter((i) => i !== currentTeam);
+    const dblTargets = effect.allOthers ? new Set(dblOpp) : new Set([targetTeamIndex]);
+    // Questions garanties + Surcharge (ultime, PERMANENT : +N à chaque Double) +
+    // chance d'imposer UNE question de plus (tirée au lancer).
+    let add = (effect.add ?? 1) + (effect.surchargePermanent || 0);
+    if (effect.bonusChance && Math.random() < effect.bonusChance) add += 1;
+    let nAffected = 0;
+    for (const ti of dblTargets) {
       if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
-      hitSet.add(ti);
+      hitSet.add(ti); nAffected++;
+      const tt = newTeams[ti];
+      // Cumulable : on AJOUTE des questions extra (plafonné), sans écraser un cast précédent.
+      const newExtra = Math.min((tt.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
       newTeams[ti] = {
-        ...newTeams[ti],
-        sablierActif: true, sablierDivisor: divisor,
-        ...(effect.silenceNextTurn ? { silencedNextTurn: true } : {}),
-        ...(effect.skipNextRoll ? { skipNextRoll: true } : {}),
-        ...(effect.goldPenaltyOnTimeout ? { timeoutPenalty: effect.goldPenaltyOnTimeout } : {}),
-        ...(effect.confuse ? { confused: true } : {}),
+        ...tt, doubleActive: true, doubleExtra: newExtra,
+        doubleNoBonus: !!effect.noBonus || !!tt.doubleNoBonus, // collant
+        // Temps commun (voie) : un seul chrono pour la rafale, raccourci de `cut` s.
+        ...(effect.sharedTimer ? { doubleSharedTimer: true, doubleSharedCut: effect.sharedTimerCut || 0 } : {}),
+        // Questions corsées (voie) : chance que chaque question imposée soit Hardcore.
+        ...(effect.corsees && effect.hardcoreChance ? { doubleHCChance: effect.hardcoreChance } : {}),
+        // Saboteur (voie) : pénalité en cas d'erreur (niveau 1/2/3).
+        ...(effect.saboteur && effect.saboteurLevel ? { doubleSaboteur: effect.saboteurLevel } : {}),
+        // Report (ultime) : sur erreur, les questions restantes vont au prochain tour.
+        ...(effect.report ? { doubleReport: true } : {}),
       };
     }
-    // Vol de temps (L10) : le temps retiré est crédité au lanceur (prochaine question).
-    if (effect.stealTime) {
-      const credit = Math.max(0, Math.round(30 - 30 / divisor));
-      newTeams[currentTeam] = { ...newTeams[currentTeam], timeCredit: (newTeams[currentTeam].timeCredit || 0) + credit };
-    }
-    const nS = sablierTargets.size;
     soundPower();
-    const sablierName = locName(POWERS[powerKey]);
-    const extrasS = `${effect.silenceNextTurn ? tg('log.pw.sablierSilence') : ''}${effect.skipNextRoll ? tg('log.pw.sablierFreeze') : ''}${effect.goldPenaltyOnTimeout ? tg('log.pw.sablierTax', { n: effect.goldPenaltyOnTimeout }) : ''}`;
-    addLog(nS > 1
-      ? tg('log.pw.sablierUseMany', { emoji: team.emoji, name: team.name, power: sablierName, level, nS, divisor, extras: extrasS })
-      : tg('log.pw.sablierUseOne', { emoji: team.emoji, name: team.name, power: sablierName, level, vemoji: target.emoji, vname: target.name, divisor, extras: extrasS }));
-    announce(set, get, '⏱️', nS > 1
-      ? tg('log.pw.sablierToastMany', { power: sablierName, divisor, nS })
-      : tg('log.pw.sablierToastOne', { power: sablierName, divisor, vemoji: target.emoji, vname: target.name }), POWERS[powerKey].color);
-  } else if (powerKey === 'double') {
-    // Double cible une seule equipe : immunite/fumigene la protegent (charge depensee).
-    if (offBlocked(targetTeamIndex)) {
-      set({ teams: newTeams, showTargetPicker: null });
-      return;
-    }
-    hitSet.add(targetTeamIndex);
-    // Cumulable : on AJOUTE des questions extra (plafonnees), sans ecraser un cast precedent.
-    // extraAdd : questions supplémentaires des voies (Rafale tranquille / Marathon+).
-    const add = (effect.add ?? 1) + (effect.extraAdd || 0);
-    const newExtra = Math.min((target.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
-    // Facteur d'or de la rafale : Chrono partagé (×1.5) / Rafale tranquille (÷2).
-    // Ces voies font GAGNER de l'or à la cible (avec le facteur) → on lève le « sans bonus ».
-    const goldFactor = (effect.goldMult || 1) / (effect.goldDiv || 1);
-    const goldFx = goldFactor !== 1 ? { doubleGoldFactor: goldFactor } : {};
-    // Tout-ou-rien : gains banqués puis doublés si rafale parfaite (sinon 0) → bonus actif.
-    const allOrNothing = !!effect.allOrNothing;
-    const aon = allOrNothing ? { doubleAllOrNothing: true, doubleBank: 0 } : {};
-    const noBonus = (goldFactor !== 1 || allOrNothing) ? false : (!!effect.noBonus || !!target.doubleNoBonus); // collant
-    // Niv.3 : timer reduit persistant sur la rafale — champ separe du Sablier
-    // (un Sablier adverse one-shot ne doit pas heriter de cette persistance)
-    const newDiv = Math.max(target.doubleTimerDivisor || 1, effect.timerDivisor || 1);
-    const pressure = newDiv > 1 ? { doubleTimerDivisor: newDiv } : {};
-    // Examen surprise : la 1re question de la rafale sera Hardcore (si le pool existe).
-    const hcPool = (get().questions?.hardcore || []).length > 0;
-    const hcFx = (effect.hardcoreOne && hcPool) ? { forcedSubject: 'hardcore' } : {};
-    // Interro générale (L10) : à la fin de la rafale, la cible renvoie une Double sur l'attaquant.
-    const reflFx = effect.reflectToTarget ? { doubleReflectTo: currentTeam } : {};
-    // Chrono partagé (L5) : un seul chrono pour toute la rafale.
-    const stFx = effect.sharedTimer ? { doubleSharedTimer: true } : {};
-    newTeams[targetTeamIndex] = { ...target, doubleActive: true, doubleExtra: newExtra, doubleNoBonus: noBonus, ...pressure, ...goldFx, ...aon, ...hcFx, ...reflFx, ...stFx };
-    soundPower();
-    const doubleName = locName(POWERS[powerKey]);
-    const doubleTotal = 1 + newExtra;
-    addLog(tgPlural('log.pw.doubleUse', add, { emoji: team.emoji, name: team.name, power: doubleName, level, vemoji: target.emoji, vname: target.name, add, total: doubleTotal, noBonus: noBonus ? tg('log.pw.doubleNoBonus') : '', timer: newDiv > 1 ? tg('log.pw.doubleTimer', { n: newDiv }) : '' }));
-    announce(set, get, '❓', tgPlural('log.pw.doubleToast', doubleTotal, { power: doubleName, vemoji: target.emoji, vname: target.name, total: doubleTotal }), POWERS[powerKey].color);
+    const doubleTotal = 1 + Math.min((target.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
+    const noBonusNow = !!effect.noBonus;
+    const extras = `${effect.corsees ? tg('log.pw.doubleCorsees') : ''}${effect.saboteur ? tg('log.pw.doubleSaboteur') : ''}${effect.sharedTimer ? tg('log.pw.doubleShared') : ''}${effect.report ? tg('log.pw.doubleReport') : ''}`;
+    addLog(tgPlural('log.pw.doubleUse', add, { emoji: team.emoji, name: team.name, power: doubleName, level, vemoji: nAffected > 1 ? '' : target.emoji, vname: nAffected > 1 ? tg('log.pw.doubleAll', { n: nAffected }) : target.name, add, total: doubleTotal, noBonus: noBonusNow ? tg('log.pw.doubleNoBonus') : '', timer: extras }));
+    announce(set, get, '❓', tgPlural('log.pw.doubleToast', doubleTotal, { power: doubleName, vemoji: nAffected > 1 ? '' : target.emoji, vname: nAffected > 1 ? tg('log.pw.doubleAll', { n: nAffected }) : target.name, total: doubleTotal }), POWERS[powerKey].color);
   }
 
   // Trahison de pacte : si l'attaquant avait promis d'épargner une cible touchée,
   // le pacte est rompu publiquement (cérémonie + pénalité). MUTE newTeams.
   resolveBetrayals(set, get, newTeams, currentTeam, hitSet);
 
-  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}) });
+  set({ teams: newTeams, showTargetPicker: null, ...(foudreMove ? { movePath: foudreMove } : {}), ...(foudreBoard ? { board: foudreBoard } : {}) });
   if (lightning) get().emitVfx('lightning', targetTeamIndex);
   // Stay in pendingLanding so player can use more powers before clicking "Continuer"
 }

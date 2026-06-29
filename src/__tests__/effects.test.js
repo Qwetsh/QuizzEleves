@@ -676,6 +676,39 @@ describe('pièges', () => {
   });
 });
 
+describe('hacking (événement mode téléphone)', () => {
+  it('hackApp pose hackedTurns sur la cible (self) + attribution « boss » via événement', () => {
+    exec([{ action: 'hackApp', target: 'self', turns: 1 }], { source: 'event' });
+    expect(team(0).hackedTurns).toBe(1);
+    expect(team(0).hackedBy).toEqual({ boss: true }); // hack d'événement = le boss
+  });
+
+  it('hackApp lancé par une équipe sur allOthers : attribution = équipe lanceuse', () => {
+    useGameStore.setState({ teams: [team(0), team(1), mkTeam(2)], currentTeam: 0 });
+    exec([{ action: 'hackApp', target: 'allOthers', turns: 1 }], { source: 'item' });
+    expect(team(0).hackedTurns).toBeUndefined();      // la source n'est pas touchée
+    expect(team(1).hackedTurns).toBe(1);
+    expect(team(1).hackedBy).toEqual({ name: 'T0', emoji: '🦁', color: '#111' });
+    expect(team(2).hackedBy.name).toBe('T0');
+  });
+
+  it('le tour piraté arme la résolution puis est PERDU (auto-sauté)', () => {
+    // Équipe 0 piratée (cinématique visible en continu). C'est au tour de
+    // l'équipe 1 ; quand 0 regagne la main, la RÉSOLUTION s'arme (hackOverlay)
+    // mais le compteur n'est consommé qu'à la fin du « beat » (endHackedTurn).
+    useGameStore.setState({ teams: [{ ...team(0), hackedTurns: 1 }, team(1)], currentTeam: 1 });
+    S().nextTurn();
+    expect(S().currentTeam).toBe(0);              // 0 regagne la main…
+    expect(S().hackOverlay).toBeTruthy();         // …résolution armée (verrou dé)
+    expect(team(0).hackedTurns).toBe(1);          // compteur PAS encore consommé
+    // Fin du « beat » → tour perdu, compteur consommé, équipe suivante.
+    S().endHackedTurn();
+    expect(S().hackOverlay).toBeNull();
+    expect(team(0).hackedTurns).toBeUndefined();
+    expect(S().currentTeam).toBe(1);
+  });
+});
+
 // --- on:roll équipement ------------------------------------------------
 
 describe('on:roll équipement', () => {

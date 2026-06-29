@@ -815,6 +815,29 @@ function stepHead(set, get, action, ctx) {
       clearCtxResolution(set, get, 'tile');
       return 'done';
     }
+    case 'hackApp': {
+      // « Hacking » (mode téléphone) : la/les cible(s) voient leur PROCHAIN tour
+      // PERDU — une cinématique « application piratée » couvre l'écran et bloque
+      // tout jusqu'à la fin de ce tour (déclenchée par nextTurn quand l'équipe
+      // regagne la main). On stocke un compteur de tours piratés.
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const turns = Math.max(1, resolveAmount(action.turns ?? action.n, srcTeam) || 1);
+      const idxs = applyReflection(set, get, action, ctx, t.indices).indices;
+      // Attribution affichée sur la cinématique : un hack issu d'un ÉVÉNEMENT est
+      // « piraté par le boss » ; un hack lancé par une équipe (objet/consommable)
+      // est « piraté par {équipe lanceuse} ». `by` est porté par chaque victime.
+      const by = (action.by === 'boss' || ctx.source === 'event')
+        ? { boss: true }
+        : { name: srcTeam?.name, emoji: srcTeam?.emoji, color: srcTeam?.color };
+      const nt = [...get().teams];
+      for (const idx of idxs) nt[idx] = { ...nt[idx], hackedTurns: Math.max(nt[idx].hackedTurns || 0, turns), hackedBy: by };
+      set({ teams: nt });
+      get().addLog(tgPlural('log.fx.hackApp', turns, { n: turns }));
+      announce(set, get, '💀', tg('log.fx.hackApp.toast'), '#19ff7a');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
     case '__rollD6': {
       if (ctx.rollResult == null) { rollEngineDice(set, get); return 'suspend'; }
       const v = ctx.rollResult;

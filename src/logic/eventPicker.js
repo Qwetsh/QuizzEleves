@@ -9,12 +9,15 @@ import { extOn } from '../extensions/registry.js';
  *   dependent du systeme d'objets (marques `needsItems`) — extension equipement coupee.
  * @param {object} [opts.extensions] - map d'extensions actives ; un event avec
  *   `requires: ['alchemy', ...]` n'est tire QUE si toutes ses extensions sont actives.
+ * @param {string} [opts.connectionMode] - 'phone' | 'board' ; un event marque
+ *   `requiresPhone` n'est tire QUE si les equipes ont ete creees au telephone.
  * @returns {{ key: string, event: object }} l'evenement tire
  */
 export function pickRandomEvent(enabledKeys, opts = {}) {
-  const { itemsEnabled = true, extensions } = opts;
+  const { itemsEnabled = true, extensions, connectionMode } = opts;
   const ok = (ev) => (itemsEnabled || !ev.needsItems)
-    && (ev.requires || []).every((ext) => extOn(extensions, ext));
+    && (ev.requires || []).every((ext) => extOn(extensions, ext))
+    && (!ev.requiresPhone || connectionMode === 'phone');
   const pool = enabledKeys
     .filter((k) => EVENTS[k] && ok(EVENTS[k]))
     .map((k) => ({ key: k, event: EVENTS[k], weight: EVENTS[k].weight ?? 1 }));

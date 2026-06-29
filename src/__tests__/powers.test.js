@@ -119,16 +119,17 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     expect(team(1).sablierActif).toBe(false);
   });
 
-  it('niv.2 : +2 questions extra', () => {
+  it('niv.2 : +1 question extra (5 % d’une de plus)', () => {
     castDouble(2);
-    expect(team(1).doubleExtra).toBe(2);
+    expect(team(1).doubleExtra).toBe(1); // spec : L2 = +1 question (+ chance bonus)
     expect(team(1).sablierActif).toBe(false);
   });
 
-  it('niv.3 : +2 questions + timer /2 (champ séparé du Sablier)', () => {
+  it('niv.3 : +2 questions extra', () => {
     castDouble(3);
     expect(team(1).doubleExtra).toBe(2);
-    expect(team(1).doubleTimerDivisor).toBe(2);
+    // La Double ne divise plus le timer (le timer commun est la voie « Temps commun »).
+    expect(team(1).doubleTimerDivisor).toBeUndefined();
     expect(team(1).sablierActif).toBe(false);
   });
 
@@ -144,31 +145,26 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     expect(team(1).doubleExtra).toBe(4);
   });
 
-  it('niv.3 : le timer réduit persiste sur TOUTE la rafale puis se nettoie', () => {
+  it('niv.3 : la rafale s’enchaîne sur 3 questions puis se nettoie', () => {
     castDouble(3);
     useGameStore.setState({ currentTeam: 1 });
 
-    // Question 1 : timer /2, la réduction persiste pendant la rafale
+    // Question 1 sur 3 (1 base + 2 extra)
     S().askQuestion('maths');
-    expect(S().showQuestion.timerDivisor).toBe(2);
     expect(S().showQuestion.multiIndex).toBe(1);
-    expect(S().showQuestion.multiTotal).toBe(3); // 1 base + 2 extra
-    expect(team(1).doubleTimerDivisor).toBe(2);
+    expect(S().showQuestion.multiTotal).toBe(3);
     S().answerQuestion(S().showQuestion.question.c, 10);
 
-    // Question 2 (enchaînée automatiquement) : toujours /2
+    // Question 2 (enchaînée automatiquement)
     expect(S().showQuestion).toBeTruthy();
-    expect(S().showQuestion.timerDivisor).toBe(2);
     expect(S().showQuestion.multiIndex).toBe(2);
     S().answerQuestion(S().showQuestion.question.c, 10);
 
-    // Question 3 : toujours /2, puis fin de rafale -> tout est nettoyé
-    expect(S().showQuestion.timerDivisor).toBe(2);
+    // Question 3, puis fin de rafale -> tout est nettoyé
     expect(S().showQuestion.multiIndex).toBe(3);
     S().answerQuestion(S().showQuestion.question.c, 10);
     expect(S().showQuestion).toBeNull();
     expect(team(1).doubleActive).toBe(false);
-    expect(team(1).doubleTimerDivisor).toBeUndefined();
     expect(team(1).doubleExtra).toBe(0);
     expect(team(1).doubleTotal).toBe(0);
     expect(team(1).doubleAsked).toBe(0);

@@ -18,6 +18,8 @@ export default function MobileSessionPanel() {
   // Journal analytique : alimente l'onglet mobile « anciennes questions ».
   const gameStats = useGameStore((s) => s.gameStats);
   const englishMode = useGameStore((s) => s.englishMode);
+  // « Hacking » : l'état piraté est porté par chaque équipe (t.hackedTurns) et
+  // donc déjà répercuté via `teams` dans le payload — rien de plus à abonner.
   // Code de session partagé (créé ici en mode tableau, ou par le lobby en mode
   // téléphone) — source unique dans le store.
   const code = useGameStore((s) => s.sessionCode);
