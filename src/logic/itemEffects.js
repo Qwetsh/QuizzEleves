@@ -216,6 +216,16 @@ export function isDuelImmune(team) {
 }
 
 /**
+ * Immunité aux pièges : soit via un passif d'équipement/set (effet `trapImmune`,
+ * permanent), soit via un buff temporisé (consommable, `trapImmune` pendant X
+ * tours). Une équipe immunisée traverse et atterrit sur les pièges sans les
+ * déclencher (ils restent armés pour les autres équipes).
+ */
+export function isTrapImmune(team) {
+  return hasEffect(team, 'trapImmune') || hasBuff(team, 'trapImmune');
+}
+
+/**
  * Recul subi après réduction par l'équipement (mauvaise réponse, Foudre,
  * défaite de duel). Jamais négatif.
  */

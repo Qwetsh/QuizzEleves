@@ -25,7 +25,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural } from '../i18n';
@@ -121,7 +121,10 @@ function bouclierAbsorbed(before, after) {
 // (géré par handleLanding). `touched` = cases traversées, dans l'ordre. Retourne :
 //   { idx, missed } — idx = index dans `touched` de la case fatale (-1 si aucune),
 //   missed = ids des cases piégées frôlées (50% raté) AVANT la fatale (restent armées).
-function scanTraversedTraps(board, touched) {
+function scanTraversedTraps(board, touched, immune = false) {
+  // Équipe immunisée aux pièges : elle glisse au-dessus sans jamais être stoppée
+  // ni déclencher quoi que ce soit (les pièges restent armés pour les autres).
+  if (immune) return { idx: -1, missed: [] };
   const missed = [];
   for (let i = 0; i < touched.length; i++) {
     const id = touched[i];
@@ -787,7 +790,7 @@ export const useGameStore = create((set, get) => ({
     const lastIdx = result.path.length - 1;
     const traversedEnd = result.stoppedAtJunction ? lastIdx : lastIdx - 1;
     const traversed = result.path.slice(1, traversedEnd + 1);
-    const scan = scanTraversedTraps(board, traversed);
+    const scan = scanTraversedTraps(board, traversed, isTrapImmune(team));
     let finalPos = result.finalPos;
     let path = result.path;
     let stoppedAtJunction = result.stoppedAtJunction;
@@ -898,7 +901,7 @@ export const useGameStore = create((set, get) => ({
       const lastIdx = result.path.length - 1;
       const traversedEnd = result.stoppedAtJunction ? lastIdx : lastIdx - 1;
       const traversed = noLanding ? [] : result.path.slice(0, traversedEnd + 1);
-      const scan = scanTraversedTraps(board, traversed);
+      const scan = scanTraversedTraps(board, traversed, isTrapImmune(team));
       let fpos = result.finalPos;
       let cut = result.path;
       let stoppedAtJunction = result.stoppedAtJunction;
@@ -979,7 +982,11 @@ export const useGameStore = create((set, get) => ({
     // Resolu AVANT le combat (un recul peut sortir la victime de la case adverse).
     // L'atterrissage PILE sur un piège le déclenche à 100% (le 50% « au passage »
     // a déjà été résolu pendant le déplacement, qui aurait stoppé le pion plus tôt).
-    if (node.trap) {
+    if (node.trap && isTrapImmune(team)) {
+      // Immunité aux pièges (passif d'équipement ou buff temporisé) : le piège
+      // n'est PAS déclenché et reste armé sur la case (pour les autres équipes).
+      addLog(tg('log.store.trapImmune', { emoji: team.emoji, name: team.name, label: node.trap.label ? tg('log.store.trap.label', { label: node.trap.label }) : '' }));
+    } else if (node.trap) {
       const depth = get().trapDepth || 0;
       const trap = node.trap;
       const nb = { ...board };
@@ -1666,7 +1673,9 @@ export const useGameStore = create((set, get) => ({
     const st = get();
     if (teamIndex === st.currentTeam && st.pendingLanding && !st.rolling && !st.awaitingChoice && !st.showDiceModal) {
       const node = st.board[st.teams[st.currentTeam]?.pos];
-      if (node?.trap) st.confirmLanding();
+      // Immunisé : pas d'auto-enchaînement, on garde le « Continuer » comme une
+      // case normale (le piège ne le concerne pas).
+      if (node?.trap && !isTrapImmune(st.teams[st.currentTeam])) st.confirmLanding();
     }
   },
 

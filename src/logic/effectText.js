@@ -108,6 +108,7 @@ export function describeAction(a, lang = getLang()) {
         loseOnWrong: `lose ${amountLabel(b.n ?? 5, lang)} gold on each mistake`,
         randomPath: 'path chosen at random at junctions',
         duelImmune: 'immune to duels',
+        trapImmune: 'immune to traps',
         bleedGold: `${b.mode === 'steal' ? 'is bled of' : 'loses'} ${amountLabel(b.n ?? 'd10', lang)} gold each turn`,
         itemStealImmune: 'immune to item theft',
         goldStealImmune: 'immune to gold theft',
@@ -120,6 +121,7 @@ export function describeAction(a, lang = getLang()) {
         loseOnWrong: `perd ${amountLabel(b.n ?? 5, lang)} or à chaque erreur`,
         randomPath: 'voie choisie au hasard aux carrefours',
         duelImmune: 'immunisé contre les duels',
+        trapImmune: 'immunisé contre les pièges',
         bleedGold: `${b.mode === 'steal' ? 'se fait voler' : 'perd'} ${amountLabel(b.n ?? 'd10', lang)} or chaque tour`,
         itemStealImmune: "immunisé au vol d'objet",
         goldStealImmune: "immunisé au vol d'or",
@@ -163,6 +165,7 @@ function describeLegacy(fx, lang) {
     case 'hardcoreChance': txt = en ? `${v}% chance your question is Hardcore` : `${v}% de chance que ta question soit en Hardcore`; break;
     case 'tempeteImmune': txt = en ? 'immune to the Storm' : `immunité à la Tempête`; break;
     case 'duelImmune': txt = en ? 'immune to duels' : `immunité aux duels`; break;
+    case 'trapImmune': txt = en ? 'immune to traps' : `immunité aux pièges`; break;
     case 'oubliProtect': txt = en ? "protects from the Memory Hole" : `protège du Trou de l'oubli`; break;
     case 'fightStealBonus': txt = en ? `+${v} ${coinW(fx.value, lang)} stolen in a duel` : `+${v} ${coinW(fx.value, lang)} volée${fx.value === 1 ? '' : 's'} en duel`; break;
     case 'lootBonusConsumable': txt = en ? `+${v}% chance to loot a consumable` : `+${v}% de chance de looter un consommable`; break;

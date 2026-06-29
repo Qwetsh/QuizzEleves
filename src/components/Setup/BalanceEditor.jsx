@@ -45,6 +45,7 @@ const EFFECT_LABELS = {
   diceMalus: 'Malus de dé (−cases / lancer)',
   tempeteImmune: 'Immunité Tempête', oubliProtect: "Anti Trou de l'oubli", fightStealBonus: 'Vol de duel (+pièces)',
   duelImmune: 'Immunité aux duels',
+  trapImmune: 'Immunité aux pièges',
   hardcoreChance: 'Question Hardcore (%)',
   itemStealImmune: "Immunité vol d'objet", goldStealImmune: "Immunité vol d'or", reflectChance: "Renvoi d'effet (% chance)",
   lootBonusConsumable: 'Chance loot consommable (+%)', lootBonusEquipment: 'Chance loot équipement (+%)',
@@ -62,7 +63,7 @@ const EFFECT_UNIT = {
   lootBonusConsumable: ' %', lootBonusEquipment: ' %', lootBonusSubject: ' %', reflectChance: ' %',
   reculReduction: ' case(s)', moveForward: ' case(s)', diceMalus: ' case(s)',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'diceMalus', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath', 'itemStealImmune', 'goldStealImmune', 'reflectChance'];
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'diceMalus', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'trapImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath', 'itemStealImmune', 'goldStealImmune', 'reflectChance'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([
@@ -71,7 +72,7 @@ const DICEABLE_EFFECTS = new Set([
   'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject',
 ]);
 // Effets binaires (immunités / déclencheurs simples) : pas de quantité.
-const BINARY_EFFECTS = new Set(['tempeteImmune', 'oubliProtect', 'duelImmune', 'gainCharge', 'fumigene', 'randomPath', 'itemStealImmune', 'goldStealImmune']);
+const BINARY_EFFECTS = new Set(['tempeteImmune', 'oubliProtect', 'duelImmune', 'trapImmune', 'gainCharge', 'fumigene', 'randomPath', 'itemStealImmune', 'goldStealImmune']);
 const diceFor = (type) => (type === 'indiceBoost' ? ['d2', 'd3'] : DEFAULT_DICE);
 const isDynamicVal = (v) => typeof v === 'string' || (v != null && typeof v === 'object');
 

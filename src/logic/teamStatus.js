@@ -38,6 +38,9 @@ const BUFF_INFO = {
   duelImmune: { tone: 'buff', icon: '\u{1F6E1}\u{FE0F}', color: '#3b6cb3',
     name: (b, lang) => L(lang, 'Anti-duel', 'Duel-proof'),
     desc: (b, lang) => L(lang, 'Immunisé contre les duels', 'Immune to duels') },
+  trapImmune: { tone: 'buff', icon: '🪤', color: '#3b6cb3',
+    name: (b, lang) => L(lang, 'Anti-piège', 'Trap-proof'),
+    desc: (b, lang) => L(lang, 'Immunisé contre les pièges', 'Immune to traps') },
   loseOnWrong: { tone: 'malus', icon: '💸', color: '#b5341f',
     name: (b, lang) => L(lang, 'Malus erreur', 'Wrong-answer malus'),
     desc: (b, lang) => L(lang, `Perd ${b.n ?? 5} or en cas d’erreur`, `Lose ${b.n ?? 5} gold on a wrong answer`) },
@@ -111,6 +114,13 @@ export function getTeamEffects(team, lang = getLang()) {
     push({ key: 'reflect', tone: 'buff', icon: '↩️', color: '#8745d4', link: { type: 'term', key: 'renvoi' },
       name: L(lang, 'Renvoi', 'Reflect'),
       desc: L(lang, `Renvoi d'effet : ${Math.min(100, reflectPct)}%`, `Effect reflect: ${Math.min(100, reflectPct)}%`) });
+  }
+  // Immunité aux pièges PASSIVE (équipement/set). Le buff temporisé est affiché
+  // séparément (avec compteur de tours) par la boucle des buffs ci-dessous.
+  if (getEffectValue(team, 'trapImmune') > 0) {
+    push({ key: 'trapImmune', tone: 'buff', icon: '🪤', color: '#3b6cb3', link: { type: 'term', key: 'immunite' },
+      name: L(lang, 'Anti-piège', 'Trap-proof'),
+      desc: L(lang, 'Immunisé contre les pièges', 'Immune to traps') });
   }
 
   // --- Malus (subis) ---

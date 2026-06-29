@@ -37,6 +37,7 @@ const BUFF_TYPES = [
   { k: 'loseOnWrong', label: 'perd de l’or en cas d’erreur (malus)' },
   { k: 'randomPath', label: 'voie choisie au hasard' },
   { k: 'duelImmune', label: 'immunisé contre les duels' },
+  { k: 'trapImmune', label: 'immunisé contre les pièges' },
   { k: 'bleedGold', label: 'saigne de l’or à chaque tour (DoT)' },
   { k: 'itemStealImmune', label: 'immunisé au vol d’objet' },
   { k: 'goldStealImmune', label: 'immunisé au vol d’or' },

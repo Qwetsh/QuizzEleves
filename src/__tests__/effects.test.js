@@ -605,6 +605,14 @@ describe('pièges', () => {
     expect(S().board.n3.trap).toBeUndefined(); // consommé
   });
 
+  it('immunité aux pièges (buff) : atterrissage sans déclenchement, piège conservé', () => {
+    useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'X', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }], ownerTeam: 1 } } } });
+    useGameStore.setState({ teams: [{ ...team(0), pos: 'n3', buffs: [{ type: 'trapImmune', turns: 2 }] }, team(1)], currentTeam: 0 });
+    S().handleLanding();
+    expect(team(0).pos).toBe('n3');            // pas de recul
+    expect(S().board.n3.trap).toBeTruthy();    // piège toujours armé pour les autres
+  });
+
   it('piège qui pousse vers l’arrivée => victoire', () => {
     useGameStore.setState({ board: { ...S().board, n3: { ...S().board.n3, trap: { label: 'Boost', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'forward', n: 8 }] } } } });
     useGameStore.setState({ teams: [{ ...team(0), pos: 'n3' }, team(1)], currentTeam: 0 });

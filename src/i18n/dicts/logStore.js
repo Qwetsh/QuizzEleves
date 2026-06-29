@@ -39,6 +39,8 @@ export default {
   'log.store.trap.label':        { fr: ' : {label}', en: ': {label}' },
   'log.store.trapAvoided':       { fr: '😅 {emoji} {name} frôle un piège{label} sans le déclencher.',
                                    en: '😅 {emoji} {name} narrowly avoids a trap{label}.' },
+  'log.store.trapImmune':        { fr: '🪤🛡️ {emoji} {name} ignore un piège{label} (immunisé·e).',
+                                   en: '🪤🛡️ {emoji} {name} ignores a trap{label} (immune).' },
 
   // --- Duels ---
   'log.store.duelImmune':        { fr: '🛡️ Duel évité : {emoji} {name} est immunisé(e) aux duels.',
