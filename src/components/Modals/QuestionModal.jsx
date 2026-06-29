@@ -97,6 +97,26 @@ export default function QuestionModal() {
   const [revealed, setRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
   const [showTrans, setShowTrans] = useState(false); // afficher la traduction (autre langue)
+  // Modeleur de l'espace (Sablier voie) : les réponses changent de place toutes
+  // les N s (gêne le clic). `order` = ordre d'AFFICHAGE ; les clics gardent l'index réel.
+  const modeleur = showQuestion?.modeleur || null;
+  // Clairvoyance (Indice ultime) : la bonne réponse est surlignée AVANT de répondre
+  // (on peut toujours cliquer ; la série compte normalement).
+  const hintReveal = !!showQuestion?.revealHint;
+  const [order, setOrder] = useState(null);
+  useEffect(() => {
+    const q = showQuestion?.question;
+    if (!modeleur || !q) { setOrder(null); return undefined; }
+    const n = q.a.length;
+    const shuffle = () => {
+      const a = Array.from({ length: n }, (_, i) => i);
+      for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+      setOrder(a);
+    };
+    shuffle();
+    const id = setInterval(shuffle, modeleur * 1000);
+    return () => clearInterval(id);
+  }, [modeleur, showQuestion?.question]);
 
   const question = showQuestion?.question;
   // Affichage anglais (repli FR par champ si la traduction manque). `c` (index
@@ -342,7 +362,7 @@ export default function QuestionModal() {
 
           {/* Choices - 2x2 grid */}
           <div className="grid gap-3 p-5 grid-cols-1 sm:grid-cols-2">
-            {question.a.map((answer, idx) => {
+            {(order || question.a.map((_, i) => i)).map((idx) => {
               const shown = ansText(idx); // texte affiché (EN si dispo, sinon FR)
               if (indiceHidden.includes(idx)) {
                 return <EliminatedAnswer key={idx} idx={idx} answer={shown} />;
@@ -351,6 +371,11 @@ export default function QuestionModal() {
               // Base = .tm-choice (parchemin + liseré pierre) ; surcharge à la révélation
               let choiceStyle = null;
               let letterStyle = null;
+              // Clairvoyance : surligne la bonne réponse avant de répondre (clic gardé).
+              if (!revealed && hintReveal && idx === question.c) {
+                choiceStyle = { border: '2px solid #5b8c3a', background: 'linear-gradient(180deg, #d1f0b8, #a8d889)', color: '#1f3d10' };
+                letterStyle = { background: '#5b8c3a', color: '#fff' };
+              }
               if (revealed) {
                 if (idx === question.c) {
                   choiceStyle = { border: '2px solid #5b8c3a', background: 'linear-gradient(180deg, #d1f0b8, #a8d889)', color: '#1f3d10' };

@@ -50,6 +50,8 @@ export default {
   'game.relanceSwapHint': { fr: 'Échange ta place avec le 1ᵉʳ ({cost} charges)', en: 'Swap places with the leader ({cost} charges)' },
   'game.shieldImmunity': { fr: 'Immunité totale', en: 'Total immunity' },
   'game.shieldImmunityHint': { fr: 'Dépense {cost} charges → immunité {turns} tours', en: 'Spend {cost} charges → immunity for {turns} turns' },
+  'game.clairvoyance': { fr: 'Clairvoyance', en: 'Clairvoyance' },
+  'game.clairvoyanceHint': { fr: 'Dépense {cost} charges → révèle la bonne réponse ce tour', en: 'Spend {cost} charges → reveal the correct answer this turn' },
 
   // --- ConsumableBar ---
   'game.itemsToUse': { fr: 'Objets à utiliser', en: 'Items to use' },

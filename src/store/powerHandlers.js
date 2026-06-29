@@ -344,6 +344,42 @@ export function useShieldImmunity(set, get, teamIndex) {
   if (get().phase === 'game') saveGame(get());
 }
 
+// Renvoie {cost, charges, canUse} si l'ultime « Clairvoyance » (Indice L10) est
+// disponible pour l'équipe (à son tour, avec une question ouverte), sinon null.
+export function clairvoyanceInfo(get, teamIndex) {
+  if (!masteryActive(get)) return null;
+  const team = get().teams[teamIndex];
+  const ind = team?.powers?.indice;
+  if (!ind) return null;
+  const eff = resolvePowerEffect(team, 'indice', true);
+  if (!eff.clairvoyance) return null;
+  const cost = eff.activeCost || 5;
+  return { cost, charges: ind.charges ?? 0, canUse: (ind.charges ?? 0) >= cost };
+}
+
+// Ultime actif « Clairvoyance » : dépense `cost` charges → révèle la bonne réponse
+// à TOUTES les questions du tour (la question en cours + la salve). La série compte
+// normalement. Le drapeau est levé à la fin du tour (nextTurn).
+export function useClairvoyance(set, get, teamIndex) {
+  const { teams, currentTeam, showQuestion, addLog } = get();
+  const i = teamIndex == null ? currentTeam : teamIndex;
+  if (i !== currentTeam || get().finished) return;
+  if (teams[i]?.silencedNextTurn) { addLog(tg('log.pw.silenced', { emoji: teams[i].emoji, name: teams[i].name })); return; }
+  if (teams[i]?.clairvoyanceTurn) return; // déjà actif ce tour
+  const info = clairvoyanceInfo(get, i);
+  if (!info || !info.canUse) return;
+  const me = teams[i];
+  const nt = [...teams];
+  nt[i] = { ...me, powers: { ...me.powers, indice: { ...me.powers.indice, charges: me.powers.indice.charges - info.cost } }, clairvoyanceTurn: true };
+  set({ teams: nt });
+  if (showQuestion) set({ showQuestion: { ...get().showQuestion, revealHint: true, revealed: true } });
+  soundPower();
+  addLog(tg('log.pw.clairvoyance', { emoji: me.emoji, name: me.name }));
+  announce(set, get, '🔮', tg('log.pw.clairvoyanceToast'), POWERS.indice?.color || '#e8b117');
+  get().recordStat?.('powerUses', { teamIdx: i, powerKey: 'indice', targetIdx: null });
+  if (get().phase === 'game') saveGame(get());
+}
+
 export function applyOffensivePower(set, get, targetTeamIndex) {
   const { teams, currentTeam, board, showTargetPicker, addLog } = get();
   if (!showTargetPicker) return;

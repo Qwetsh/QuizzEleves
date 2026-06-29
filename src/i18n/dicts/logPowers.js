@@ -33,6 +33,8 @@ export default {
   'log.pw.immuneBlock':     { fr: '🛡️ {emoji} {name} est immunisé : {power} n’a aucun effet !', en: '🛡️ {emoji} {name} is immune: {power} has no effect!' },
   'log.pw.immuneToast':     { fr: '{emoji} Immunité totale !', en: '{emoji} Total immunity!' },
   'log.pw.immuneCast':      { fr: '🛡️ {emoji} {name} active l’Immunité totale ({turns} tours) !', en: '🛡️ {emoji} {name} activates Total Immunity ({turns} turns)!' },
+  'log.pw.clairvoyance':    { fr: '🔮 {emoji} {name} active la Clairvoyance : la bonne réponse est révélée ce tour !', en: '🔮 {emoji} {name} activates Clairvoyance: the correct answer is revealed this turn!' },
+  'log.pw.clairvoyanceToast': { fr: '🔮 Clairvoyance !', en: '🔮 Clairvoyance!' },
   'log.pw.surgePush':       { fr: '⏩ Sur-réduction : {vemoji} {vname} recule de {n} !', en: '⏩ Overcharge: {vemoji} {vname} pushed back {n}!' },
   'log.pw.goldVault':       { fr: '🏦 Banque fortifiée : l’or de {emoji} {name} est protégé.', en: '🏦 Fortified vault: {emoji} {name}’s gold is protected.' },
 

@@ -1,6 +1,6 @@
 import { useGameStore } from '../../../store/gameStore';
 import { getAvailablePowers, canUsePowerInContext } from '../../../logic/powerActivator';
-import { relanceSwapInfo, shieldImmunityInfo } from '../../../store/powerHandlers';
+import { relanceSwapInfo, shieldImmunityInfo, clairvoyanceInfo } from '../../../store/powerHandlers';
 import { POWERS } from '../../../data/powers';
 import { useT } from '../../../i18n';
 import { locName } from '../../../i18n/content';
@@ -49,6 +49,11 @@ export default function PowerButtons() {
   const immune = shieldImmunityInfo(useGameStore.getState, currentTeam);
   const showImmune = immune?.canUse && !powersBlocked && (team.totalImmuneTurns ?? 0) <= 0 && !rolling && !showQuestion && !showEvent && !showChargePicker && !showTargetPicker && !finished;
   const shieldColor = POWERS.bouclier?.color || '#3b6cb3';
+  // Ultime « Clairvoyance » (Indice L10) : actif PENDANT une question (révèle la
+  // bonne réponse de tout le tour). Dispo si voie + 5 charges et pas déjà actif.
+  const clair = clairvoyanceInfo(useGameStore.getState, currentTeam);
+  const showClair = clair?.canUse && !powersBlocked && !!showQuestion && !team.clairvoyanceTurn && !finished;
+  const indiceColor = POWERS.indice?.color || '#e8b117';
 
   return (
     <div className="flex flex-col items-center gap-3 mt-3">
@@ -72,6 +77,17 @@ export default function PowerButtons() {
             <span className="power-cast-count">{immune.cost}</span>
           </span>
           <span className="power-cast-name">{T('game.shieldImmunity')}</span>
+        </button>
+      )}
+      {showClair && (
+        <button onClick={() => useGameStore.getState().useClairvoyance()}
+          className="power-cast-btn" style={{ '--cast-color': indiceColor }}
+          title={T('game.clairvoyanceHint', { cost: clair.cost })}>
+          <span className="power-cast-disc">
+            <span className="power-cast-icon">🔮</span>
+            <span className="power-cast-count">{clair.cost}</span>
+          </span>
+          <span className="power-cast-name">{T('game.clairvoyance')}</span>
         </button>
       )}
       {castable.length > 0 && (

@@ -269,6 +269,14 @@ describe('Indice — effets en jeu (store)', () => {
     expect(S().teams[0].indiceLegendaryArmed).toBe(true);
   });
 
+  it('Clairvoyance (ultime actif) : 5 charges → révèle la bonne réponse du tour', () => {
+    setup({ level: 10, spec10: 'clairvoyance', charges: 5 });
+    S().useClairvoyance();
+    expect(S().teams[0].clairvoyanceTurn).toBe(true);
+    expect(S().teams[0].powers.indice.charges).toBe(0);
+    expect(S().showQuestion.revealHint).toBe(true);
+  });
+
   it('Sagesse partagée (ultime, passif) : élimine 1 réponse à l’ouverture, sans charge', () => {
     useGameStore.setState({
       phase: 'game', devSandbox: true, board: BOARD, finished: false, currentTeam: 0, log: [],

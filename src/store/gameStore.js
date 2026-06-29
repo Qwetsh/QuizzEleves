@@ -1179,9 +1179,12 @@ export const useGameStore = create((set, get) => ({
     const doubleDiv = (team.doubleActive && team.doubleTimerDivisor) || 1;
     const timerDivisor = Math.max(sablierDiv, doubleDiv);
     const timerHalved = timerDivisor > 1;
+    // Modeleur de l'espace (Sablier voie) : intervalle de réarrangement des réponses
+    // (one-shot, consommé avec le Sablier).
+    const modeleur = team.modeleurInterval || null;
     if (team.sablierActif) {
       const nt = [...get().teams];
-      nt[currentTeam] = { ...nt[currentTeam], sablierActif: false, sablierDivisor: undefined };
+      nt[currentTeam] = { ...nt[currentTeam], sablierActif: false, sablierDivisor: undefined, modeleurInterval: undefined };
       set({ teams: nt });
     }
     if (timerHalved) {
@@ -1263,7 +1266,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     set({
-      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused, timerCap: team.maxTimerCap || null },
+      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused, timerCap: team.maxTimerCap || null, modeleur, revealHint: !!team.clairvoyanceTurn, revealed: !!team.clairvoyanceTurn },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false, indiceUses: 0, indiceHidden, rerollUsed: false,
     });
@@ -2044,6 +2047,7 @@ export const useGameStore = create((set, get) => ({
   useRelance: () => powerH.useRelance(set, get),
   useRelanceSwap: () => powerH.useRelanceSwap(set, get),
   useShieldImmunity: () => powerH.useShieldImmunity(set, get),
+  useClairvoyance: () => powerH.useClairvoyance(set, get),
   applyOffensivePower: (ti) => powerH.applyOffensivePower(set, get, ti),
   cancelTargetPicker: () => powerH.cancelTargetPicker(set, get),
 
@@ -2543,10 +2547,10 @@ export const useGameStore = create((set, get) => ({
     let nt = get().teams;
     // Silence/Taxe (Sablier) : consommés à la fin du tour de l'équipe visée.
     const og = nt[currentTeam];
-    if (og && (og.silencedNextTurn || og.timeoutPenalty || og.forgeAegis != null || og.forgeGoldMult != null || og.forgeButin != null || og.forgeStreakGuard || og.forgeIndice != null || og.forgeRepit != null || og.forgeFreshQ)) {
+    if (og && (og.silencedNextTurn || og.timeoutPenalty || og.forgeAegis != null || og.forgeGoldMult != null || og.forgeButin != null || og.forgeStreakGuard || og.forgeIndice != null || og.forgeRepit != null || og.forgeFreshQ || og.clairvoyanceTurn)) {
       nt = [...nt];
-      // Flags de face Forge = « ce tour » : nettoyés quand l'équipe rend la main.
-      nt[currentTeam] = { ...og, silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined, forgeGoldMult: undefined, forgeButin: undefined, forgeStreakGuard: undefined, forgeIndice: undefined, forgeRepit: undefined, forgeFreshQ: undefined };
+      // Flags « ce tour » (faces Forge + Clairvoyance) : nettoyés quand l'équipe rend la main.
+      nt[currentTeam] = { ...og, silencedNextTurn: false, timeoutPenalty: undefined, forgeAegis: undefined, forgeGoldMult: undefined, forgeButin: undefined, forgeStreakGuard: undefined, forgeIndice: undefined, forgeRepit: undefined, forgeFreshQ: undefined, clairvoyanceTurn: undefined };
     }
     const ct = nt[newCurrent];
     if (ct?.itemFumigeneTurns > 0) {
