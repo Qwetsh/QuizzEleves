@@ -12,6 +12,7 @@ function setup({ customerMoney = 50 } = {}) {
     phase: 'game', currentTeam: 2, // équipe active = un tiers (ni forgeron ni client)
     extensions: { equipment: true, forge: true, trade: true },
     forgeService: null,
+    shopFaceStock: [], // pas de catalogue par défaut (faces = réserve du forgeron)
     teams: [
       { name: 'Forge', emoji: '🔨', money: 0, bag: [], equipment: {}, faceStock: [face(9, 3), face(2, 5)], dieFaces: defaultDieFaces(), token: 'tk-forge' },
       { name: 'Client', emoji: '🧑', money: customerMoney, bag: [], equipment: {}, faceStock: [], dieFaces: defaultDieFaces(), token: 'tk-cli' },
@@ -53,16 +54,28 @@ describe('startForgeService (escrow)', () => {
     const fs = S().forgeService;
     expect(fs.providerIdx).toBe(0);
     expect(fs.customerIdx).toBe(1);
-    expect(fs.providerStock.length).toBe(2);
+    expect(fs.providerStock.filter((f) => f.src === 'reserve').length).toBe(2); // les 2 faces de réserve
     expect(fs.price).toEqual({ gold: 20 });
   });
   it('refuse si une session est déjà en cours', () => {
     S().startForgeService(TRADE);
     expect(S().startForgeService(TRADE).ok).toBe(false);
   });
-  it('refuse si le forgeron n’a aucune face en réserve', () => {
-    useGameStore.setState({ teams: S().teams.map((t, i) => (i === 0 ? { ...t, faceStock: [] } : t)) });
-    expect(S().startForgeService(TRADE).ok).toBe(false);
+  it('s’ouvre même sans réserve ni catalogue (catalogue généré à la volée)', () => {
+    useGameStore.setState({ teams: S().teams.map((t, i) => (i === 0 ? { ...t, faceStock: [] } : t)), shopFaceStock: [] });
+    const res = S().startForgeService(TRADE);
+    expect(res.ok).toBe(true);
+    expect(S().forgeService.providerStock.length).toBeGreaterThan(0); // faces du catalogue
+  });
+  it('s’ouvre même sans réserve si le catalogue boutique a des faces', () => {
+    useGameStore.setState({
+      teams: S().teams.map((t, i) => (i === 0 ? { ...t, faceStock: [] } : t)),
+      shopFaceStock: [{ value: 7, slot: 4, effects: [] }],
+    });
+    const res = S().startForgeService(TRADE);
+    expect(res.ok).toBe(true);
+    expect(S().forgeService.providerStock.length).toBe(1); // 0 réserve + 1 catalogue
+    expect(S().forgeService.providerStock[0].src).toBe('shop');
   });
 });
 

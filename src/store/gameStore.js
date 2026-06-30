@@ -2477,8 +2477,16 @@ export const useGameStore = create((set, get) => ({
     const provider = st.teams[providerIdx], customer = st.teams[customerIdx];
     if (!provider || !customer || providerIdx === customerIdx) return { ok: false, reason: 'équipe invalide' };
     if (!craftEnabledFor(st.extensions, provider, 'forge')) return { ok: false, reason: 'pas forgeron' };
-    const providerStock = [...(provider.faceStock || [])];
-    if (!providerStock.length) return { ok: false, reason: 'aucune face en réserve' };
+    // Faces disponibles pour le forgeron : SA réserve (escrow) + le CATALOGUE de la
+    // boutique (faces qu'il pourrait acheter) → il place « les faces souhaitées »
+    // même sans réserve. Tag `src` pour ne rendre que la réserve à la fin/annulation.
+    const reserve = (provider.faceStock || []).map((f) => ({ value: f.value, effects: faceEffects(f), slot: f.slot, src: 'reserve' }));
+    // Catalogue : la vitrine de faces (générée à la volée si vide — ex. forge
+    // activée en cours de partie) → le forgeron a TOUJOURS des faces à proposer.
+    const catalogSource = (st.shopFaceStock && st.shopFaceStock.length) ? st.shopFaceStock : pickFaceStock();
+    const catalog = (catalogSource || []).map((f) => ({ value: f.value, effects: faceEffects(f), slot: f.slot, src: 'shop' }));
+    const providerStock = [...reserve, ...catalog];
+    if (!providerStock.length) return { ok: false, reason: 'aucune face disponible' };
     const nt = [...st.teams];
     nt[providerIdx] = { ...provider, faceStock: [] }; // escrow : la réserve part en atelier
     set({
@@ -2545,7 +2553,9 @@ export const useGameStore = create((set, get) => ({
     if (teamIndex != null && teamIndex !== fs.providerIdx && teamIndex !== fs.customerIdx) return;
     const nt = [...st.teams];
     const prov = nt[fs.providerIdx];
-    if (prov) nt[fs.providerIdx] = { ...prov, faceStock: [...(prov.faceStock || []), ...fs.providerStock] };
+    // Ne RENDRE que les faces de RÉSERVE escrow (le catalogue n'appartient à personne).
+    const reserveBack = (fs.providerStock || []).filter((f) => f.src === 'reserve').map((f) => ({ value: f.value, effects: f.effects, slot: f.slot }));
+    if (prov) nt[fs.providerIdx] = { ...prov, faceStock: [...(prov.faceStock || []), ...reserveBack] };
     set({ teams: nt, forgeService: null });
     const customer = st.teams[fs.customerIdx];
     if (prov && customer) st.addLog(tg('log.store.forgeServiceCancel', { pe: prov.emoji, pn: prov.name, ce: customer.emoji, cn: customer.name }));
@@ -2572,7 +2582,11 @@ export const useGameStore = create((set, get) => ({
       const f = fs.providerStock[si];
       return { base: i + 1, value: clampFaceValue(f.value), effects: faceEffects(f) };
     });
-    const returned = fs.providerStock.filter((_, i) => !placedStock.has(i)); // faces non posées
+    // Seules les faces de RÉSERVE non posées sont rendues au forgeron (les faces du
+    // catalogue non posées ne reviennent à personne).
+    const returned = fs.providerStock
+      .filter((f, i) => f.src === 'reserve' && !placedStock.has(i))
+      .map((f) => ({ value: f.value, effects: f.effects, slot: f.slot }));
     const custTeam = { ...pay.team, dieFaces: faces };
     let provTeam = giveSpecTo(provider, pay.items, pay.gold);
     provTeam = { ...provTeam, faceStock: [...(provTeam.faceStock || []), ...returned] };
