@@ -1393,7 +1393,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
         </div>
 
         {/* Manœuvre (or/objets ou pacte) — seulement si l'extension Complots est active. */}
-        {hasDiplo && (
+        {showKinds && (
           <>
             <div style={{ fontSize: 13, fontWeight: 700, margin: '10px 0 4px' }}>{T('mobile.schemeType')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
