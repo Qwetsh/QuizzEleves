@@ -1395,13 +1395,24 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
 
         <div style={{ fontSize: 13, fontWeight: 700, margin: '6px 0 4px' }}>{T('mobile.schemeTarget')}</div>
         <div className="mob-trade-targets">
-          {others.map(({ t, i }) => (
-            <button key={i} className={'mob-trade-target' + (toIdx === i ? ' on' : '')}
-              onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
-              {t.emoji} {t.name}
-            </button>
-          ))}
+          {others.map(({ t, i }) => {
+            // Demande de forgeage (je ne suis pas forgeron) → seuls les FORGERONS
+            // sont des cibles valides (eux seuls peuvent forger).
+            const forbid = isForge && !meCanForge && !craftEnabledFor(session.extensions, t, 'forge');
+            return (
+              <button key={i} disabled={forbid}
+                className={'mob-trade-target' + (toIdx === i ? ' on' : '')}
+                style={forbid ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+                title={forbid ? T('mobile.forgeNeedsSmith') : undefined}
+                onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
+                {t.emoji} {t.name}{forbid ? ' 🚫' : ''}
+              </button>
+            );
+          })}
         </div>
+        {isForge && !meCanForge && (
+          <div style={{ fontSize: 12, color: 'var(--ink-600)', marginTop: 4 }}>{T('mobile.forgeNeedsSmith')}</div>
+        )}
 
         {/* Manœuvre (or/objets ou pacte) — seulement si l'extension Complots est active. */}
         {showKinds && (
@@ -2000,9 +2011,11 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
   const [drag, setDrag] = useState(null);        // { stockIndex, face, slot, x, y }
   const [hoverSlot, setHoverSlot] = useState(null); // n° de slot survolé (1-indexé)
   const [badSlot, setBadSlot] = useState(null);  // slot refusant le drop
-  const dragRef = useRef({ id: null, stockIndex: null, moved: false, startX: 0, startY: 0 });
+  const dragRef = useRef({ id: null, stockIndex: null, moved: false, startX: 0, startY: 0, offX: 0, offY: 0 });
   const badT = useRef(null);
+  const [detail, setDetail] = useState(null); // { face, kind:'reserve'|'die', slot, stockIndex }
   useEffect(() => () => clearTimeout(badT.current), []);
+  const en = !!session?.englishMode;
 
   const fs = session.forgeService;
   const provider = fs && session.teams[fs.providerIdx];
@@ -2030,11 +2043,13 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
   const cancel = () => { if (canAct) sendIntent(code, token, 'forgeServiceCancel', {}).catch(() => {}); };
 
   // --- Glisser-déposer (réserve → emplacement du dé) via pointer capture, robuste
-  // au tactile. Tap simple (sans déplacement) = pose sur le slot cible de la face. ---
-  const reset = () => { dragRef.current = { id: null, stockIndex: null, moved: false, startX: 0, startY: 0 }; };
+  // au tactile. Tap simple (sans déplacement) = ouvre la fiche d'info de la face. ---
+  const reset = () => { dragRef.current = { id: null, stockIndex: null, moved: false, startX: 0, startY: 0, offX: 0, offY: 0 }; };
   const onDown = (e, stockIndex) => {
     if (!isProvider || !canAct) return;
-    dragRef.current = { id: e.pointerId, stockIndex, moved: false, startX: e.clientX, startY: e.clientY };
+    const r = e.currentTarget.getBoundingClientRect();
+    dragRef.current = { id: e.pointerId, stockIndex, moved: false, startX: e.clientX, startY: e.clientY,
+      offX: e.clientX - (r.left + r.width / 2), offY: e.clientY - (r.top + r.height / 2) };
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* noop */ }
   };
   const onMove = (e) => {
@@ -2055,7 +2070,7 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
     const { moved, stockIndex } = d;
     reset(); setDrag(null); setHoverSlot(null);
     const f = fs.providerStock[stockIndex]; if (!f) return;
-    if (!moved) { place(stockIndex); return; } // tap → pose sur SON slot cible
+    if (!moved) { setDetail({ face: f, kind: 'reserve', slot: f.slot, stockIndex }); return; } // tap → fiche d'info
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const slotEl = el && el.closest && el.closest('[data-fs-slot]');
     const slot = slotEl ? Number(slotEl.dataset.fsSlot) : null;
@@ -2066,25 +2081,6 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
 
   const myOk = isProvider ? fs.providerOk : fs.customerOk;
   const otherOk = isProvider ? fs.customerOk : fs.providerOk;
-  const colorOf = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
-
-  // Cellule de face (dé ou réserve). `as` = élément ; props passées telles quelles.
-  const faceCell = (face, { drafted = false, slot = null, border = null, ring = null } = {}) => {
-    const eff = faceEffects(face);
-    return (
-      <>
-        {slot != null && <span style={{ position: 'absolute', top: 3, left: 5, fontSize: 9, opacity: 0.7 }}>#{slot}</span>}
-        <span style={{ fontSize: 24, fontWeight: 800, fontFamily: 'var(--font-display, sans-serif)' }}>{clampFaceValue(face.value)}</span>
-        <span style={{ display: 'flex', gap: 2, height: 7 }}>
-          {eff.map((e, k) => { const m = FORGE_EFFECTS[e.type]; const col = (m && FORGE_FAMILY_COLOR[m.family]) || '#caa45f'; return <span key={k} style={{ width: 7, height: 7, borderRadius: '50%', background: col }} />; })}
-        </span>
-      </>
-    );
-  };
-  const cellBase = {
-    width: 64, height: 70, borderRadius: 12, color: '#fff', position: 'relative',
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-  };
 
   // Rappel du prix (ce que le client paie).
   const price = fs.price || {};
@@ -2108,29 +2104,26 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
 
         {/* Dé du client (brouillon) — emplacements = cibles de drop */}
         <div style={{ fontSize: 13, fontWeight: 700, margin: '16px 0 6px' }}>{T('mobile.forgeSvcDie', { who: customer.name })}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, justifyItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, justifyItems: 'center' }}>
           {draft.map((d, i) => {
             const slotN = i + 1;
-            const isTarget = drag && drag.slot === slotN;
             const isBad = badSlot === slotN || (drag && hoverSlot === slotN && drag.slot !== slotN);
             const isGood = drag && hoverSlot === slotN && drag.slot === slotN;
-            const border = isBad ? '#d23b2f' : isGood ? '#7bd88f' : d.drafted ? '#ffcf6a' : colorOf(d.face);
+            const ring = isBad ? '#d23b2f' : isGood ? '#7bd88f' : d.drafted ? '#ffcf6a' : null;
             return (
               <div key={`s${i}`} data-fs-slot={slotN}
-                onClick={(isProvider && canAct && d.drafted) ? () => remove(i) : undefined}
+                onClick={() => setDetail({ face: d.face, kind: 'die', slot: slotN })}
                 style={{
-                  ...cellBase, border: `2px solid ${border}`,
-                  background: d.drafted ? 'linear-gradient(180deg,#3a2a12,#241809)' : 'linear-gradient(180deg,#2a2114,#1b150c)',
-                  boxShadow: isTarget ? '0 0 12px rgba(123,216,143,0.5)' : d.drafted ? '0 0 10px rgba(255,200,90,0.4)' : 'none',
-                  cursor: (isProvider && canAct && d.drafted) ? 'pointer' : 'default',
-                  opacity: drag && drag.slot !== slotN ? 0.55 : 1, transition: 'opacity 0.15s, border-color 0.15s',
+                  padding: 4, borderRadius: 14, cursor: 'pointer',
+                  boxShadow: ring ? `0 0 0 2px ${ring}, 0 0 12px ${ring}66` : 'none',
+                  opacity: drag && drag.slot !== slotN ? 0.5 : 1, transition: 'opacity .15s, box-shadow .15s',
                 }}>
-                {faceCell(d.face, { drafted: d.drafted, slot: slotN })}
+                <FaceTile face={d.face} base={slotN} size={62} title={faceEffectLabel(d.face, en) || undefined} />
               </div>
             );
           })}
         </div>
-        {isProvider && <div style={{ fontSize: 11, color: '#8a734f', textAlign: 'center', marginTop: 4 }}>{T('mobile.forgeSvcDrag')}</div>}
+        {isProvider && <div style={{ fontSize: 11, color: '#8a734f', textAlign: 'center', marginTop: 6 }}>{T('mobile.forgeSvcDrag')}</div>}
 
         {/* Réserve du forgeron (faces à glisser) — seulement côté forgeron */}
         {isProvider && (
@@ -2138,17 +2131,11 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
             <div style={{ fontSize: 13, fontWeight: 700, margin: '16px 0 6px' }}>{T('mobile.forgeSvcReserve')}</div>
             {available.length === 0
               ? <div style={{ fontSize: 12, color: '#8a734f' }}>{T('mobile.forgeSvcReserveEmpty')}</div>
-              : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {available.map(({ f, i }) => (
-                    <div key={`r${i}`}
-                      onPointerDown={(e) => onDown(e, i)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}
-                      style={{
-                        ...cellBase, border: `2px solid ${colorOf(f)}`, touchAction: 'none',
-                        background: 'linear-gradient(180deg,#2a2114,#1b150c)',
-                        cursor: canAct ? 'grab' : 'default',
-                        opacity: drag && drag.stockIndex === i ? 0.3 : 1,
-                      }}>
-                      {faceCell(f, { slot: f.slot })}
+                    <div key={`r${i}`} style={{ touchAction: 'none', cursor: canAct ? 'grab' : 'default', opacity: drag && drag.stockIndex === i ? 0.3 : 1 }}
+                      onPointerDown={(e) => onDown(e, i)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}>
+                      <FaceTile face={f} size={56} slotTag={f.slot} title={faceEffectLabel(f, en) || undefined} />
                     </div>
                   ))}
                 </div>}
@@ -2156,11 +2143,9 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
         )}
 
         {/* Fantôme de glissement qui suit le doigt */}
-        {drag && (
-          <div style={{ position: 'fixed', left: drag.x, top: drag.y, transform: 'translate(-50%,-60%)', pointerEvents: 'none', zIndex: 95 }}>
-            <div style={{ ...cellBase, border: '2px solid #ffcf6a', background: 'linear-gradient(180deg,#3a2a12,#241809)', boxShadow: '0 6px 18px rgba(0,0,0,0.5)' }}>
-              {faceCell(drag.face, { slot: drag.slot })}
-            </div>
+        {drag && drag.moved && (
+          <div style={{ position: 'fixed', left: drag.x - dragRef.current.offX, top: drag.y - dragRef.current.offY, transform: 'translate(-50%,-50%) rotate(-4deg) scale(1.1)', pointerEvents: 'none', zIndex: 95, filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.5))' }}>
+            <FaceTile face={drag.face} size={56} />
           </div>
         )}
 
@@ -2185,6 +2170,53 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
         {otherOk && !myOk && <div style={{ fontSize: 12, textAlign: 'center', marginTop: 8, color: '#ffd27a' }}>{T('mobile.forgeSvcWaitingYou')}</div>}
         {myOk && !otherOk && <div style={{ fontSize: 12, textAlign: 'center', marginTop: 8, color: '#caa45f' }}>{T('mobile.forgeSvcWaitingOther')}</div>}
       </div>
+
+      {/* Fiche d'info d'une face (tap) : zoom + effets ; bouton poser/retirer (forgeron) */}
+      {detail && (() => {
+        const f = detail.face;
+        const descs = faceEffectDescriptions(f, en);
+        const moveVal = clampFaceValue(f.value);
+        const fromReserve = detail.kind === 'reserve';
+        const isDraftedDie = detail.kind === 'die' && placements[detail.slot - 1] != null;
+        return (
+          <div onClick={() => setDetail(null)} style={{ position: 'fixed', inset: 0, zIndex: 96, background: 'rgba(8,5,2,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 320, background: 'linear-gradient(180deg,#2a2114,#1b150c)', border: '1px solid rgba(232,169,88,0.4)', borderRadius: 18, padding: 18, textAlign: 'center', color: '#f3e9d3' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                <FaceTile face={f} size={120} slotTag={fromReserve ? f.slot : undefined} base={!fromReserve ? detail.slot : undefined} />
+              </div>
+              <div style={{ fontFamily: 'var(--font-display, sans-serif)', fontSize: 16, color: '#ffe9b8' }}>
+                {descs.length ? descs.map((d) => `${d.icon} ${d.name}`).join(' · ') : T('mobile.forgeNoEffect')}
+              </div>
+              <div style={{ fontSize: 13, color: '#caa45f', marginTop: 4 }}>
+                {moveVal > 0 ? T('mobile.forgeMove', { n: moveVal, s: moveVal > 1 ? 's' : '' }) : T('mobile.forgeMoveSafe')}
+              </div>
+              {descs.length > 0 && (
+                <div style={{ textAlign: 'left', marginTop: 10, fontSize: 12.5, lineHeight: 1.4 }}>
+                  {descs.map((d, k) => (
+                    <div key={k} style={{ marginBottom: 6 }}>
+                      <div>{d.icon} {d.what}</div>
+                      {d.when && <div style={{ color: '#8a734f', fontSize: 11.5 }}>{d.when}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isProvider && canAct && fromReserve && (
+                <button className="mob-btn mob-btn--gold" style={{ marginTop: 12, width: '100%' }}
+                  onClick={() => { place(detail.stockIndex); setDetail(null); }}>
+                  🔨 {T('mobile.forgeForgeOn', { n: detail.slot })}
+                </button>
+              )}
+              {isProvider && canAct && isDraftedDie && (
+                <button className="mob-btn mob-btn--ghost" style={{ marginTop: 10, width: '100%' }}
+                  onClick={() => { remove(detail.slot - 1); setDetail(null); }}>
+                  {T('mobile.forgeSvcRemove')}
+                </button>
+              )}
+              <button className="mob-btn mob-btn--ghost" style={{ marginTop: 10, width: '100%' }} onClick={() => setDetail(null)}>{T('common.close')}</button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

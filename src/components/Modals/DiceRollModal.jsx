@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
-import { craftEnabledFor } from '../../logic/metier';
+import { extOn } from '../../extensions/registry';
 import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { buffValue, getEffectValue } from '../../logic/itemEffects';
@@ -87,7 +87,9 @@ export default function DiceRollModal() {
   const diceValue = useGameStore((s) => s.diceValue);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
-  const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
+  // Visuel forgeable pour TOUT le monde dès que Forge OU Métiers est active (un
+  // non-forgeron peut avoir un dé forgé par un autre via la prestation de forgeage).
+  const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || extOn(s.extensions, 'metier'));
   const completeDiceRoll = useGameStore((s) => s.completeDiceRoll);
 
   const [phase, setPhase] = useState('intro');
@@ -96,7 +98,7 @@ export default function DiceRollModal() {
   const accent = team?.color || '#888';
   // Forge : le dé montre les faces forgées ; la face tirée (slot = diceValue)
   // donne la VALEUR de déplacement et l'effet à révéler (≠ adresse du slot).
-  const faces = forgeOn && team ? getDieFaces(team) : null;
+  const faces = dieVisualOn && team ? getDieFaces(team) : null;
   const landed = faces && diceValue ? faces[((diceValue - 1) % 6 + 6) % 6] : null;
   // Cases réellement parcourues = valeur de face (bornée) + bonus de dé − malus de
   // dé, plancher 0 — IDENTIQUE à handleDiceResult, pour ne pas annoncer un nombre

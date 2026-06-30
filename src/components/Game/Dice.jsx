@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { canUsePowerInContext } from '../../logic/powerActivator';
 import { useT } from '../../i18n';
+import { extOn } from '../../extensions/registry';
 import { craftEnabledFor } from '../../logic/metier';
 import { getDieFaces } from '../../logic/forge';
 import Dice3D from './Dice3D';
@@ -29,15 +30,15 @@ export default function Dice() {
   const showDuelChoice = useGameStore((s) => s.showDuelChoice);
   // « Hacking » : le tour piraté s'auto-résout (cinématique HUD) → dé verrouillé.
   const hackOverlay = useGameStore((s) => s.hackOverlay);
-  // Forge cliquable seulement si l'équipe active peut forger (métier forgeron, ou
-  // extension Métiers inactive → tout le monde).
-  const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
+  // VISUEL du dé forgeable : dès que l'extension Forge OU Métiers est active, TOUT
+  // le monde (même un non-forgeron dont le dé a été forgé par un autre) voit le dé
+  // avec ses faces personnalisables. Le CLIC pour ouvrir la forge, lui, reste
+  // réservé à celui qui peut forger (métier forgeron, ou Métiers inactive).
+  const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || extOn(s.extensions, 'metier'));
+  const canOpenForge = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice || !!hackOverlay;
   const team = teams[currentTeam];
-  // Extension Forge : on montre le dé PROPRE à l'équipe qui passe (faces forgées),
-  // en rotation continue puisque chaque dé diffère. Sans l'extension : visuel
-  // standard inchangé (dé générique figé).
-  const faces = forgeOn && team ? getDieFaces(team) : null;
+  const faces = dieVisualOn && team ? getDieFaces(team) : null;
   const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding, pendingActions };
   const canRelance = team?.powers?.relance?.charges > 0 && canUsePowerInContext('relance', ctx);
 
@@ -47,7 +48,7 @@ export default function Dice() {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {forgeOn ? (
+      {canOpenForge ? (
         // Quand le dé est désactivé (lancer en cours, choix de voie, etc.) il est
         // grisé : on neutralise aussi le clic d'ouverture de la Forge pour ne pas
         // donner un contrôle qui PARAÎT inactif mais répond quand même.
@@ -57,10 +58,10 @@ export default function Dice() {
           title={disabled ? undefined : T('game.openForge')}
           style={{ cursor: disabled ? 'default' : 'pointer' }}
         >
-          <Dice3D value={diceValue || 1} rolling={false} idleSpin faces={faces} size={88} disabled={disabled} />
+          <Dice3D value={diceValue || 1} rolling={false} idleSpin={dieVisualOn} faces={faces} size={88} disabled={disabled} />
         </div>
       ) : (
-        <Dice3D value={diceValue || 1} rolling={false} faces={faces} size={88} disabled={disabled} />
+        <Dice3D value={diceValue || 1} rolling={false} idleSpin={dieVisualOn} faces={faces} size={88} disabled={disabled} />
       )}
 
       <div style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: pendingLanding ? 'var(--gold-600)' : 'var(--ink-500)' }}>
