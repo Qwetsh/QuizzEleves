@@ -1285,12 +1285,16 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   const [againstIdx, setAgainstIdx] = useState(null); // coalition : cible commune
   const [info, setInfo] = useState(null); // { itemKey, team, enchants? } : fiche d'objet ouverte
   const target = toIdx != null ? session.teams[toIdx] : null;
-  // Prestation de forgeage : proposable seulement si MOI j'ai accès à la forge
-  // (métier forgeron, ou extension Métiers inactive). Je « donne » le service et
-  // je « veux » un paiement (or/objets du client).
+  // Prestation de forgeage — proposable dans les DEUX SENS :
+  //  • si MOI je peux forger → je PROPOSE de forger le dé du client (give.forge) ;
+  //  • sinon, si la CIBLE peut forger → je lui DEMANDE de forger mon dé (want.forge).
   const meCanForge = craftEnabledFor(session.extensions, me, 'forge');
-  const showKinds = hasDiplo || meCanForge;
+  const targetCanForge = !!target && craftEnabledFor(session.extensions, target, 'forge');
+  const anyCanForge = meCanForge || others.some((o) => craftEnabledFor(session.extensions, o.t, 'forge'));
   const isForge = kind === 'forge';
+  // Quand je propose un forgeage : si je peux forger, je fournis ; sinon je demande.
+  const iProvideForge = isForge && meCanForge;
+  const showKinds = hasDiplo || anyCanForge;
   const isFree = !showKinds || kind === 'free';
   const isCounter = !!initial;
   // Coalition : la cible commune est une 3ᵉ équipe (ni moi, ni l'allié `toIdx`).
@@ -1316,15 +1320,20 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
       { key: 'mutual', label: T('mobile.mutual'), desc: T('mobile.mutualDesc') },
       ...(canCoalition ? [{ key: 'coalition', label: T('mobile.coalition'), desc: T('mobile.coalitionDesc') }] : []),
     ] : []),
-    ...(meCanForge ? [{ key: 'forge', label: T('mobile.forgeDeal'), desc: T('mobile.forgeDealDesc') }] : []),
+    ...(anyCanForge ? [{ key: 'forge', label: T('mobile.forgeDeal'), desc: T('mobile.forgeDealDesc') }] : []),
   ];
 
   const build = () => {
     const pact = { turns };
-    // Forgeage : je donne le service (give.forge), je veux un paiement (want).
+    // Forgeage (deux sens) : si JE fournis, je donne le service (give.forge) et je
+    // veux un paiement ; sinon je DEMANDE (give = mon paiement, want.forge).
     if (isForge) {
-      const w = {}; if (want.gold > 0) w.gold = want.gold; if (want.bag.length) w.bag = want.bag; if (want.equip.length) w.equip = want.equip;
-      return { give: { forge: true }, want: w };
+      if (iProvideForge) {
+        const w = {}; if (want.gold > 0) w.gold = want.gold; if (want.bag.length) w.bag = want.bag; if (want.equip.length) w.equip = want.equip;
+        return { give: { forge: true }, want: w };
+      }
+      const g = {}; if (give.gold > 0) g.gold = give.gold; if (give.bag.length) g.bag = give.bag; if (give.equip.length) g.equip = give.equip;
+      return { give: g, want: { forge: true } };
     }
     if (hasDiplo && kind === 'extort') return { give: { pact }, want: { gold: Math.max(0, demand) } };
     if (hasDiplo && kind === 'gift') return { give: { pact }, want: {} };
@@ -1341,7 +1350,9 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   };
   const built = build();
   const has = (s) => !!(s.pact || s.coalition || s.gold || s.bag?.length || s.equip?.length);
-  const valid = toIdx != null && (isForge || ((kind !== 'coalition' || against != null) && (has(built.give) || has(built.want))));
+  const valid = toIdx != null && (isForge
+    ? (iProvideForge || targetCanForge) // je fournis (cible quelconque) OU je demande à un forgeron
+    : ((kind !== 'coalition' || against != null) && (has(built.give) || has(built.want))));
   const usesPact = hasDiplo && (kind !== 'free' || peace);
 
   // `cap` = plafond DUR (l'or que JE donne : on ne peut pas donner ce qu'on n'a
@@ -1435,14 +1446,21 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
           </>
         )}
 
-        {/* Prestation de forgeage : je fixe le PRIX (ce que le client me paie). Le
-            service de forge s'ouvrira pour les deux équipes une fois le deal accepté. */}
-        {isForge && target && (
-          <>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-600)', margin: '10px 0 2px' }}>{T('mobile.forgePriceHint', { who: target.name })}</div>
-            {panel(T('mobile.forgePrice'), target, want, setWant, false)}
-          </>
-        )}
+        {/* Prestation de forgeage : le service s'ouvrira pour les 2 équipes une fois
+            le deal accepté. Si JE fournis → je fixe le prix (objets du client) ;
+            si je DEMANDE à un forgeron → je choisis ce que JE paie. */}
+        {isForge && target && (iProvideForge
+          ? (
+            <>
+              <div style={{ fontSize: 12.5, color: 'var(--ink-600)', margin: '10px 0 2px' }}>{T('mobile.forgePriceHint', { who: target.name })}</div>
+              {panel(T('mobile.forgePrice'), target, want, setWant, false)}
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 12.5, color: 'var(--ink-600)', margin: '10px 0 2px' }}>{T('mobile.forgePayHint', { who: target.name })}</div>
+              {panel(T('mobile.forgePay'), me, give, setGive, true)}
+            </>
+          ))}
 
         {usesPact && (
           <div style={{ marginTop: 10 }}>
@@ -1587,6 +1605,8 @@ function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true
 // coalition).
 function schemeText(spec, equipOf, mine, T = tFor(false), nameOf = null) {
   const parts = [];
+  // Prestation de forgeage : le marqueur `forge` décrit un SERVICE (pas un objet).
+  if (spec?.forge) parts.push(mine ? T('mobile.forgeLineMine') : T('mobile.forgeLineYours'));
   if (spec?.gold || spec?.bag?.length || spec?.equip?.length) parts.push(tradeSideText(spec, equipOf, T));
   if (spec?.pact) parts.push(mine
     ? T('mobile.pactLineGive', { n: spec.pact.turns ?? PACT_DEFAULT_TURNS })
@@ -1977,6 +1997,13 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, hasForg
 // les téléphones du forgeron (provider) et du client. Le forgeron pose ses faces
 // (réserve mise en escrow) sur le dé du CLIENT ; double validation → pose + paiement.
 function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
+  const [drag, setDrag] = useState(null);        // { stockIndex, face, slot, x, y }
+  const [hoverSlot, setHoverSlot] = useState(null); // n° de slot survolé (1-indexé)
+  const [badSlot, setBadSlot] = useState(null);  // slot refusant le drop
+  const dragRef = useRef({ id: null, stockIndex: null, moved: false, startX: 0, startY: 0 });
+  const badT = useRef(null);
+  useEffect(() => () => clearTimeout(badT.current), []);
+
   const fs = session.forgeService;
   const provider = fs && session.teams[fs.providerIdx];
   const customer = fs && session.teams[fs.customerIdx];
@@ -2002,28 +2029,61 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
   const validate = () => { if (canAct) sendIntent(code, token, 'forgeServiceValidate', {}).catch(() => {}); };
   const cancel = () => { if (canAct) sendIntent(code, token, 'forgeServiceCancel', {}).catch(() => {}); };
 
+  // --- Glisser-déposer (réserve → emplacement du dé) via pointer capture, robuste
+  // au tactile. Tap simple (sans déplacement) = pose sur le slot cible de la face. ---
+  const reset = () => { dragRef.current = { id: null, stockIndex: null, moved: false, startX: 0, startY: 0 }; };
+  const onDown = (e, stockIndex) => {
+    if (!isProvider || !canAct) return;
+    dragRef.current = { id: e.pointerId, stockIndex, moved: false, startX: e.clientX, startY: e.clientY };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* noop */ }
+  };
+  const onMove = (e) => {
+    const d = dragRef.current;
+    if (d.stockIndex == null || e.pointerId !== d.id) return;
+    if (!d.moved) { if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) <= 6) return; d.moved = true; }
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const slotEl = el && el.closest && el.closest('[data-fs-slot]');
+    const f = fs.providerStock[d.stockIndex];
+    setDrag({ stockIndex: d.stockIndex, face: f, slot: f.slot, x: e.clientX, y: e.clientY });
+    setHoverSlot(slotEl ? Number(slotEl.dataset.fsSlot) : null);
+    if (e.cancelable) e.preventDefault();
+  };
+  const onUp = (e) => {
+    const d = dragRef.current;
+    if (d.stockIndex == null || e.pointerId !== d.id) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    const { moved, stockIndex } = d;
+    reset(); setDrag(null); setHoverSlot(null);
+    const f = fs.providerStock[stockIndex]; if (!f) return;
+    if (!moved) { place(stockIndex); return; } // tap → pose sur SON slot cible
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const slotEl = el && el.closest && el.closest('[data-fs-slot]');
+    const slot = slotEl ? Number(slotEl.dataset.fsSlot) : null;
+    if (slot === f.slot) place(stockIndex);
+    else if (slot) { setBadSlot(slot); clearTimeout(badT.current); badT.current = setTimeout(() => setBadSlot(null), 460); }
+  };
+  const onCancel = (e) => { if (e.pointerId !== dragRef.current.id) return; reset(); setDrag(null); setHoverSlot(null); };
+
   const myOk = isProvider ? fs.providerOk : fs.customerOk;
   const otherOk = isProvider ? fs.customerOk : fs.providerOk;
   const colorOf = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
 
-  const faceBox = (face, { drafted = false, slot = null, onClick = null, key } = {}) => {
+  // Cellule de face (dé ou réserve). `as` = élément ; props passées telles quelles.
+  const faceCell = (face, { drafted = false, slot = null, border = null, ring = null } = {}) => {
     const eff = faceEffects(face);
-    const c = colorOf(face);
     return (
-      <button key={key} onClick={onClick || undefined} disabled={!onClick}
-        style={{
-          width: 64, height: 70, borderRadius: 12, border: `2px solid ${drafted ? '#ffcf6a' : c}`,
-          background: drafted ? 'linear-gradient(180deg,#3a2a12,#241809)' : 'linear-gradient(180deg,#2a2114,#1b150c)',
-          color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-          cursor: onClick ? 'pointer' : 'default', position: 'relative', boxShadow: drafted ? '0 0 10px rgba(255,200,90,0.4)' : 'none',
-        }}>
+      <>
         {slot != null && <span style={{ position: 'absolute', top: 3, left: 5, fontSize: 9, opacity: 0.7 }}>#{slot}</span>}
         <span style={{ fontSize: 24, fontWeight: 800, fontFamily: 'var(--font-display, sans-serif)' }}>{clampFaceValue(face.value)}</span>
         <span style={{ display: 'flex', gap: 2, height: 7 }}>
           {eff.map((e, k) => { const m = FORGE_EFFECTS[e.type]; const col = (m && FORGE_FAMILY_COLOR[m.family]) || '#caa45f'; return <span key={k} style={{ width: 7, height: 7, borderRadius: '50%', background: col }} />; })}
         </span>
-      </button>
+      </>
     );
+  };
+  const cellBase = {
+    width: 64, height: 70, borderRadius: 12, color: '#fff', position: 'relative',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
   };
 
   // Rappel du prix (ce que le client paie).
@@ -2046,26 +2106,62 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
           {isProvider ? T('mobile.forgeSvcProviderHint') : T('mobile.forgeSvcCustomerHint')}
         </div>
 
-        {/* Dé du client (brouillon) */}
+        {/* Dé du client (brouillon) — emplacements = cibles de drop */}
         <div style={{ fontSize: 13, fontWeight: 700, margin: '16px 0 6px' }}>{T('mobile.forgeSvcDie', { who: customer.name })}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, justifyItems: 'center' }}>
-          {draft.map((d, i) => faceBox(d.face, {
-            key: `s${i}`, drafted: d.drafted, slot: i + 1,
-            onClick: (isProvider && canAct && d.drafted) ? () => remove(i) : null,
-          }))}
+          {draft.map((d, i) => {
+            const slotN = i + 1;
+            const isTarget = drag && drag.slot === slotN;
+            const isBad = badSlot === slotN || (drag && hoverSlot === slotN && drag.slot !== slotN);
+            const isGood = drag && hoverSlot === slotN && drag.slot === slotN;
+            const border = isBad ? '#d23b2f' : isGood ? '#7bd88f' : d.drafted ? '#ffcf6a' : colorOf(d.face);
+            return (
+              <div key={`s${i}`} data-fs-slot={slotN}
+                onClick={(isProvider && canAct && d.drafted) ? () => remove(i) : undefined}
+                style={{
+                  ...cellBase, border: `2px solid ${border}`,
+                  background: d.drafted ? 'linear-gradient(180deg,#3a2a12,#241809)' : 'linear-gradient(180deg,#2a2114,#1b150c)',
+                  boxShadow: isTarget ? '0 0 12px rgba(123,216,143,0.5)' : d.drafted ? '0 0 10px rgba(255,200,90,0.4)' : 'none',
+                  cursor: (isProvider && canAct && d.drafted) ? 'pointer' : 'default',
+                  opacity: drag && drag.slot !== slotN ? 0.55 : 1, transition: 'opacity 0.15s, border-color 0.15s',
+                }}>
+                {faceCell(d.face, { drafted: d.drafted, slot: slotN })}
+              </div>
+            );
+          })}
         </div>
-        {isProvider && <div style={{ fontSize: 11, color: '#8a734f', textAlign: 'center', marginTop: 4 }}>{T('mobile.forgeSvcTapRemove')}</div>}
+        {isProvider && <div style={{ fontSize: 11, color: '#8a734f', textAlign: 'center', marginTop: 4 }}>{T('mobile.forgeSvcDrag')}</div>}
 
-        {/* Réserve du forgeron (faces à poser) — seulement côté forgeron */}
+        {/* Réserve du forgeron (faces à glisser) — seulement côté forgeron */}
         {isProvider && (
           <>
             <div style={{ fontSize: 13, fontWeight: 700, margin: '16px 0 6px' }}>{T('mobile.forgeSvcReserve')}</div>
             {available.length === 0
               ? <div style={{ fontSize: 12, color: '#8a734f' }}>{T('mobile.forgeSvcReserveEmpty')}</div>
               : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {available.map(({ f, i }) => faceBox(f, { key: `r${i}`, slot: f.slot, onClick: canAct ? () => place(i) : null }))}
+                  {available.map(({ f, i }) => (
+                    <div key={`r${i}`}
+                      onPointerDown={(e) => onDown(e, i)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel}
+                      style={{
+                        ...cellBase, border: `2px solid ${colorOf(f)}`, touchAction: 'none',
+                        background: 'linear-gradient(180deg,#2a2114,#1b150c)',
+                        cursor: canAct ? 'grab' : 'default',
+                        opacity: drag && drag.stockIndex === i ? 0.3 : 1,
+                      }}>
+                      {faceCell(f, { slot: f.slot })}
+                    </div>
+                  ))}
                 </div>}
           </>
+        )}
+
+        {/* Fantôme de glissement qui suit le doigt */}
+        {drag && (
+          <div style={{ position: 'fixed', left: drag.x, top: drag.y, transform: 'translate(-50%,-60%)', pointerEvents: 'none', zIndex: 95 }}>
+            <div style={{ ...cellBase, border: '2px solid #ffcf6a', background: 'linear-gradient(180deg,#3a2a12,#241809)', boxShadow: '0 6px 18px rgba(0,0,0,0.5)' }}>
+              {faceCell(drag.face, { slot: drag.slot })}
+            </div>
+          </div>
         )}
 
         {/* Prix */}

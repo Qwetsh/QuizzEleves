@@ -22,9 +22,25 @@ function setup({ customerMoney = 50 } = {}) {
 const TRADE = { from_idx: 0, to_idx: 1, give: { forge: true }, want: { gold: 20 } };
 
 describe('isForgeServiceTrade', () => {
-  it('détecte une offre de forgeage (give.forge)', () => {
+  it('détecte une offre de forgeage dans les deux sens (give.forge OU want.forge)', () => {
     expect(isForgeServiceTrade(TRADE)).toBe(true);
+    expect(isForgeServiceTrade({ give: { gold: 5 }, want: { forge: true } })).toBe(true);
     expect(isForgeServiceTrade({ give: { gold: 5 }, want: {} })).toBe(false);
+  });
+});
+
+describe('sens client → forgeron (want.forge)', () => {
+  beforeEach(() => setup());
+  it('le forgeron (destinataire) devient provider, le demandeur paie (give)', () => {
+    // Le CLIENT (idx 1) demande au FORGERON (idx 0) de forger son dé.
+    const req = { from_idx: 1, to_idx: 0, give: { gold: 15 }, want: { forge: true } };
+    const res = S().startForgeService(req);
+    expect(res.ok).toBe(true);
+    const fs = S().forgeService;
+    expect(fs.providerIdx).toBe(0); // le forgeron
+    expect(fs.customerIdx).toBe(1); // le demandeur
+    expect(fs.price).toEqual({ gold: 15 }); // paiement = give du demandeur
+    expect(S().teams[0].faceStock).toEqual([]); // réserve du forgeron en escrow
   });
 });
 

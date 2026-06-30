@@ -23,10 +23,11 @@ export const DIE_SLOTS = 6;
 export const MAX_FACE_EFFECTS = 3;
 
 // Une offre de troc (ligne quete_trades) est-elle une PRESTATION DE FORGEAGE ?
-// Le forgeron (from_idx) « donne » un service (give.forge) et « veut » un paiement
-// (want : or/objets). À l'acceptation, le TBI n'applique pas un transfert direct
-// mais ouvre une session de forge collaborative (cf. startForgeService).
-export const isForgeServiceTrade = (trade) => !!(trade && trade.give && trade.give.forge);
+// Le marqueur `forge` peut être sur l'un OU l'autre côté (proposition dans les
+// deux sens) : le forgeron PROPOSE (give.forge, want = paiement) OU le client
+// DEMANDE à un forgeron (give = paiement, want.forge). Le côté forge = le forgeron.
+// À l'acceptation, le TBI ouvre une session collaborative (cf. startForgeService).
+export const isForgeServiceTrade = (trade) => !!(trade && ((trade.give && trade.give.forge) || (trade.want && trade.want.forge)));
 
 // Liste NORMALISÉE des effets d'une face (0→3). Rétro-compatible : lit la forme
 // MODERNE `effects: [{type,tier}, …]` OU l'ancienne `effect: {type,tier}|null`

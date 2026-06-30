@@ -2467,7 +2467,13 @@ export const useGameStore = create((set, get) => ({
   startForgeService: (trade) => {
     const st = get();
     if (st.finished || st.forgeService) return { ok: false, reason: 'occupé' };
-    const providerIdx = trade?.from_idx, customerIdx = trade?.to_idx;
+    // Sens du deal : le FORGERON est le côté qui porte le marqueur `forge`.
+    //  • give.forge → le proposeur (from) forge le dé du destinataire (to) ; paiement = want.
+    //  • want.forge → le destinataire (to) forge le dé du proposeur (from) ; paiement = give.
+    const giveForge = !!trade?.give?.forge;
+    const providerIdx = giveForge ? trade?.from_idx : trade?.to_idx;
+    const customerIdx = giveForge ? trade?.to_idx : trade?.from_idx;
+    const price = (giveForge ? trade?.want : trade?.give) || {};
     const provider = st.teams[providerIdx], customer = st.teams[customerIdx];
     if (!provider || !customer || providerIdx === customerIdx) return { ok: false, reason: 'équipe invalide' };
     if (!craftEnabledFor(st.extensions, provider, 'forge')) return { ok: false, reason: 'pas forgeron' };
@@ -2479,7 +2485,7 @@ export const useGameStore = create((set, get) => ({
       teams: nt,
       forgeService: {
         providerIdx, customerIdx,
-        price: trade.want || {},        // ce que le client paie (or/objets)
+        price,                          // ce que le client paie (or/objets)
         providerStock,                  // faces escrow (réserve du forgeron au départ)
         placements: {},                 // { [slotIndex]: stockIndex } — brouillon
         providerOk: false, customerOk: false,

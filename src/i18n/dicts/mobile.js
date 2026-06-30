@@ -178,7 +178,12 @@ export default {
   'mobile.forgeDealDesc': { fr: 'Tu forges des faces sur le dé d\'une autre équipe contre un paiement. La forge s\'ouvre pour vous deux à l\'acceptation.', en: 'You forge faces onto another team\'s die for a fee. The forge opens for both of you on acceptance.' },
   'mobile.forgePrice': { fr: 'Prix (ce que le client paie)', en: 'Price (what the client pays)' },
   'mobile.forgePriceHint': { fr: 'Choisis ce que {who} te paiera pour le forgeage.', en: 'Choose what {who} will pay you for the forging.' },
+  'mobile.forgePay': { fr: 'Ce que tu paies', en: 'What you pay' },
+  'mobile.forgePayHint': { fr: 'Choisis ce que tu paies à {who} pour qu\'il forge ton dé.', en: 'Choose what you pay {who} to forge your die.' },
   'mobile.forgeFree': { fr: 'Gratuit', en: 'Free' },
+  // Lignes d'offre (prestation de forgeage) affichées dans le récap du deal.
+  'mobile.forgeLineMine': { fr: '🔨 Tu forges son dé', en: '🔨 You forge their die' },
+  'mobile.forgeLineYours': { fr: '🔨 Il forge ton dé', en: '🔨 They forge your die' },
   // Session de forgeage collaborative (overlay mobile)
   'mobile.forgeSvcProviderTitle': { fr: 'Forge le dé de {who}', en: 'Forge {who}\'s die' },
   'mobile.forgeSvcCustomerTitle': { fr: '{who} forge ton dé', en: '{who} is forging your die' },
@@ -186,6 +191,7 @@ export default {
   'mobile.forgeSvcCustomerHint': { fr: 'Le forgeron travaille. Valide quand le résultat te convient.', en: 'The smith is working. Validate when you\'re happy with it.' },
   'mobile.forgeSvcDie': { fr: 'Dé de {who}', en: '{who}\'s die' },
   'mobile.forgeSvcTapRemove': { fr: 'Touche une face dorée pour la retirer.', en: 'Tap a golden face to remove it.' },
+  'mobile.forgeSvcDrag': { fr: 'Glisse une face sur son emplacement (ou touche-la). Touche une face dorée pour la retirer.', en: 'Drag a face onto its slot (or tap it). Tap a golden face to remove it.' },
   'mobile.forgeSvcReserve': { fr: 'Tes faces à poser', en: 'Your faces to place' },
   'mobile.forgeSvcReserveEmpty': { fr: 'Plus de faces en réserve.', en: 'No more faces in reserve.' },
   'mobile.forgeSvcPrice': { fr: 'Le client paie', en: 'The client pays' },
