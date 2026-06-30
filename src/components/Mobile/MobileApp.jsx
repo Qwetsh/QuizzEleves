@@ -2059,7 +2059,7 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const slotEl = el && el.closest && el.closest('[data-fs-slot]');
     const f = fs.providerStock[d.stockIndex];
-    setDrag({ stockIndex: d.stockIndex, face: f, slot: f.slot, x: e.clientX, y: e.clientY });
+    setDrag({ stockIndex: d.stockIndex, face: f, slot: f.slot, x: e.clientX, y: e.clientY, moved: true });
     setHoverSlot(slotEl ? Number(slotEl.dataset.fsSlot) : null);
     if (e.cancelable) e.preventDefault();
   };
