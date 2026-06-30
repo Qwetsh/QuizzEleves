@@ -193,7 +193,7 @@ export default {
   'mobile.forgeSvcTapRemove': { fr: 'Touche une face dorée pour la retirer.', en: 'Tap a golden face to remove it.' },
   'mobile.forgeSvcDrag': { fr: 'Glisse une face sur son emplacement. Touche une face pour voir ses infos.', en: 'Drag a face onto its slot. Tap a face to see its details.' },
   'mobile.forgeSvcRemove': { fr: '↩︎ Retirer cette face', en: '↩︎ Remove this face' },
-  'mobile.forgeNeedsSmith': { fr: 'Seul un forgeron peut forger : choisis une équipe forgeron.', en: 'Only a smith can forge: pick a smith team.' },
+  'mobile.forgeNeedsSmith': { fr: 'Seul un forgeron AYANT des faces en réserve peut forger : choisis une telle équipe.', en: 'Only a smith WITH faces in reserve can forge: pick such a team.' },
   'mobile.forgeSvcReserve': { fr: 'Tes faces à poser', en: 'Your faces to place' },
   'mobile.forgeSvcReserveEmpty': { fr: 'Plus de faces en réserve.', en: 'No more faces in reserve.' },
   'mobile.forgeSvcPrice': { fr: 'Le client paie', en: 'The client pays' },

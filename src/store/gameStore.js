@@ -2482,13 +2482,11 @@ export const useGameStore = create((set, get) => ({
     // Faces disponibles pour le forgeron : SA réserve (escrow) + le CATALOGUE de la
     // boutique (faces qu'il pourrait acheter) → il place « les faces souhaitées »
     // même sans réserve. Tag `src` pour ne rendre que la réserve à la fin/annulation.
-    const reserve = (provider.faceStock || []).map((f) => ({ value: f.value, effects: faceEffects(f), slot: f.slot, src: 'reserve' }));
-    // Catalogue : la vitrine de faces (générée à la volée si vide — ex. forge
-    // activée en cours de partie) → le forgeron a TOUJOURS des faces à proposer.
-    const catalogSource = (st.shopFaceStock && st.shopFaceStock.length) ? st.shopFaceStock : pickFaceStock();
-    const catalog = (catalogSource || []).map((f) => ({ value: f.value, effects: faceEffects(f), slot: f.slot, src: 'shop' }));
-    const providerStock = [...reserve, ...catalog];
-    if (!providerStock.length) return { ok: false, reason: 'aucune face disponible' };
+    // Faces disponibles = UNIQUEMENT la réserve du forgeron (faces achetées à
+    // l'avance, escrow). Coût de revient réel, symétrique avec potions/parchemins.
+    // (La proposition du deal est gatée côté UI sur la présence de faces.)
+    const providerStock = (provider.faceStock || []).map((f) => ({ value: f.value, effects: faceEffects(f), slot: f.slot, src: 'reserve' }));
+    if (!providerStock.length) return { ok: false, reason: 'aucune face en réserve' };
     const nt = [...st.teams];
     nt[providerIdx] = { ...provider, faceStock: [] }; // escrow : la réserve part en atelier
     set({

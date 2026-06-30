@@ -75,21 +75,15 @@ describe('startForgeService (escrow)', () => {
     S().startForgeService(TRADE);
     expect(S().startForgeService(TRADE).ok).toBe(false);
   });
-  it('s’ouvre même sans réserve ni catalogue (catalogue généré à la volée)', () => {
-    useGameStore.setState({ teams: S().teams.map((t, i) => (i === 0 ? { ...t, faceStock: [] } : t)), shopFaceStock: [] });
-    const res = S().startForgeService(TRADE);
-    expect(res.ok).toBe(true);
-    expect(S().forgeService.providerStock.length).toBeGreaterThan(0); // faces du catalogue
+  it('réserve seule : refuse si le forgeron n’a aucune face en réserve (même avec catalogue)', () => {
+    useGameStore.setState({ teams: S().teams.map((t, i) => (i === 0 ? { ...t, faceStock: [] } : t)), shopFaceStock: [{ value: 7, slot: 4, effects: [] }] });
+    expect(S().startForgeService(TRADE).ok).toBe(false); // le catalogue n'est plus utilisé
   });
-  it('s’ouvre même sans réserve si le catalogue boutique a des faces', () => {
-    useGameStore.setState({
-      teams: S().teams.map((t, i) => (i === 0 ? { ...t, faceStock: [] } : t)),
-      shopFaceStock: [{ value: 7, slot: 4, effects: [] }],
-    });
-    const res = S().startForgeService(TRADE);
-    expect(res.ok).toBe(true);
-    expect(S().forgeService.providerStock.length).toBe(1); // 0 réserve + 1 catalogue
-    expect(S().forgeService.providerStock[0].src).toBe('shop');
+  it('providerStock = uniquement la réserve (pas de catalogue)', () => {
+    useGameStore.setState({ shopFaceStock: [{ value: 7, slot: 4, effects: [] }, { value: 8, slot: 6, effects: [] }] });
+    S().startForgeService(TRADE);
+    expect(S().forgeService.providerStock.length).toBe(2); // 2 réserve, 0 catalogue
+    expect(S().forgeService.providerStock.every((f) => f.src === 'reserve')).toBe(true);
   });
 });
 

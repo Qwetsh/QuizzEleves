@@ -1288,13 +1288,18 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   // Prestation de forgeage — proposable dans les DEUX SENS :
   //  • si MOI je peux forger → je PROPOSE de forger le dé du client (give.forge) ;
   //  • sinon, si la CIBLE peut forger → je lui DEMANDE de forger mon dé (want.forge).
+  // Modèle « réserve du forgeron » : le forgeron pose ses faces ACHETÉES à l'avance,
+  // donc l'option n'apparaît que si le forgeron concerné a des faces en réserve.
+  const hasFaces = (t) => ((t && t.faceStock) || []).length > 0;
   const meCanForge = craftEnabledFor(session.extensions, me, 'forge');
   const targetCanForge = !!target && craftEnabledFor(session.extensions, target, 'forge');
-  const anyCanForge = meCanForge || others.some((o) => craftEnabledFor(session.extensions, o.t, 'forge'));
+  const meProvidesForge = meCanForge && hasFaces(me);
+  const someForgeronHasFaces = others.some((o) => craftEnabledFor(session.extensions, o.t, 'forge') && hasFaces(o.t));
+  const canProposeForge = meProvidesForge || (!meCanForge && someForgeronHasFaces);
   const isForge = kind === 'forge';
   // Quand je propose un forgeage : si je peux forger, je fournis ; sinon je demande.
   const iProvideForge = isForge && meCanForge;
-  const showKinds = hasDiplo || anyCanForge;
+  const showKinds = hasDiplo || canProposeForge;
   const isFree = !showKinds || kind === 'free';
   const isCounter = !!initial;
   // Coalition : la cible commune est une 3ᵉ équipe (ni moi, ni l'allié `toIdx`).
@@ -1320,7 +1325,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
       { key: 'mutual', label: T('mobile.mutual'), desc: T('mobile.mutualDesc') },
       ...(canCoalition ? [{ key: 'coalition', label: T('mobile.coalition'), desc: T('mobile.coalitionDesc') }] : []),
     ] : []),
-    ...(anyCanForge ? [{ key: 'forge', label: T('mobile.forgeDeal'), desc: T('mobile.forgeDealDesc') }] : []),
+    ...(canProposeForge ? [{ key: 'forge', label: T('mobile.forgeDeal'), desc: T('mobile.forgeDealDesc') }] : []),
   ];
 
   const build = () => {
@@ -1351,7 +1356,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
   const built = build();
   const has = (s) => !!(s.pact || s.coalition || s.gold || s.bag?.length || s.equip?.length);
   const valid = toIdx != null && (isForge
-    ? (iProvideForge || targetCanForge) // je fournis (cible quelconque) OU je demande à un forgeron
+    ? (iProvideForge ? hasFaces(me) : (targetCanForge && hasFaces(target))) // forgeron AVEC des faces
     : ((kind !== 'coalition' || against != null) && (has(built.give) || has(built.want))));
   const usesPact = hasDiplo && (kind !== 'free' || peace);
 
@@ -1396,9 +1401,9 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
         <div style={{ fontSize: 13, fontWeight: 700, margin: '6px 0 4px' }}>{T('mobile.schemeTarget')}</div>
         <div className="mob-trade-targets">
           {others.map(({ t, i }) => {
-            // Demande de forgeage (je ne suis pas forgeron) → seuls les FORGERONS
-            // sont des cibles valides (eux seuls peuvent forger).
-            const forbid = isForge && !meCanForge && !craftEnabledFor(session.extensions, t, 'forge');
+            // Demande de forgeage (je ne suis pas forgeron) → seuls les forgerons
+            // AYANT des faces en réserve sont des cibles valides.
+            const forbid = isForge && !meCanForge && !(craftEnabledFor(session.extensions, t, 'forge') && hasFaces(t));
             return (
               <button key={i} disabled={forbid}
                 className={'mob-trade-target' + (toIdx === i ? ' on' : '')}
