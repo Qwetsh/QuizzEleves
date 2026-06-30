@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { canUsePowerInContext } from '../../logic/powerActivator';
 import { useT } from '../../i18n';
 import { extOn } from '../../extensions/registry';
-import { craftEnabledFor } from '../../logic/metier';
+import { craftEnabledFor, metierActive } from '../../logic/metier';
 import { getDieFaces } from '../../logic/forge';
 import Dice3D from './Dice3D';
 
@@ -34,7 +34,7 @@ export default function Dice() {
   // le monde (même un non-forgeron dont le dé a été forgé par un autre) voit le dé
   // avec ses faces personnalisables. Le CLIC pour ouvrir la forge, lui, reste
   // réservé à celui qui peut forger (métier forgeron, ou Métiers inactive).
-  const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || extOn(s.extensions, 'metier'));
+  const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || metierActive(s.extensions));
   const canOpenForge = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice || !!hackOverlay;
   const team = teams[currentTeam];

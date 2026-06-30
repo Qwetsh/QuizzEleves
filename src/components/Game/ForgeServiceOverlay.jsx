@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
-import { FORGE_EFFECTS, FORGE_FAMILY_COLOR } from '../../logic/forgeEffects';
+import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceColor } from '../../logic/forgeEffects';
 
 // Overlay TBI (lecture seule + override prof) d'une PRESTATION DE FORGEAGE en cours :
 // la classe voit le forgeron travailler sur le dé du client et l'état des deux
@@ -27,7 +27,6 @@ export default function ForgeServiceOverlay() {
     const sf = fs.providerStock[si];
     return { face: { base: i + 1, value: clampFaceValue(sf.value), effects: faceEffects(sf) }, drafted: true };
   });
-  const colorOf = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
 
   return (
     <AnimatePresence>
@@ -46,7 +45,7 @@ export default function ForgeServiceOverlay() {
             return (
               <div key={i} style={{
                 aspectRatio: '1', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
-                border: `2px solid ${d.drafted ? '#ffcf6a' : colorOf(d.face)}`,
+                border: `2px solid ${d.drafted ? '#ffcf6a' : faceColor(d.face)}`,
                 background: d.drafted ? 'linear-gradient(180deg,#3a2a12,#241809)' : 'rgba(255,255,255,0.04)',
                 boxShadow: d.drafted ? '0 0 8px rgba(255,200,90,0.45)' : 'none',
               }}>

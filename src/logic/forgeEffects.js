@@ -38,6 +38,14 @@ export const FORGE_EFFECTS = {
   relance:         { icon: '🎲', family: 'power',    timing: 'roll',        fr: 'Relance',         en: 'Reroll' },
 };
 
+// Couleur d'une face = couleur de famille de son 1er effet (sinon `fallback`).
+// Source unique (évite la duplication du helper dans chaque composant de forge).
+export function faceColor(face, fallback = '#7a5e3a') {
+  const e = faceEffects(face)[0];
+  const m = e ? FORGE_EFFECTS[e.type] : null;
+  return (m && FORGE_FAMILY_COLOR[m.family]) || fallback;
+}
+
 // Valeur du palier d'un effet (tier 0/1/2 = petit/moyen/gros). null si inconnu.
 // Une valeur peut être un nombre (Prime), un littéral (Égide : 'cancel') ou un
 // booléen (effets sans palier, ex. Question fraîche).

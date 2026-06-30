@@ -7,8 +7,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { tFor } from '../../i18n';
-import { getDieFaces, isFaceForged, clampFaceValue, faceEffects } from '../../logic/forge';
-import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, faceEffectDescriptions } from '../../logic/forgeEffects';
+import { getDieFaces, isFaceForged, clampFaceValue } from '../../logic/forge';
+import { faceEffectLabel, faceEffectDescriptions, faceColor } from '../../logic/forgeEffects';
 import FaceTile from '../Game/FaceTile';
 import { soundClick, soundCast } from '../../logic/sounds';
 import '../../styles/forge.css';
@@ -53,7 +53,7 @@ export default function ForgeModal() {
   const faces = getDieFaces(team);
   const reserve = team.faceStock || [];
   const gold = team.money ?? 0;
-  const colorOf = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
+  const colorOf = faceColor;
 
   // Pose une face de la réserve sur SON slot + coulée in-slot (cérémonie TBI sautée).
   const doForge = (stockIndex) => {

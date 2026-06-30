@@ -16,7 +16,7 @@ import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
 import { getDieFaces, isFaceForged, clampFaceValue, faceEffects, faceSig } from '../../logic/forge';
-import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceEffectLabel, faceEffectDescriptions } from '../../logic/forgeEffects';
+import { faceEffectLabel, faceEffectDescriptions, faceColor as sharedFaceColor } from '../../logic/forgeEffects';
 import FaceTile from '../Game/FaceTile';
 import HackCinematic from '../Game/HackCinematic';
 import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from '../../logic/pacts';
@@ -685,7 +685,7 @@ function ShopView({ session, teamIdx, owned, code, token }) {
     setSheet(null);
   };
   const buyFace = (i) => { if (owned && !locked && code && token) sendIntent(code, token, 'buyFace', { faceIndex: i }).catch(() => {}); };
-  const faceColor = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#9a8156'; };
+  const faceColor = (f) => sharedFaceColor(f, '#9a8156');
   return (
     <div className="mob-root" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <div className="mob-pick-head">{T('mobile.shop')}</div>
@@ -784,7 +784,7 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
     forge(slot, stockIndex);
   };
 
-  const colorOf = (f) => { const e = faceEffects(f)[0]; const m = e ? FORGE_EFFECTS[e.type] : null; return (m && FORGE_FAMILY_COLOR[m.family]) || '#7a5e3a'; };
+  const colorOf = sharedFaceColor;
 
   // Flash de coulée : détecte l'emplacement qui vient d'être forgé (état Realtime).
   const forgedSig = faces.map((f) => (isFaceForged(f) ? '1' : '0')).join('');
@@ -1215,6 +1215,22 @@ function DealToast({ trade, teamIdx, teams, onClose, T = tFor(false) }) {
   const received = isTo ? trade.give : trade.want;
   const gave = isTo ? trade.want : trade.give;
   const other = teams[isTo ? trade.from_idx : trade.to_idx];
+  // Offre ÉCHOUÉE (or/objet manquant, ou forge occupée/sans réserve) : sans ce
+  // bandeau l'offre s'évanouissait sans explication côté élève.
+  if (trade.status === 'failed') {
+    const isForge = !!(trade.give?.forge || trade.want?.forge);
+    return (
+      <div className="mob-deal-wrap" onClick={onClose}>
+        <div className="mob-deal" onClick={(e) => e.stopPropagation()}>
+          <div className="mob-deal-emoji">⚠️</div>
+          <div className="mob-deal-title">{T('mobile.dealFailed')}</div>
+          <div className="mob-deal-with">{T('mobile.dealWith', { who: other ? `${other.emoji} ${other.name}` : T('mobile.anotherTeam') })}</div>
+          <div className="mob-deal-lines" style={{ textAlign: 'center' }}>{isForge ? T('mobile.dealFailedForge') : T('mobile.dealFailedTrade')}</div>
+          <button className="mob-btn mob-btn--ghost" style={{ marginTop: 12 }} onClick={onClose}>{T('common.close')}</button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mob-deal-wrap" onClick={onClose}>
       <div className="mob-deal" onClick={(e) => e.stopPropagation()}>
@@ -2426,9 +2442,9 @@ export default function MobileApp() {
     if (teamIdx == null) return;
     // Les engagements secrets (pacte / coalition) ne déclenchent pas de bandeau
     // « affaire conclue » (il révélerait le complot).
-    const mineApplied = trades.filter((t) => t.status === 'applied' && !isDiploTrade(t) && (t.to_idx === teamIdx || t.from_idx === teamIdx));
-    if (seenDeals.current === null) { seenDeals.current = new Set(mineApplied.map((t) => t.id)); return; }
-    const fresh = mineApplied.find((t) => !seenDeals.current.has(t.id));
+    const mineDone = trades.filter((t) => (t.status === 'applied' || t.status === 'failed') && !isDiploTrade(t) && (t.to_idx === teamIdx || t.from_idx === teamIdx));
+    if (seenDeals.current === null) { seenDeals.current = new Set(mineDone.map((t) => t.id)); return; }
+    const fresh = mineDone.find((t) => !seenDeals.current.has(t.id));
     if (fresh) { seenDeals.current.add(fresh.id); setDealToast(fresh); }
   }, [trades, teamIdx]);
 

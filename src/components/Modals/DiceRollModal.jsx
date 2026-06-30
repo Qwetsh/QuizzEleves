@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
 import { extOn } from '../../extensions/registry';
+import { metierActive } from '../../logic/metier';
 import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
 import { buffValue, getEffectValue } from '../../logic/itemEffects';
@@ -89,7 +90,7 @@ export default function DiceRollModal() {
   const currentTeam = useGameStore((s) => s.currentTeam);
   // Visuel forgeable pour TOUT le monde dès que Forge OU Métiers est active (un
   // non-forgeron peut avoir un dé forgé par un autre via la prestation de forgeage).
-  const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || extOn(s.extensions, 'metier'));
+  const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || metierActive(s.extensions));
   const completeDiceRoll = useGameStore((s) => s.completeDiceRoll);
 
   const [phase, setPhase] = useState('intro');
