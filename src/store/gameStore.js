@@ -1039,6 +1039,7 @@ export const useGameStore = create((set, get) => ({
       const pos = get().teams[currentTeam].pos;
       if (board[pos]?.type === 'arrivee') {
         get().addLog(tg('log.store.finish', { emoji: get().teams[currentTeam].emoji, name: get().teams[currentTeam].name }));
+        get().closeForgeService(); // rend l'escrow d'une éventuelle session de forge
         set({ finished: true });
       }
       // Move issu du moteur d'effets : reprendre la file (l'action move est terminee)
@@ -1076,6 +1077,7 @@ export const useGameStore = create((set, get) => ({
 
     if (node.type === 'arrivee') {
       addLog(tg('log.store.finish', { emoji: team.emoji, name: team.name }));
+      get().closeForgeService(); // rend l'escrow d'une éventuelle session de forge
       set({ finished: true });
       saveGame(get());
       return;
@@ -2521,7 +2523,7 @@ export const useGameStore = create((set, get) => ({
       if (si !== stockIndex && Number(s) !== target) placements[s] = si;
     }
     placements[target] = stockIndex;
-    set({ forgeService: { ...fs, placements, providerOk: false, customerOk: false } });
+    set({ forgeService: { ...fs, placements, providerOk: false, customerOk: false, error: null } });
   },
   // Le forgeron retire la face brouillon d'un slot (revient à la face d'origine).
   forgeServiceRemove: (slotIndex, teamIndex) => {
@@ -2530,13 +2532,25 @@ export const useGameStore = create((set, get) => ({
     if (!fs || teamIndex !== fs.providerIdx) return;
     const placements = { ...(fs.placements || {}) };
     delete placements[slotIndex];
-    set({ forgeService: { ...fs, placements, providerOk: false, customerOk: false } });
+    set({ forgeService: { ...fs, placements, providerOk: false, customerOk: false, error: null } });
+  },
+  // Clôt une éventuelle session de forge (ex. fin de partie) en RENDANT l'escrow
+  // au forgeron, sans paiement ni log bruyant. Idempotent.
+  closeForgeService: () => {
+    const st = get();
+    const fs = st.forgeService;
+    if (!fs) return;
+    const nt = [...st.teams];
+    const prov = nt[fs.providerIdx];
+    const back = (fs.providerStock || []).filter((f) => f.src === 'reserve').map((f) => ({ value: f.value, effects: f.effects, slot: f.slot }));
+    if (prov) nt[fs.providerIdx] = { ...prov, faceStock: [...(prov.faceStock || []), ...back] };
+    set({ teams: nt, forgeService: null });
   },
   // Validation d'une partie (forgeron ou client). Quand les DEUX valident → pose.
   forgeServiceValidate: (teamIndex) => {
     const st = get();
     const fs = st.forgeService;
-    if (!fs) return;
+    if (!fs || st.finished) return;
     let next = fs;
     if (teamIndex === fs.providerIdx) next = { ...fs, providerOk: true };
     else if (teamIndex === fs.customerIdx) next = { ...fs, customerOk: true };
@@ -2566,14 +2580,19 @@ export const useGameStore = create((set, get) => ({
   applyForgeService: () => {
     const st = get();
     const fs = st.forgeService;
-    if (!fs) return { ok: false };
+    if (!fs || st.finished) return { ok: false };
     const provider = st.teams[fs.providerIdx];
     const customer = st.teams[fs.customerIdx];
     if (!provider || !customer) { set({ forgeService: null }); return { ok: false }; }
-    // Paiement (client → forgeron). Échec atomique si le client ne peut plus payer :
-    // on GARDE la session ouverte (les parties pourront annuler).
+    // Paiement (client → forgeron). Échec si le client est devenu insolvable pendant
+    // la session : on RÉINITIALISE les validations + on signale l'erreur (sinon les
+    // deux mobiles restent figés sur « ✅✅ » sans comprendre), session gardée ouverte.
     const pay = takeSpecFrom(customer, fs.price || {});
-    if (!pay) return { ok: false, reason: 'paiement impossible' };
+    if (!pay) {
+      set({ forgeService: { ...fs, providerOk: false, customerOk: false, error: 'payment' } });
+      st.addLog(tg('log.store.forgeServicePayFail', { ce: customer.emoji, cn: customer.name }));
+      return { ok: false, reason: 'paiement impossible' };
+    }
     const placements = fs.placements || {};
     const placedStock = new Set(Object.values(placements).map(Number));
     const faces = getDieFaces(customer).map((face, i) => {
@@ -2782,6 +2801,7 @@ export const useGameStore = create((set, get) => ({
     const t = get().teams[idx];
     if (t && get().board[t.pos]?.type === 'arrivee') {
       get().addLog(tg('log.store.finish', { emoji: t.emoji, name: t.name }));
+      get().closeForgeService(); // rend l'escrow d'une éventuelle session de forge
       set({ finished: true });
       saveGame(get());
       return true;
@@ -3004,6 +3024,9 @@ export const useGameStore = create((set, get) => ({
       // et le préavis, eux, sont persistés et restaurés via ...saved).
       weatherCeremony: null,
     });
+    // Prestation de forgeage : absente des vieilles saves → null. Si présente (reload
+    // en pleine session), elle est restaurée via ...saved (escrow préservé).
+    if (saved.forgeService === undefined) set({ forgeService: null });
     // Météo : champs absents des vieilles sauvegardes → défauts.
     if (saved.weather === undefined) set({ weather: null });
     if (saved.weatherNotice === undefined) set({ weatherNotice: null });

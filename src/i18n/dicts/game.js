@@ -13,6 +13,7 @@ export default {
   // Overlay TBI d'une prestation de forgeage en cours
   'game.forgeSvcTitle': { fr: '{p} forge le dé de {c}', en: '{p} is forging {c}\'s die' },
   'game.forgeSvcCancel': { fr: 'Annuler la forge', en: 'Cancel forging' },
+  'game.forgeSvcPayFail': { fr: '⚠️ Le client ne peut plus payer le prix convenu.', en: '⚠️ The client can no longer pay the agreed price.' },
   'game.title': { fr: 'Quête des Matières', en: 'Subject Quest' },
   'game.boardGame': { fr: 'Jeu de plateau', en: 'Board game' },
   'game.journal': { fr: 'Journal', en: 'Log' },

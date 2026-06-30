@@ -201,6 +201,7 @@ export default {
   'mobile.forgeSvcValidated': { fr: '✓ Validé', en: '✓ Validated' },
   'mobile.forgeSvcWaitingYou': { fr: 'L\'autre équipe a validé. À toi de valider !', en: 'The other team validated. Your turn!' },
   'mobile.forgeSvcWaitingOther': { fr: 'En attente de l\'autre équipe…', en: 'Waiting for the other team…' },
+  'mobile.forgeSvcPayFail': { fr: '⚠️ Paiement impossible : le client n\'a plus de quoi payer le prix convenu. Ajustez l\'offre ou annulez.', en: '⚠️ Payment failed: the client can no longer pay the agreed price. Adjust the deal or cancel.' },
   'mobile.pactDuration': { fr: 'Durée du pacte', en: 'Pact duration' },
   'mobile.turnsN': { fr: '{n} tours', en: '{n} turns' },
   'mobile.demandGold': { fr: 'Or que tu réclames', en: 'Gold you demand' },

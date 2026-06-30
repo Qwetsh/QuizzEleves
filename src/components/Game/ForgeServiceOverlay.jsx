@@ -58,6 +58,11 @@ export default function ForgeServiceOverlay() {
             );
           })}
         </div>
+        {fs.error === 'payment' && (
+          <div style={{ marginTop: 10, padding: '7px 10px', borderRadius: 8, background: 'rgba(210,59,47,0.2)', border: '1px solid rgba(210,59,47,0.5)', color: '#ffd9d4', fontSize: 12, textAlign: 'center' }}>
+            {T('game.forgeSvcPayFail')}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 12, fontSize: 13 }}>
           <span>{provider.emoji} {fs.providerOk ? '✅' : '⏳'}</span>
           <span>{customer.emoji} {fs.customerOk ? '✅' : '⏳'}</span>

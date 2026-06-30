@@ -2155,6 +2155,13 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
           <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{priceText}</div>
         </div>
 
+        {/* Erreur de paiement (client devenu insolvable) : on l'affiche en clair. */}
+        {fs.error === 'payment' && (
+          <div style={{ marginTop: 14, padding: '8px 12px', borderRadius: 10, background: 'rgba(210,59,47,0.18)', border: '1px solid rgba(210,59,47,0.5)', color: '#ffd9d4', fontSize: 12.5, textAlign: 'center' }}>
+            {T('mobile.forgeSvcPayFail')}
+          </div>
+        )}
+
         {/* Validation */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 18, margin: '14px 0 10px', fontSize: 13 }}>
           <span>{provider.emoji} {fs.providerOk ? '✅' : '⏳'}</span>

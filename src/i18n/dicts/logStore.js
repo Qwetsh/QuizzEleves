@@ -92,6 +92,7 @@ export default {
   'log.store.forgeServiceStart': { fr: '🔨 {pe} {pn} ouvre sa forge pour le dé de {ce} {cn}…', en: '🔨 {pe} {pn} opens the forge for {ce} {cn}\'s die…' },
   'log.store.forgeServiceDone':  { fr: '🔨 {pe} {pn} a forgé {n} face(s) sur le dé de {ce} {cn} (payé) !', en: '🔨 {pe} {pn} forged {n} face(s) onto {ce} {cn}\'s die (paid)!' },
   'log.store.forgeServiceCancel':{ fr: '🔨 Forge annulée entre {pe} {pn} et {ce} {cn}.', en: '🔨 Forging cancelled between {pe} {pn} and {ce} {cn}.' },
+  'log.store.forgeServicePayFail':{ fr: '🔨 Forge en attente : {ce} {cn} ne peut plus payer le prix convenu.', en: '🔨 Forging on hold: {ce} {cn} can no longer pay the agreed price.' },
   'log.store.freshQuestion':     { fr: '🔄 {emoji} {name} écarte la question et en pioche une autre.', en: '🔄 {emoji} {name} discards the question and draws another.' },
 
   // --- Timeout ---

@@ -5,6 +5,10 @@ const SAVE_FIELDS = [
   'askedQuestions', 'questions', 'log', 'phase', 'boardSubjects', 'categoryPools',
   'extensions', 'enabledEvents', 'knownEventKeys', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'forcedDuels', 'connectionMode', 'sessionCode', 'boardParams', 'englishMode',
   'shopStock', 'shopStockTurns', 'shopFaceStock',
+  // Prestation de forgeage en cours : la réserve du forgeron est en ESCROW DANS
+  // cet objet (sa faceStock est vidée). Sans persistance, un reload du TBI en
+  // pleine session perdrait définitivement ces faces achetées → on le sauvegarde.
+  'forgeService',
   'starterChestConfig', 'starterGold',
   'gameStats', 'statsArchived', 'classLabel',
   // Météo : état ambiant + préavis + compteurs de cadence (l'overlay transitoire

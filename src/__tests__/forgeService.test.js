@@ -1,7 +1,21 @@
 // Tests de la PRESTATION DE FORGEAGE (troc + forge collaborative).
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
+import { saveGame, loadGame } from '../store/persistence.js';
 import { defaultDieFaces, getDieFaces, isForgeServiceTrade } from '../logic/forge.js';
+
+// localStorage minimal (l'env de test n'en fournit pas) pour le round-trip save/load.
+beforeAll(() => {
+  if (typeof globalThis.localStorage === 'undefined') {
+    const mem = {};
+    globalThis.localStorage = {
+      getItem: (k) => (k in mem ? mem[k] : null),
+      setItem: (k, v) => { mem[k] = String(v); },
+      removeItem: (k) => { delete mem[k]; },
+      clear: () => { for (const k of Object.keys(mem)) delete mem[k]; },
+    };
+  }
+});
 
 const S = () => useGameStore.getState();
 const face = (value, slot) => ({ value, slot, effects: [] });
@@ -115,11 +129,42 @@ describe('double validation → pose + paiement', () => {
     // Face posée consommée ; face non posée RENDUE au forgeron.
     expect(S().teams[0].faceStock).toEqual([face(2, 5)]);
   });
-  it('paiement impossible : la session reste ouverte, dé inchangé', () => {
+  it('paiement impossible : session ouverte, validations réinitialisées + erreur signalée', () => {
     setup({ customerMoney: 5 }); S().startForgeService(TRADE); S().forgeServicePlace(undefined, 0, 0);
     S().forgeServiceValidate(0); S().forgeServiceValidate(1);
-    expect(S().forgeService).not.toBeNull(); // pas appliqué
-    expect(getDieFaces(S().teams[1])[2].value).toBe(3); // dé inchangé (valeur d'origine)
+    const fs = S().forgeService;
+    expect(fs).not.toBeNull(); // pas appliqué
+    expect(fs.providerOk).toBe(false); // validations RÉINITIALISÉES (sinon figé sur ✅✅)
+    expect(fs.customerOk).toBe(false);
+    expect(fs.error).toBe('payment'); // erreur diffusée pour feedback
+    expect(getDieFaces(S().teams[1])[2].value).toBe(3); // dé inchangé
+  });
+});
+
+describe('garde fin de partie', () => {
+  beforeEach(() => { setup(); S().startForgeService(TRADE); S().forgeServicePlace(undefined, 0, 0); });
+  it('partie finie : validate/apply n’appliquent rien', () => {
+    useGameStore.setState({ finished: true });
+    S().forgeServiceValidate(0); S().forgeServiceValidate(1);
+    expect(getDieFaces(S().teams[1])[2].value).toBe(3); // dé inchangé après la fin
+  });
+  it('closeForgeService rend l’escrow et clôt la session', () => {
+    S().closeForgeService();
+    expect(S().forgeService).toBeNull();
+    expect(S().teams[0].faceStock).toEqual([face(9, 3), face(2, 5)]); // réserve rendue
+    expect(S().teams[1].money).toBe(50); // aucun paiement
+  });
+});
+
+describe('persistance (P0-1 : escrow non perdu au reload)', () => {
+  it('save→load conserve forgeService (réserve en escrow, placements)', () => {
+    setup(); S().startForgeService(TRADE); S().forgeServicePlace(undefined, 0, 0);
+    saveGame(useGameStore.getState());
+    const loaded = loadGame();
+    expect(loaded.forgeService).not.toBeNull();
+    expect(loaded.forgeService.placements).toEqual({ 2: 0 });
+    expect(loaded.forgeService.providerStock.filter((f) => f.src === 'reserve').length).toBe(2);
+    expect(loaded.teams[0].faceStock).toEqual([]); // escrow préservé (récupérable via forgeService)
   });
 });
 
