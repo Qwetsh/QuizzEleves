@@ -5,7 +5,7 @@
 // du sac (slot.png) sur le parchemin, et le bouton fermer (close.png).
 // La mécanique de drag & drop est inchangée (rects des cases figés au grab).
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
@@ -220,7 +220,13 @@ export default function InventoryModal() {
   };
 
   const onUse = (pop) => {
-    setPopover(null);
+    // Fermer la carte d'info AVANT d'ouvrir l'éventuel sélecteur de cible :
+    // useConsumable peut ouvrir showTargetPicker de façon synchrone (moteur
+    // d'effets), et la modale de ciblage (abonnée au store via
+    // useSyncExternalStore) se rendrait sinon avant que ce setState local ne
+    // soit appliqué — d'où une superposition visible. flushSync garantit
+    // l'ordre : carte fermée, puis picker.
+    flushSync(() => setPopover(null));
     useConsumable(+pop.cellKey.slice(4));
   };
   const onSell = (pop) => {

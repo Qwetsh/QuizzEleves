@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, setItemsData } from '../data/items.js';
 import { getEffectValue, activeSets, hasBuff, isDuelImmune } from '../logic/itemEffects.js';
+import { normalizeBag, cellKey } from '../store/itemHandlers.js';
 import {
   runEffects, resumeQueue, legacyToActions, consumableActions,
   equipOnRollActions, equipTriggerActions, questionRerollOptions, d6Branch, expandUseTriggers,
@@ -885,5 +886,46 @@ describe('robustesse selon le contexte', () => {
   it('fumigène via on:roll arme l’anti-pouvoir', () => {
     exec([{ action: 'fumigene' }], { source: 'roll', diceValue: 4 });
     expect(team(0).itemFumigene).toBe(true);
+  });
+});
+
+describe('annulation du sélecteur de cible (consommable)', () => {
+  const bagKeys = (i) => normalizeBag(team(i).bag).map(cellKey);
+
+  beforeEach(() => {
+    // Catalogue isolé : un consommable « blockPowers target:target » → exige un
+    // choix de cible (ouvre le sélecteur). Évite la pollution d'ITEMS par les
+    // setItemsData d'autres tests de ce fichier.
+    setItemsData({
+      testSceau: {
+        name: 'Sceau test', icon: '🤐', slot: 'consumable', price: 10,
+        effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockPowers', target: 'target', turns: 2 }] }],
+      },
+    });
+    freshGame([{ bag: ['testSceau'] }, {}]);
+  });
+
+  it('annuler REND le consommable et ne laisse pas la file suspendue', () => {
+    expect(bagKeys(0)).toContain('testSceau');
+
+    S().useConsumable(0);
+    // L'objet est retiré et le sélecteur de cible (moteur) s'ouvre.
+    expect(S().showTargetPicker?.source).toBe('engine');
+    expect(bagKeys(0)).not.toContain('testSceau');
+
+    S().cancelTargetPicker();
+    // L'objet est rendu, la file est vidée, aucune cible n'a été touchée.
+    expect(S().showTargetPicker).toBeNull();
+    expect(S().pendingActions).toBeNull();
+    expect(bagKeys(0)).toContain('testSceau');
+    expect(team(1).powersBlockedTurns ?? 0).toBe(0);
+  });
+
+  it('valider la cible applique l’effet et consomme bien l’objet', () => {
+    S().useConsumable(0);
+    S().selectTarget(1);
+    expect(S().showTargetPicker).toBeNull();
+    expect(team(1).powersBlockedTurns).toBe(2);
+    expect(bagKeys(0)).not.toContain('testSceau');
   });
 });

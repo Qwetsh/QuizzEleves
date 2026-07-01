@@ -5,7 +5,7 @@ import { reducedRecul, resolveAmount, diceLabel, rollsReflect, isGoldStealImmune
 import { resolvePowerEffect, maxPowerLevel, powerUpgradeCost, specSlotForLevel, specOptionsFor } from '../logic/powerEffects.js';
 import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
-import { soundThunder, soundPower, soundDice, soundCharge } from '../logic/sounds.js';
+import { soundThunder, soundPower, soundDice, soundCharge, soundSablier, soundSablierBoost, soundDouble } from '../logic/sounds.js';
 import { resumeQueue as resumeEngineQueue, announce, runEffects } from './effectEngine.js';
 import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content.js';
@@ -627,7 +627,8 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     if (effect.autoTarget && targetTeamIndex === currentTeam) {
       const bonus = Math.max(0, Math.round(30 * (divisor - 1)));
       newTeams[currentTeam] = { ...newTeams[currentTeam], timeCredit: (newTeams[currentTeam].timeCredit || 0) + bonus };
-      soundPower();
+      get().emitPowerFx?.('sablierSelf', currentTeam, { color: '#2f9d5a' });
+      soundSablierBoost();
       addLog(tg('log.pw.sablierSelf', { emoji: team.emoji, name: team.name, power: sablierName, n: bonus }));
       announce(set, get, '⏳', tg('log.pw.sablierSelfToast', { n: bonus }), POWERS[powerKey].color);
     } else {
@@ -640,6 +641,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
       for (const ti of sablierTargets) {
         if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
         hitSet.add(ti);
+        get().emitPowerFx?.('sablier', ti, { color: POWERS[powerKey].color });
         removedTime += Math.max(0, Math.round(30 - 30 / divisor));
         newTeams[ti] = {
           ...newTeams[ti],
@@ -654,7 +656,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
         if (credit > 0) newTeams[currentTeam] = { ...newTeams[currentTeam], timeCredit: (newTeams[currentTeam].timeCredit || 0) + credit };
       }
       const nS = sablierTargets.size;
-      soundPower();
+      if (hitSet.size > 0) soundSablier(); else soundPower();
       const extrasS = `${effect.larcin ? tg('log.pw.sablierLarcin') : ''}${effect.modeleur ? tg('log.pw.sablierModeleur') : ''}`;
       addLog(nS > 1
         ? tg('log.pw.sablierUseMany', { emoji: team.emoji, name: team.name, power: sablierName, level, nS, divisor, extras: extrasS })
@@ -676,6 +678,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     for (const ti of dblTargets) {
       if (offBlocked(ti)) continue; // immunité / fumigène (par cible)
       hitSet.add(ti); nAffected++;
+      get().emitPowerFx?.('double', ti, { color: POWERS[powerKey].color });
       const tt = newTeams[ti];
       // Cumulable : on AJOUTE des questions extra (plafonné), sans écraser un cast précédent.
       const newExtra = Math.min((tt.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
@@ -692,7 +695,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
         ...(effect.report ? { doubleReport: true } : {}),
       };
     }
-    soundPower();
+    if (hitSet.size > 0) soundDouble(); else soundPower();
     const doubleTotal = 1 + Math.min((target.doubleExtra || 0) + add, MAX_DOUBLE_EXTRA);
     const noBonusNow = !!effect.noBonus;
     const extras = `${effect.corsees ? tg('log.pw.doubleCorsees') : ''}${effect.saboteur ? tg('log.pw.doubleSaboteur') : ''}${effect.sharedTimer ? tg('log.pw.doubleShared') : ''}${effect.report ? tg('log.pw.doubleReport') : ''}`;
@@ -742,6 +745,9 @@ function resolveBetrayals(set, get, newTeams, attackerIdx, hitSet) {
 }
 
 export function cancelTargetPicker(set, get) {
+  // NB : l'annulation d'un sélecteur issu du MOTEUR (source 'engine') est traitée
+  // en amont par le store (remboursement d'un consommable + abandon de la file).
+  // Ici on ne gère que les pouvoirs (rien n'est consommé tant qu'on n'a pas ciblé).
   set({ showTargetPicker: null });
   // Stay in pendingLanding — player can use other powers or click "Continuer"
 }

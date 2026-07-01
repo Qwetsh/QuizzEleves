@@ -255,6 +255,61 @@ export function soundClick() {
   playTone(800, 0.05, 'square', 0.1);
 }
 
+// Pouvoir SABLIER (sabotage du temps de la cible) : un tic-tac d'horloge régulier
+// qui se DÉRÈGLE — l'engrenage s'emballe, le ressort se détend (glissando grave),
+// puis le mécanisme se bloque (clunk). Accompagne la cinématique <PowerCinematic>.
+export function soundSablier() {
+  // tic = clic aigu, tac = clic plus grave (alternance d'une vraie horloge)
+  const tick = (hi, v = 0.16) => {
+    playNoise(0.022, v, { type: 'bandpass', freq: hi ? 3200 : 2200, q: 3.2 });
+    playTone(hi ? 1500 : 1080, 0.028, 'square', v * 0.45);
+  };
+  // 1) 6 tic-tac réguliers (~1 s)
+  for (let i = 0; i < 6; i++) setTimeout(() => tick(i % 2 === 0), i * 165);
+  // 2) emballement : les tics accélèrent puis le ressort se détend (pitch qui chute)
+  setTimeout(() => {
+    let t = 0;
+    for (let i = 0; i < 8; i++) { setTimeout(() => tick(i % 2 === 0, 0.13), t); t += Math.max(22, 78 - i * 8); }
+    playTone(900, 0.5, 'sawtooth', 0.1);
+    setTimeout(() => playTone(520, 0.45, 'sawtooth', 0.11), 110);
+    setTimeout(() => playTone(300, 0.5, 'sawtooth', 0.12), 240);
+  }, 1000);
+  // 3) clunk final : le mécanisme se bloque
+  setTimeout(() => {
+    playNoise(0.13, 0.24, { type: 'lowpass', freq: 280, q: 1 });
+    playTone(115, 0.24, 'square', 0.17);
+  }, 1760);
+}
+
+// Sablier SUR SOI (gain de temps) : version POSITIVE — on remonte le ressort,
+// les tics ralentissent en montant, puis un accord chaleureux (« +temps »).
+export function soundSablierBoost() {
+  const tick = (f, v = 0.12) => {
+    playNoise(0.02, v, { type: 'bandpass', freq: f, q: 3 });
+    playTone(f * 0.7, 0.03, 'square', v * 0.4);
+  };
+  let t = 0;
+  for (let i = 0; i < 6; i++) { const f = 2100 + i * 190; setTimeout(() => tick(f), t); t += 110 + i * 32; }
+  setTimeout(() => {
+    playTone(523, 0.3, 'sine', 0.16);
+    playTone(659, 0.32, 'sine', 0.13);
+    setTimeout(() => playTone(784, 0.42, 'triangle', 0.16), 120);
+  }, 950);
+}
+
+// Pouvoir DOUBLE (questions imposées en plus) : un « blip » interrogatif (montée)
+// qui se DÉDOUBLE puis résonne en écho — sensation de questions qui se multiplient.
+export function soundDouble() {
+  const q = (v = 0.14) => {
+    playTone(440, 0.09, 'triangle', v);
+    setTimeout(() => playTone(660, 0.12, 'triangle', v), 90); // montée interrogative
+  };
+  q();                              // la question
+  setTimeout(() => q(0.12), 165);   // sa copie
+  setTimeout(() => q(0.07), 430);   // écho
+  setTimeout(() => q(0.045), 650);  // écho lointain
+}
+
 export function soundTimer() {
   playTone(880, 0.08, 'square', 0.15);
 }

@@ -1,0 +1,208 @@
+/* ============================================================================
+   Cinematiques d'IDENTITE des pouvoirs, ancrees sur la carte cible (HUD du bas).
+   Pilote par le canal store `powerFx` -> <PowerCinematic/>.
+
+   --- SABLIER ---------------------------------------------------------------
+   Une horloge se materialise sur la carte de la cible, fait tic-tac (6 pas),
+   puis se DEREGLE : les aiguilles s'emballent, des felures parcourent le
+   cadran, le tout tremble, et le mecanisme se bloque (effondrement + fondu).
+   Couleur du pouvoir via --pfx-color. Taille via --d (diametre px).
+   ========================================================================== */
+
+.pfx-root {
+  position: absolute;
+  inset: 0;
+  animation: pfx-fade 360ms ease-out 1980ms forwards;
+}
+@keyframes pfx-fade { to { opacity: 0; } }
+
+/* Conteneur centre sur la carte (centrage + apparition + effondrement final) */
+.pfx-clock {
+  position: absolute;
+  width: var(--d);
+  height: var(--d);
+  margin-left: calc(var(--d) / -2);
+  margin-top: calc(var(--d) / -2);
+  transform-origin: 50% 50%;
+  animation:
+    pfx-appear 460ms cubic-bezier(.2,.9,.25,1.35) forwards,
+    pfx-collapse 320ms ease-in 2000ms forwards;
+}
+@keyframes pfx-appear {
+  0%   { transform: scale(.25) rotate(-14deg); opacity: 0; }
+  55%  { transform: scale(1.14) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes pfx-collapse {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(.82) rotate(9deg); opacity: .85; }
+}
+
+/* Halo derriere l'horloge, qui s'intensifie au moment du deraillement */
+.pfx-glow {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--pfx-color) 55%, transparent), transparent 68%);
+  opacity: .35;
+  animation: pfx-glow-pulse 1100ms ease-in-out 1000ms;
+}
+@keyframes pfx-glow-pulse {
+  0% { opacity: .35; }
+  35% { opacity: .9; transform: scale(1.18); }
+  100% { opacity: .4; transform: scale(1); }
+}
+
+/* Couche qui TREMBLE (separee du centrage pour ne pas se marcher dessus) */
+.pfx-shake {
+  position: absolute;
+  inset: 0;
+  animation: pfx-shake 920ms ease-in-out 1000ms;
+}
+@keyframes pfx-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  12% { transform: translate(-2px, 1px) rotate(-3deg); }
+  26% { transform: translate(3px, -2px) rotate(4deg); }
+  42% { transform: translate(-3px, 2px) rotate(-5deg); }
+  58% { transform: translate(4px, -1px) rotate(6deg); }
+  74% { transform: translate(-3px, 2px) rotate(-4deg); }
+  88% { transform: translate(2px, -1px) rotate(2deg); }
+}
+
+/* Cadran (SVG) : rim + graduations + felures */
+.pfx-face { position: absolute; inset: 0; overflow: visible; filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); }
+.pfx-rim { fill: rgba(18, 14, 24, .9); stroke: var(--pfx-color); stroke-width: 3.2; }
+.pfx-rim-inner { fill: none; stroke: color-mix(in srgb, var(--pfx-color) 60%, #fff); stroke-width: .8; opacity: .55; }
+.pfx-tick { stroke: rgba(255, 255, 255, .8); stroke-width: 1.4; stroke-linecap: round; }
+.pfx-tick--h { stroke: var(--pfx-color); stroke-width: 2.4; }
+
+/* Felures : tracees a l'instant du deraillement */
+.pfx-crack {
+  fill: none;
+  stroke: color-mix(in srgb, var(--pfx-color) 40%, #fff);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  animation: pfx-crack-draw 220ms ease-out forwards;
+}
+@keyframes pfx-crack-draw {
+  0% { stroke-dashoffset: 1; opacity: .95; }
+  100% { stroke-dashoffset: 0; opacity: .9; }
+}
+
+/* Aiguilles (divs HTML, pivot au centre = bas de l'aiguille) */
+.pfx-hand {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  border-radius: 3px;
+  transform-origin: 50% 100%;
+  background: #f4f0ff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, .4);
+}
+.pfx-hour {
+  width: 5px; margin-left: -2.5px;
+  height: calc(var(--d) * .25);
+  transform: rotate(-20deg);
+  animation: pfx-hour-wild 900ms ease-in 1050ms forwards;
+}
+.pfx-min {
+  width: 3.6px; margin-left: -1.8px;
+  height: calc(var(--d) * .36);
+  transform: rotate(14deg);
+  animation: pfx-min-wild 920ms ease-in 1000ms forwards;
+}
+.pfx-sec {
+  width: 2.4px; margin-left: -1.2px;
+  height: calc(var(--d) * .42);
+  background: var(--pfx-color);
+  animation:
+    pfx-sec-tick 1000ms steps(6, end) forwards,
+    pfx-sec-wild 940ms cubic-bezier(.5,0,.95,.55) 1000ms forwards;
+}
+.pfx-center {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 9px; height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--pfx-color);
+  box-shadow: 0 0 8px var(--pfx-color);
+}
+
+/* Tic-tac regulier (la trotteuse saute par pas de 30deg) puis emballement */
+@keyframes pfx-sec-tick { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
+@keyframes pfx-sec-wild { 0% { transform: rotate(180deg); } 100% { transform: rotate(1420deg); } }
+@keyframes pfx-min-wild { 0% { transform: rotate(14deg); } 100% { transform: rotate(-660deg); } }
+@keyframes pfx-hour-wild { 0% { transform: rotate(-20deg); } 100% { transform: rotate(230deg); } }
+
+/* === SABLIER SUR SOI (variante POSITIVE) ================================== */
+/* L'horloge se REMONTE au lieu de casser : aiguilles qui rembobinent en
+   douceur, halo chaleureux, pas de felure ni de secousse, relachement final. */
+.pfx-clock.pfx-boost {
+  animation:
+    pfx-appear 460ms cubic-bezier(.2,.9,.25,1.35) forwards,
+    pfx-release 420ms ease-out 1500ms forwards;
+}
+@keyframes pfx-release {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.14) rotate(0deg); opacity: 0; }
+}
+.pfx-boost .pfx-shake { animation: none; }
+.pfx-boost .pfx-crack { display: none; }
+.pfx-boost .pfx-glow { animation: pfx-glow-soft 1600ms ease-in-out forwards; opacity: .5; }
+@keyframes pfx-glow-soft {
+  0% { opacity: 0; transform: scale(.7); }
+  40% { opacity: .7; transform: scale(1.1); }
+  100% { opacity: .45; transform: scale(1); }
+}
+/* Rembobinage (sens anti-horaire), decelere */
+.pfx-boost .pfx-sec  { animation: pfx-sec-rewind 1500ms cubic-bezier(.15,.7,.25,1) forwards; }
+.pfx-boost .pfx-min  { animation: pfx-min-rewind 1500ms cubic-bezier(.15,.7,.25,1) forwards; }
+.pfx-boost .pfx-hour { animation: pfx-hour-rewind 1500ms cubic-bezier(.15,.7,.25,1) forwards; }
+@keyframes pfx-sec-rewind  { 0% { transform: rotate(0deg); }    100% { transform: rotate(-720deg); } }
+@keyframes pfx-min-rewind  { 0% { transform: rotate(14deg); }   100% { transform: rotate(-126deg); } }
+@keyframes pfx-hour-rewind { 0% { transform: rotate(-20deg); }  100% { transform: rotate(-66deg); } }
+
+/* === DOUBLE : « ❓ » qui se dedouble et resonne en echo =================== */
+.pdbl-root {
+  position: absolute;
+  inset: 0;
+  animation: pdbl-fade 300ms ease-out 1420ms forwards;
+}
+@keyframes pdbl-fade { to { opacity: 0; } }
+.pdbl { position: absolute; transform: translate(-50%, -50%); line-height: 1; }
+.pdbl-core, .pdbl-echo {
+  position: absolute;
+  left: 0; top: 0;
+  font-size: 1em;
+  filter: drop-shadow(0 0 12px var(--pfx-color)) drop-shadow(0 2px 4px rgba(0,0,0,.5));
+}
+.pdbl-core { animation: pdbl-core 1480ms cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes pdbl-core {
+  0%   { transform: translate(-50%, -50%) scale(.2) rotate(-8deg); opacity: 0; }
+  16%  { transform: translate(-50%, -50%) scale(1.2) rotate(4deg); opacity: 1; }
+  28%  { transform: translate(-50%, -50%) scale(.94) rotate(-2deg); }
+  46%  { transform: translate(-52%, -50%) scale(1.04); }
+  54%  { transform: translate(-48%, -50%) scale(1.04); }  /* leger glitch lateral */
+  100% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; }
+}
+.pdbl-echo { opacity: 0; animation: pdbl-echo 900ms ease-out forwards; }
+@keyframes pdbl-echo {
+  0%   { transform: translate(-50%, -50%) scale(.55); opacity: .8; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.3); opacity: 0; }
+}
+
+/* Accessibilite : horloge fixe + felures + fondu rapide, sans emballement */
+@media (prefers-reduced-motion: reduce) {
+  .pfx-clock { animation: pfx-appear 200ms ease-out forwards; }
+  .pfx-shake, .pfx-glow { animation: none; }
+  .pfx-sec, .pfx-min, .pfx-hour { animation: none; }
+  .pfx-crack { animation: pfx-crack-draw 1ms linear forwards; }
+  .pfx-root { animation: pfx-fade 260ms ease-out 700ms forwards; }
+  .pdbl-echo { display: none; }
+  .pdbl-core { animation: pdbl-core 220ms ease-out forwards; }
+  .pdbl-root { animation: pdbl-fade 260ms ease-out 700ms forwards; }
+}

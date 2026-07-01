@@ -19,7 +19,9 @@ const L = (lang, fr, en) => (lang === 'en' ? en : fr);
 const plural = (n, lang, fr, en) => (n > 1 ? L(lang, fr, en) : '');
 
 // Effets de durée (buffs des consommables) → name + desc + ton pour l'affichage.
-const BUFF_INFO = {
+// Exporté pour que le moteur d'effets (effectEngine) puisse en tirer l'icône, la
+// couleur et le ton lorsqu'il déclenche l'aura visuelle d'un buff posé.
+export const BUFF_INFO = {
   themeBonus: { tone: 'buff', icon: '💰', color: '#c8911f',
     name: (b, lang) => L(lang, '+Or/réponse', '+Gold/answer'),
     desc: (b, lang) => L(lang, `+${b.n ?? 5} or par bonne réponse${b.subject ? ` en ${locName(SUBJECTS[b.subject], lang) || b.subject}` : ''}`, `+${b.n ?? 5} gold per correct answer${b.subject ? ` in ${locName(SUBJECTS[b.subject], lang) || b.subject}` : ''}`) },

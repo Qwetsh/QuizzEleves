@@ -4,6 +4,7 @@
 // l'inventaire. Les actions du store (useConsumable/sellBagItem) ciblent
 // l'équipe active : OK ici puisqu'on n'affiche que la sienne.
 import { useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useGameStore } from '../../../store/gameStore';
 import { ITEMS, RARITIES } from '../../../data/items';
 import { cellKey, cellN } from '../../../store/itemHandlers';
@@ -68,7 +69,10 @@ export default function ConsumableBar() {
       {pop && (
         <ItemActionCard
           pop={pop}
-          onUse={(p) => { setPop(null); useConsumable(+p.cellKey.slice(4)); }}
+          // flushSync : fermer la carte d'info AVANT que useConsumable n'ouvre
+          // l'éventuel sélecteur de cible (sinon la modale de ciblage, abonnée
+          // au store, s'afficherait par-dessus la carte encore visible).
+          onUse={(p) => { flushSync(() => setPop(null)); useConsumable(+p.cellKey.slice(4)); }}
           onSell={(p) => { setPop(null); sellBagItem(+p.cellKey.slice(4)); }}
           onClose={() => setPop(null)}
         />

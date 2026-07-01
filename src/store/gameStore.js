@@ -31,6 +31,7 @@ import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasB
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural, getLang } from '../i18n';
+import { locName } from '../i18n/content.js';
 import { loc } from '../i18n/content';
 import { hasPactSpec, isDiploTrade, pactTurns, withPromise, tickPromises, hasCoalitionSpec, coalitionTurns, withCoalition, tickCoalitions } from '../logic/pacts.js';
 
@@ -1875,6 +1876,28 @@ export const useGameStore = create((set, get) => ({
   emitVfx: (type, teamIndex) => set({ vfx: { type, teamIndex, id: ++vfxSeq } }),
   clearVfx: () => set({ vfx: null }),
 
+  // Aura visuelle de malediction/bonus, MULTI-cibles (liste, contrairement au
+  // canal `vfx` mono-slot ci-dessus) : « maudire les autres groupes » frappe
+  // plusieurs cartes en meme temps. Chaque entree { id, teamIndex, icon, color,
+  // tone } est rendue par <CurseStrike/> puis auto-retiree (clearCurseVfx).
+  curseVfx: [],
+  emitCurseVfx: (teamIndex, opts = {}) => set({
+    curseVfx: [...(get().curseVfx || []), {
+      id: ++vfxSeq, teamIndex,
+      icon: opts.icon || '\u{1F300}', color: opts.color || '#8745d4', tone: opts.tone || 'malus',
+    }],
+  }),
+  clearCurseVfx: (id) => set({ curseVfx: (get().curseVfx || []).filter((v) => v.id !== id) }),
+
+  // Cinematiques d'IDENTITE des pouvoirs (Sablier : horloge qui se deregle, etc.),
+  // ancrees sur la/les carte(s) cible(s). Multi-cibles (liste) comme curseVfx.
+  // Chaque entree { id, type, teamIndex, color }. Rendu par <PowerCinematic/>.
+  powerFx: [],
+  emitPowerFx: (type, teamIndex, opts = {}) => set({
+    powerFx: [...(get().powerFx || []), { id: ++vfxSeq, type, teamIndex, color: opts.color || '#a83e7f' }],
+  }),
+  clearPowerFx: (id) => set({ powerFx: (get().powerFx || []).filter((v) => v.id !== id) }),
+
   // Toasts d'effet animes (moteur d'effets composable) — auto-retires par l'overlay.
   effectToasts: [],
   dismissFx: (id) => set({ effectToasts: (get().effectToasts || []).filter((t) => t.id !== id) }),
@@ -2731,9 +2754,23 @@ export const useGameStore = create((set, get) => ({
       return;
     }
     if (stp?.source === 'engine') {
-      // Annuler = sauter l'action ciblée et continuer le reste de la file
-      set({ showTargetPicker: null });
       const pa = get().pendingActions;
+      const ctx = pa?.ctx || {};
+      // Consommable : l'unité a été retirée du sac AVANT la résolution. Annuler le
+      // choix de cible doit donc la REMBOURSER (l'objet n'a pas servi) et ABANDONNER
+      // la séquence — sinon l'objet est perdu pour rien.
+      if (ctx.source === 'item' && ITEMS[ctx.itemKey]) {
+        const ti = ctx.sourceTeam ?? get().currentTeam;
+        const nt = [...get().teams];
+        nt[ti] = itemH.placeItem(nt[ti], ctx.itemKey).team; // restacke l'unité au sac
+        set({ teams: nt });
+        get().addLog(tg('log.it.useCancelled', { icon: ITEMS[ctx.itemKey].icon, item: locName(ITEMS[ctx.itemKey]) }));
+        set({ showTargetPicker: null });
+        if (pa) effectH.finishQueue(set, get); // vide la file + reprend le flux normal
+        return;
+      }
+      // Autres sources (événement/piège…) : on saute l'action ciblée et on continue.
+      set({ showTargetPicker: null });
       if (pa) {
         set({ pendingActions: { ...pa, queue: pa.queue.slice(1) } });
         effectH.runQueue(set, get);

@@ -12,6 +12,7 @@ import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
 import { SUBJECTS } from '../data/subjects.js';
+import { BUFF_INFO } from '../logic/teamStatus.js';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { ITEMS } from '../data/items.js';
 import { MAX_CHARGES } from '../data/powers.js';
@@ -528,6 +529,7 @@ function stepHead(set, get, action, ctx) {
         announce(set, get, '⌛', tg('log.fx.extraTimeThis.toast', { n: et, tag: dieTag(action.n) }), '#3b6cb3');
       } else {
         patchSource(set, get, (t) => ({ itemTimerBonus: (t.itemTimerBonus || 0) + et }));
+        get().emitCurseVfx?.(ctx.sourceTeam ?? get().currentTeam, { icon: '⌛', color: '#3b6cb3', tone: 'buff' });
         get().addLog(tg('log.fx.extraTimeNext', { n: et }));
         announce(set, get, '⌛', tg('log.fx.extraTimeNext.toast', { n: et, tag: dieTag(action.n) }), '#3b6cb3');
       }
@@ -556,6 +558,7 @@ function stepHead(set, get, action, ctx) {
     case 'shieldNext': {
       const sn = typeof action.n === 'number' ? (action.n || 1) : (resolveAmount(action.n, srcTeam) || 1);
       patchSource(set, get, (t) => ({ itemShield: (t.itemShield || 0) + sn }));
+      get().emitCurseVfx?.(ctx.sourceTeam ?? get().currentTeam, { icon: '🛡️', color: '#3b6cb3', tone: 'buff' });
       get().addLog(tgPlural('log.fx.shieldNext', sn, { n: sn }));
       announce(set, get, '🛡️', tgPlural('log.fx.shieldNext.toast', sn, { n: sn, tag: dieTag(action.n) }), '#3b6cb3');
       return 'done';
@@ -565,6 +568,7 @@ function stepHead(set, get, action, ctx) {
       // Absent ⇒ comportement historique (jusqu'à utilisation).
       const ft = action.turns != null ? resolveAmount(action.turns, srcTeam) : 0;
       patchSource(set, get, () => ({ itemFumigene: true, ...(ft > 0 ? { itemFumigeneTurns: ft } : {}) }));
+      get().emitCurseVfx?.(ctx.sourceTeam ?? get().currentTeam, { icon: '💨', color: '#7a8a99', tone: 'buff' });
       get().addLog(ft > 0
         ? tgPlural('log.fx.fumigeneTurns', ft, { n: ft })
         : tg('log.fx.fumigeneUntil'));
@@ -669,6 +673,7 @@ function stepHead(set, get, action, ctx) {
       // / timeoutQuestion (team.wager).
       const subj = action.subject;
       patchSource(set, get, () => ({ forcedSubject: subj, wager: { do: action.do || [], else: action.else || [] } }));
+      get().emitCurseVfx?.(ctx.sourceTeam ?? get().currentTeam, { icon: SUBJECTS[subj]?.icon || '🎲', color: SUBJECTS[subj]?.color || '#c8911f', tone: 'buff' });
       const sname = loc(SUBJECTS[subj], 'name') || subj;
       get().addLog(tg('log.fx.challenge', { subject: sname }));
       announce(set, get, SUBJECTS[subj]?.icon || '🎲', tg('log.fx.challenge.toast', { subject: sname }), SUBJECTS[subj]?.color || '#8a1f2e');
@@ -694,6 +699,16 @@ function stepHead(set, get, action, ctx) {
         nt[idx] = { ...cur, buffs: [...(cur.buffs || []), { type: src.type, turns, n: src.n, subject: src.subject, mode: src.mode, from }] };
       }
       set({ teams: nt });
+      // Aura visuelle : icône/couleur/ton réels du buff (un DoT comme bleedGold
+      // ressort en malus rouge, un vrai bonus en vert/sa couleur propre).
+      const bi = BUFF_INFO[src.type];
+      if (bi) {
+        const tone = typeof bi.tone === 'function'
+          ? bi.tone({ type: src.type, turns, n: src.n, subject: src.subject, mode: src.mode })
+          : bi.tone;
+        const color = tone === 'malus' ? '#8a1f2e' : (bi.color || '#2f9d5a');
+        for (const idx of buffIndices) get().emitCurseVfx?.(idx, { icon: bi.icon, color, tone });
+      }
       get().addLog(tgPlural('log.fx.buff', turns, { n: turns }));
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
@@ -759,6 +774,7 @@ function stepHead(set, get, action, ctx) {
       const nt = [...get().teams];
       for (const idx of curseIdx) nt[idx] = { ...nt[idx], sablierActif: true, sablierDivisor: div };
       set({ teams: nt });
+      for (const idx of curseIdx) get().emitCurseVfx?.(idx, { icon: '⏱️', color: '#8745d4', tone: 'malus' });
       get().addLog(tg('log.fx.curseTimer', { n: div }));
       announce(set, get, '⏱️', tg('log.fx.curseTimer.toast', { n: div }), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
@@ -776,6 +792,7 @@ function stepHead(set, get, action, ctx) {
         nt[idx] = { ...tm, doubleActive: true, doubleExtra: Math.min((tm.doubleExtra || 0) + add, 4) };
       }
       set({ teams: nt });
+      for (const idx of curseQIdx) get().emitCurseVfx?.(idx, { icon: '❓', color: '#8745d4', tone: 'malus' });
       get().addLog(tgPlural('log.fx.curseExtra', add, { n: add }));
       announce(set, get, '❓', tgPlural('log.fx.curseExtra.toast', add, { n: add }), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
@@ -790,6 +807,7 @@ function stepHead(set, get, action, ctx) {
       const nt = [...get().teams];
       for (const idx of idxs) nt[idx] = { ...nt[idx], powersBlockedTurns: Math.max(nt[idx].powersBlockedTurns || 0, turns) };
       set({ teams: nt });
+      for (const idx of idxs) get().emitCurseVfx?.(idx, { icon: '🚫', color: '#8a1f2e', tone: 'malus' });
       get().addLog(tgPlural('log.fx.blockPowers', turns, { n: turns }));
       announce(set, get, '🚫', tgPlural('log.fx.blockPowers.toast', turns, { n: turns }), '#8a1f2e');
       clearCtxResolution(set, get, 'targetTeam');
@@ -804,6 +822,7 @@ function stepHead(set, get, action, ctx) {
       const nt = [...get().teams];
       for (const idx of idxs) nt[idx] = { ...nt[idx], consumablesBlockedTurns: Math.max(nt[idx].consumablesBlockedTurns || 0, turns) };
       set({ teams: nt });
+      for (const idx of idxs) get().emitCurseVfx?.(idx, { icon: '🚫', color: '#8a1f2e', tone: 'malus' });
       get().addLog(tgPlural('log.fx.blockConsumables', turns, { n: turns }));
       announce(set, get, '🚫', tgPlural('log.fx.blockConsumables.toast', turns, { n: turns }), '#8a1f2e');
       clearCtxResolution(set, get, 'targetTeam');
@@ -927,7 +946,9 @@ export function resumeQueue(set, get, resolution = {}) {
 }
 
 // Fin de file : nettoyage + reprise du flux normal selon la source.
-function finishQueue(set, get) {
+// Exporté pour que l'ANNULATION d'un sélecteur (cancelTargetPicker) puisse
+// abandonner une séquence suspendue et reprendre le flux (event/trap/roll).
+export function finishQueue(set, get) {
   const pa = get().pendingActions;
   const ctx = pa?.ctx || {};
   set({ pendingActions: null });

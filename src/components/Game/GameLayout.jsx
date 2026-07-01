@@ -44,6 +44,8 @@ import MetierPickerModal from '../Modals/MetierPickerModal';
 import FightModal from '../Fight/FightModal';
 import FlyingCoins from './FlyingCoins';
 import LightningStrike from './LightningStrike';
+import CurseStrike from './CurseStrike';
+import PowerCinematic from './PowerCinematic';
 import ActionDiceOverlay from './ActionDiceOverlay';
 import SubjectPickerModal from '../Modals/SubjectPickerModal';
 import TrapInspectModal from '../Modals/TrapInspectModal';
@@ -292,6 +294,8 @@ export default function GameLayout() {
       {/* Animations */}
       <FlyingCoins />
       <LightningStrike />
+      <CurseStrike />
+      <PowerCinematic />
       <ActionDiceOverlay />
       <SubjectPickerModal />
       <EffectToast />

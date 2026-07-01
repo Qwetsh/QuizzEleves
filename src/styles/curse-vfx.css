@@ -1,0 +1,136 @@
+/* ============================================================================
+   Aura de malediction / bonus qui frappe la carte d'une equipe (HUD du bas).
+   Sequence (≈1,75 s) :
+     1. un projectile part du CENTRE de l'ecran vers le haut de la carte cible ;
+     2. a l'impact, deux brins lumineux descendent les DEUX cotes de la carte
+        et se rejoignent en BAS au centre ;
+     3. un sceau + l'icone du debuff surgissent la ou les brins se rejoignent.
+   Pilote par <CurseStrike/>, couleur via --cv-color (purple malus, etc.).
+   ========================================================================== */
+
+.cv-root {
+  position: absolute;
+  inset: 0;
+  animation: cv-fade-out 300ms ease-out 1450ms forwards;
+}
+@keyframes cv-fade-out { to { opacity: 0; } }
+
+.cv-svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* --- 1. Projectile depuis le centre de l'ecran --------------------------- */
+.cv-orb {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  animation: cv-orb-fly 540ms cubic-bezier(.45,.05,.3,1) forwards;
+}
+@keyframes cv-orb-fly {
+  0%   { transform: translate(calc(-50% + var(--cv-dx)), calc(-50% + var(--cv-dy))) scale(.45); opacity: 0; }
+  14%  { opacity: 1; }
+  78%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.9); opacity: 0; }
+}
+.cv-orb-core {
+  position: absolute;
+  left: -14px; top: -14px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--cv-color) 48%, transparent 74%);
+  box-shadow: 0 0 24px 7px var(--cv-color);
+}
+.cv-orb-trail {
+  position: absolute;
+  left: -10px; top: -10px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--cv-color);
+  filter: blur(8px);
+  opacity: .85;
+}
+
+/* Onde d'impact en haut de la carte, quand l'orbe arrive */
+.cv-impact {
+  position: absolute;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--cv-color);
+  box-shadow: 0 0 18px var(--cv-color);
+  transform: translate(-50%, -50%) scale(.3);
+  opacity: 0;
+  animation: cv-impact 460ms ease-out 470ms forwards;
+}
+@keyframes cv-impact {
+  0%   { transform: translate(-50%, -50%) scale(.3); opacity: .9; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+
+/* --- 2. Brins qui ceinturent la carte ----------------------------------- */
+/* pathLength=1 → on anime stroke-dashoffset de 1 a 0 (trace progressive). */
+.cv-trace {
+  fill: none;
+  stroke: var(--cv-color);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  animation:
+    cv-trace-draw 640ms cubic-bezier(.4,0,.5,1) 470ms forwards,
+    cv-trace-pulse 1100ms ease-in-out 1110ms;
+}
+@keyframes cv-trace-draw {
+  0%   { stroke-dashoffset: 1; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+@keyframes cv-trace-pulse {
+  0%, 100% { filter: brightness(1); }
+  40%      { filter: brightness(1.7); }
+}
+
+/* --- 3. Sceau + icone qui surgit la ou les brins se rejoignent (bas) ----- */
+.cv-seal {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+}
+.cv-seal-ring {
+  position: absolute;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--cv-color);
+  box-shadow: 0 0 22px var(--cv-color);
+  opacity: 0;
+  animation: cv-ring 560ms ease-out 1060ms forwards;
+}
+@keyframes cv-ring {
+  0%   { transform: scale(.2); opacity: .95; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+.cv-seal-icon {
+  font-size: 34px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .55));
+  opacity: 0;
+  animation: cv-icon-pop 640ms cubic-bezier(.2,.9,.25,1.5) 1060ms forwards;
+}
+@keyframes cv-icon-pop {
+  0%   { transform: translateY(7px) scale(.2); opacity: 0; }
+  45%  { transform: translateY(-5px) scale(1.3); opacity: 1; }
+  72%  { transform: translateY(0) scale(.94); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* --- Accessibilite : on coupe le voyage et on revele directement --------- */
+@media (prefers-reduced-motion: reduce) {
+  .cv-orb, .cv-impact, .cv-seal-ring { display: none; }
+  .cv-trace { animation: cv-trace-draw 1ms linear forwards; opacity: .7; }
+  .cv-seal-icon { animation: cv-icon-pop 220ms ease-out forwards; }
+  .cv-root { animation: cv-fade-out 260ms ease-out 460ms forwards; }
+}
