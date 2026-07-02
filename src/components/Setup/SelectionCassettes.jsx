@@ -21,6 +21,16 @@ import '../../styles/cassettes.css';
 import { useGameStore } from '../../store/gameStore';
 import { themesToCassetteModel, buildPerimeter, levelForCycle } from '../../logic/perimeter';
 import { getQuestions } from '../../data/questions';
+// Composants Setup existants hébergés dans les panneaux de la console.
+import TeamCount from './TeamCount';
+import TeamCustomization from './TeamCustomization';
+import LobbyPanel from './LobbyPanel';
+import ExtensionsChecklist from './ExtensionsChecklist';
+import BoardParams from './BoardParams';
+import EventsChecklist from './EventsChecklist';
+import ItemsChecklist from './ItemsChecklist';
+import StarterChestConfig from './StarterChestConfig';
+import RulesConfig from './RulesConfig';
 
 const FONT_DISPLAY = "'Archivo Black', system-ui, sans-serif";
 const FONT_UI = "'Hanken Grotesk', system-ui, sans-serif";
@@ -75,6 +85,22 @@ const VU = Array.from({ length: 30 }, (_, i) => {
 
 const WORLD_MODES = ['Mini-monde', 'Serpentin', 'Ruban'];
 
+// Sélecteur de fonction de la console (onglets stylés « boutons illuminés »).
+const CONSOLE_TABS = [
+  { id: 'themes', label: 'THÈMES', emblem: '📼' },
+  { id: 'mode', label: 'MODE DE JEU', emblem: '🎮' },
+  { id: 'reglages', label: 'RÉGLAGES', emblem: '🎛' },
+];
+
+// Modes de jeu. Les 2 premiers sont actifs (mappés sur connectionMode board/phone) ;
+// les 2 suivants sont visibles mais « prochainement ».
+const GAME_MODES = [
+  { id: 'tbi', conn: 'board', emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
+  { id: 'companion', conn: 'phone', emblem: '📱', name: 'Téléphone + TBI', desc: 'Les élèves rejoignent par QR ; on joue sur le TBI.', ready: true },
+  { id: 'manette', emblem: '🕹️', name: 'Téléphone-manette', desc: 'Le téléphone devient manette et interface joueur.', ready: false },
+  { id: 'online', emblem: '🌐', name: 'Jeu en ligne', desc: 'Partie et connexion 100 % en ligne.', ready: false },
+];
+
 // Modèle actif (mock en preview ?cassettes, arbre réel en mode live). Un seul
 // écran SelectionCassettes est monté à la fois → variable de module sûre.
 let ACTIVE = { DOMAINS: MOCK_DOMAINS, GROUPS: MOCK_GROUPS };
@@ -89,16 +115,25 @@ const themeById = (id) => {
   return null;
 };
 
-export default function SelectionCassettes({ voies = 6, reperesRatio = true, live = false }) {
-  // Source de données : arbre réel (mode live) ou mocks (preview ?cassettes).
-  const model = live ? themesToCassetteModel() : { DOMAINS: MOCK_DOMAINS, GROUPS: MOCK_GROUPS };
+export default function SelectionCassettes({ voies = 6, reperesRatio = true, live = false, main = false }) {
+  const liveData = live || main; // `main` (console de setup) implique les données réelles
+  // Source de données : arbre réel (live/main) ou mocks (preview ?cassettes).
+  const model = liveData ? themesToCassetteModel() : { DOMAINS: MOCK_DOMAINS, GROUPS: MOCK_GROUPS };
   ACTIVE = model;
   const { DOMAINS, GROUPS } = model;
-  // Actions store (toujours appelées ; utilisées seulement en mode live).
+  // Actions store (toujours appelées ; utilisées seulement en live/main).
   const startGameFromPerimeter = useGameStore((s) => s.startGameFromPerimeter);
   const setPhase = useGameStore((s) => s.setPhase);
   const useBrevet = useGameStore((s) => s.useBrevet);
   const [cycle, setCycle] = useState('cycle4');
+  const [tab, setTab] = useState('themes');
+  const englishMode = useGameStore((s) => s.englishMode);
+  const setEnglishMode = useGameStore((s) => s.setEnglishMode);
+  const classLabel = useGameStore((s) => s.classLabel);
+  const setClassLabel = useGameStore((s) => s.setClassLabel);
+  const connectionMode = useGameStore((s) => s.connectionMode);
+  const setConnectionMode = useGameStore((s) => s.setConnectionMode);
+  const phoneMode = connectionMode === 'phone';
 
   const [slots, setSlots] = useState([]);
   const [revealed, setRevealed] = useState([]);
@@ -325,10 +360,11 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const reset = () => { setSlots([]); setRevealed([]); setLastCard(null); };
 
   const loaded = slots.filter(Boolean);
+  const hasScolaire = loaded.some((v) => v.domain === 'scolaire'); // cycle utile seulement si scolaire chargé
 
   const launch = () => {
     if (!loaded.length) return;
-    if (live) {
+    if (liveData) {
       // Sélection → périmètre → vraie partie (contourne FINE_MIX via startGameFromPerimeter).
       const selection = loaded.map((v) => ({
         themeKey: v.themeId,
@@ -517,10 +553,58 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
   const cycleWorld = () => setWorldStyle((w) => WORLD_MODES[(WORLD_MODES.indexOf(w) + 1) % WORLD_MODES.length]);
 
+  // Panneau central des onglets autres que « thèmes » : héberge les composants
+  // Setup existants dans un encart clair (façon afficheur intégré à la machine).
+  const panelInset = { border: '5px solid #150f08', borderRadius: 14, background: '#efe3c6', boxShadow: 'inset 0 0 0 3px #b79a63, inset 0 2px 8px rgba(0,0,0,.15)', padding: '18px 22px', fontFamily: 'var(--font-ui)', color: 'var(--ink-700, #241a10)' };
+
+  // Carte « mode de jeu » (rétro, harmonisée avec la console).
+  const renderModeCard = (m) => {
+    const sel = m.ready && m.id === (phoneMode ? 'companion' : 'tbi');
+    return (
+      <button key={m.id} type="button" disabled={!m.ready} onClick={() => m.ready && setConnectionMode(m.conn)}
+        style={{ flex: 1, textAlign: 'left', position: 'relative', padding: '14px 16px', borderRadius: 12, cursor: m.ready ? 'pointer' : 'not-allowed', border: '3px solid ' + (sel ? '#57c84d' : '#150f08'), background: sel ? '#16331a' : (m.ready ? '#2a2117' : '#211a12'), opacity: m.ready ? 1 : 0.75, boxShadow: sel ? '0 0 14px rgba(87,200,77,.4),inset 0 2px 0 rgba(255,255,255,.1)' : 'inset 0 -3px 0 rgba(0,0,0,.4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ fontSize: 22 }}>{m.emblem}</span>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 15, letterSpacing: 0.5, color: sel ? '#9be88f' : (m.ready ? '#f4e7cc' : '#8a7656') }}>{m.name}</span>
+          {sel && <span style={{ marginLeft: 'auto', width: 9, height: 9, borderRadius: '50%', background: '#9be88f', boxShadow: '0 0 8px #9be88f' }} />}
+        </div>
+        <div style={{ fontFamily: FONT_UI, fontSize: 12.5, marginTop: 6, lineHeight: 1.35, color: m.ready ? '#a89878' : '#6b5f48' }}>{m.desc}</div>
+        {!m.ready && <div style={{ position: 'absolute', top: 10, right: 10, fontFamily: FONT_MONO, fontSize: 12, letterSpacing: 1, color: '#e8a13a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 6px', background: '#1d160e' }}>🔒 PROCHAINEMENT</div>}
+      </button>
+    );
+  };
+
+  // Panneau central des onglets « mode de jeu » et « réglages ».
+  const renderConsolePanel = () => {
+    if (tab === 'mode') {
+      return (
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', gap: 12 }}>{GAME_MODES.map(renderModeCard)}</div>
+          {/* Participants — contextuels au mode : TBI = création d'équipes, téléphone = lobby QR. */}
+          <div className="qm-console-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto', ...panelInset }}>
+            {phoneMode ? <LobbyPanel /> : (<><TeamCount /><TeamCustomization /></>)}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="qm-console-panel" style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', ...panelInset }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <ExtensionsChecklist embedded />
+          <BoardParams />
+          <StarterChestConfig />
+          <ItemsChecklist embedded />
+          <EventsChecklist embedded />
+          <RulesConfig />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div ref={outerRef} className="qm-cassettes" style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#160f08', color: '#241a10', fontFamily: FONT_UI, WebkitFontSmoothing: 'antialiased' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(130% 130% at 50% 28%,#2a1d0c,#0d0703)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%,-50%) scale(${scale})`, width: 1600, height: 900, display: 'grid', gridTemplateRows: 'auto minmax(0,1fr) auto', background: '#e3d0aa', overflow: 'hidden', borderRadius: 8, boxShadow: '0 0 0 6px #120c06,0 40px 90px rgba(0,0,0,.7)' }}>
+      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%,-50%) scale(${scale})`, width: 1600, height: 900, display: 'grid', gridTemplateRows: main ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto', background: '#e3d0aa', overflow: 'hidden', borderRadius: 8, boxShadow: '0 0 0 6px #120c06,0 40px 90px rgba(0,0,0,.7)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(135deg,rgba(210,98,43,.05) 0 22px,transparent 22px 44px),repeating-linear-gradient(45deg,rgba(22,153,140,.05) 0 22px,transparent 22px 44px)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 90% at 50% 0%,transparent 55%,rgba(70,40,16,.22) 100%)', pointerEvents: 'none' }} />
 
@@ -546,7 +630,14 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
               <div style={{ fontFamily: FONT_MONO, fontSize: 18, letterSpacing: 1, color: '#57c84d' }}>{statusText}</div>
-              {live ? (
+              {main ? (hasScolaire ? (
+                <div style={{ marginTop: 4, display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 1 }}>CYCLE</span>
+                  {[['cycle3', '6e'], ['cycle4', '5e→3e']].map(([c, lab]) => (
+                    <button key={c} onClick={() => setCycle(c)} style={{ fontFamily: FONT_MONO, fontSize: 13, letterSpacing: 1, padding: '1px 7px', borderRadius: 4, cursor: 'pointer', border: '2px solid ' + (cycle === c ? '#57c84d' : '#5a4023'), background: cycle === c ? '#16331a' : '#3a2c1a', color: cycle === c ? '#9be88f' : '#e3d0aa' }}>{lab}</button>
+                  ))}
+                </div>
+              ) : null) : live ? (
                 <div style={{ marginTop: 4, display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
                   <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 1 }}>CYCLE</span>
                   {[['cycle3', '6e'], ['cycle4', '5e→3e']].map(([c, lab]) => (
@@ -558,15 +649,39 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 <button onClick={demo} style={{ marginTop: 3, fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e3d0aa', background: '#3a2c1a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 8px', cursor: 'pointer' }}>▸ SCÉNARIO DÉMO</button>
               )}
             </div>
-            <button onClick={launch} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
-              <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
-              <span>LANCER</span>
-            </button>
+            {!(main && phoneMode) && (
+              <button onClick={launch} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
+                <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
+                <span>LANCER</span>
+              </button>
+            )}
           </div>
         </header>
 
-        {/* ============ MIDDLE : SHELF + MACHINE ============ */}
+        {/* ============ SÉLECTEUR DE FONCTION (console de setup) ============ */}
+        {main && (
+          <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#1d160e', borderBottom: '3px solid #120c06' }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 2 }}>FONCTION</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {CONSOLE_TABS.map((tb) => {
+                const on = tab === tb.id;
+                return (
+                  <button key={tb.id} onClick={() => setTab(tb.id)} style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 1, padding: '6px 13px', borderRadius: 6, cursor: 'pointer', border: '2px solid #150f08', display: 'flex', alignItems: 'center', gap: 7, background: on ? '#57c84d' : '#3a2e22', color: on ? '#0c2a0a' : '#cdbf9e', boxShadow: on ? '0 0 10px rgba(87,200,77,.5),inset 0 2px 0 rgba(255,255,255,.35)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
+                    <span>{tb.emblem}</span><span>{tb.label}</span>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: on ? '#0c2a0a' : '#241a10', boxShadow: on ? '0 0 6px #9be88f' : 'none' }} />
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ flex: 1 }} />
+            <input value={classLabel || ''} onChange={(e) => setClassLabel(e.target.value)} placeholder="📚 Classe / séance" style={{ fontFamily: FONT_MONO, fontSize: 16, color: '#241a10', background: '#e8d9bb', border: '2px solid #5a4023', borderRadius: 4, padding: '3px 9px', width: 190 }} />
+            <button onClick={() => setEnglishMode(!englishMode)} title="Langue des questions" style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: englishMode ? '#16331a' : '#3a2c1a', color: englishMode ? '#9be88f' : '#e3d0aa' }}>{englishMode ? '🇬🇧 EN ✓' : '🇬🇧 FR'}</button>
+          </div>
+        )}
+
+        {/* ============ MIDDLE : PANNEAU ACTIF ============ */}
         <main style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 20, padding: '20px 22px 14px', minHeight: 0 }}>
+          {(!main || tab === 'themes') ? (<>
 
           {/* ---- SHELF ---- */}
           <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -718,6 +833,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
             </div>
           </section>
+          </>) : renderConsolePanel()}
         </main>
 
         {/* ============ WORLD PREVIEW ============ */}

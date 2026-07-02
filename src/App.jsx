@@ -6,9 +6,10 @@ import Setup from './components/Setup/Setup';
 import PowerSetup from './components/Setup/PowerSetup';
 import GameLayout from './components/Game/GameLayout';
 
-// Écran de sélection « lecteur de cassettes » (beta) : paresseux, hors du bundle
-// principal du jeu (cf. openCompose / phase 'compose').
+// Console de setup « SONORAMA » (écran principal) : paresseuse. Repli vers
+// l'ancien Setup via ?classic (filet de sécurité pendant la transition).
 const SelectionCassettes = lazy(() => import('./components/Setup/SelectionCassettes'));
+const CLASSIC_SETUP = new URLSearchParams(window.location.search).has('classic');
 
 const pageVariants = {
   initial: { opacity: 0, scale: 0.96 },
@@ -33,7 +34,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {phase === 'setup' && (
           <motion.div key="setup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
-            <Setup />
+            {CLASSIC_SETUP ? <Setup /> : <Suspense fallback={null}><SelectionCassettes main /></Suspense>}
           </motion.div>
         )}
         {phase === 'compose' && (
