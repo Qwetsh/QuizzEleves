@@ -648,7 +648,7 @@ export const useGameStore = create((set, get) => ({
 
   // --- Start game ---
   startGame: () => {
-    const { setupTeams, boardParams, level, useBrevet, selectedSubjects, lv2Mode } = get();
+    const { level, useBrevet, selectedSubjects, lv2Mode } = get();
     const questions = getQuestions(level, { brevet: useBrevet });
     // Matières effectives = sélection ∩ matières ayant réellement des questions
     // (au niveau choisi) → on n'envoie jamais une matière au pool vide sur le
@@ -671,14 +671,15 @@ export const useGameStore = create((set, get) => ({
     if (lv2On) allWithContent = [...allWithContent.filter((k) => !LV2_SUBJECTS.includes(k)), 'lv2'];
     const subthemesOf = (theme) => allWithContent.filter((k) => themeOf(k) === theme);
     const { boardCats, categoryPools } = boardCategoriesFor(subjects, themeOf, subthemesOf, FINE_MIX);
-    // Mode multi : une voie = un THÈME (clé de module). On injecte une pseudo-
-    // catégorie d'affichage dans le catalogue runtime pour que tout (disque coloré
-    // du plateau, libellés) la rende comme une matière. Display-only (hors SUBJECT_KEYS).
+    // Mode multi : une voie = un THÈME (clé de module). Pseudo-catégorie d'affichage
+    // construite depuis MODULES pour que le disque coloré du plateau la rende comme
+    // une matière. Display-only (hors SUBJECT_KEYS), appliquée dans _beginGameWithBoard.
+    const displayInject = {};
     if (Object.keys(categoryPools).length) {
       for (const themeKey of boardCats) {
         const m = MODULES[themeKey];
         if (m && !SUBJECTS[themeKey]) {
-          SUBJECTS[themeKey] = {
+          displayInject[themeKey] = {
             module: themeKey, name: m.name, name_en: m.name_en, icon: m.icon,
             color: m.color || '#d9cda5', colorSoft: m.colorSoft, colorDeep: m.colorDeep,
             biome: m.biome, biome_en: m.biome_en,
@@ -686,7 +687,34 @@ export const useGameStore = create((set, get) => ({
         }
       }
     }
-    const { nodes, viewBox } = generateBoard({ ...boardParams, subjects: boardCats });
+    get()._beginGameWithBoard({ boardSubjects: boardCats, categoryPools, questions, displayInject, statsSubjects: subjects, lv2On });
+  },
+
+  // Lancement depuis un PÉRIMÈTRE (nouvel écran « lecteur de cassettes »).
+  // Contourne la rustine FINE_MIX / boardCategoriesFor : le périmètre fournit
+  // directement boardSubjects/categoryPools/displayInject (cf. src/logic/perimeter.js).
+  startGameFromPerimeter: (perimeter) => {
+    const { level = 'cycle4', boardSubjects, categoryPools, displayInject } = perimeter || {};
+    if (!boardSubjects || !boardSubjects.length) return;
+    set({ level });
+    const questions = getQuestions(level, { brevet: get().useBrevet });
+    get()._beginGameWithBoard({ boardSubjects, categoryPools, questions, displayInject, statsSubjects: boardSubjects, lv2On: false });
+  },
+
+  openCompose: () => set({ phase: 'compose' }),
+
+  // Queue commune de démarrage (partagée par startGame et startGameFromPerimeter) :
+  // injecte les pseudo-catégories d'affichage, génère le plateau, construit les
+  // équipes et passe en phase 'powerSelect'.
+  _beginGameWithBoard: ({ boardSubjects, categoryPools, questions, displayInject, statsSubjects, lv2On = false }) => {
+    const { setupTeams, boardParams } = get();
+    // Injection display-only des voies larges dans le catalogue runtime SUBJECTS.
+    if (displayInject) {
+      for (const [key, cat] of Object.entries(displayInject)) {
+        if (!SUBJECTS[key]) SUBJECTS[key] = cat;
+      }
+    }
+    const { nodes, viewBox } = generateBoard({ ...boardParams, subjects: boardSubjects });
     const forgeOn = extOn(get().extensions, 'forge');
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
@@ -708,7 +736,7 @@ export const useGameStore = create((set, get) => ({
     set({
       devSandbox: false,
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
-      boardSubjects: boardCats,
+      boardSubjects,
       categoryPools,
       boardDecor: generateDecor(nodes),
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
@@ -716,7 +744,7 @@ export const useGameStore = create((set, get) => ({
       gameStats: {
         startedAt: new Date().toISOString(),
         classLabel: get().classLabel || '',
-        subjects, level: get().level || [],
+        subjects: statsSubjects, level: get().level || [],
         answers: [], itemUses: [], powerUses: [],
       },
       statsArchived: false,

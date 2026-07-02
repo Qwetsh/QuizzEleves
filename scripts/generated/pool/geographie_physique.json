@@ -1,0 +1,1692 @@
+[
+  {
+    "q": "Quelle est la plus haute montagne du monde ?",
+    "a": [
+      "L'Everest",
+      "Le Mont Blanc",
+      "Le K2",
+      "Le Kilimandjaro"
+    ],
+    "correct": 0,
+    "e": "L'Everest, dans l'Himalaya, culmine à environ 8 849 mètres au-dessus du niveau de la mer.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel est le plus long fleuve du monde ?",
+    "a": [
+      "Le Mississippi",
+      "Le Nil",
+      "Le Danube",
+      "Le Rhin"
+    ],
+    "correct": 1,
+    "e": "Le Nil, en Afrique, est généralement considéré comme le plus long fleuve du monde avec environ 6 650 km.",
+    "difficulte": 2,
+    "generalite": 5
+  },
+  {
+    "q": "Quel océan est le plus vaste du monde ?",
+    "a": [
+      "L'océan Atlantique",
+      "L'océan Indien",
+      "L'océan Pacifique",
+      "L'océan Arctique"
+    ],
+    "correct": 2,
+    "e": "L'océan Pacifique est le plus grand et le plus profond des océans de la planète.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel fleuve traverse Paris ?",
+    "a": [
+      "La Loire",
+      "Le Rhône",
+      "La Garonne",
+      "La Seine"
+    ],
+    "correct": 3,
+    "e": "La Seine traverse Paris avant de se jeter dans la Manche au Havre.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel est le plus grand désert du monde toutes catégories confondues ?",
+    "a": [
+      "L'Antarctique",
+      "Le Gobi",
+      "Le Sahara",
+      "Le Kalahari"
+    ],
+    "correct": 0,
+    "e": "L'Antarctique est le plus grand désert du monde, un désert froid où les précipitations sont très rares.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on une étendue d'eau salée presque entièrement entourée de terres, comme la mer Caspienne ?",
+    "a": [
+      "Un golfe",
+      "Une mer fermée",
+      "Un détroit",
+      "Une baie"
+    ],
+    "correct": 1,
+    "e": "Une mer fermée, comme la mer Caspienne, n'a pas de communication directe avec l'océan.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel type de climat caractérise la région méditerranéenne ?",
+    "a": [
+      "Précipitations abondantes toute l'année",
+      "Étés frais, hivers rigoureux",
+      "Étés chauds et secs, hivers doux et humides",
+      "Sécheresse permanente"
+    ],
+    "correct": 2,
+    "e": "Le climat méditerranéen se distingue par des étés chauds et secs et des hivers doux et pluvieux.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on l'ouverture au sommet d'un volcan par laquelle sortent lave et gaz ?",
+    "a": [
+      "La caldeira",
+      "La faille",
+      "Le magma",
+      "Le cratère"
+    ],
+    "correct": 3,
+    "e": "Le cratère est l'ouverture au sommet d'un volcan par laquelle sortent les matériaux éruptifs.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel est le point émergé le plus bas de la surface terrestre ?",
+    "a": [
+      "Les rives de la mer Morte",
+      "La vallée de la Mort",
+      "La dépression de l'Afar",
+      "Le lac Assal"
+    ],
+    "correct": 0,
+    "e": "Les rives de la mer Morte, à environ 430 mètres sous le niveau de la mer, forment le point terrestre émergé le plus bas.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on un cours d'eau qui se jette dans un autre cours d'eau ?",
+    "a": [
+      "Un estuaire",
+      "Un affluent",
+      "Un méandre",
+      "Une source"
+    ],
+    "correct": 1,
+    "e": "Un affluent est un cours d'eau qui se jette dans un autre, appelé cours d'eau principal.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on le recul et la fonte progressive des glaciers ?",
+    "a": [
+      "La sédimentation",
+      "La subduction",
+      "La déglaciation",
+      "L'orogenèse"
+    ],
+    "correct": 2,
+    "e": "La déglaciation désigne le recul et la fonte des glaciers, souvent liés au réchauffement.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel est le plus grand lac d'eau douce du monde par sa superficie ?",
+    "a": [
+      "Le lac Victoria",
+      "Le lac Baïkal",
+      "Le lac Tanganyika",
+      "Le lac Supérieur"
+    ],
+    "correct": 3,
+    "e": "Le lac Supérieur, en Amérique du Nord, est le plus vaste lac d'eau douce par sa superficie.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le plus haut sommet d'Afrique ?",
+    "a": [
+      "Le Kilimandjaro",
+      "Le mont Kenya",
+      "Le Ras Dashan",
+      "Le mont Cameroun"
+    ],
+    "correct": 0,
+    "e": "Le Kilimandjaro, en Tanzanie, culmine à environ 5 895 mètres, ce qui en fait le point le plus élevé d'Afrique.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on la vapeur d'eau qui se condense pour former les nuages puis la pluie ?",
+    "a": [
+      "L'évaporation",
+      "La condensation",
+      "Le cycle de l'eau",
+      "Le ruissellement"
+    ],
+    "correct": 1,
+    "e": "La condensation est le passage de la vapeur d'eau à l'état liquide, à l'origine des nuages.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel fleuve célèbre traverse Londres ?",
+    "a": [
+      "La Mersey",
+      "La Severn",
+      "La Tamise",
+      "Le Trent"
+    ],
+    "correct": 2,
+    "e": "La Tamise traverse Londres avant de se jeter dans la mer du Nord.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel phénomène géologique est mesuré par l'échelle de Richter ?",
+    "a": [
+      "Les éruptions volcaniques",
+      "Les cyclones",
+      "Les tsunamis",
+      "Les tremblements de terre"
+    ],
+    "correct": 3,
+    "e": "L'échelle de Richter mesure la magnitude, c'est-à-dire l'énergie libérée par un séisme.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on l'endroit où un fleuve se jette dans la mer ?",
+    "a": [
+      "L'embouchure",
+      "La source",
+      "L'affluent",
+      "Le bassin"
+    ],
+    "correct": 0,
+    "e": "L'embouchure est l'endroit où un fleuve rejoint la mer ou l'océan.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel désert froid s'étend sur la Mongolie et le nord de la Chine ?",
+    "a": [
+      "Le Taklamakan",
+      "Le désert de Gobi",
+      "Le Thar",
+      "Le Kyzylkoum"
+    ],
+    "correct": 1,
+    "e": "Le désert de Gobi est un vaste désert froid d'Asie centrale, en Mongolie et en Chine.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on une île de corail en forme d'anneau entourant un lagon ?",
+    "a": [
+      "Un archipel",
+      "Un récif barrière",
+      "Un atoll",
+      "Une presqu'île"
+    ],
+    "correct": 2,
+    "e": "Un atoll est une île corallienne annulaire enfermant un lagon central.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on une longue vallée creusée par un glacier et envahie par la mer ?",
+    "a": [
+      "Une calanque",
+      "Un estuaire",
+      "Un canyon",
+      "Un fjord"
+    ],
+    "correct": 3,
+    "e": "Un fjord est une vallée glaciaire profonde envahie par la mer, typique de la Norvège.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la couche gazeuse qui entoure la Terre ?",
+    "a": [
+      "L'atmosphère",
+      "L'hydrosphère",
+      "La lithosphère",
+      "La biosphère"
+    ],
+    "correct": 0,
+    "e": "L'atmosphère est l'enveloppe gazeuse qui entoure la Terre et contient l'air que nous respirons.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Quel est le plus long fleuve d'Europe ?",
+    "a": [
+      "Le Danube",
+      "La Volga",
+      "Le Rhin",
+      "Le Dniepr"
+    ],
+    "correct": 1,
+    "e": "La Volga, en Russie, est le plus long fleuve d'Europe avec environ 3 530 km.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la limite d'altitude au-dessus de laquelle la neige ne fond pas entièrement ?",
+    "a": [
+      "La limite forestière",
+      "La ligne de partage des eaux",
+      "La ligne des neiges éternelles",
+      "La courbe de niveau"
+    ],
+    "correct": 2,
+    "e": "La ligne des neiges éternelles marque l'altitude au-delà de laquelle la neige persiste toute l'année.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on les grandes plaques rigides qui composent la surface terrestre ?",
+    "a": [
+      "Les boucliers",
+      "Les strates",
+      "Les massifs",
+      "Les plaques tectoniques"
+    ],
+    "correct": 3,
+    "e": "Les plaques tectoniques sont les fragments rigides de la lithosphère qui se déplacent lentement.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel courant marin chaud longe la côte est de l'Amérique du Nord puis traverse l'Atlantique ?",
+    "a": [
+      "Le Gulf Stream",
+      "Le courant de Humboldt",
+      "Le courant du Labrador",
+      "Le courant des Canaries"
+    ],
+    "correct": 0,
+    "e": "Le Gulf Stream est un courant chaud qui adoucit le climat de l'ouest de l'Europe.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel massif volcanique domine le centre de la France ?",
+    "a": [
+      "Les Vosges",
+      "Le Massif central",
+      "Le Jura",
+      "Les Ardennes"
+    ],
+    "correct": 1,
+    "e": "Le Massif central, en France, comprend d'anciens volcans comme la chaîne des Puys.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel gaz est le plus abondant dans l'atmosphère terrestre ?",
+    "a": [
+      "L'oxygène",
+      "Le dioxyde de carbone",
+      "L'azote",
+      "L'argon"
+    ],
+    "correct": 2,
+    "e": "L'azote représente environ 78 % de l'atmosphère terrestre, devant l'oxygène.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on une plaine côtière recouverte à marée haute et découverte à marée basse ?",
+    "a": [
+      "Un marais salant",
+      "Un delta",
+      "Une lagune",
+      "Un estran"
+    ],
+    "correct": 3,
+    "e": "L'estran est la portion du littoral alternativement couverte et découverte par les marées.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel fleuve marque une partie de la frontière entre la France et l'Allemagne ?",
+    "a": [
+      "Le Rhin",
+      "La Meuse",
+      "Le Rhône",
+      "La Moselle"
+    ],
+    "correct": 0,
+    "e": "Le Rhin forme une frontière naturelle entre la France (Alsace) et l'Allemagne.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel type de climat règne au niveau de l'équateur ?",
+    "a": [
+      "Un climat désertique",
+      "Un climat équatorial chaud et humide",
+      "Un climat polaire",
+      "Un climat continental"
+    ],
+    "correct": 1,
+    "e": "Le climat équatorial se caractérise par des températures élevées et de fortes pluies toute l'année.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la même tempête tropicale dans l'océan Pacifique nord-ouest ?",
+    "a": [
+      "Un ouragan",
+      "Un blizzard",
+      "Un typhon",
+      "Un simoun"
+    ],
+    "correct": 2,
+    "e": "Dans le Pacifique nord-ouest, la tempête tropicale intense est appelée typhon.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel massif montagneux abrite le plus grand nombre de sommets de plus de 8 000 mètres ?",
+    "a": [
+      "Les Andes",
+      "Les Rocheuses",
+      "Le Karakoram",
+      "L'Himalaya"
+    ],
+    "correct": 3,
+    "e": "L'Himalaya concentre la majorité des sommets dépassant 8 000 mètres, dont l'Everest.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle mer intérieure sépare l'Europe de l'Afrique du Nord ?",
+    "a": [
+      "La mer Méditerranée",
+      "La mer Rouge",
+      "La mer Noire",
+      "la mer Caspienne"
+    ],
+    "correct": 0,
+    "e": "La mer Méditerranée s'étend entre l'Europe du Sud, l'Afrique du Nord et le Proche-Orient.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel grand fleuve traverse l'Allemagne et se jette dans la mer du Nord ?",
+    "a": [
+      "L'Elbe",
+      "Le Rhin",
+      "L'Oder",
+      "Le Main"
+    ],
+    "correct": 1,
+    "e": "Le Rhin traverse notamment l'Allemagne et se jette dans la mer du Nord aux Pays-Bas.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel fleuve traverse Le Caire ?",
+    "a": [
+      "Le Congo",
+      "Le Niger",
+      "Le Nil",
+      "Le Zambèze"
+    ],
+    "correct": 2,
+    "e": "Le Nil traverse Le Caire, capitale de l'Égypte, avant de rejoindre la Méditerranée.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on une pointe de terre qui s'avance dans la mer ?",
+    "a": [
+      "Un golfe",
+      "Un delta",
+      "Une baie",
+      "Un cap"
+    ],
+    "correct": 3,
+    "e": "Un cap est une avancée de terre dans la mer, comme le cap Horn ou le cap de Bonne-Espérance.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel désert d'Amérique du Sud est réputé pour être l'un des plus arides du monde ?",
+    "a": [
+      "Le désert d'Atacama",
+      "Le désert de Sonora",
+      "Le désert de Patagonie",
+      "Le désert de Sechura"
+    ],
+    "correct": 0,
+    "e": "Le désert d'Atacama, au Chili, est l'un des endroits les plus secs de la planète.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la ligne imaginaire de référence à 0 degré de longitude ?",
+    "a": [
+      "L'équateur",
+      "Le méridien de Greenwich",
+      "Le tropique du Capricorne",
+      "La ligne de changement de date"
+    ],
+    "correct": 1,
+    "e": "Le méridien de Greenwich, en Angleterre, sert de référence de longitude 0°.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel fleuve d'Afrique traverse la ville de Bamako ?",
+    "a": [
+      "Le Sénégal",
+      "Le Congo",
+      "Le Niger",
+      "Le Nil Blanc"
+    ],
+    "correct": 2,
+    "e": "Le fleuve Niger traverse Bamako, la capitale du Mali.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle formation végétale caractérise les régions polaires sans arbres ?",
+    "a": [
+      "La taïga",
+      "La garrigue",
+      "La savane",
+      "La toundra"
+    ],
+    "correct": 3,
+    "e": "La toundra est une végétation basse (mousses, lichens) des régions froides où les arbres ne poussent pas.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on la couche superficielle solide de la Terre ?",
+    "a": [
+      "La croûte terrestre",
+      "Le manteau",
+      "Le noyau",
+      "Le magma"
+    ],
+    "correct": 0,
+    "e": "La croûte terrestre est la couche externe et rigide de la Terre, sous laquelle se trouve le manteau.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on un plateau élevé entaillé par une rivière profonde, comme le Grand Canyon ?",
+    "a": [
+      "Une gorge",
+      "Un canyon",
+      "Une combe",
+      "Une cluse"
+    ],
+    "correct": 1,
+    "e": "Un canyon est une vallée très encaissée creusée par une rivière dans un plateau.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Dans quel pays se trouve le Grand Canyon ?",
+    "a": [
+      "Le Mexique",
+      "Le Canada",
+      "Les États-Unis",
+      "L'Argentine"
+    ],
+    "correct": 2,
+    "e": "Le Grand Canyon, creusé par le fleuve Colorado, se situe en Arizona, aux États-Unis.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on la zone où une plaque océanique s'enfonce sous une autre plaque ?",
+    "a": [
+      "Une dorsale",
+      "Un horst",
+      "Un rift",
+      "Une zone de subduction"
+    ],
+    "correct": 3,
+    "e": "Dans une zone de subduction, une plaque plonge sous une autre, provoquant séismes et volcans.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on les précipitations saisonnières abondantes du sud de l'Asie ?",
+    "a": [
+      "La mousson",
+      "Le blizzard",
+      "Le foehn",
+      "L'alizé"
+    ],
+    "correct": 0,
+    "e": "La mousson est un régime de vents saisonniers apportant de fortes pluies en Asie du Sud.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on les vents réguliers qui soufflent des tropiques vers l'équateur ?",
+    "a": [
+      "Les moussons",
+      "Les alizés",
+      "Les jets-streams",
+      "Les cyclones"
+    ],
+    "correct": 1,
+    "e": "Les alizés sont des vents constants qui soufflent des hautes pressions tropicales vers l'équateur.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on un vaste plateau de faible altitude en région de socle ancien ?",
+    "a": [
+      "Une plaine alluviale",
+      "Un rift",
+      "Un bouclier",
+      "Une cuvette"
+    ],
+    "correct": 2,
+    "e": "Un bouclier est une vaste étendue de roches très anciennes, comme le bouclier canadien.",
+    "difficulte": 4,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on l'ensemble des cours d'eau alimentant un même fleuve ?",
+    "a": [
+      "Le réseau routier",
+      "Le lit majeur",
+      "L'estuaire",
+      "Le bassin versant"
+    ],
+    "correct": 3,
+    "e": "Le bassin versant est le territoire dont toutes les eaux convergent vers un même fleuve.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel fleuve d'Asie est surnommé le fleuve Bleu ?",
+    "a": [
+      "Le Yangtsé",
+      "Le fleuve Jaune",
+      "Le Mékong",
+      "Le Gange"
+    ],
+    "correct": 0,
+    "e": "Le Yangtsé, plus long fleuve d'Asie, est surnommé le fleuve Bleu.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on un dépôt de sédiments accumulés à l'embouchure d'un fleuve ?",
+    "a": [
+      "Un estuaire",
+      "Un delta",
+      "Une lagune",
+      "Un cône de déjection"
+    ],
+    "correct": 1,
+    "e": "Un delta est une plaine de sédiments en éventail formée là où un fleuve rejoint la mer.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le plus grand océan bordant l'Asie à l'est ?",
+    "a": [
+      "L'océan Indien",
+      "L'océan Atlantique",
+      "L'océan Pacifique",
+      "L'océan Arctique"
+    ],
+    "correct": 2,
+    "e": "L'océan Pacifique borde la façade orientale du continent asiatique.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle est la plus grande forêt tropicale humide du monde ?",
+    "a": [
+      "La forêt du Congo",
+      "La forêt de Sumatra",
+      "La forêt de Bornéo",
+      "La forêt amazonienne"
+    ],
+    "correct": 3,
+    "e": "La forêt amazonienne, en Amérique du Sud, est la plus vaste forêt tropicale humide de la planète.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on une vaste étendue herbeuse tropicale parsemée d'arbres, comme en Afrique ?",
+    "a": [
+      "La savane",
+      "La toundra",
+      "La prairie",
+      "La taïga"
+    ],
+    "correct": 0,
+    "e": "La savane est une formation herbeuse des régions tropicales à saisons sèche et humide.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on une dépression fermée sans écoulement vers la mer ?",
+    "a": [
+      "Un bassin versant",
+      "Un bassin endoréique",
+      "Un estuaire",
+      "Un exutoire"
+    ],
+    "correct": 1,
+    "e": "Un bassin endoréique est une région dont les eaux ne rejoignent pas l'océan mais s'y accumulent ou s'évaporent.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on la déformation des couches rocheuses en plis lors de la formation des montagnes ?",
+    "a": [
+      "La sédimentation",
+      "La subduction",
+      "Le plissement",
+      "L'altération"
+    ],
+    "correct": 2,
+    "e": "Le plissement est la déformation des roches en plis, à l'origine de nombreuses chaînes de montagnes.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel tropique passe par le nord de l'Afrique et le sud de l'Asie ?",
+    "a": [
+      "Le tropique du Capricorne",
+      "L'équateur",
+      "Le cercle polaire arctique",
+      "Le tropique du Cancer"
+    ],
+    "correct": 3,
+    "e": "Le tropique du Cancer se situe dans l'hémisphère nord, à environ 23°5 de latitude.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle est la principale cause des marées sur Terre ?",
+    "a": [
+      "L'attraction de la Lune et du Soleil",
+      "Le vent",
+      "La rotation des courants",
+      "La fonte des glaces"
+    ],
+    "correct": 0,
+    "e": "Les marées résultent surtout de l'attraction gravitationnelle de la Lune, complétée par celle du Soleil.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on un gros bloc de glace détaché d'un glacier et flottant sur la mer ?",
+    "a": [
+      "Une banquise",
+      "Un iceberg",
+      "Un névé",
+      "Une moraine"
+    ],
+    "correct": 1,
+    "e": "Un iceberg est un bloc de glace d'eau douce détaché d'un glacier ou d'une calotte, qui dérive en mer.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on la roche en fusion sous la surface de la Terre ?",
+    "a": [
+      "La lave",
+      "La cendre",
+      "Le magma",
+      "Le basalte"
+    ],
+    "correct": 2,
+    "e": "Le magma est la roche fondue présente sous la surface ; on parle de lave une fois qu'elle a atteint l'air libre.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le nom de la roche fondue une fois qu'elle est sortie d'un volcan ?",
+    "a": [
+      "Le magma",
+      "Le gneiss",
+      "Le tuf",
+      "La lave"
+    ],
+    "correct": 3,
+    "e": "La lave est le magma qui a atteint la surface lors d'une éruption volcanique.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on l'ensemble de la circulation de l'eau entre océans, atmosphère et continents ?",
+    "a": [
+      "Le cycle de l'eau",
+      "Le cycle du carbone",
+      "La marée",
+      "Le ruissellement"
+    ],
+    "correct": 0,
+    "e": "Le cycle de l'eau décrit les échanges permanents d'eau par évaporation, condensation, précipitations et ruissellement.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle grande île se trouve au sud-est de l'Afrique, dans l'océan Indien ?",
+    "a": [
+      "Les Seychelles",
+      "Madagascar",
+      "Zanzibar",
+      "Les Comores"
+    ],
+    "correct": 1,
+    "e": "Madagascar est une grande île de l'océan Indien située au large de l'Afrique de l'Est.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on la limite d'altitude au-delà de laquelle les arbres ne poussent plus ?",
+    "a": [
+      "La limite des neiges",
+      "La ligne de crête",
+      "La limite des arbres",
+      "Le col"
+    ],
+    "correct": 2,
+    "e": "La limite des arbres marque l'altitude au-dessus de laquelle le climat empêche la croissance des arbres.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on un col ou passage naturel permettant de franchir une montagne ?",
+    "a": [
+      "Un pic",
+      "Un plateau",
+      "Un versant",
+      "Un col"
+    ],
+    "correct": 3,
+    "e": "Un col est un point bas d'une crête montagneuse permettant de passer d'un versant à l'autre.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on une vallée en forme de U creusée par un glacier ?",
+    "a": [
+      "Une vallée glaciaire",
+      "Une vallée fluviale",
+      "Un canyon",
+      "Une combe"
+    ],
+    "correct": 0,
+    "e": "Une vallée glaciaire présente un profil en U, contrairement au V des vallées creusées par les rivières.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on la partie d'une montagne exposée à un versant donné ?",
+    "a": [
+      "Le sommet",
+      "Le versant",
+      "La crête",
+      "Le piémont"
+    ],
+    "correct": 1,
+    "e": "Le versant est la pente d'une montagne située d'un côté de la ligne de crête.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on la zone de basse altitude au pied d'une montagne ?",
+    "a": [
+      "La crête",
+      "Le col",
+      "Le piémont",
+      "Le talweg"
+    ],
+    "correct": 2,
+    "e": "Le piémont est la région de plaine ou de collines située au pied d'un massif montagneux.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on la ligne qui sépare deux bassins versants ?",
+    "a": [
+      "La ligne de crête",
+      "Le thalweg côtier",
+      "Le talweg",
+      "La ligne de partage des eaux"
+    ],
+    "correct": 3,
+    "e": "La ligne de partage des eaux sépare les territoires dont les eaux s'écoulent vers des fleuves différents.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on une petite mer intérieure très salée entre l'Asie et l'Afrique ?",
+    "a": [
+      "La mer Rouge",
+      "La mer Noire",
+      "La mer d'Aral",
+      "La mer de Marmara"
+    ],
+    "correct": 0,
+    "e": "La mer Rouge sépare la péninsule Arabique de l'Afrique du Nord-Est et communique avec l'océan Indien.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle grande dépression d'Afrique de l'Est est bordée de volcans et de lacs ?",
+    "a": [
+      "Le désert du Namib",
+      "Le Rift est-africain",
+      "Le bassin du Congo",
+      "Le plateau éthiopien"
+    ],
+    "correct": 1,
+    "e": "Le Rift est-africain est une vaste zone d'écartement de plaques, jalonnée de volcans et de grands lacs.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on la distance angulaire d'un lieu par rapport à l'équateur ?",
+    "a": [
+      "La longitude",
+      "L'altitude",
+      "La latitude",
+      "L'azimut"
+    ],
+    "correct": 2,
+    "e": "La latitude mesure la position nord ou sud d'un lieu par rapport à l'équateur.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on un relief tabulaire, c'est-à-dire un plateau à sommet plat et bords escarpés ?",
+    "a": [
+      "Une doline",
+      "Une butte témoin",
+      "Une cuesta",
+      "Une mesa"
+    ],
+    "correct": 3,
+    "e": "Une mesa est un plateau à sommet plat et à versants abrupts, fréquent dans les régions arides.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel vent froid et sec souffle du nord vers la vallée du Rhône, en France ?",
+    "a": [
+      "Le mistral",
+      "Le sirocco",
+      "Le foehn",
+      "L'autan"
+    ],
+    "correct": 0,
+    "e": "Le mistral est un vent froid et sec qui descend la vallée du Rhône vers la Méditerranée.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on une grande vague provoquée par un séisme sous-marin ?",
+    "a": [
+      "Un raz-de-marée classique",
+      "Un tsunami",
+      "Une houle",
+      "Un mascaret"
+    ],
+    "correct": 1,
+    "e": "Un tsunami est une vague de grande ampleur généralement causée par un séisme sous-marin.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle est la principale source d'énergie qui met en mouvement l'atmosphère et le climat ?",
+    "a": [
+      "Le noyau terrestre",
+      "La Lune",
+      "Le Soleil",
+      "Les marées"
+    ],
+    "correct": 2,
+    "e": "Le rayonnement solaire est le moteur principal des vents, des courants et du climat terrestre.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on un cours d'eau temporaire à sec la plupart de l'année, typique des déserts ?",
+    "a": [
+      "Une chott",
+      "Un erg",
+      "Un reg",
+      "Un oued"
+    ],
+    "correct": 3,
+    "e": "Un oued est le lit d'un cours d'eau désertique qui ne s'écoule qu'occasionnellement après des pluies.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel type de climat, aux hivers froids et étés chauds, règne à l'intérieur des grands continents ?",
+    "a": [
+      "Le climat continental",
+      "Le climat océanique",
+      "Le climat tropical",
+      "Le climat polaire"
+    ],
+    "correct": 0,
+    "e": "Le climat continental présente de forts écarts de température entre hivers froids et étés chauds.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on une zone humide côtière peuplée d'arbres adaptés à l'eau salée, en région tropicale ?",
+    "a": [
+      "Une lagune",
+      "Une mangrove",
+      "Un marais salant",
+      "Une tourbière"
+    ],
+    "correct": 1,
+    "e": "La mangrove est une forêt littorale tropicale composée d'arbres, comme les palétuviers, adaptés à l'eau salée.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on le mouvement de montée du niveau de la mer sur les côtes durant la journée ?",
+    "a": [
+      "Le jusant",
+      "Le reflux",
+      "Le flux (marée montante)",
+      "Le mascaret"
+    ],
+    "correct": 2,
+    "e": "Le flux, ou marée montante, désigne la montée des eaux vers le rivage.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel fleuve traverse l'Espagne et le Portugal avant de rejoindre l'Atlantique à Lisbonne ?",
+    "a": [
+      "L'Èbre",
+      "Le Douro",
+      "Le Guadalquivir",
+      "Le Tage"
+    ],
+    "correct": 3,
+    "e": "Le Tage, le plus long fleuve de la péninsule Ibérique, se jette dans l'Atlantique à Lisbonne.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel massif montagneux domine l'ouest de l'Amérique du Nord ?",
+    "a": [
+      "Les montagnes Rocheuses",
+      "Les Appalaches",
+      "La Sierra Madre",
+      "Les Laurentides"
+    ],
+    "correct": 0,
+    "e": "Les montagnes Rocheuses s'étendent sur l'ouest des États-Unis et du Canada.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le nom du plus haut sommet d'Amérique du Sud ?",
+    "a": [
+      "Le Chimborazo",
+      "L'Aconcagua",
+      "L'Ojos del Salado",
+      "Le Huascarán"
+    ],
+    "correct": 1,
+    "e": "L'Aconcagua, en Argentine, culmine à environ 6 960 mètres, plus haut sommet des Andes et des Amériques.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel grand lac d'Amérique du Sud, situé sur l'Altiplano, est le plus haut lac navigable notable ?",
+    "a": [
+      "Le lac Poopó",
+      "Le lac Maracaibo",
+      "Le lac Titicaca",
+      "La lagune de Mar Chiquita"
+    ],
+    "correct": 2,
+    "e": "Le lac Titicaca, entre le Pérou et la Bolivie, se situe à environ 3 800 mètres d'altitude.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la zone de contact entre deux masses d'air aux caractéristiques différentes ?",
+    "a": [
+      "Un anticyclone",
+      "Un alizé",
+      "Une dépression",
+      "Un front"
+    ],
+    "correct": 3,
+    "e": "Un front est la limite entre deux masses d'air, par exemple chaude et froide, souvent associée à des perturbations.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on une zone de basses pressions souvent associée à un temps perturbé ?",
+    "a": [
+      "Une dépression",
+      "Un anticyclone",
+      "Un alizé",
+      "Un mascaret"
+    ],
+    "correct": 0,
+    "e": "Une dépression est une zone de basses pressions, généralement liée à des nuages, du vent et des pluies.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on une chute d'eau importante sur le cours d'un fleuve ?",
+    "a": [
+      "Un rapide",
+      "Une cataracte",
+      "Une cascade",
+      "Un méandre"
+    ],
+    "correct": 1,
+    "e": "Une cataracte est une grande chute d'eau, comme les cataractes du Nil.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quelles célèbres chutes d'eau se trouvent à la frontière du Canada et des États-Unis ?",
+    "a": [
+      "Les chutes Victoria",
+      "Les chutes d'Iguaçu",
+      "Les chutes du Niagara",
+      "Les chutes Angel"
+    ],
+    "correct": 2,
+    "e": "Les chutes du Niagara se situent à la frontière entre l'État de New York et l'Ontario.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel massif montagneux jeune sépare l'Espagne du reste de l'Europe ?",
+    "a": [
+      "Les Alpes",
+      "Les Cantabriques",
+      "La sierra Nevada",
+      "Les Pyrénées"
+    ],
+    "correct": 3,
+    "e": "Les Pyrénées séparent la péninsule Ibérique du reste du continent européen.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel désert froid couvre une grande partie de l'Asie centrale et du plateau iranien ?",
+    "a": [
+      "Le Karakoum",
+      "Le Taklamakan",
+      "Le désert de Thar",
+      "Le désert de Nubie"
+    ],
+    "correct": 0,
+    "e": "Le Karakoum est un vaste désert d'Asie centrale, situé principalement au Turkménistan.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment nomme-t-on une île reliée au continent par une étroite bande de sable ?",
+    "a": [
+      "Un atoll",
+      "Un tombolo",
+      "Un cordon dunaire",
+      "Un isthme rocheux"
+    ],
+    "correct": 1,
+    "e": "Un tombolo est un cordon de sable reliant une île à la terre ferme, comme au Mont-Saint-Michel jadis.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on la partie basse et évasée d'une vallée où coule un cours d'eau ?",
+    "a": [
+      "Le versant",
+      "La crête",
+      "Le talweg",
+      "Le col"
+    ],
+    "correct": 2,
+    "e": "Le talweg est la ligne de plus grande pente au fond d'une vallée, souvent suivie par le cours d'eau.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on une éruption volcanique caractérisée par de violentes explosions et des nuées ardentes ?",
+    "a": [
+      "Une éruption effusive",
+      "Une éruption sous-marine",
+      "Une éruption fissurale",
+      "Une éruption explosive"
+    ],
+    "correct": 3,
+    "e": "Une éruption explosive projette gaz, cendres et parfois des nuées ardentes, comme au Vésuve.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel volcan est le plus haut d'Europe et se situe en Sicile ?",
+    "a": [
+      "L'Etna",
+      "Le Vésuve",
+      "Le Stromboli",
+      "Le Vulcano"
+    ],
+    "correct": 0,
+    "e": "L'Etna, en Sicile, est le plus haut volcan actif d'Europe.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on la vaste zone du Pacifique bordée de nombreux volcans et séismes ?",
+    "a": [
+      "La dorsale médio-atlantique",
+      "La ceinture de feu du Pacifique",
+      "Le triangle des Bermudes",
+      "Le Rift africain"
+    ],
+    "correct": 1,
+    "e": "La ceinture de feu du Pacifique concentre l'essentiel des volcans et séismes du globe autour de cet océan.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel fleuve traverse la ville de Rome ?",
+    "a": [
+      "Le Pô",
+      "L'Arno",
+      "Le Tibre",
+      "L'Adige"
+    ],
+    "correct": 2,
+    "e": "Le Tibre traverse Rome avant de se jeter dans la mer Tyrrhénienne.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on l'eau souterraine contenue dans les roches poreuses du sous-sol ?",
+    "a": [
+      "Une source",
+      "Un exutoire",
+      "Un aquifère de surface",
+      "Une nappe phréatique"
+    ],
+    "correct": 3,
+    "e": "La nappe phréatique est une réserve d'eau souterraine logée dans les roches perméables du sous-sol.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le plus long fleuve d'Amérique du Nord ?",
+    "a": [
+      "Le Missouri-Mississippi",
+      "Le Colorado",
+      "Le Saint-Laurent",
+      "Le Yukon"
+    ],
+    "correct": 0,
+    "e": "Le système Missouri-Mississippi est le plus long réseau fluvial d'Amérique du Nord.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel continent est presque entièrement recouvert de glace ?",
+    "a": [
+      "L'Amérique du Nord",
+      "L'Antarctique",
+      "L'Asie",
+      "L'Océanie"
+    ],
+    "correct": 1,
+    "e": "L'Antarctique est recouvert à près de 98 % par une épaisse calotte de glace.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on la neige tassée en cours de transformation en glace de glacier ?",
+    "a": [
+      "La banquise",
+      "La moraine",
+      "Le névé",
+      "Le pergélisol"
+    ],
+    "correct": 2,
+    "e": "Le névé est de la neige compactée, étape intermédiaire avant la formation de la glace de glacier.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on un bras de mer étroit reliant deux étendues d'eau plus vastes ?",
+    "a": [
+      "Un golfe",
+      "Une lagune",
+      "Une baie",
+      "Un détroit"
+    ],
+    "correct": 3,
+    "e": "Un détroit est un passage maritime resserré entre deux terres, reliant deux mers ou océans.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel fleuve d'Afrique centrale possède le deuxième plus grand débit du monde ?",
+    "a": [
+      "Le Congo",
+      "Le Niger",
+      "Le Zambèze",
+      "Le Nil"
+    ],
+    "correct": 0,
+    "e": "Le fleuve Congo, en Afrique centrale, a le deuxième débit mondial après l'Amazone.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel phénomène explique l'alternance des saisons sur Terre ?",
+    "a": [
+      "La distance variable au Soleil",
+      "L'inclinaison de l'axe de la Terre",
+      "La rotation de la Lune",
+      "Les marées"
+    ],
+    "correct": 1,
+    "e": "L'inclinaison de l'axe terrestre par rapport au plan de son orbite est à l'origine des saisons.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on une étendue plate mais surélevée par rapport aux régions voisines ?",
+    "a": [
+      "Une plaine",
+      "Une vallée",
+      "Un plateau",
+      "Une dépression"
+    ],
+    "correct": 2,
+    "e": "Un plateau est une surface relativement plane mais située en hauteur, souvent entaillée par des vallées.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le point culminant du continent nord-américain ?",
+    "a": [
+      "Le mont Whitney",
+      "Le pic d'Orizaba",
+      "Le mont Logan",
+      "Le Denali (mont McKinley)"
+    ],
+    "correct": 3,
+    "e": "Le Denali, en Alaska, est le plus haut sommet d'Amérique du Nord avec environ 6 190 mètres.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel très grand fleuve de Sibérie se jette dans l'océan Arctique ?",
+    "a": [
+      "L'Ienisseï",
+      "Le Danube",
+      "Le Rhin",
+      "La Volga"
+    ],
+    "correct": 0,
+    "e": "L'Ienisseï est l'un des grands fleuves de Sibérie qui s'écoulent vers l'océan Arctique.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on les grandes profondeurs océaniques planes et sombres ?",
+    "a": [
+      "Le plateau continental",
+      "La plaine abyssale",
+      "La dorsale",
+      "Le talus continental"
+    ],
+    "correct": 1,
+    "e": "Les plaines abyssales sont de vastes étendues planes situées à grande profondeur au fond des océans.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on la mesure de la quantité de vapeur d'eau contenue dans l'air ?",
+    "a": [
+      "La pression",
+      "La température",
+      "L'humidité",
+      "L'altitude"
+    ],
+    "correct": 2,
+    "e": "L'humidité mesure la quantité de vapeur d'eau présente dans l'atmosphère.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Quel océan a été récemment reconnu comme entourant le continent Antarctique ?",
+    "a": [
+      "L'océan Arctique",
+      "L'océan Pacifique",
+      "L'océan Indien",
+      "L'océan Austral"
+    ],
+    "correct": 3,
+    "e": "L'océan Austral entoure l'Antarctique et est parfois considéré comme le cinquième océan.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on un cours d'eau rapide et pentu de montagne ?",
+    "a": [
+      "Un torrent",
+      "Un fleuve",
+      "Un canal",
+      "Un estuaire"
+    ],
+    "correct": 0,
+    "e": "Un torrent est un cours d'eau de montagne à forte pente et au débit très variable.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la zone de transition entre le désert et les régions plus humides, comme au sud du Sahara ?",
+    "a": [
+      "La toundra",
+      "Le Sahel",
+      "La pampa",
+      "La taïga"
+    ],
+    "correct": 1,
+    "e": "Le Sahel est une bande semi-aride séparant le Sahara des régions plus humides d'Afrique de l'Ouest.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on une grande plaine herbeuse tempérée d'Argentine ?",
+    "a": [
+      "La toundra",
+      "La savane",
+      "La pampa",
+      "La lande"
+    ],
+    "correct": 2,
+    "e": "La pampa est une vaste plaine herbeuse fertile d'Amérique du Sud, notamment en Argentine.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel est le deuxième plus haut sommet du monde, situé dans le Karakoram ?",
+    "a": [
+      "Le Lhotse",
+      "Le Cho Oyu",
+      "Le Makalu",
+      "Le K2"
+    ],
+    "correct": 3,
+    "e": "Le K2, dans le Karakoram, culmine à environ 8 611 mètres, ce qui en fait le deuxième sommet mondial.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel plateau très élevé d'Asie est surnommé le toit du monde ?",
+    "a": [
+      "Le plateau du Tibet",
+      "Le plateau iranien",
+      "Le plateau du Deccan",
+      "Le plateau anatolien"
+    ],
+    "correct": 0,
+    "e": "Le plateau du Tibet, très haut en altitude, est souvent appelé le toit du monde.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on l'ensemble des terres émergées et immergées formant le socle d'un continent ?",
+    "a": [
+      "La croûte océanique",
+      "La croûte continentale",
+      "Le manteau supérieur",
+      "La dorsale"
+    ],
+    "correct": 1,
+    "e": "La croûte continentale, plus épaisse et plus légère que la croûte océanique, constitue les continents.",
+    "difficulte": 4,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on la baisse de la température de l'air avec l'altitude en montagne ?",
+    "a": [
+      "L'inversion thermique",
+      "Le réchauffement adiabatique",
+      "Le gradient thermique d'altitude",
+      "L'effet de foehn"
+    ],
+    "correct": 2,
+    "e": "En moyenne, la température diminue avec l'altitude, ce qui explique le froid et la neige en haute montagne.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on le vaste estuaire commun de la Garonne et de la Dordogne, en France ?",
+    "a": [
+      "La rade de Brest",
+      "La baie de Somme",
+      "Le golfe du Morbihan",
+      "L'estuaire de la Gironde"
+    ],
+    "correct": 3,
+    "e": "L'estuaire de la Gironde, le plus grand d'Europe occidentale, est formé par la Garonne et la Dordogne.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on une avancée de la mer dans les terres, plus large qu'une baie ?",
+    "a": [
+      "Un golfe",
+      "Un cap",
+      "Un isthme",
+      "Un delta"
+    ],
+    "correct": 0,
+    "e": "Un golfe est une vaste échancrure de la côte où la mer pénètre dans les terres.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on une petite avancée de la mer dans les terres, souvent abritée ?",
+    "a": [
+      "Un cap",
+      "Une baie",
+      "Un plateau",
+      "Une dorsale"
+    ],
+    "correct": 1,
+    "e": "Une baie est une échancrure de la côte, généralement plus modeste qu'un golfe.",
+    "difficulte": 2,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le mouvement lent des plaques tectoniques à la surface du globe ?",
+    "a": [
+      "L'érosion différentielle",
+      "La sédimentation",
+      "La tectonique des plaques",
+      "La météorisation"
+    ],
+    "correct": 2,
+    "e": "La tectonique des plaques décrit le déplacement des plaques rigides à l'origine des séismes et volcans.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la ligne où le ciel semble rejoindre la mer ou la terre au loin ?",
+    "a": [
+      "Le zénith",
+      "Le méridien",
+      "Le nadir",
+      "L'horizon"
+    ],
+    "correct": 3,
+    "e": "L'horizon est la ligne apparente où le ciel et la surface terrestre ou marine semblent se rencontrer.",
+    "difficulte": 1,
+    "generalite": 4
+  },
+  {
+    "q": "Quel grand fleuve d'Afrique australe forme les chutes Victoria ?",
+    "a": [
+      "Le Zambèze",
+      "Le Congo",
+      "L'Orange",
+      "Le Limpopo"
+    ],
+    "correct": 0,
+    "e": "Le Zambèze forme les célèbres chutes Victoria à la frontière entre la Zambie et le Zimbabwe.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel type de roche, issu de dépôts accumulés puis compactés, contient souvent des fossiles ?",
+    "a": [
+      "Une roche magmatique",
+      "Une roche sédimentaire",
+      "Une roche volcanique",
+      "Une roche plutonique"
+    ],
+    "correct": 1,
+    "e": "Les roches sédimentaires, formées par accumulation de dépôts, renferment fréquemment des fossiles.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel fleuve, le plus long de France, se jette dans l'océan Atlantique près de Saint-Nazaire ?",
+    "a": [
+      "La Seine",
+      "La Garonne",
+      "La Loire",
+      "Le Rhône"
+    ],
+    "correct": 2,
+    "e": "La Loire, plus long fleuve de France, se jette dans l'Atlantique au niveau de l'estuaire de Saint-Nazaire.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on les régions situées entre les tropiques et les cercles polaires ?",
+    "a": [
+      "Les zones arides",
+      "Les zones équatoriales",
+      "Les zones polaires",
+      "Les zones tempérées"
+    ],
+    "correct": 3,
+    "e": "Les zones tempérées, entre tropiques et cercles polaires, connaissent des saisons marquées.",
+    "difficulte": 3,
+    "generalite": 2
+  },
+  {
+    "q": "Quel massif montagneux abrite le mont Cervin, célèbre pour sa forme pyramidale ?",
+    "a": [
+      "Les Alpes",
+      "Les Pyrénées",
+      "Les Carpates",
+      "Les Apennins"
+    ],
+    "correct": 0,
+    "e": "Le Cervin, à la frontière entre la Suisse et l'Italie, est l'un des sommets emblématiques des Alpes.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel désert côtier extrêmement aride longe l'océan Atlantique en Namibie ?",
+    "a": [
+      "Le Kalahari",
+      "Le Namib",
+      "Le Karoo",
+      "Le Danakil"
+    ],
+    "correct": 1,
+    "e": "Le désert du Namib, l'un des plus anciens du monde, borde la côte atlantique de la Namibie.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Comment appelle-t-on la ligne imaginaire reliant les points de même altitude sur une carte ?",
+    "a": [
+      "Une isobare",
+      "Un méridien",
+      "Une courbe de niveau",
+      "Un parallèle"
+    ],
+    "correct": 2,
+    "e": "Les courbes de niveau relient sur une carte les points situés à la même altitude, figurant le relief.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le plus grand golfe du monde, bordant plusieurs pays du sud de l'Asie ?",
+    "a": [
+      "Le golfe Persique",
+      "Le golfe d'Oman",
+      "Le golfe de Guinée",
+      "Le golfe du Bengale"
+    ],
+    "correct": 3,
+    "e": "Le golfe du Bengale, dans l'océan Indien, borde notamment l'Inde, le Bangladesh et la Birmanie.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel grand fleuve d'Amérique du Sud se jette dans l'Atlantique par un estuaire au nord du Venezuela ?",
+    "a": [
+      "L'Orénoque",
+      "L'Amazone",
+      "Le Paraná",
+      "Le Magdalena"
+    ],
+    "correct": 0,
+    "e": "L'Orénoque draine une grande partie du Venezuela et de la Colombie avant de rejoindre l'Atlantique.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel fleuve d'Afrique de l'Ouest décrit une vaste boucle avant de se jeter dans le golfe de Guinée ?",
+    "a": [
+      "Le Sénégal",
+      "Le Niger",
+      "Le Congo",
+      "La Volta"
+    ],
+    "correct": 1,
+    "e": "Le fleuve Niger décrit une grande boucle traversant plusieurs pays avant de rejoindre le golfe de Guinée.",
+    "difficulte": 4,
+    "generalite": 2
+  }
+]

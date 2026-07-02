@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { loadGame } from '../../store/persistence';
 import { SUBJECTS, SUBJECT_KEYS, MODULES } from '../../data/subjects';
+import { THEME_ROOTS } from '../../data/themes';
 import { getMinigame, getDefaultMinigame } from '../Fight/minigames';
 import { ITEMS } from '../../data/items';
 import LootReveal from '../Modals/LootReveal';
@@ -132,6 +133,11 @@ const TOOLS_CODE = '54150';
 export default function Setup() {
   const T = useT();
   const startGame = useGameStore((s) => s.startGame);
+  const openCompose = useGameStore((s) => s.openCompose);
+  // S'abonne à la version des données pour ré-afficher le bouton « Composer »
+  // dès que l'arbre de thèmes est chargé (cache/refresh async).
+  const dataVersion = useGameStore((s) => s.questionsVersion);
+  const themesReady = dataVersion != null && THEME_ROOTS.length > 0;
   const resumeGame = useGameStore((s) => s.resumeGame);
   const extensions = useGameStore((s) => s.extensions);
   const itemsOn = extOn(extensions, 'equipment');
@@ -268,6 +274,11 @@ export default function Setup() {
             {hasSave && (
               <button onClick={resumeGame} className="btn btn--blue btn--sm">
                 {T('setup.resumeShort')}
+              </button>
+            )}
+            {!phoneMode && themesReady && (
+              <button type="button" onClick={openCompose} className="btn btn--ghost btn--sm" title="Nouvel écran de sélection (beta)">
+                📼 Composer (beta)
               </button>
             )}
             {!phoneMode && (

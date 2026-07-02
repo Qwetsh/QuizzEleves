@@ -1,9 +1,14 @@
+import { lazy, Suspense } from 'react';
 import { useGameStore } from './store/gameStore';
 import { AnimatePresence, motion } from 'framer-motion';
 import { setLang } from './i18n';
 import Setup from './components/Setup/Setup';
 import PowerSetup from './components/Setup/PowerSetup';
 import GameLayout from './components/Game/GameLayout';
+
+// Écran de sélection « lecteur de cassettes » (beta) : paresseux, hors du bundle
+// principal du jeu (cf. openCompose / phase 'compose').
+const SelectionCassettes = lazy(() => import('./components/Setup/SelectionCassettes'));
 
 const pageVariants = {
   initial: { opacity: 0, scale: 0.96 },
@@ -29,6 +34,11 @@ export default function App() {
         {phase === 'setup' && (
           <motion.div key="setup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
             <Setup />
+          </motion.div>
+        )}
+        {phase === 'compose' && (
+          <motion.div key="compose" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
+            <Suspense fallback={null}><SelectionCassettes live /></Suspense>
           </motion.div>
         )}
         {phase === 'powerSelect' && (

@@ -5,6 +5,9 @@ import MobileApp from './components/Mobile/MobileApp';
 // Dashboard d'analyse (?analyse) : chargé paresseusement (jamais embarqué dans
 // le chemin élève/jeu si on n'ouvre pas l'URL).
 const DashboardApp = lazy(() => import('./components/Dashboard/DashboardApp'));
+// Preview autonome du nouvel écran de sélection « Lecteur de cassettes » (?cassettes) :
+// données mock, non câblé au jeu. Paresseux pour ne pas l'embarquer dans le flux TBI.
+const CassettesPreview = lazy(() => import('./components/Setup/SelectionCassettes'));
 // Polices auto-hébergées (bundlées) au lieu du CDN Google Fonts : fonctionnent
 // hors ligne et évitent tout appel réseau. Familles : Lilita One (display),
 // Fredoka (UI), Inter (corps) — cf. --font-display/--font-ui/--font-body.
@@ -25,6 +28,7 @@ import { applyCachedEvents, refreshEvents } from './logic/eventsConfig';
 import { applyCachedQuestions, refreshQuestions } from './logic/questionsConfig';
 import { applyCachedRecipes, refreshRecipes } from './logic/recipesConfig';
 import { applyCachedCategories, refreshCategories } from './logic/categoriesConfig';
+import { applyCachedThemes, refreshThemes } from './logic/themesConfig';
 import { useGameStore } from './store/gameStore';
 
 // Le companion mobile s'ouvre via l'URL d'appairage (?join=CODE) : c'est une
@@ -33,6 +37,8 @@ const params = new URLSearchParams(window.location.search);
 const joinMode = params.has('join');
 // Dashboard d'analyse : vue dédiée, hors flux de jeu (nécessite Supabase).
 const analyseMode = params.has('analyse');
+// Preview de l'écran de sélection cassettes : autonome, aucune donnée requise.
+const cassettesMode = params.has('cassettes');
 
 // Build hors ligne : aucun appel réseau, données figées dans le bundle. Le test
 // littéral (et non un import) garantit que cette branche — et donc l'instantané
@@ -45,6 +51,8 @@ if (import.meta.env.VITE_OFFLINE === '1') {
     st.syncEnabledEvents();
     st.bumpQuestionsVersion();
   });
+} else if (cassettesMode) {
+  // Preview mock : rien à charger.
 } else if (joinMode || analyseMode) {
   // Mobile / dashboard : catalogue d'objets (noms/images) + recettes + équilibrage
   // (noms de pouvoirs) pour résoudre ITEMS/POWERS dans les libellés.
@@ -65,6 +73,13 @@ if (import.meta.env.VITE_OFFLINE === '1') {
   // Catégories/modules d'abord (le plateau et la sélection des matières en dépendent).
   applyCachedCategories();
   refreshCategories()
+    .then((n) => { if (n) useGameStore.getState().bumpQuestionsVersion(); })
+    .catch(() => {});
+
+  // Arbre de thèmes (table quete_themes) : alimente l'écran de sélection « cassettes »
+  // (beta). Après les catégories, car les feuilles référencent des categories.
+  applyCachedThemes();
+  refreshThemes()
     .then((n) => { if (n) useGameStore.getState().bumpQuestionsVersion(); })
     .catch(() => {});
 
@@ -96,6 +111,7 @@ if (import.meta.env.VITE_OFFLINE === '1') {
 
 function Root() {
   if (import.meta.env.VITE_OFFLINE === '1') return <App />;
+  if (cassettesMode) return <Suspense fallback={null}><CassettesPreview /></Suspense>;
   if (analyseMode) return <Suspense fallback={null}><DashboardApp /></Suspense>;
   if (joinMode) return <MobileApp />;
   return <App />;

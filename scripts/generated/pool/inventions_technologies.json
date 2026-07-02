@@ -1,0 +1,1627 @@
+[
+  {
+    "q": "Qui a mis au point le premier procédé industriel d'imprimerie à caractères mobiles en Europe vers 1450 ?",
+    "a": [
+      "Galilée",
+      "Nicolas Copernic",
+      "Léonard de Vinci",
+      "Johannes Gutenberg"
+    ],
+    "correct": 3,
+    "e": "Johannes Gutenberg développa vers 1450 l'imprimerie à caractères mobiles métalliques, révolutionnant la diffusion des livres.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quelle invention est attribuée aux frères Lumière en 1895 ?",
+    "a": [
+      "Le cinématographe",
+      "La radio",
+      "La photographie",
+      "Le téléphone"
+    ],
+    "correct": 0,
+    "e": "Louis et Auguste Lumière brevetèrent le cinématographe et organisèrent la première projection publique payante en 1895.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel physicien italien est considéré comme l'inventeur de la pile électrique en 1800 ?",
+    "a": [
+      "Enrico Fermi",
+      "Guglielmo Marconi",
+      "Luigi Galvani",
+      "Alessandro Volta"
+    ],
+    "correct": 3,
+    "e": "Alessandro Volta inventa la pile voltaïque en 1800, première source de courant électrique continu.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Qui a déposé le brevet du téléphone en 1876 aux États-Unis ?",
+    "a": [
+      "Alexander Graham Bell",
+      "Nikola Tesla",
+      "Thomas Edison",
+      "Samuel Morse"
+    ],
+    "correct": 0,
+    "e": "Alexander Graham Bell obtint le brevet du téléphone en 1876, bien que la paternité reste débattue.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quelle invention majeure Thomas Edison a-t-il perfectionnée pour la rendre commercialisable en 1879 ?",
+    "a": [
+      "Le télégraphe",
+      "La dynamo",
+      "Le moteur électrique",
+      "La lampe à incandescence"
+    ],
+    "correct": 3,
+    "e": "Edison mit au point une lampe à incandescence durable en 1879, favorisant l'éclairage électrique domestique.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel savant français a inventé le procédé de conservation des aliments par la chaleur qui porte son nom ?",
+    "a": [
+      "Louis Pasteur",
+      "Antoine Lavoisier",
+      "Claude Bernard",
+      "Marie Curie"
+    ],
+    "correct": 0,
+    "e": "La pasteurisation, mise au point par Louis Pasteur, détruit les micro-organismes par chauffage modéré.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Qui a inventé le paratonnerre au XVIIIe siècle ?",
+    "a": [
+      "James Watt",
+      "Benjamin Franklin",
+      "Isaac Newton",
+      "Michael Faraday"
+    ],
+    "correct": 1,
+    "e": "Benjamin Franklin inventa le paratonnerre vers 1752 après ses expériences sur l'électricité atmosphérique.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle machine James Watt a-t-il grandement perfectionnée au XVIIIe siècle ?",
+    "a": [
+      "La locomotive",
+      "Le moteur à explosion",
+      "La machine à vapeur",
+      "Le métier à tisser"
+    ],
+    "correct": 2,
+    "e": "James Watt améliora la machine à vapeur avec le condenseur séparé, moteur clé de la révolution industrielle.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Qui a réalisé le premier vol motorisé contrôlé en 1903 ?",
+    "a": [
+      "Charles Lindbergh",
+      "Les frères Wright",
+      "Louis Blériot",
+      "Clément Ader"
+    ],
+    "correct": 1,
+    "e": "Orville et Wilbur Wright réussirent le premier vol motorisé et contrôlé le 17 décembre 1903 à Kitty Hawk.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel code de communication utilisant points et traits porte le nom de son inventeur ?",
+    "a": [
+      "Le binaire",
+      "Le braille",
+      "L'ASCII",
+      "Le morse"
+    ],
+    "correct": 3,
+    "e": "Le code morse, développé par Samuel Morse, transmet des lettres via des combinaisons de points et de traits.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quelle Française pionnière de la radioactivité a reçu deux prix Nobel ?",
+    "a": [
+      "Rosalind Franklin",
+      "Lise Meitner",
+      "Marie Curie",
+      "Irène Joliot-Curie"
+    ],
+    "correct": 2,
+    "e": "Marie Curie reçut le Nobel de physique en 1903 puis celui de chimie en 1911 pour ses travaux sur la radioactivité.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel physicien allemand a découvert les rayons X en 1895 ?",
+    "a": [
+      "Albert Einstein",
+      "Wilhelm Röntgen",
+      "Werner Heisenberg",
+      "Max Planck"
+    ],
+    "correct": 1,
+    "e": "Wilhelm Röntgen découvrit les rayons X en 1895, ce qui lui valut le premier prix Nobel de physique en 1901.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Qui est crédité de l'invention de la machine à coudre perfectionnée avec navette, brevetée en 1846 ?",
+    "a": [
+      "Eli Whitney",
+      "Elias Howe",
+      "Barthélemy Thimonnier",
+      "Isaac Singer"
+    ],
+    "correct": 1,
+    "e": "Elias Howe breveta en 1846 une machine à coudre à point noué, principe repris ensuite par Singer.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle invention de Johann Philipp Reis puis d'autres permet de transmettre la voix à distance ?",
+    "a": [
+      "Le mégaphone",
+      "Le télégraphe",
+      "Le phonographe",
+      "Le téléphone"
+    ],
+    "correct": 3,
+    "e": "Le téléphone transmet la voix par signaux électriques, aboutissement de travaux de plusieurs inventeurs au XIXe siècle.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel appareil inventé par Thomas Edison en 1877 permettait d'enregistrer et de reproduire le son ?",
+    "a": [
+      "Le magnétophone",
+      "Le gramophone",
+      "Le microphone",
+      "Le phonographe"
+    ],
+    "correct": 3,
+    "e": "Edison inventa le phonographe en 1877, premier appareil à enregistrer et restituer le son.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Qui a effectué la première traversée en solitaire de l'Atlantique en avion sans escale en 1927 ?",
+    "a": [
+      "Amelia Earhart",
+      "Louis Blériot",
+      "Antoine de Saint-Exupéry",
+      "Charles Lindbergh"
+    ],
+    "correct": 3,
+    "e": "Charles Lindbergh relia New York à Paris en solitaire et sans escale en mai 1927 à bord du Spirit of St. Louis.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel aviateur français a traversé la Manche en avion pour la première fois en 1909 ?",
+    "a": [
+      "Louis Blériot",
+      "Roland Garros",
+      "Clément Ader",
+      "Henri Farman"
+    ],
+    "correct": 0,
+    "e": "Louis Blériot traversa la Manche en avion le 25 juillet 1909, exploit retentissant de l'aviation naissante.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle invention de Gutenberg reposait sur des lettres métalliques réutilisables ?",
+    "a": [
+      "La lithographie",
+      "La sérigraphie",
+      "La gravure sur bois",
+      "Les caractères mobiles"
+    ],
+    "correct": 3,
+    "e": "Les caractères mobiles en métal pouvaient être assemblés et réutilisés pour composer différentes pages.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel ingénieur écossais a donné son nom à l'unité de puissance électrique et mécanique ?",
+    "a": [
+      "André-Marie Ampère",
+      "James Joule",
+      "James Watt",
+      "Georg Ohm"
+    ],
+    "correct": 2,
+    "e": "Le watt, unité de puissance, honore James Watt pour ses travaux sur la machine à vapeur.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel moyen de transport ferroviaire George Stephenson a-t-il développé au début du XIXe siècle ?",
+    "a": [
+      "Le métro",
+      "La locomotive à vapeur",
+      "Le tramway électrique",
+      "Le funiculaire"
+    ],
+    "correct": 1,
+    "e": "George Stephenson construisit des locomotives à vapeur, dont la célèbre Rocket, pionnières du chemin de fer.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle invention de Karl Benz en 1886 est considérée comme la première automobile moderne ?",
+    "a": [
+      "La Ford T",
+      "La Benz Patent-Motorwagen",
+      "La Peugeot Type 2",
+      "La Renault Type A"
+    ],
+    "correct": 1,
+    "e": "Karl Benz breveta en 1886 un véhicule à moteur à combustion interne, souvent vu comme la première automobile.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel constructeur a popularisé la production automobile en série avec la Ford T à partir de 1908 ?",
+    "a": [
+      "Gottlieb Daimler",
+      "Ransom Olds",
+      "Ferdinand Porsche",
+      "Henry Ford"
+    ],
+    "correct": 3,
+    "e": "Henry Ford généralisa la chaîne de montage, rendant l'automobile accessible avec la Ford T.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Qui a inventé le système d'écriture tactile pour aveugles au XIXe siècle ?",
+    "a": [
+      "Valentin Haüy",
+      "Helen Keller",
+      "Charles Barbier",
+      "Louis Braille"
+    ],
+    "correct": 3,
+    "e": "Louis Braille mit au point vers 1825 son système de points en relief permettant la lecture au toucher.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel matériau synthétique inventé par Leo Baekeland en 1907 est considéré comme le premier plastique entièrement artificiel ?",
+    "a": [
+      "Le nylon",
+      "La bakélite",
+      "Le PVC",
+      "Le polystyrène"
+    ],
+    "correct": 1,
+    "e": "La bakélite, créée par Leo Baekeland en 1907, fut le premier plastique thermodurcissable entièrement synthétique.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel physicien italien a envoyé le premier signal de radiotélégraphie transatlantique en 1901 ?",
+    "a": [
+      "Heinrich Hertz",
+      "Guglielmo Marconi",
+      "Alessandro Volta",
+      "Nikola Tesla"
+    ],
+    "correct": 1,
+    "e": "Guglielmo Marconi réussit en 1901 la première transmission radio à travers l'Atlantique.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel physicien allemand a mis en évidence les ondes électromagnétiques dont l'unité de fréquence porte le nom ?",
+    "a": [
+      "Michael Faraday",
+      "James Maxwell",
+      "Wilhelm Röntgen",
+      "Heinrich Hertz"
+    ],
+    "correct": 3,
+    "e": "Heinrich Hertz démontra l'existence des ondes électromagnétiques ; le hertz mesure la fréquence.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle découverte de la pénicilline en 1928 est attribuée à ce médecin britannique ?",
+    "a": [
+      "Robert Koch",
+      "Alexander Fleming",
+      "Louis Pasteur",
+      "Joseph Lister"
+    ],
+    "correct": 1,
+    "e": "Alexander Fleming découvrit fortuitement la pénicilline en 1928, premier antibiotique majeur.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel savant a énoncé les lois du magnétisme et de l'induction électromagnétique au XIXe siècle ?",
+    "a": [
+      "Charles Coulomb",
+      "Georg Ohm",
+      "Blaise Pascal",
+      "Michael Faraday"
+    ],
+    "correct": 3,
+    "e": "Michael Faraday découvrit l'induction électromagnétique en 1831, base des générateurs électriques.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel dispositif Blaise Pascal a-t-il conçu vers 1642 pour effectuer des calculs ?",
+    "a": [
+      "La Pascaline",
+      "La règle à calcul",
+      "La machine analytique",
+      "L'abaque"
+    ],
+    "correct": 0,
+    "e": "La Pascaline, machine à additionner de Blaise Pascal, est l'une des premières calculatrices mécaniques.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel mathématicien britannique a conçu au XIXe siècle la machine analytique, ancêtre de l'ordinateur ?",
+    "a": [
+      "George Boole",
+      "Alan Turing",
+      "Isaac Newton",
+      "Charles Babbage"
+    ],
+    "correct": 3,
+    "e": "Charles Babbage imagina la machine analytique, machine programmable considérée comme ancêtre de l'ordinateur.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle mathématicienne est considérée comme la première programmeuse de l'histoire ?",
+    "a": [
+      "Hedy Lamarr",
+      "Ada Lovelace",
+      "Grace Hopper",
+      "Katherine Johnson"
+    ],
+    "correct": 1,
+    "e": "Ada Lovelace écrivit au XIXe siècle un algorithme pour la machine analytique de Babbage.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel mathématicien britannique a posé les bases théoriques de l'informatique et du calcul avec sa machine abstraite ?",
+    "a": [
+      "Kurt Gödel",
+      "Claude Shannon",
+      "Alan Turing",
+      "John von Neumann"
+    ],
+    "correct": 2,
+    "e": "Alan Turing conçut en 1936 la machine de Turing, modèle théorique fondateur de l'informatique.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel composant électronique inventé en 1947 aux laboratoires Bell a remplacé les tubes à vide ?",
+    "a": [
+      "Le condensateur",
+      "La résistance",
+      "Le transistor",
+      "La diode"
+    ],
+    "correct": 2,
+    "e": "Le transistor, inventé en 1947 par Bardeen, Brattain et Shockley, révolutionna l'électronique.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel réseau, ancêtre d'Internet, fut développé à la fin des années 1960 aux États-Unis ?",
+    "a": [
+      "Usenet",
+      "ARPANET",
+      "Minitel",
+      "Ethernet"
+    ],
+    "correct": 1,
+    "e": "ARPANET, financé par la défense américaine, relia les premiers ordinateurs en 1969 et préfigura Internet.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Qui a inventé le World Wide Web au début des années 1990 ?",
+    "a": [
+      "Tim Berners-Lee",
+      "Vint Cerf",
+      "Bill Gates",
+      "Steve Jobs"
+    ],
+    "correct": 0,
+    "e": "Tim Berners-Lee créa le World Wide Web au CERN en 1989-1991 avec le HTML, l'URL et le HTTP.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel appareil optique inventé au XVIIe siècle Antoni van Leeuwenhoek a-t-il perfectionné pour observer les micro-organismes ?",
+    "a": [
+      "Le périscope",
+      "Le télescope",
+      "Le microscope",
+      "La lunette"
+    ],
+    "correct": 2,
+    "e": "Van Leeuwenhoek perfectionna le microscope et fut le premier à observer des bactéries et protozoaires.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel astronome italien a amélioré la lunette astronomique pour observer le ciel dès 1609 ?",
+    "a": [
+      "Johannes Kepler",
+      "Galilée",
+      "Tycho Brahe",
+      "Copernic"
+    ],
+    "correct": 1,
+    "e": "Galilée perfectionna la lunette et observa les satellites de Jupiter et les phases de Vénus.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel type de moteur Rudolf Diesel a-t-il breveté à la fin du XIXe siècle ?",
+    "a": [
+      "Le moteur électrique",
+      "Le moteur rotatif",
+      "Le moteur à allumage par compression",
+      "Le moteur à essence"
+    ],
+    "correct": 2,
+    "e": "Rudolf Diesel breveta en 1892 un moteur à combustion enflammant le carburant par la seule compression.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel savant danois a découvert en 1820 le lien entre courant électrique et champ magnétique ?",
+    "a": [
+      "Hans Christian Ørsted",
+      "André-Marie Ampère",
+      "Georg Ohm",
+      "Michael Faraday"
+    ],
+    "correct": 0,
+    "e": "Ørsted observa en 1820 qu'un courant dévie une boussole, révélant l'électromagnétisme.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel Français a inventé un des premiers procédés photographiques, le daguerréotype, en 1839 ?",
+    "a": [
+      "Louis Lumière",
+      "Louis Daguerre",
+      "Nadar",
+      "Nicéphore Niépce"
+    ],
+    "correct": 1,
+    "e": "Louis Daguerre présenta le daguerréotype en 1839, procédé photographique donnant une image sur plaque d'argent.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Qui a réalisé vers 1826 la plus ancienne photographie conservée au monde ?",
+    "a": [
+      "Nicéphore Niépce",
+      "William Talbot",
+      "Louis Daguerre",
+      "George Eastman"
+    ],
+    "correct": 0,
+    "e": "Nicéphore Niépce obtint vers 1826 le point de vue du Gras, plus ancienne photographie conservée.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel industriel a lancé l'appareil photo Kodak grand public en 1888 avec le slogan de la simplicité ?",
+    "a": [
+      "Edwin Land",
+      "Louis Daguerre",
+      "George Eastman",
+      "Oskar Barnack"
+    ],
+    "correct": 2,
+    "e": "George Eastman démocratisa la photographie avec l'appareil Kodak et la pellicule souple.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel dispositif électrique André-Marie Ampère a-t-il contribué à théoriser, lui donnant son nom à une unité ?",
+    "a": [
+      "La tension",
+      "La capacité",
+      "La résistance",
+      "Le courant électrique"
+    ],
+    "correct": 3,
+    "e": "L'ampère, unité d'intensité du courant électrique, honore les travaux d'André-Marie Ampère.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle unité de résistance électrique porte le nom d'un physicien allemand ?",
+    "a": [
+      "Le henry",
+      "L'ohm",
+      "Le volt",
+      "Le farad"
+    ],
+    "correct": 1,
+    "e": "L'ohm, unité de résistance électrique, doit son nom à Georg Simon Ohm, auteur de la loi d'Ohm.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel objet du quotidien la fermeture Éclair, brevetée au début du XXe siècle, désigne-t-elle ?",
+    "a": [
+      "Le velcro",
+      "Le bouton pression",
+      "La fermeture à glissière",
+      "L'agrafe"
+    ],
+    "correct": 2,
+    "e": "La fermeture Éclair est une fermeture à glissière perfectionnée par Gideon Sundback vers 1913.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel système d'attache inventé par Georges de Mestral s'inspire des fruits de bardane accrochés au poil ?",
+    "a": [
+      "La fermeture Éclair",
+      "Le velcro",
+      "Le bouton-pression",
+      "L'aimant"
+    ],
+    "correct": 1,
+    "e": "Le velcro, inventé par le Suisse Georges de Mestral, imite les crochets des fruits de bardane.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel appareil ménager la première machine à laver électrique du début du XXe siècle a-t-elle automatisé ?",
+    "a": [
+      "Le séchage",
+      "Le lavage du linge",
+      "Le repassage",
+      "La cuisson"
+    ],
+    "correct": 1,
+    "e": "La machine à laver électrique automatisa l'agitation du linge, allégeant une tâche domestique pénible.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel savant a formulé les équations unifiant l'électricité, le magnétisme et la lumière au XIXe siècle ?",
+    "a": [
+      "James Clerk Maxwell",
+      "Heinrich Hertz",
+      "Michael Faraday",
+      "Isaac Newton"
+    ],
+    "correct": 0,
+    "e": "James Clerk Maxwell unifia électricité et magnétisme et prédit les ondes électromagnétiques.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel type de dispositif Wilhelm Röntgen a-t-il rendu possible en médecine grâce à sa découverte de 1895 ?",
+    "a": [
+      "La radiographie",
+      "L'IRM",
+      "Le scanner à ultrasons",
+      "L'échographie"
+    ],
+    "correct": 0,
+    "e": "Les rayons X découverts par Röntgen permirent la radiographie, visualisant l'intérieur du corps.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel type de lumière cohérente le laser, mis au point en 1960, produit-il ?",
+    "a": [
+      "Une lumière polarisée naturelle",
+      "Une lumière infrarouge diffuse",
+      "Une lumière amplifiée et concentrée",
+      "Une lumière fluorescente"
+    ],
+    "correct": 2,
+    "e": "Le laser, réalisé par Theodore Maiman en 1960, émet une lumière cohérente, monochromatique et directive.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel objet de navigation, inventé en Chine, indique le nord grâce au magnétisme terrestre ?",
+    "a": [
+      "La boussole",
+      "Le gyroscope",
+      "Le sextant",
+      "L'astrolabe"
+    ],
+    "correct": 0,
+    "e": "La boussole, apparue en Chine, utilise une aiguille aimantée qui s'oriente selon le champ magnétique terrestre.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quelle invention chinoise ancienne était utilisée pour les feux d'artifice et plus tard les armes ?",
+    "a": [
+      "La soie",
+      "La porcelaine",
+      "La poudre à canon",
+      "Le papier"
+    ],
+    "correct": 2,
+    "e": "La poudre à canon fut inventée en Chine et employée dans les feux d'artifice avant les usages militaires.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle invention chinoise attribuée à Cai Lun vers l'an 105 a remplacé le papyrus et le parchemin ?",
+    "a": [
+      "La boussole",
+      "L'imprimerie",
+      "Le papier",
+      "L'encre"
+    ],
+    "correct": 2,
+    "e": "Le papier, dont la fabrication est attribuée à Cai Lun vers 105, se répandit ensuite dans le monde entier.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel objet mécanique mesurant le temps, l'horloge à balancier, a été perfectionné au XVIIe siècle par ce savant néerlandais ?",
+    "a": [
+      "Galilée",
+      "Robert Hooke",
+      "Isaac Newton",
+      "Christiaan Huygens"
+    ],
+    "correct": 3,
+    "e": "Christiaan Huygens construisit en 1656 la première horloge à balancier, bien plus précise.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel instrument, le thermomètre à mercure, est associé à ce physicien du XVIIIe siècle ?",
+    "a": [
+      "William Kelvin",
+      "Blaise Pascal",
+      "Daniel Fahrenheit",
+      "Anders Celsius"
+    ],
+    "correct": 2,
+    "e": "Daniel Fahrenheit conçut vers 1714 le thermomètre à mercure et une échelle de température.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle échelle de température, définie à partir de la fusion et de l'ébullition de l'eau, porte le nom d'un astronome suédois ?",
+    "a": [
+      "Rankine",
+      "Kelvin",
+      "Celsius",
+      "Fahrenheit"
+    ],
+    "correct": 2,
+    "e": "L'échelle Celsius, du nom d'Anders Celsius, fixe des repères liés à la glace fondante et à l'eau bouillante.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel vaccin Edward Jenner a-t-il mis au point à la fin du XVIIIe siècle ?",
+    "a": [
+      "Le vaccin contre la variole",
+      "Le vaccin contre la tuberculose",
+      "Le vaccin contre la rougeole",
+      "Le vaccin contre la rage"
+    ],
+    "correct": 0,
+    "e": "Edward Jenner introduisit en 1796 la vaccination contre la variole à partir de la vaccine.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel vaccin contre la rage Louis Pasteur a-t-il expérimenté avec succès en 1885 ?",
+    "a": [
+      "Le vaccin contre le tétanos",
+      "Le vaccin contre la diphtérie",
+      "Le vaccin antirabique",
+      "Le vaccin antivariolique"
+    ],
+    "correct": 2,
+    "e": "Louis Pasteur administra en 1885 son vaccin contre la rage au jeune Joseph Meister.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel appareil d'auscultation Laennec a-t-il inventé en 1816 ?",
+    "a": [
+      "Le tensiomètre",
+      "Le thermomètre médical",
+      "Le stéthoscope",
+      "L'électrocardiographe"
+    ],
+    "correct": 2,
+    "e": "René Laennec inventa le stéthoscope en 1816 pour écouter les bruits du cœur et des poumons.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle technique d'anesthésie s'est développée au milieu du XIXe siècle grâce à l'éther et au chloroforme ?",
+    "a": [
+      "L'hypnose médicale",
+      "La cryothérapie",
+      "L'anesthésie générale",
+      "L'acupuncture"
+    ],
+    "correct": 2,
+    "e": "L'usage de l'éther puis du chloroforme au XIXe siècle permit l'anesthésie générale en chirurgie.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel chirurgien britannique a introduit l'antisepsie en salle d'opération au XIXe siècle ?",
+    "a": [
+      "Robert Koch",
+      "Alexander Fleming",
+      "Ignác Semmelweis",
+      "Joseph Lister"
+    ],
+    "correct": 3,
+    "e": "Joseph Lister généralisa l'antisepsie avec le phénol, réduisant fortement les infections chirurgicales.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel microbiologiste allemand a identifié le bacille de la tuberculose en 1882 ?",
+    "a": [
+      "Paul Ehrlich",
+      "Robert Koch",
+      "Alexander Fleming",
+      "Louis Pasteur"
+    ],
+    "correct": 1,
+    "e": "Robert Koch découvrit en 1882 la bactérie responsable de la tuberculose, le bacille de Koch.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel matériau textile synthétique le nylon a-t-il été développé par la firme DuPont dans les années 1930 ?",
+    "a": [
+      "Une fibre de carbone",
+      "Une fibre polyamide",
+      "Une fibre de verre",
+      "Une fibre de cellulose"
+    ],
+    "correct": 1,
+    "e": "Le nylon, un polyamide mis au point par Wallace Carothers chez DuPont, servit d'abord aux bas et parachutes.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel dispositif la télévision électronique doit-elle notamment aux travaux de cet inventeur des années 1920 ?",
+    "a": [
+      "Guglielmo Marconi",
+      "Philo Farnsworth",
+      "John Logie Baird",
+      "Lee de Forest"
+    ],
+    "correct": 1,
+    "e": "Philo Farnsworth réalisa en 1927 une transmission télévisée entièrement électronique.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet permettant de mesurer la pression atmosphérique Evangelista Torricelli a-t-il inventé en 1643 ?",
+    "a": [
+      "L'altimètre",
+      "Le thermomètre",
+      "L'hygromètre",
+      "Le baromètre"
+    ],
+    "correct": 3,
+    "e": "Torricelli inventa en 1643 le baromètre à mercure, démontrant la pression atmosphérique.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel système de numération de position, avec un zéro, nous vient principalement des mathématiciens indiens ?",
+    "a": [
+      "Le système décimal",
+      "Le système binaire",
+      "Le système romain",
+      "Le système hexadécimal"
+    ],
+    "correct": 0,
+    "e": "Le système décimal de position avec zéro fut développé en Inde puis transmis par les mathématiciens arabes.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel instrument de navigation mesurant la hauteur des astres était utilisé par les marins avant le GPS ?",
+    "a": [
+      "Le sextant",
+      "La boussole",
+      "Le radar",
+      "Le sonar"
+    ],
+    "correct": 0,
+    "e": "Le sextant mesure l'angle entre un astre et l'horizon pour déterminer la position en mer.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel appareil détectant les objets grâce aux ondes radio a été développé avant la Seconde Guerre mondiale ?",
+    "a": [
+      "Le sonar",
+      "Le télémètre",
+      "Le radar",
+      "Le lidar"
+    ],
+    "correct": 2,
+    "e": "Le radar émet des ondes radio et analyse leur écho pour détecter avions et navires à distance.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel système de détection sous-marine utilise la propagation du son dans l'eau ?",
+    "a": [
+      "Le gyroscope",
+      "Le sonar",
+      "Le lidar",
+      "Le radar"
+    ],
+    "correct": 1,
+    "e": "Le sonar émet des ondes sonores et écoute leur écho pour repérer objets et fonds sous l'eau.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel objet, le premier satellite artificiel, fut lancé par l'URSS en 1957 ?",
+    "a": [
+      "Telstar",
+      "Spoutnik 1",
+      "Explorer 1",
+      "Vostok 1"
+    ],
+    "correct": 1,
+    "e": "Spoutnik 1, lancé le 4 octobre 1957, fut le premier satellite artificiel de l'histoire.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel Français a fait décoller les premiers passagers en montgolfière avec son frère en 1783 ?",
+    "a": [
+      "Les frères Voisin",
+      "Les frères Wright",
+      "Les frères Lumière",
+      "Les frères Montgolfier"
+    ],
+    "correct": 3,
+    "e": "Joseph et Étienne de Montgolfier réalisèrent en 1783 les premières ascensions en ballon à air chaud.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel type de four à cuisson rapide utilisant les micro-ondes est né d'une découverte fortuite dans les années 1940 ?",
+    "a": [
+      "Le four à micro-ondes",
+      "Le four à induction",
+      "Le four solaire",
+      "Le four à convection"
+    ],
+    "correct": 0,
+    "e": "Le four à micro-ondes fut découvert par Percy Spencer, qui remarqua qu'un magnétron avait fondu une friandise.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel dispositif de sécurité automobile, la ceinture à trois points, a été popularisé par Volvo en 1959 ?",
+    "a": [
+      "L'airbag",
+      "La ceinture de sécurité",
+      "L'appui-tête",
+      "L'ABS"
+    ],
+    "correct": 1,
+    "e": "La ceinture de sécurité à trois points, conçue par Nils Bohlin chez Volvo, a sauvé de nombreuses vies.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel type de moteur équipe la fusée et fonctionne par éjection de gaz vers l'arrière ?",
+    "a": [
+      "Le moteur électrique",
+      "Le moteur-fusée",
+      "Le moteur à réaction à air",
+      "Le moteur à hélice"
+    ],
+    "correct": 1,
+    "e": "Le moteur-fusée éjecte des gaz à grande vitesse et produit une poussée par réaction, même dans le vide.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel savant américain d'origine serbe a promu le courant alternatif à la fin du XIXe siècle ?",
+    "a": [
+      "Thomas Edison",
+      "Michael Faraday",
+      "Nikola Tesla",
+      "George Westinghouse"
+    ],
+    "correct": 2,
+    "e": "Nikola Tesla développa les systèmes à courant alternatif, adoptés pour le transport de l'électricité.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle invention permit dès le milieu du XXe siècle de stocker et transmettre l'information par bits ?",
+    "a": [
+      "Le calcul binaire électronique",
+      "Le boulier",
+      "Le télégraphe optique",
+      "La carte perforée mécanique"
+    ],
+    "correct": 0,
+    "e": "L'électronique numérique code l'information en bits (0 et 1), fondement des ordinateurs modernes.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel mathématicien a fondé la théorie de l'information en 1948 ?",
+    "a": [
+      "Alan Turing",
+      "Norbert Wiener",
+      "John von Neumann",
+      "Claude Shannon"
+    ],
+    "correct": 3,
+    "e": "Claude Shannon posa en 1948 les bases de la théorie de l'information et de la notion de bit.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel objet la première ampoule à LED de lumière visible, développée dans les années 1960, a-t-elle préfiguré ?",
+    "a": [
+      "Le tube fluorescent",
+      "L'halogène",
+      "L'éclairage à diodes électroluminescentes",
+      "L'incandescence"
+    ],
+    "correct": 2,
+    "e": "La LED, mise au point par Nick Holonyak en 1962, est aujourd'hui à la base de l'éclairage à diodes.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel support de stockage optique lisible au laser s'est imposé pour la musique dans les années 1980 ?",
+    "a": [
+      "La disquette",
+      "Le disque compact",
+      "Le disque dur",
+      "La cassette"
+    ],
+    "correct": 1,
+    "e": "Le disque compact (CD), lu par laser, a diffusé la musique numérique à partir de 1982.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel réseau français de vidéotex a précédé l'usage grand public d'Internet dès 1982 ?",
+    "a": [
+      "Le Minitel",
+      "Le Télétel filaire seul",
+      "Le Numéris",
+      "Le Bi-Bop"
+    ],
+    "correct": 0,
+    "e": "Le Minitel, terminal grand public, offrit annuaire, messageries et services en ligne dès 1982 en France.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel dispositif de fibre optique transmet l'information sous forme de signaux lumineux ?",
+    "a": [
+      "Le fil de cuivre",
+      "L'onde radio",
+      "La fibre optique",
+      "Le câble coaxial"
+    ],
+    "correct": 2,
+    "e": "La fibre optique guide la lumière et transporte des données à très haut débit sur de longues distances.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel système de positionnement par satellites, initialement militaire américain, est utilisé pour la navigation ?",
+    "a": [
+      "Le radar",
+      "Le sonar",
+      "Le GPS",
+      "Le Loran"
+    ],
+    "correct": 2,
+    "e": "Le GPS localise un récepteur grâce à des signaux émis par une constellation de satellites.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel principe physique, l'imprimerie de Gutenberg mise à part, a permis la lithographie inventée en 1796 ?",
+    "a": [
+      "La répulsion entre l'eau et le gras",
+      "La compression thermique",
+      "La photosensibilité de l'argent",
+      "La gravure au burin"
+    ],
+    "correct": 0,
+    "e": "La lithographie, inventée par Senefelder, exploite le fait que l'eau et les corps gras se repoussent.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet la roue, apparue en Mésopotamie, a-t-elle d'abord servi avant le transport ?",
+    "a": [
+      "Le moulin à vent",
+      "Le tour de potier",
+      "La brouette",
+      "L'horloge"
+    ],
+    "correct": 1,
+    "e": "La roue apparut d'abord comme tour de potier avant d'être adaptée aux véhicules vers 3500 av. J.-C.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle machine textile, la navette volante inventée en 1733, a accéléré quel geste ?",
+    "a": [
+      "La teinture",
+      "La filature",
+      "Le cardage",
+      "Le tissage"
+    ],
+    "correct": 3,
+    "e": "La navette volante de John Kay accéléra le tissage et lança la mécanisation de l'industrie textile.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel savant a inventé le télégraphe optique à bras articulés en France à la fin du XVIIIe siècle ?",
+    "a": [
+      "Samuel Morse",
+      "Denis Papin",
+      "André-Marie Ampère",
+      "Claude Chappe"
+    ],
+    "correct": 3,
+    "e": "Claude Chappe déploya dès 1794 un réseau de télégraphe optique à sémaphores entre villes françaises.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel physicien français a inventé le premier appareil de plongée autonome moderne avec Émile Gagnan ?",
+    "a": [
+      "Auguste Piccard",
+      "Paul Bert",
+      "Denis Papin",
+      "Jacques-Yves Cousteau"
+    ],
+    "correct": 3,
+    "e": "Cousteau et Gagnan mirent au point en 1943 le scaphandre autonome à détendeur, l'aqualung.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel physicien a conçu le premier bathyscaphe pour explorer les grands fonds marins ?",
+    "a": [
+      "Jacques-Yves Cousteau",
+      "Auguste Piccard",
+      "William Beebe",
+      "Robert Ballard"
+    ],
+    "correct": 1,
+    "e": "Auguste Piccard conçut le bathyscaphe, engin autonome capable de plonger dans les grandes profondeurs.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel type de propulsion l'ingénieur Frank Whittle a-t-il breveté dans les années 1930 pour l'aviation ?",
+    "a": [
+      "L'hélice à pas variable",
+      "Le statoréacteur à carburant solide",
+      "Le turboréacteur",
+      "Le moteur à pistons"
+    ],
+    "correct": 2,
+    "e": "Frank Whittle breveta le turboréacteur, base de la propulsion à réaction des avions modernes.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet, la première pile rechargeable au plomb, a été inventé par ce physicien français en 1859 ?",
+    "a": [
+      "Georges Leclanché",
+      "Alessandro Volta",
+      "Gaston Planté",
+      "Luigi Galvani"
+    ],
+    "correct": 2,
+    "e": "Gaston Planté inventa en 1859 l'accumulateur au plomb, première batterie rechargeable.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel appareil, le télescope à réflexion, a été construit par ce grand savant anglais vers 1668 ?",
+    "a": [
+      "Isaac Newton",
+      "Johannes Kepler",
+      "Galilée",
+      "Christiaan Huygens"
+    ],
+    "correct": 0,
+    "e": "Isaac Newton construisit vers 1668 un télescope à miroir, évitant les défauts des lentilles.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel dispositif la première compression frigorifique a-t-elle permis dès le XIXe siècle ?",
+    "a": [
+      "La conservation par salaison",
+      "La climatisation solaire",
+      "La production de froid artificiel",
+      "Le chauffage central"
+    ],
+    "correct": 2,
+    "e": "La machine frigorifique à compression permit de produire du froid, révolutionnant conservation et transport.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel savant italien a inventé le baromètre en s'appuyant sur les travaux de Galilée ?",
+    "a": [
+      "Luigi Galvani",
+      "Amedeo Avogadro",
+      "Evangelista Torricelli",
+      "Alessandro Volta"
+    ],
+    "correct": 2,
+    "e": "Torricelli, élève de Galilée, réalisa en 1643 la première expérience de baromètre à mercure.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel physicien français a démontré la pression atmosphérique par une expérience au sommet du Puy de Dôme ?",
+    "a": [
+      "Évangelista Torricelli",
+      "Blaise Pascal",
+      "Antoine Lavoisier",
+      "Denis Papin"
+    ],
+    "correct": 1,
+    "e": "Pascal fit mesurer la hauteur du mercure au Puy de Dôme en 1648, confirmant l'existence de la pression atmosphérique.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel physicien français a inventé un digesteur, ancêtre de l'autocuiseur, au XVIIe siècle ?",
+    "a": [
+      "Antoine Lavoisier",
+      "Nicolas Carnot",
+      "Blaise Pascal",
+      "Denis Papin"
+    ],
+    "correct": 3,
+    "e": "Denis Papin conçut en 1679 le digesteur, cuve fermée à vapeur sous pression, ancêtre de la cocotte-minute.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quelle invention a permis à Louis Pasteur de réfuter la génération spontanée grâce à un col particulier ?",
+    "a": [
+      "Le microscope à immersion",
+      "Le ballon à col de cygne",
+      "L'autoclave",
+      "La chambre de culture"
+    ],
+    "correct": 1,
+    "e": "Le ballon à col de cygne empêchait les micro-organismes d'entrer, réfutant la génération spontanée.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet ordinaire, le stylo à bille, a été breveté par ce Hongrois dans les années 1930 ?",
+    "a": [
+      "George Parker",
+      "László Bíró",
+      "Lewis Waterman",
+      "Marcel Bich"
+    ],
+    "correct": 1,
+    "e": "László Bíró breveta le stylo à bille moderne, dont Marcel Bich fit ensuite un objet de masse.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel industriel français a démocratisé le stylo à bille jetable sous une célèbre marque ?",
+    "a": [
+      "Parker",
+      "Waterman",
+      "László Bíró",
+      "Marcel Bich"
+    ],
+    "correct": 3,
+    "e": "Marcel Bich lança le stylo à bille jetable Bic en 1950, produit bon marché et universel.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel objet la première photographie couleur stable doit-elle notamment aux frères Lumière au début du XXe siècle ?",
+    "a": [
+      "Le calotype",
+      "L'autochrome",
+      "Le Polaroïd",
+      "Le daguerréotype"
+    ],
+    "correct": 1,
+    "e": "Les frères Lumière commercialisèrent en 1907 l'autochrome, premier procédé pratique de photographie couleur.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel appareil de photographie instantanée a été inventé par Edwin Land ?",
+    "a": [
+      "Le Leica",
+      "Le Kodak",
+      "Le Rolleiflex",
+      "Le Polaroïd"
+    ],
+    "correct": 3,
+    "e": "Edwin Land présenta en 1948 le Polaroïd, appareil développant la photo en quelques instants.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel appareil compact 35 mm Oskar Barnack a-t-il conçu, lançant la photographie moderne ?",
+    "a": [
+      "Le Leica",
+      "Le Kodak Brownie",
+      "Le Hasselblad",
+      "Le Polaroïd"
+    ],
+    "correct": 0,
+    "e": "Oskar Barnack conçut le Leica, appareil au format 24x36 qui révolutionna la photographie dans les années 1920.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel savant a découvert la conservation de la masse au cours des réactions chimiques ?",
+    "a": [
+      "John Dalton",
+      "Joseph Priestley",
+      "Dmitri Mendeleïev",
+      "Antoine Lavoisier"
+    ],
+    "correct": 3,
+    "e": "Lavoisier établit à la fin du XVIIIe siècle que rien ne se perd, rien ne se crée dans les réactions chimiques.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel chimiste russe a proposé la classification périodique des éléments en 1869 ?",
+    "a": [
+      "Marie Curie",
+      "Antoine Lavoisier",
+      "Dmitri Mendeleïev",
+      "John Dalton"
+    ],
+    "correct": 2,
+    "e": "Mendeleïev ordonna les éléments dans un tableau périodique et prédit l'existence d'éléments encore inconnus.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel objet permet, depuis l'Antiquité grecque, de démultiplier la force avec des roues et cordes ?",
+    "a": [
+      "L'engrenage",
+      "Le levier hydraulique",
+      "La poulie",
+      "La vis sans fin"
+    ],
+    "correct": 2,
+    "e": "La poulie, connue dès l'Antiquité, permet de soulever des charges en démultipliant l'effort.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel savant grec est associé à la vis d'élévation de l'eau et au principe de la poussée ?",
+    "a": [
+      "Thalès",
+      "Euclide",
+      "Archimède",
+      "Pythagore"
+    ],
+    "correct": 2,
+    "e": "Archimède est associé à la vis sans fin pour élever l'eau et au principe de la poussée qui porte son nom.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel dispositif de calcul manuel à boules coulissantes est utilisé depuis l'Antiquité ?",
+    "a": [
+      "La règle à calcul",
+      "Le boulier",
+      "L'astrolabe",
+      "Le compas"
+    ],
+    "correct": 1,
+    "e": "Le boulier, ou abaque, permet d'effectuer des calculs en déplaçant des boules sur des tiges.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel instrument le mécanisme d'Anticythère, retrouvé en Grèce, servait-il à prédire ?",
+    "a": [
+      "Les récoltes",
+      "Les marées uniquement",
+      "Les séismes",
+      "Les positions astronomiques"
+    ],
+    "correct": 3,
+    "e": "Le mécanisme d'Anticythère, calculateur antique à engrenages, prédisait des phénomènes astronomiques.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet la première montre-bracelet à quartz, commercialisée en 1969, a-t-elle rendu très précis ?",
+    "a": [
+      "La mesure de la pression",
+      "La mesure de la température",
+      "La mesure du temps",
+      "La mesure de l'altitude"
+    ],
+    "correct": 2,
+    "e": "La montre à quartz utilise les vibrations régulières d'un cristal pour mesurer le temps avec précision.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel matériau, le béton armé, associe le béton à quel autre élément pour résister à la traction ?",
+    "a": [
+      "Du bois",
+      "De la pierre",
+      "Des armatures d'acier",
+      "Du verre"
+    ],
+    "correct": 2,
+    "e": "Le béton armé combine béton, résistant à la compression, et acier, résistant à la traction.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel objet, l'ascenseur de sécurité présenté par Elisha Otis en 1854, a rendu possible quelle évolution urbaine ?",
+    "a": [
+      "Les ponts suspendus",
+      "Les tunnels routiers",
+      "Le métro souterrain",
+      "La construction de gratte-ciel"
+    ],
+    "correct": 3,
+    "e": "Le frein de sécurité d'Otis rassura le public et permit l'essor des immeubles de grande hauteur.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel savant anglais a énoncé la loi de la gravitation universelle au XVIIe siècle ?",
+    "a": [
+      "Galilée",
+      "Isaac Newton",
+      "Robert Hooke",
+      "Edmond Halley"
+    ],
+    "correct": 1,
+    "e": "Isaac Newton formula la gravitation universelle, expliquant la chute des corps et le mouvement des planètes.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel dispositif Chester Carlson a-t-il inventé en 1938, à l'origine de la photocopie ?",
+    "a": [
+      "La xérographie",
+      "L'offset",
+      "La sérigraphie",
+      "La lithographie"
+    ],
+    "correct": 0,
+    "e": "Chester Carlson inventa la xérographie, procédé électrostatique à la base des photocopieurs.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet, le code-barres, permet de coder une information lue optiquement par quel moyen ?",
+    "a": [
+      "Un balayage lumineux",
+      "Une puce radio",
+      "Un contact électrique",
+      "Un champ magnétique"
+    ],
+    "correct": 0,
+    "e": "Le code-barres est lu par un faisceau lumineux qui interprète la largeur des barres et espaces.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel savant a formulé le principe selon lequel un corps plongé dans un fluide subit une poussée verticale ?",
+    "a": [
+      "Archimède",
+      "Daniel Bernoulli",
+      "Blaise Pascal",
+      "Isaac Newton"
+    ],
+    "correct": 0,
+    "e": "Le principe d'Archimède énonce qu'un corps immergé reçoit une poussée égale au poids du fluide déplacé.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel instrument optique corrigeant la vue, apparu au Moyen Âge, est composé de deux lentilles montées ?",
+    "a": [
+      "La loupe binoculaire",
+      "Le télescope",
+      "Les lunettes",
+      "Le monocle magnétique"
+    ],
+    "correct": 2,
+    "e": "Les lunettes à verres correcteurs apparurent en Italie vers la fin du XIIIe siècle.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel savant a inventé la première pile à combustible en 1839, produisant de l'électricité à partir d'hydrogène ?",
+    "a": [
+      "Michael Faraday",
+      "Gaston Planté",
+      "Alessandro Volta",
+      "William Grove"
+    ],
+    "correct": 3,
+    "e": "William Grove réalisa en 1839 la première pile à combustible, combinant hydrogène et oxygène.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel type de verre, le verre trempé, est renforcé par un traitement particulier lui donnant quelle propriété ?",
+    "a": [
+      "Une plus grande résistance aux chocs",
+      "Une teinte permanente",
+      "Une conductivité électrique",
+      "Une transparence accrue"
+    ],
+    "correct": 0,
+    "e": "Le verre trempé subit un refroidissement rapide qui le rend plus résistant aux chocs et à la chaleur.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel appareil médical mesurant l'activité électrique du cœur a été mis au point par Willem Einthoven ?",
+    "a": [
+      "Le défibrillateur",
+      "L'électrocardiographe",
+      "Le stéthoscope",
+      "Le tensiomètre"
+    ],
+    "correct": 1,
+    "e": "Willem Einthoven développa l'électrocardiographe au début du XXe siècle, enregistrant l'activité cardiaque.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle technique d'imagerie médicale utilise des ultrasons pour visualiser l'intérieur du corps ?",
+    "a": [
+      "La radiographie",
+      "La scintigraphie",
+      "L'échographie",
+      "La tomographie X"
+    ],
+    "correct": 2,
+    "e": "L'échographie exploite l'écho d'ultrasons pour former des images des organes et du fœtus.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle invention permit à Robert Watson-Watt de contribuer à la détection radar avant 1940 ?",
+    "a": [
+      "La détection sismique",
+      "La détection sonore sous-marine",
+      "La détection d'avions par ondes radio",
+      "La détection infrarouge"
+    ],
+    "correct": 2,
+    "e": "Robert Watson-Watt développa un système radar de détection d'avions crucial durant la bataille d'Angleterre.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet, la boussole gyroscopique, indique le nord sans utiliser le magnétisme terrestre ?",
+    "a": [
+      "Le gyrocompas",
+      "La boussole magnétique",
+      "Le sextant",
+      "L'astrolabe"
+    ],
+    "correct": 0,
+    "e": "Le gyrocompas s'appuie sur la rotation d'un gyroscope pour indiquer le nord géographique, insensible au métal.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel objet du quotidien, l'allumette de sûreté à friction, a été perfectionné en Suède au XIXe siècle ?",
+    "a": [
+      "L'allumette de sûreté",
+      "L'amadou",
+      "La mèche lente",
+      "Le briquet à silex"
+    ],
+    "correct": 0,
+    "e": "L'allumette de sûreté suédoise, ne s'enflammant que sur un grattoir spécial, améliora la sécurité.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel appareil, le tour à fileter de précision, est associé aux progrès de quelle discipline industrielle ?",
+    "a": [
+      "L'électricité",
+      "La chimie organique",
+      "L'optique",
+      "La mécanique de précision"
+    ],
+    "correct": 3,
+    "e": "Le tour à fileter de précision, perfectionné par Henry Maudslay, permit la fabrication de pièces standardisées.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel concept d'organisation, les pièces interchangeables, a favorisé la production de masse ?",
+    "a": [
+      "La standardisation des pièces",
+      "Le travail à la commande",
+      "L'artisanat sur mesure",
+      "La sculpture unique"
+    ],
+    "correct": 0,
+    "e": "Les pièces interchangeables, standardisées, permirent l'assemblage rapide et la réparation aisée des machines.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel physicien a inventé un galvanomètre et donné son nom à une unité liée au magnétisme ?",
+    "a": [
+      "André-Marie Ampère",
+      "James Watt",
+      "Nikola Tesla",
+      "Georg Ohm"
+    ],
+    "correct": 2,
+    "e": "Le tesla, unité d'induction magnétique, honore Nikola Tesla, pionnier du courant alternatif.",
+    "difficulte": 4,
+    "generalite": 2
+  }
+]

@@ -1,0 +1,1640 @@
+[
+  {
+    "q": "Combien de joueurs s'affrontent dans un match de tennis en simple ?",
+    "a": [
+      "6",
+      "4",
+      "2",
+      "3"
+    ],
+    "correct": 2,
+    "e": "Le simple oppose un joueur contre un autre, soit deux joueurs au total.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel objet frappe la balle au tennis ?",
+    "a": [
+      "Une raquette",
+      "Une crosse",
+      "Une batte",
+      "Un maillet"
+    ],
+    "correct": 0,
+    "e": "Au tennis, on frappe la balle avec une raquette cordee.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "De quelle couleur est traditionnellement une balle de tennis moderne ?",
+    "a": [
+      "Bleue",
+      "Rouge",
+      "Blanche uniquement",
+      "Jaune fluo"
+    ],
+    "correct": 3,
+    "e": "La balle jaune fluo a ete adoptee pour une meilleure visibilite, notamment a la television.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on un service reussi que l'adversaire ne touche pas ?",
+    "a": [
+      "Un smash",
+      "Un ace",
+      "Un let",
+      "Un lob"
+    ],
+    "correct": 1,
+    "e": "Un ace est un service gagnant que le receveur ne parvient meme pas a toucher.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Que separe le filet au tennis ?",
+    "a": [
+      "Les zones de service",
+      "Les lignes de fond",
+      "Les deux cotes du court",
+      "Les couloirs de double"
+    ],
+    "correct": 2,
+    "e": "Le filet divise le court en deux moities, une pour chaque camp.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Combien de fois un joueur a-t-il droit de servir pour reussir sa mise en jeu ?",
+    "a": [
+      "Trois fois",
+      "Une seule fois",
+      "A volonte",
+      "Deux fois"
+    ],
+    "correct": 3,
+    "e": "Le serveur dispose d'un premier et, en cas d'echec, d'un second service.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel est le score annonce quand un joueur mene 40 a rien dans un jeu ?",
+    "a": [
+      "Avantage",
+      "Quarante-zero",
+      "Egalite",
+      "Jeu blanc"
+    ],
+    "correct": 1,
+    "e": "On annonce 'quarante-zero' lorsqu'un joueur a marque trois points et l'autre aucun.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on le score de 40 partout au tennis ?",
+    "a": [
+      "Break",
+      "Egalite",
+      "Ace",
+      "Avantage"
+    ],
+    "correct": 1,
+    "e": "A 40-40 on dit 'egalite' (deuce), il faut alors deux points d'ecart pour gagner le jeu.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Que signifie 'gagner son service' (tenir son service) ?",
+    "a": [
+      "Remporter le jeu ou l'on sert",
+      "Casser le service adverse",
+      "Gagner le tie-break",
+      "Reussir un ace"
+    ],
+    "correct": 0,
+    "e": "Tenir son service, c'est remporter le jeu dans lequel on est au service.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le fait de remporter le jeu de service de l'adversaire ?",
+    "a": [
+      "Un let",
+      "Un break",
+      "Un ace",
+      "Un smash"
+    ],
+    "correct": 1,
+    "e": "Un break (une breche) consiste a gagner un jeu ou l'adversaire etait au service.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Combien de jeux faut-il gagner au minimum pour remporter un set classique ?",
+    "a": [
+      "Cinq jeux",
+      "Quatre jeux",
+      "Six, avec deux jeux d'ecart",
+      "Dix jeux"
+    ],
+    "correct": 2,
+    "e": "Un set se gagne a six jeux avec au moins deux jeux d'ecart, sinon on continue.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le jeu decisif joue a 6 jeux partout ?",
+    "a": [
+      "Le tie-break",
+      "Le deuce",
+      "Le passing",
+      "Le smash"
+    ],
+    "correct": 0,
+    "e": "Le tie-break (jeu decisif) departage les joueurs a 6 jeux partout dans un set.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Combien de points faut-il generalement pour remporter un tie-break classique ?",
+    "a": [
+      "Sept, avec deux points d'ecart",
+      "Dix points",
+      "Cinq points",
+      "Six points"
+    ],
+    "correct": 0,
+    "e": "Le tie-break se gagne a 7 points avec au moins deux points d'ecart.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel coup se joue avec la paume de la main tournee vers l'avant, du cote fort ?",
+    "a": [
+      "La volee",
+      "Le smash",
+      "Le revers",
+      "Le coup droit"
+    ],
+    "correct": 3,
+    "e": "Le coup droit se frappe du cote dominant, paume orientee vers la balle.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel coup se joue de l'autre cote du corps par rapport au coup droit ?",
+    "a": [
+      "Le lob",
+      "Le service",
+      "Le revers",
+      "L'amortie"
+    ],
+    "correct": 2,
+    "e": "Le revers se frappe du cote oppose au coup droit, le dos de la main vers l'avant.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on une balle frappee avant qu'elle ne rebondisse, souvent pres du filet ?",
+    "a": [
+      "Un lob",
+      "Une volee",
+      "Un ace",
+      "Un slice"
+    ],
+    "correct": 1,
+    "e": "La volee consiste a frapper la balle de volee, avant qu'elle ne touche le sol.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on un coup lobe qui passe au-dessus de l'adversaire ?",
+    "a": [
+      "Un revers",
+      "Un smash",
+      "Un lob",
+      "Un ace"
+    ],
+    "correct": 2,
+    "e": "Le lob envoie la balle haut par-dessus l'adversaire, souvent monte au filet.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on la balle courte deposee juste derriere le filet ?",
+    "a": [
+      "Un passing",
+      "Une amortie",
+      "Un ace",
+      "Un smash"
+    ],
+    "correct": 1,
+    "e": "L'amortie (drop shot) depose la balle tout pres du filet pour surprendre l'adversaire.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on le coup puissant frappe au-dessus de la tete, comme un service ?",
+    "a": [
+      "Le slice",
+      "Le smash",
+      "La demi-volee",
+      "L'amortie"
+    ],
+    "correct": 1,
+    "e": "Le smash est un coup violent frappe au-dessus de la tete pour conclure l'echange.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Sur quelle surface se dispute le tournoi de Wimbledon ?",
+    "a": [
+      "Le dur",
+      "Le gazon",
+      "La terre battue",
+      "La moquette"
+    ],
+    "correct": 1,
+    "e": "Wimbledon est le plus prestigieux tournoi sur gazon.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Sur quelle surface se dispute le tournoi de Roland-Garros ?",
+    "a": [
+      "Le dur",
+      "Le bois",
+      "La terre battue",
+      "Le gazon"
+    ],
+    "correct": 2,
+    "e": "Roland-Garros, a Paris, se joue sur terre battue (ocre).",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Dans quel pays se dispute le tournoi de Roland-Garros ?",
+    "a": [
+      "Angleterre",
+      "Etats-Unis",
+      "Australie",
+      "France"
+    ],
+    "correct": 3,
+    "e": "Roland-Garros se tient a Paris, en France.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Dans quelle ville se dispute le tournoi de Wimbledon ?",
+    "a": [
+      "New York",
+      "Melbourne",
+      "Londres",
+      "Paris"
+    ],
+    "correct": 2,
+    "e": "Wimbledon se joue dans un quartier du sud-ouest de Londres.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Combien de tournois composent le Grand Chelem de tennis ?",
+    "a": [
+      "Quatre",
+      "Cinq",
+      "Six",
+      "Trois"
+    ],
+    "correct": 0,
+    "e": "Le Grand Chelem reunit l'Open d'Australie, Roland-Garros, Wimbledon et l'US Open.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Lequel de ces tournois N'EST PAS un tournoi du Grand Chelem ?",
+    "a": [
+      "L'US Open",
+      "Le Masters de Monte-Carlo",
+      "Wimbledon",
+      "L'Open d'Australie"
+    ],
+    "correct": 1,
+    "e": "Monte-Carlo est un Masters 1000, pas l'un des quatre tournois du Grand Chelem.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Dans quel pays se dispute l'US Open de tennis ?",
+    "a": [
+      "Etats-Unis",
+      "Angleterre",
+      "Canada",
+      "Australie"
+    ],
+    "correct": 0,
+    "e": "L'US Open se tient a New York, aux Etats-Unis.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Dans quelle ville se dispute l'Open d'Australie ?",
+    "a": [
+      "Sydney",
+      "Perth",
+      "Melbourne",
+      "Brisbane"
+    ],
+    "correct": 2,
+    "e": "L'Open d'Australie se joue a Melbourne, en debut d'annee.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est le tout premier tournoi du Grand Chelem dans l'annee civile ?",
+    "a": [
+      "Wimbledon",
+      "Roland-Garros",
+      "L'Open d'Australie",
+      "L'US Open"
+    ],
+    "correct": 2,
+    "e": "L'Open d'Australie ouvre la saison du Grand Chelem, en janvier.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le fait de remporter les quatre tournois du Grand Chelem la meme annee ?",
+    "a": [
+      "Le triple couronne",
+      "Le Grand Chelem",
+      "Le Petit Chelem",
+      "Le Masters"
+    ],
+    "correct": 1,
+    "e": "Realiser le Grand Chelem, c'est gagner les quatre Majeurs la meme annee civile.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Combien de joueurs composent une equipe sur le court dans un match de double ?",
+    "a": [
+      "Quatre de chaque cote",
+      "Deux de chaque cote",
+      "Trois de chaque cote",
+      "Un de chaque cote"
+    ],
+    "correct": 1,
+    "e": "En double, deux joueurs s'associent contre deux autres.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "En double, les couloirs lateraux sont-ils utilises ?",
+    "a": [
+      "Non, ils sont interdits",
+      "Oui, le court est plus large",
+      "Seulement au service",
+      "Seulement en tie-break"
+    ],
+    "correct": 1,
+    "e": "En double, les couloirs sont dans le jeu, le terrain est donc plus large qu'en simple.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle competition oppose des equipes nationales masculines de tennis ?",
+    "a": [
+      "La Ryder Cup",
+      "La Coupe Davis",
+      "La Coupe du monde",
+      "La Laver Cup des nations"
+    ],
+    "correct": 1,
+    "e": "La Coupe Davis est la grande competition par equipes nationales masculines.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle competition par equipes nationales feminines est l'equivalent de la Coupe Davis ?",
+    "a": [
+      "La Coupe Federation feminine",
+      "La Coupe Hopman",
+      "La Solheim Cup",
+      "La Billie Jean King Cup (Fed Cup)"
+    ],
+    "correct": 3,
+    "e": "La Billie Jean King Cup, longtemps appelee Fed Cup, est la competition feminine par nations.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on la faute lorsque le serveur mord ou depasse la ligne au moment de servir ?",
+    "a": [
+      "Une faute de pied",
+      "Un carton",
+      "Un let",
+      "Un hors-jeu"
+    ],
+    "correct": 0,
+    "e": "La faute de pied (foot fault) sanctionne le serveur qui touche la ligne avant de frapper.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Que se passe-t-il quand la balle de service touche le filet mais retombe dans la bonne zone ?",
+    "a": [
+      "Le point est perdu",
+      "On change de cote",
+      "Le point est gagne",
+      "On rejoue le service (let)"
+    ],
+    "correct": 3,
+    "e": "Un service qui frole le filet et tombe dans le carre est un 'let', on le rejoue.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel organisme gere le circuit professionnel masculin de tennis ?",
+    "a": [
+      "Le CIO",
+      "La FIFA",
+      "La WTA",
+      "L'ATP"
+    ],
+    "correct": 3,
+    "e": "L'ATP (Association of Tennis Professionals) organise le circuit masculin.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel organisme gere le circuit professionnel feminin de tennis ?",
+    "a": [
+      "La NBA",
+      "La WTA",
+      "L'UEFA",
+      "L'ATP"
+    ],
+    "correct": 1,
+    "e": "La WTA (Women's Tennis Association) chapeaute le circuit feminin.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le tournoi de fin d'annee reunissant les meilleurs joueurs du classement ?",
+    "a": [
+      "Le Grand Chelem",
+      "Le Masters (ATP Finals)",
+      "La Coupe Davis",
+      "L'Open d'ete"
+    ],
+    "correct": 1,
+    "e": "Les ATP Finals (Masters) rassemblent les huit meilleurs joueurs de l'annee.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Combien de sets gagnants faut-il pour remporter un match masculin en Grand Chelem ?",
+    "a": [
+      "Quatre sets gagnants",
+      "Deux sets gagnants",
+      "Un seul set",
+      "Trois sets gagnants"
+    ],
+    "correct": 3,
+    "e": "En Grand Chelem, les hommes jouent au meilleur des cinq sets, soit trois gagnants.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Combien de sets gagnants faut-il pour remporter la plupart des matchs feminins ?",
+    "a": [
+      "Deux sets gagnants",
+      "Trois sets gagnants",
+      "Un seul set",
+      "Quatre sets gagnants"
+    ],
+    "correct": 0,
+    "e": "Les femmes jouent au meilleur des trois sets, soit deux sets gagnants.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Qui remporte le point si la balle rebondit deux fois avant d'etre frappee ?",
+    "a": [
+      "Le joueur au service",
+      "L'adversaire",
+      "Le receveur toujours",
+      "Personne, on rejoue"
+    ],
+    "correct": 1,
+    "e": "Un double rebond fait perdre le point au joueur qui devait renvoyer la balle.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Que se passe-t-il si un joueur envoie la balle hors des limites du court ?",
+    "a": [
+      "Le point continue",
+      "Il rejoue le coup",
+      "Il gagne le point",
+      "Il perd le point"
+    ],
+    "correct": 3,
+    "e": "Une balle qui tombe en dehors des lignes est faute et fait perdre le point.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Une balle qui touche la ligne est-elle consideree bonne ou faute ?",
+    "a": [
+      "Bonne",
+      "Faute",
+      "Cela depend de l'arbitre",
+      "On rejoue"
+    ],
+    "correct": 0,
+    "e": "Une balle touchant la ligne, meme partiellement, est consideree comme bonne (dans le court).",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel effet donne-t-on a la balle pour qu'elle plonge et rebondisse haut ?",
+    "a": [
+      "Le lift (topspin)",
+      "L'effet retro",
+      "L'effet plat",
+      "Le slice"
+    ],
+    "correct": 0,
+    "e": "Le lift (topspin) fait tourner la balle vers l'avant, la faisant plonger puis rebondir haut.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel effet coupe fait rester la balle basse apres le rebond ?",
+    "a": [
+      "L'effet brosse",
+      "Le lift",
+      "Le slice (coupe)",
+      "Le topspin"
+    ],
+    "correct": 2,
+    "e": "Le slice (effet coupe, ou retro) fait glisser la balle et la maintient basse.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on la partie cordee de la raquette qui frappe la balle ?",
+    "a": [
+      "Le manche",
+      "Le cadre",
+      "Le grip",
+      "Le tamis"
+    ],
+    "correct": 3,
+    "e": "Le tamis est la surface de cordage qui entre en contact avec la balle.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment nomme-t-on la poignee de la raquette que l'on tient en main ?",
+    "a": [
+      "Le cordage",
+      "Le manche (grip)",
+      "Le coeur",
+      "Le tamis"
+    ],
+    "correct": 1,
+    "e": "Le manche, recouvert d'un grip, est la partie que la main enserre.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on le fait de gagner un set 6-0 ?",
+    "a": [
+      "Un tie-break",
+      "Un break",
+      "Une manche blanche",
+      "Un ace"
+    ],
+    "correct": 2,
+    "e": "Remporter un set 6-0 sans concder de jeu est une manche 'blanche' (bagel).",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Ou se situe le juge-arbitre principal pendant un match de haut niveau ?",
+    "a": [
+      "Au centre du court",
+      "Dans les tribunes",
+      "Derriere la ligne de fond",
+      "Sur une chaise haute au bord du filet"
+    ],
+    "correct": 3,
+    "e": "L'arbitre de chaise est perche sur une chaise elevee, a hauteur du filet.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel systeme electronique permet de verifier si une balle est bonne ou faute ?",
+    "a": [
+      "Le Hawk-Eye",
+      "Le Cyclope numerique",
+      "Le VAR",
+      "Le GoalControl"
+    ],
+    "correct": 0,
+    "e": "Le Hawk-Eye reconstitue la trajectoire de la balle pour trancher les situations litigieuses.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on les jeunes qui ramassent les balles pendant un match ?",
+    "a": [
+      "Les cadets",
+      "Les stadiers",
+      "Les ramasseurs de balles",
+      "Les porteurs"
+    ],
+    "correct": 2,
+    "e": "Les ramasseurs de balles renvoient rapidement les balles aux joueurs entre les points.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle est la hauteur du filet au centre du court de tennis ?",
+    "a": [
+      "Environ 0,50 metre",
+      "Environ 2 metres",
+      "Environ 0,91 metre",
+      "Environ 1,50 metre"
+    ],
+    "correct": 2,
+    "e": "Le filet mesure environ 0,914 m (3 pieds) en son centre.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on un changement de camp entre les joueurs ?",
+    "a": [
+      "Le break",
+      "Le let",
+      "Le changement de cote",
+      "Le tie-break"
+    ],
+    "correct": 2,
+    "e": "Les joueurs changent de cote a intervalles reguliers (nombre impair de jeux).",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Dans un jeu de tennis, quel point suit immediatement le 15 ?",
+    "a": [
+      "L'avantage",
+      "Le 20",
+      "Le 30",
+      "Le 40"
+    ],
+    "correct": 2,
+    "e": "La progression des points est 15, 30, 40 puis le jeu.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel est le nom de la ligne qui delimite le fond du court ?",
+    "a": [
+      "La ligne mediane",
+      "La ligne de service",
+      "Le couloir",
+      "La ligne de fond"
+    ],
+    "correct": 3,
+    "e": "La ligne de fond marque la limite arriere du court, d'ou l'on sert.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on la zone ou doit atterrir le service ?",
+    "a": [
+      "Le couloir",
+      "Le carre de service",
+      "Le rectangle central",
+      "La zone de fond"
+    ],
+    "correct": 1,
+    "e": "Le service doit tomber dans le carre de service diagonalement oppose.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Le service se fait-il en diagonale ou en ligne droite ?",
+    "a": [
+      "Toujours vers le centre",
+      "Au choix du serveur",
+      "En ligne droite",
+      "En diagonale"
+    ],
+    "correct": 3,
+    "e": "Le serveur envoie la balle en diagonale, dans le carre de service oppose.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle discipline de raquette se joue avec un volant plutot qu'une balle ?",
+    "a": [
+      "Le padel",
+      "Le tennis de table",
+      "Le badminton",
+      "Le squash"
+    ],
+    "correct": 2,
+    "e": "Le badminton se joue avec un volant a plumes ou synthetique.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel sport de raquette se joue sur une table avec une petite balle en celluloide ?",
+    "a": [
+      "Le padel",
+      "Le tennis de table",
+      "Le squash",
+      "Le badminton"
+    ],
+    "correct": 1,
+    "e": "Le tennis de table (ping-pong) se joue sur une table avec une balle legere.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel sport de raquette se pratique dans une piece fermee en frappant la balle contre un mur ?",
+    "a": [
+      "Le padel",
+      "Le tennis",
+      "Le badminton",
+      "Le squash"
+    ],
+    "correct": 3,
+    "e": "Le squash se joue dans un court ferme, la balle rebondissant sur les murs.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel sport de raquette recent se joue a deux contre deux dans une cage vitree ?",
+    "a": [
+      "Le tennis-ballon",
+      "Le padel",
+      "Le badminton",
+      "Le squash"
+    ],
+    "correct": 1,
+    "e": "Le padel se joue en double dans un court vitre, ou les murs font partie du jeu.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le petit projectile a plumes du badminton ?",
+    "a": [
+      "La bille",
+      "La navette",
+      "Le volant",
+      "Le cone"
+    ],
+    "correct": 2,
+    "e": "Au badminton, on echange un volant (aussi appele 'plumes').",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Au tennis de table, en combien de points se joue generalement une manche moderne ?",
+    "a": [
+      "11 points",
+      "10 points",
+      "21 points",
+      "15 points"
+    ],
+    "correct": 0,
+    "e": "Depuis 2001, les manches de tennis de table se jouent en 11 points (avec 2 d'ecart).",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel materiau recouvre generalement la raquette de tennis de table ?",
+    "a": [
+      "Du cordage nylon",
+      "Du feutre",
+      "Un revetement de caoutchouc",
+      "Du cuir"
+    ],
+    "correct": 2,
+    "e": "La raquette de ping-pong est recouverte de picots de caoutchouc, souvent avec une mousse.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Le tennis de table est-il un sport olympique ?",
+    "a": [
+      "Non, jamais",
+      "Seulement en demonstration",
+      "Oui, depuis 1988",
+      "Uniquement aux Jeux d'hiver"
+    ],
+    "correct": 2,
+    "e": "Le tennis de table est au programme olympique depuis les Jeux de Seoul 1988.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Le badminton est-il un sport olympique ?",
+    "a": [
+      "Seulement en demonstration",
+      "Oui, depuis 1992",
+      "Uniquement aux Jeux d'hiver",
+      "Non, jamais"
+    ],
+    "correct": 1,
+    "e": "Le badminton est devenu olympique aux Jeux de Barcelone en 1992.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel pays domine historiquement le badminton et le tennis de table mondiaux ?",
+    "a": [
+      "La Chine",
+      "L'Italie",
+      "Le Bresil",
+      "L'Espagne"
+    ],
+    "correct": 0,
+    "e": "La Chine est une nation ultra-dominante au tennis de table comme au badminton.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le geste de tromper l'adversaire par une fausse trajectoire au badminton ?",
+    "a": [
+      "Un lob smashe",
+      "Une feinte (amortie)",
+      "Un revers coupe",
+      "Un ace"
+    ],
+    "correct": 1,
+    "e": "L'amortie et les feintes visent a surprendre l'adversaire pres du filet.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle joueuse a marque le tennis feminin en remportant de tres nombreux titres du Grand Chelem dans les annees 1980-1990 ?",
+    "a": [
+      "Kim Clijsters",
+      "Amelie Mauresmo",
+      "Steffi Graf",
+      "Justine Henin"
+    ],
+    "correct": 2,
+    "e": "L'Allemande Steffi Graf est une icone, notamment autrice du Grand Chelem en 1988.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel joueur suisse est celebre pour son style elegant et ses nombreux titres a Wimbledon ?",
+    "a": [
+      "Novak Djokovic",
+      "Roger Federer",
+      "Rafael Nadal",
+      "Andy Murray"
+    ],
+    "correct": 1,
+    "e": "Roger Federer, joueur suisse, est particulierement associe au gazon de Wimbledon.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quel joueur espagnol est surnomme le 'roi de la terre battue' pour ses succes a Roland-Garros ?",
+    "a": [
+      "Roger Federer",
+      "Novak Djokovic",
+      "Rafael Nadal",
+      "Carlos Moya"
+    ],
+    "correct": 2,
+    "e": "Rafael Nadal, ecrasant sur terre battue, est surnomme le roi de l'ocre parisien.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Steffi Graf a realise en 1988 un exploit unique : le Grand Chelem plus quelle medaille ?",
+    "a": [
+      "La medaille d'or olympique",
+      "La Coupe Davis",
+      "Le Masters mixte",
+      "Une medaille de bronze"
+    ],
+    "correct": 0,
+    "e": "En 1988, Graf a realise le 'Golden Slam' : les 4 Majeurs et l'or olympique la meme annee.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quelle joueuse americaine, avec sa soeur, a domine le tennis feminin des annees 2000-2010 ?",
+    "a": [
+      "Martina Hingis",
+      "Lindsay Davenport",
+      "Serena Williams",
+      "Jennifer Capriati"
+    ],
+    "correct": 2,
+    "e": "Serena Williams, avec sa soeur Venus, a marque durablement le tennis feminin.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment s'appelle la soeur ainee de Serena Williams, egalement grande championne ?",
+    "a": [
+      "Valerie Williams",
+      "Vera Williams",
+      "Venus Williams",
+      "Vanessa Williams"
+    ],
+    "correct": 2,
+    "e": "Venus Williams, soeur ainee de Serena, a notamment brille a Wimbledon.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel joueur suedois des annees 1970-1980 a remporte de nombreux Roland-Garros et Wimbledon ?",
+    "a": [
+      "Bjorn Borg",
+      "Ivan Lendl",
+      "Mats Wilander",
+      "Stefan Edberg"
+    ],
+    "correct": 0,
+    "e": "Bjorn Borg, joueur suedois, a domine la fin des annees 1970 sur terre et sur gazon.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel joueur americain etait connu pour son fort caractere et ses coleres sur le court dans les annees 1980 ?",
+    "a": [
+      "Pete Sampras",
+      "John McEnroe",
+      "Andre Agassi",
+      "Jim Courier"
+    ],
+    "correct": 1,
+    "e": "John McEnroe est reste celebre pour son talent et ses eclats face aux arbitres.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle championne francaise a ete numero un mondiale et a remporte deux titres du Grand Chelem en 2006 ?",
+    "a": [
+      "Mary Pierce",
+      "Amelie Mauresmo",
+      "Marion Bartoli",
+      "Nathalie Tauziat"
+    ],
+    "correct": 1,
+    "e": "Amelie Mauresmo a remporte l'Open d'Australie et Wimbledon en 2006.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle joueuse belge, tres complete, a remporte plusieurs Roland-Garros dans les annees 2000 ?",
+    "a": [
+      "Justine Henin",
+      "Yanina Wickmayer",
+      "Kim Clijsters",
+      "Sabine Lisicki"
+    ],
+    "correct": 0,
+    "e": "La Belge Justine Henin, au revers a une main repute, a triomphe plusieurs fois a Paris.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel Francais a remporte Wimbledon en 1946 et donne son nom a un celebre polo a crocodile ?",
+    "a": [
+      "Yannick Noah",
+      "Jean Borotra",
+      "Rene Lacoste",
+      "Henri Cochet"
+    ],
+    "correct": 2,
+    "e": "Rene Lacoste, surnomme 'le Crocodile', a fonde la marque au logo reptilien.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel joueur francais a remporte Roland-Garros en 1983, dernier Francais titre en simple messieurs a l'epoque ?",
+    "a": [
+      "Cedric Pioline",
+      "Henri Leconte",
+      "Yannick Noah",
+      "Guy Forget"
+    ],
+    "correct": 2,
+    "e": "Yannick Noah a remporte Roland-Garros en 1983, un exploit reste dans les memoires.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelait-on le groupe de champions francais des annees 1920-1930 vainqueurs de la Coupe Davis ?",
+    "a": [
+      "Les Mousquetaires",
+      "Les Cavaliers",
+      "Les Titans",
+      "Les Gladiateurs"
+    ],
+    "correct": 0,
+    "e": "Les 'Quatre Mousquetaires' (Lacoste, Cochet, Borotra, Brugnon) ont domine l'entre-deux-guerres.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel trophee du vainqueur de Roland-Garros porte le nom d'un des Mousquetaires ?",
+    "a": [
+      "La Coupe des Mousquetaires",
+      "Le Trophee Borotra",
+      "La Coupe Lacoste",
+      "La Coupe de Paris"
+    ],
+    "correct": 0,
+    "e": "Le vainqueur du simple messieurs souleve la Coupe des Mousquetaires.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel joueur serbe, ne en 1987, figure parmi les plus grands vainqueurs de Grand Chelem de l'histoire ?",
+    "a": [
+      "Roger Federer",
+      "Rafael Nadal",
+      "Andy Murray",
+      "Novak Djokovic"
+    ],
+    "correct": 3,
+    "e": "Le Serbe Novak Djokovic a accumule un nombre record de titres du Grand Chelem.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quels trois joueurs forment le trio surnomme le 'Big Three' du tennis masculin des annees 2000-2020 ?",
+    "a": [
+      "Sampras, Agassi et Courier",
+      "Federer, Nadal et Djokovic",
+      "Murray, Wawrinka et Del Potro",
+      "Becker, Edberg et Lendl"
+    ],
+    "correct": 1,
+    "e": "Le 'Big Three' designe Roger Federer, Rafael Nadal et Novak Djokovic.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle joueuse est associee au combat pour l'egalite des primes entre hommes et femmes au tennis ?",
+    "a": [
+      "Billie Jean King",
+      "Margaret Court",
+      "Martina Navratilova",
+      "Chris Evert"
+    ],
+    "correct": 0,
+    "e": "Billie Jean King a milite pour l'egalite et remporte le celebre match 'Battle of the Sexes'.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quel tournoi du Grand Chelem se joue sous une chaleur souvent extreme en debut d'annee ?",
+    "a": [
+      "L'US Open",
+      "L'Open d'Australie",
+      "Wimbledon",
+      "Roland-Garros"
+    ],
+    "correct": 1,
+    "e": "L'Open d'Australie, en janvier (ete austral), connait parfois des chaleurs caniculaires.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quelle tenue etait traditionnellement exigee des joueurs a Wimbledon ?",
+    "a": [
+      "Une tenue blanche",
+      "Une tenue verte",
+      "Une tenue rayee",
+      "Une tenue noire"
+    ],
+    "correct": 0,
+    "e": "Wimbledon impose de longue date une tenue predominante blanche.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on le fait de renvoyer une balle qui a rebondi tout juste apres le rebond, au ras du sol ?",
+    "a": [
+      "Un lob",
+      "Un smash",
+      "Une amortie",
+      "Une demi-volee"
+    ],
+    "correct": 3,
+    "e": "La demi-volee se frappe immediatement apres le rebond, tres pres du sol.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on un coup gagnant frappe en passant a cote du joueur monte au filet ?",
+    "a": [
+      "Un ace",
+      "Une amortie",
+      "Un lob",
+      "Un passing-shot"
+    ],
+    "correct": 3,
+    "e": "Le passing-shot passe le joueur monte au filet, hors de sa portee.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on une balle de match, point qui peut donner la victoire ?",
+    "a": [
+      "Un ace decisif",
+      "Une balle de set",
+      "Une balle de match",
+      "Une balle de break"
+    ],
+    "correct": 2,
+    "e": "La balle de match est le point qui, s'il est gagne, offre la victoire du match.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on le point qui permettrait de reussir un break ?",
+    "a": [
+      "Une balle de set",
+      "Une balle de break",
+      "Un avantage",
+      "Une balle de match"
+    ],
+    "correct": 1,
+    "e": "La balle de break est le point qui, s'il est gagne, fait perdre son service a l'adversaire.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Sur quelle surface les echanges sont-ils generalement les plus longs ?",
+    "a": [
+      "La moquette",
+      "Le gazon",
+      "Le beton lisse",
+      "La terre battue"
+    ],
+    "correct": 3,
+    "e": "La terre battue ralentit la balle et allonge les echanges, favorisant les defenseurs.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Sur quelle surface le jeu est-il traditionnellement le plus rapide, favorisant service-volee ?",
+    "a": [
+      "Le gazon",
+      "Le sable",
+      "L'argile",
+      "La terre battue"
+    ],
+    "correct": 0,
+    "e": "Le gazon offre un rebond bas et rapide, historiquement propice au service-volee.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la tactique consistant a servir puis monter aussitot au filet ?",
+    "a": [
+      "Le contre-pied",
+      "Le lift croise",
+      "Le fond de court",
+      "Le service-volee"
+    ],
+    "correct": 3,
+    "e": "Le service-volee enchaine le service et une montee immediate au filet pour conclure.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Que designe l'expression 'monter au filet' ?",
+    "a": [
+      "Grimper sur le filet",
+      "S'avancer pres du filet pour jouer a la volee",
+      "Servir plus fort",
+      "Reculer au fond du court"
+    ],
+    "correct": 1,
+    "e": "Monter au filet, c'est avancer pour prendre la balle de volee et raccourcir l'echange.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on le jeu depuis l'arriere du court, en frappant apres le rebond ?",
+    "a": [
+      "Le jeu de demi-volee",
+      "La contre-attaque au filet",
+      "Le service-volee",
+      "Le jeu de fond de court"
+    ],
+    "correct": 3,
+    "e": "Le jeu de fond de court consiste a echanger depuis la ligne de fond apres le rebond.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "En Coupe Davis, un match entre deux nations est traditionnellement appele comment ?",
+    "a": [
+      "Un tournoi",
+      "Une rencontre (tie)",
+      "Un derby",
+      "Une poule"
+    ],
+    "correct": 1,
+    "e": "Une confrontation entre deux nations en Coupe Davis est une rencontre, ou 'tie'.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Combien de simples et de doubles composent traditionnellement une rencontre de Coupe Davis en cinq matchs ?",
+    "a": [
+      "Quatre simples et un double",
+      "Deux simples et trois doubles",
+      "Cinq simples",
+      "Trois simples et deux doubles"
+    ],
+    "correct": 0,
+    "e": "La formule classique comptait quatre simples et un double, soit cinq matchs.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel geste effectue le serveur juste avant de frapper au service ?",
+    "a": [
+      "Il pose la balle au sol",
+      "Il fait rebondir la balle sur le filet",
+      "Il tape la balle contre sa raquette",
+      "Il lance la balle en l'air"
+    ],
+    "correct": 3,
+    "e": "Le serveur lance la balle en l'air (le 'lancer') avant de la frapper au-dessus de la tete.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on le fait de perdre son propre service ?",
+    "a": [
+      "Faire un let",
+      "Se faire breaker",
+      "Faire un ace",
+      "Gagner un tie-break"
+    ],
+    "correct": 1,
+    "e": "Se faire breaker, c'est perdre le jeu ou l'on etait au service.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Le tennis figure-t-il au programme des Jeux olympiques d'ete modernes ?",
+    "a": [
+      "Non, jamais",
+      "Oui",
+      "Seulement en double",
+      "Uniquement en demonstration"
+    ],
+    "correct": 1,
+    "e": "Le tennis est present aux Jeux olympiques, avec un retour officiel en 1988 apres une longue absence.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel type de raquette a progressivement remplace les cadres en bois a la fin du XXe siecle ?",
+    "a": [
+      "Les raquettes en graphite/composite",
+      "Les raquettes en verre",
+      "Les raquettes en plastique moule",
+      "Les raquettes en aluminium massif"
+    ],
+    "correct": 0,
+    "e": "Les cadres modernes en graphite et fibres composites ont supplante le bois pour la legerete et la rigidite.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on les cordes tendues sur le cadre de la raquette ?",
+    "a": [
+      "Le grip",
+      "Le cordage",
+      "Le manche",
+      "Le tamis externe"
+    ],
+    "correct": 1,
+    "e": "Le cordage est l'ensemble des cordes qui tissent le tamis et frappent la balle.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Quelle balle est utilisee au tennis : creuse et sous pression, ou pleine ?",
+    "a": [
+      "En metal leger",
+      "En mousse pleine",
+      "Creuse et sous pression",
+      "Pleine et rigide"
+    ],
+    "correct": 2,
+    "e": "La balle de tennis est creuse, sous pression et recouverte de feutre.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on un match ou l'on joue chacun a son tour au service et au retour ?",
+    "a": [
+      "Un match a handicap",
+      "Un match en simple ou double classique",
+      "Un contre-la-montre",
+      "Un relais"
+    ],
+    "correct": 1,
+    "e": "Au tennis, serveur et receveur alternent les roles au fil des jeux.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on le fait qu'un joueur touche le filet avec sa raquette ou son corps pendant l'echange ?",
+    "a": [
+      "Un avantage",
+      "Un let",
+      "Un ace",
+      "Une faute (point perdu)"
+    ],
+    "correct": 3,
+    "e": "Toucher le filet pendant que la balle est en jeu fait perdre le point.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Quel est l'age minimum de la discipline : lequel de ces sports de raquette est le plus recent ?",
+    "a": [
+      "Le padel",
+      "Le tennis de table",
+      "Le tennis",
+      "Le badminton"
+    ],
+    "correct": 0,
+    "e": "Le padel, ne au XXe siecle (annees 1960-1970), est le plus recent de ces sports.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Dans quel pays le padel a-t-il connu son premier grand essor populaire ?",
+    "a": [
+      "En Espagne",
+      "En Suede",
+      "Au Japon",
+      "En Australie"
+    ],
+    "correct": 0,
+    "e": "Le padel s'est fortement developpe en Espagne, ou il est tres populaire.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Au padel, la balle peut-elle rebondir sur les parois vitrees pendant l'echange ?",
+    "a": [
+      "Oui, apres avoir touche le sol",
+      "Seulement au service",
+      "Non, jamais",
+      "Seulement en double mixte"
+    ],
+    "correct": 0,
+    "e": "Au padel, la balle peut etre jouee apres rebond sur les vitres, ce qui fait sa specificite.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Au squash, contre quoi frappe-t-on la balle ?",
+    "a": [
+      "Contre le plafond",
+      "Contre le sol uniquement",
+      "Par-dessus un filet",
+      "Contre le mur frontal"
+    ],
+    "correct": 3,
+    "e": "Au squash, on frappe la balle contre le mur frontal, dans un court ferme.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on la ligne au bas du mur frontal a ne pas toucher au squash ?",
+    "a": [
+      "Le tin (bandeau)",
+      "Le couloir",
+      "La ligne de service",
+      "La touche"
+    ],
+    "correct": 0,
+    "e": "Le 'tin' est la bande basse : une balle qui le touche est faute au squash.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Au badminton, un match se joue generalement en combien de sets gagnants ?",
+    "a": [
+      "Un seul set",
+      "Cinq sets",
+      "Deux sets gagnants sur trois",
+      "Trois sets gagnants"
+    ],
+    "correct": 2,
+    "e": "Le badminton se dispute au meilleur des trois manches, soit deux sets gagnants.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "A combien de points se joue habituellement un set de badminton en simple ?",
+    "a": [
+      "15 points",
+      "11 points",
+      "25 points",
+      "21 points"
+    ],
+    "correct": 3,
+    "e": "Un set de badminton se joue en 21 points, avec au moins deux points d'ecart.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Quelle est la particularite du volant de badminton par rapport a une balle ?",
+    "a": [
+      "Il roule au sol",
+      "Il ralentit fortement en fin de trajectoire",
+      "Il flotte sur l'eau",
+      "Il rebondit tres haut"
+    ],
+    "correct": 1,
+    "e": "La forme conique du volant le freine brutalement, d'ou des trajectoires tres particulieres.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment appelle-t-on un point remporte au filet d'un coup smashe puissant au badminton ?",
+    "a": [
+      "Un smash",
+      "Un service long",
+      "Un lob",
+      "Un drive lent"
+    ],
+    "correct": 0,
+    "e": "Le smash, frappe descendant et puissant, est l'arme offensive majeure au badminton.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Au tennis de table, comment appelle-t-on l'effet donne a la balle avec le poignet ?",
+    "a": [
+      "Un effet (topspin, coupe, laterale)",
+      "Un let",
+      "Un ace",
+      "Un smash croise"
+    ],
+    "correct": 0,
+    "e": "Les pongistes maitrisent de nombreux effets (topspin, coupe, laterales) grace au poignet et au revetement.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Au tennis de table, ou doit rebondir le service ?",
+    "a": [
+      "Sur le filet",
+      "N'importe ou sur la table",
+      "Dans son camp puis dans celui de l'adversaire",
+      "Directement chez l'adversaire"
+    ],
+    "correct": 2,
+    "e": "Le service doit d'abord toucher la table du serveur, puis celle de l'adversaire.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on familierement le tennis de table ?",
+    "a": [
+      "Le tennis-court",
+      "Le mini-tennis",
+      "Le tabletop",
+      "Le ping-pong"
+    ],
+    "correct": 3,
+    "e": "Le tennis de table est couramment appele 'ping-pong', du bruit de la balle.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Quel sport de raquette se joue avec la plus petite raquette de cette liste ?",
+    "a": [
+      "Le tennis de table",
+      "Le padel",
+      "Le badminton",
+      "Le tennis"
+    ],
+    "correct": 0,
+    "e": "La raquette (ou palette) de tennis de table est la plus petite de ces disciplines.",
+    "difficulte": 3,
+    "generalite": 3
+  },
+  {
+    "q": "Comment appelle-t-on l'action de servir la balle vers le carre de service adverse en tennis ?",
+    "a": [
+      "La volee",
+      "La relance",
+      "Le service",
+      "Le retour"
+    ],
+    "correct": 2,
+    "e": "Le service (ou mise en jeu) lance chaque point du tennis.",
+    "difficulte": 1,
+    "generalite": 5
+  },
+  {
+    "q": "Comment appelle-t-on le fait de renvoyer le service de l'adversaire ?",
+    "a": [
+      "Le retour de service",
+      "L'amortie",
+      "Le smash",
+      "Le lob defensif"
+    ],
+    "correct": 0,
+    "e": "Le retour (ou relance) est le coup joue par le receveur sur le service adverse.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment nomme-t-on la faute lorsque le serveur rate ses deux services consecutifs ?",
+    "a": [
+      "Un let double",
+      "Un break blanc",
+      "Un ace inverse",
+      "Une double faute"
+    ],
+    "correct": 3,
+    "e": "La double faute (deux services manques) donne le point directement a l'adversaire.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Que remporte le receveur si le serveur commet une double faute ?",
+    "a": [
+      "Le jeu entier",
+      "Le set",
+      "Rien, on rejoue",
+      "Le point"
+    ],
+    "correct": 3,
+    "e": "Une double faute offre le point en jeu au receveur.",
+    "difficulte": 2,
+    "generalite": 4
+  },
+  {
+    "q": "Comment appelle-t-on le geste d'accompagnement de la raquette apres avoir frappe la balle ?",
+    "a": [
+      "Le split-step",
+      "Le finish (accompagnement)",
+      "Le drop",
+      "Le lancer"
+    ],
+    "correct": 1,
+    "e": "L'accompagnement (finish) prolonge le mouvement apres l'impact pour controler la balle.",
+    "difficulte": 4,
+    "generalite": 2
+  },
+  {
+    "q": "Comment nomme-t-on le petit sursaut d'appui que fait le joueur au moment ou l'adversaire frappe ?",
+    "a": [
+      "Le smash",
+      "Le split-step",
+      "Le drop-shot",
+      "Le tie-break"
+    ],
+    "correct": 1,
+    "e": "Le split-step est un petit rebond des appuis qui prepare le deplacement vers la balle.",
+    "difficulte": 5,
+    "generalite": 1
+  },
+  {
+    "q": "Quel revers technique consiste a tenir la raquette a deux mains ?",
+    "a": [
+      "Le revers slice",
+      "Le revers a deux mains",
+      "Le revers lifte plat",
+      "Le revers a une main"
+    ],
+    "correct": 1,
+    "e": "Le revers a deux mains, tres repandu, offre puissance et controle.",
+    "difficulte": 3,
+    "generalite": 3
+  }
+]
