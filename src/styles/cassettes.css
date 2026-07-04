@@ -12,8 +12,8 @@
 @keyframes qm-pop { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes qm-arrow { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
 @keyframes qm-flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes qm-drawer-open { from { max-width: 0; } to { max-width: 340px; } }
-@keyframes qm-drawer-close { from { max-width: 340px; } to { max-width: 0; } }
+@keyframes qm-drawer-open { from { max-width: 0; } to { max-width: 680px; } }
+@keyframes qm-drawer-close { from { max-width: 680px; } to { max-width: 0; } }
 @keyframes qm-card-out {
   0% { opacity: 0; transform: translateX(-70px) rotateY(52deg) scale(.62); }
   60% { opacity: 1; }
@@ -43,3 +43,172 @@
 .qm-cassettes .qm-drawer-btn:hover { filter: brightness(1.09); }
 .qm-cassettes .qm-eject:hover { background: #c0392b !important; }
 .qm-cassettes .qm-reset:hover { background: #7a2c20 !important; }
+
+/* Galerie d'extensions COMPACTE : version réduite pour l'onglet RÉGLAGES de la
+   console (rubrique EXTENSIONS), afin que toutes les affiches tiennent sans
+   scroll dans le panneau. N'affecte pas l'ancien Setup (?classic). */
+.qm-ext-compact .ext-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+  margin-top: 2px;
+}
+.qm-ext-compact .ext-card { border-radius: 10px; }
+.qm-ext-compact .ext-card__badge { width: 22px; height: 22px; font-size: 12px; top: 5px; right: 5px; }
+.qm-ext-compact .ext-card__desc { padding: 9px 9px 8px; }
+.qm-ext-compact .ext-card__desc-title { font-size: 11px; margin-bottom: 3px; }
+.qm-ext-compact .ext-card__desc-text { font-size: 10px; line-height: 1.32; }
+.qm-ext-compact .ext-card__dep { font-size: 8px; padding: 3px 6px; bottom: 6px; left: 6px; }
+.qm-ext-compact .ext-card__soon { font-size: 10px; padding: 6px 6px; letter-spacing: 1px; }
+
+/* ==========================================================================
+   Bac « crate-digging » : pile dense de cassettes ; chaque bouton fait la hauteur
+   de sa tranche (STRIP, empilement flush en JS) — la zone de survol correspond
+   exactement au visible, la face déployée déborde en absolu via __box.
+
+   VOLUME RIGIDE : chaque K7 = un groupe 3D (.qm-slab__box, preserve-3d) dont la
+   CHARNIÈRE est l'arête commune tranche/face (y = 42px = STRIP). Les deux plans
+   sont soudés une fois pour toutes :
+     - la tranche (.qm-slab__label) est couchée à plat vers l'arrière (rotateX(90°)
+       autour de sa base) → elle forme le DESSUS de la boîte ;
+     - la face avant (.qm-slab__front) reste dans le plan du groupe, sous la charnière.
+   AU REPOS le groupe entier est à rotateX(-90°) : on regarde la boîte PILE DU DESSUS
+   (la tranche se présente à plat plein cadre, la face avant est vue sur la tranche →
+   invisible). AU SURVOL le groupe bascule vers le spectateur (rotateX ≈ -32°) : la
+   face avant se dresse (trapèze qui converge vers le bas — caméra au-dessus), la
+   tranche se couche derrière, TOUJOURS reliées par la charnière. Un seul transform
+   animé → le volume ne se « déconnecte » jamais.
+   ========================================================================== */
+.qm-cassettes .qm-stack { position: relative; }
+
+/* Chaque K7 porte sa propre caméra (perspective sur le bouton → s'applique au
+   groupe 3D enfant direct) : le rendu du survol est identique quelle que soit la
+   position de la carte dans la pile. Origine légèrement au-dessus = regard plongeant. */
+.qm-cassettes .qm-slab {
+  position: relative;
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  perspective: 900px;
+  perspective-origin: 50% -40px;
+  transition: transform .3s cubic-bezier(.32,1.15,.5,1);
+  will-change: transform;
+}
+.qm-cassettes .qm-slab:focus-visible { outline: none; }
+.qm-cassettes .qm-slab:focus-visible .qm-slab__label { box-shadow: 0 0 0 3px #57c84d, 0 2px 4px rgba(0,0,0,.28); }
+
+/* Groupe 3D rigide (tranche + face soudées). transform-origin Y = STRIP (42px),
+   à garder synchronisé avec la constante STRIP de SelectionCassettes.jsx. */
+.qm-cassettes .qm-slab__box {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  /* Charnière tranche/face = 42px × facteur d'échelle (mini-cassettes → --slab-k < 1). */
+  transform-origin: 50% calc(42px * var(--slab-k, 1));
+  transform: rotateX(-90deg);
+  transition: transform .38s cubic-bezier(.32,1.15,.5,1);
+}
+.qm-cassettes .qm-slab.is-focus .qm-slab__box { transform: rotateX(-32deg); }
+
+/* FACE AVANT : sous la charnière. Les PNG des jaquettes sont rognés à zéro marge
+   (scripts/trim-cassettes.mjs) : la coque touche les bords du fichier → l'image en
+   pleine largeur fait EXACTEMENT la largeur de la tranche (cassette-top.png, opaque
+   bord à bord), pas de plaque qui déborde sur les côtés. top = 37px < 42px
+   (charnière) : ~5px de chevauchement franc, le bord de coque passe DEVANT le liseré
+   bas de la tranche (plus proche caméra au-dessus de la charnière) → couture soudée,
+   zéro vide. aspect-ratio = hauteur de repli pour la coque générique (sans jaquette). */
+.qm-cassettes .qm-slab__front {
+  position: absolute; left: 0; right: 0; top: calc(37px * var(--slab-k, 1));
+  aspect-ratio: 1.4;
+}
+/* Jaquette détourée (PNG transparent, zéro marge) : pleine largeur, hauteur
+   naturelle (les ratios varient ~1,33-1,51 selon la jaquette, jamais recadrée). */
+.qm-cassettes .qm-slab__art {
+  display: block;
+  width: 100%; height: auto;
+  filter: drop-shadow(0 14px 16px rgba(20,10,2,.5));
+}
+
+/* Face générique (cassettes sans jaquette : scolaire / intégrale) : coque dessinée.
+   inset-top 5px = replace le bord de coque au ras de la charnière (le conteneur
+   __front remonte de 5px au-dessus d'elle) ; côtés 0 = même largeur que la tranche,
+   comme les jaquettes rognées. */
+.qm-cassettes .qm-slab__shell {
+  position: absolute; inset: 5px 0 6%;
+  border: 2px solid #17100a;
+  border-radius: 10px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.14), inset 0 -12px 16px rgba(0,0,0,.4), 0 14px 16px rgba(20,10,2,.45);
+}
+.qm-cassettes .qm-slab__window {
+  position: absolute; left: 16%; right: 16%; top: 40%; bottom: 26%;
+  border-radius: 5px; background: #efe3c6;
+  border: 2px solid rgba(0,0,0,.35);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.35), inset 0 -4px 8px rgba(0,0,0,.18);
+}
+
+/* TRANCHE HAUTE (cassette-top.png) = dessus de la boîte : couchée à plat vers
+   l'arrière autour de sa base (la charnière). Au repos (groupe à -90°) le cumul des
+   deux rotations la ramène pile face caméra, à plat dans le plan de l'écran → rendu
+   net, identique à une simple image 2D. */
+.qm-cassettes .qm-slab__label {
+  position: absolute; left: 0; right: 0; top: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  transform: rotateX(90deg);
+  border-radius: 6px 6px 2px 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.28);
+}
+/* Le titre reste posé sur la tranche pendant la bascule : il suit le pli 3D
+   (foreshortening naturel), comme une vraie étiquette collée sur le dessus. */
+.qm-cassettes .qm-slab__labelimg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: fill;               /* barre décorative → étirement vertical léger, sans distordre de forme ronde */
+}
+.qm-cassettes .qm-slab__title {
+  position: relative; z-index: 1;
+  max-width: 64%;                 /* reste sur le crème (rayures aux extrémités) */
+  font-family: 'Archivo Black', system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.04;
+  letter-spacing: .2px;
+  color: #241a10;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Mini-cassette (sous-sous-thème, depth ≥ 2) : titre plus petit sur la tranche réduite. */
+.qm-cassettes .qm-slab--mini .qm-slab__title { font-size: 8px; -webkit-line-clamp: 2; }
+
+/* Flèche discrète de repli des sous-sous-thèmes : dans la marge GAUCHE de la
+   cassette, centrée sur la tranche. Posée dans le bouton → suit le translateY
+   des cassettes au survol. translateY(-50%) pour le centrage vertical. */
+.qm-cassettes .qm-subtoggle {
+  position: absolute; left: -17px; top: 50%; transform: translateY(-50%); z-index: 50;
+  width: 15px; height: 15px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: rgba(36,26,16,.45); color: #f4e7cc;
+  font-family: 'Archivo Black', system-ui, sans-serif; font-size: 9px; line-height: 1;
+  cursor: pointer; transition: background .15s;
+}
+.qm-cassettes .qm-subtoggle:hover { background: rgba(36,26,16,.85); }
+
+/* Confort : respecte la préférence « moins d'animations » (états instantanés). */
+@media (prefers-reduced-motion: reduce) {
+  .qm-cassettes .qm-slab,
+  .qm-cassettes .qm-slab__box { transition: none; }
+}
+
+/* Séparateurs = plaques rétro cliquables (accordéon vertical). */
+.qm-cassettes .qm-sep { transition: filter .15s, transform .12s; }
+.qm-cassettes .qm-sep:hover { filter: brightness(1.05) saturate(1.05); }
+.qm-cassettes .qm-sep:active { transform: translateY(1px); }
+.qm-cassettes .qm-sep:focus-visible { outline: 3px solid #57c84d; outline-offset: 2px; border-radius: 6px; }

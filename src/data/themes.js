@@ -27,6 +27,9 @@ export function resetThemesData() {
 }
 
 // --- Helpers d'arbre (lisent THEMES) ---
+// `isLeaf` = porte un subjectKey (donc du contenu). Attention : un nœud MIXTE
+// (subjectKey ET enfants) est à la fois « leaf » et parent — préférer `isPureLeaf`
+// quand la sémantique « voie singleton vs voie large » compte (cf. perimeter).
 export const isLeaf = (key) => !!THEMES[key]?.subjectKey;
 export const pathOf = (key) => THEMES[key]?.path || null;
 
@@ -36,18 +39,21 @@ export function childrenOf(key) {
     .sort((a, b) => (a.ord ?? 0) - (b.ord ?? 0));
 }
 
+export const hasChildren = (key) => childrenOf(key).length > 0;
+// Feuille PURE = du contenu propre ET aucun enfant → voie singleton.
+export const isPureLeaf = (key) => isLeaf(key) && !hasChildren(key);
+
 // subject_keys de toutes les feuilles descendantes de `key` (DFS), dédupliqués,
-// dans l'ordre de l'arbre. Si `key` est lui-même une feuille, renvoie [subjectKey].
+// dans l'ordre de l'arbre. NŒUD MIXTE : on inclut son propre subjectKey PUIS on
+// descend dans ses enfants (« insérer Jeux vidéo » = ses Q générales + Skyrim + …).
+// Une feuille pure renvoie [subjectKey].
 export function descendantLeaves(key) {
   const out = [];
   const seen = new Set();
   const walk = (k) => {
     const node = THEMES[k];
     if (!node) return;
-    if (node.subjectKey) {
-      if (!seen.has(node.subjectKey)) { seen.add(node.subjectKey); out.push(node.subjectKey); }
-      return;
-    }
+    if (node.subjectKey && !seen.has(node.subjectKey)) { seen.add(node.subjectKey); out.push(node.subjectKey); }
     for (const child of childrenOf(k)) walk(child.key);
   };
   walk(key);

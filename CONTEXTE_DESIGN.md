@@ -1,4 +1,4 @@
-# Quête des Matières — Contexte de conception (design · UX · équilibrage)
+# Curioscope — Contexte de conception (design · UX · équilibrage)
 
 > **À quoi sert ce document.** C'est le brief de contexte à charger dans un projet Claude
 > dédié à la **conception** du jeu : idées, game design, UX, équilibrage, pédagogie,

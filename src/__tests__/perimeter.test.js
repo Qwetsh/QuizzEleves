@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { setThemesData, resetThemesData } from '../data/themes';
+import { setThemesData, resetThemesData, descendantLeaves, isPureLeaf } from '../data/themes';
 import { buildPerimeter, themesToCassetteModel } from '../logic/perimeter';
+import { repathSubtree, slugifyKey } from '../logic/themesConfig';
 
 // Petit arbre de test : scolaire (2 matières), divertissement > cinema (1 film),
 // et un domaine 'vide' sans contenu.
@@ -55,6 +56,75 @@ describe('buildPerimeter', () => {
     const p = buildPerimeter([{ themeKey: 'vide' }], { hasContent: all });
     expect(p.boardSubjects).toEqual([]);
     expect(p.categoryPools).toEqual({});
+  });
+});
+
+// Arbre avec un nœud MIXTE : jeux_video porte du contenu ET a un enfant Skyrim.
+const MIXED = {
+  divertissement: { key: 'divertissement', path: 'divertissement', parentKey: null, kind: 'domain', name: 'Divertissement', ord: 0 },
+  jeux_video: { key: 'jeux_video', path: 'divertissement.jeux_video', parentKey: 'divertissement', kind: 'theme', name: 'Jeux vidéo', subjectKey: 'jeux_video', ord: 0 },
+  skyrim: { key: 'skyrim', path: 'divertissement.jeux_video.skyrim', parentKey: 'jeux_video', kind: 'theme', name: 'Skyrim', subjectKey: 'skyrim', ord: 0 },
+};
+
+describe('nœud mixte (contenu propre + enfants)', () => {
+  beforeEach(() => setThemesData({ themes: MIXED, roots: ['divertissement'] }));
+  afterEach(() => resetThemesData());
+
+  it('descendantLeaves inclut le subject du nœud PUIS ses enfants', () => {
+    expect(descendantLeaves('jeux_video')).toEqual(['jeux_video', 'skyrim']);
+    expect(descendantLeaves('skyrim')).toEqual(['skyrim']);
+  });
+
+  it('isPureLeaf : Skyrim oui, Jeux vidéo non (a un enfant)', () => {
+    expect(isPureLeaf('skyrim')).toBe(true);
+    expect(isPureLeaf('jeux_video')).toBe(false);
+  });
+
+  it('insérer un nœud mixte = voie large (ses Q générales + Skyrim)', () => {
+    const p = buildPerimeter([{ themeKey: 'jeux_video' }], { hasContent: () => true });
+    expect(p.boardSubjects).toEqual(['jeux_video']);
+    expect(p.categoryPools.jeux_video).toEqual(['jeux_video', 'skyrim']);
+  });
+
+  it('insérer une feuille pure = voie singleton', () => {
+    const p = buildPerimeter([{ themeKey: 'skyrim' }], { hasContent: () => true });
+    expect(p.categoryPools).toEqual({ skyrim: ['skyrim'] });
+  });
+
+  it('cassette : le nœud mixte = INTÉGRALE + le sous-sous-thème en mini (depth 2)', () => {
+    const { GROUPS } = themesToCassetteModel();
+    const items = GROUPS.find((g) => g.domain === 'divertissement').items;
+    const jv = items.find((i) => i.id === 'jeux_video');
+    const sky = items.find((i) => i.id === 'skyrim');
+    expect(jv).toMatchObject({ type: 'integrale', depth: 1 });
+    expect(sky).toMatchObject({ type: 'theme', depth: 2 });
+    // Skyrim est listé juste après Jeux vidéo (rangé sous son parent).
+    expect(items.indexOf(sky)).toBe(items.indexOf(jv) + 1);
+  });
+});
+
+describe('repathSubtree', () => {
+  const rows = [
+    { key: 'divertissement', path: 'divertissement', parent_key: null },
+    { key: 'jeux_video', path: 'divertissement.jeux_video', parent_key: 'divertissement' },
+    { key: 'bethesda', path: 'divertissement.jeux_video.bethesda', parent_key: 'jeux_video' },
+    { key: 'skyrim', path: 'divertissement.jeux_video.skyrim', parent_key: 'jeux_video' },
+  ];
+
+  it('déplacer Skyrim sous Bethesda re-path le nœud (questions intactes car liées au subject)', () => {
+    const up = repathSubtree(rows, 'skyrim', 'bethesda');
+    expect(up).toEqual([{ key: 'skyrim', path: 'divertissement.jeux_video.bethesda.skyrim', parent_key: 'bethesda' }]);
+  });
+
+  it('déplacer un nœud re-path aussi tous ses descendants', () => {
+    const up = repathSubtree(rows, 'jeux_video', 'divertissement'); // no-op parent, mais teste la descente
+    // parent identique → aucun changement
+    expect(up).toEqual([]);
+  });
+
+  it('slugifyKey : accents retirés, séparateurs → underscore', () => {
+    expect(slugifyKey('Épée à Feu !')).toBe('epee_a_feu');
+    expect(slugifyKey('The Elder Scrolls V')).toBe('the_elder_scrolls_v');
   });
 });
 

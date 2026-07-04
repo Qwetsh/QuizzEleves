@@ -482,9 +482,17 @@ export function eventPillageApply(set, get, pick) {
   const item = ITEMS[itemKey];
   set({ teams: newTeams });
   addLog(tg('log.ev.pillageApply', { emoji: team.emoji, name: team.name, icon: item.icon, item: locName(item), vemoji: target.emoji, vname: target.name }));
-  grantItem(set, get, currentTeam, itemKey);
-  set({ showEvent: null });
-  get().finishEventTurn();
+  const res = grantItem(set, get, currentTeam, itemKey);
+  // Sac plein → objet revendu : pas de cérémonie de gain (cohérent avec le
+  // coffre) ; on ferme l'événement et on enchaîne le tour.
+  if (!res || res.outcome === 'refunded') {
+    set({ showEvent: null });
+    get().finishEventTurn();
+    return;
+  }
+  // Révélation de l'objet pillé (visuel + effets) ; sa fermeture clôt
+  // l'événement et passe la main (thenClose, comme le coffre).
+  get().showLoot(itemKey, { title: tg('modal.loot.pillageTitle'), thenClose: true });
 }
 
 // --- The big switch ---

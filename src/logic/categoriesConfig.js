@@ -76,6 +76,21 @@ export function applyCachedCategories() {
   } catch { /* cache illisible */ }
 }
 
+// --- CRUD catégories (pour l'éditeur de thèmes : une FEUILLE jouable = 1 ligne
+// quete_categories role='subject', sinon getQuestions ne l'itère pas). ---
+export async function saveCategoryRow(row) {
+  const payload = { ...row, updated_at: new Date().toISOString() };
+  const { data, error } = await supabase.from('quete_categories')
+    .upsert(payload, { onConflict: 'key' }).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCategoryRow(key) {
+  const { error } = await supabase.from('quete_categories').delete().eq('key', key);
+  if (error) throw error;
+}
+
 // Récupère modules + catégories, remplit les bindings et met à jour le cache.
 export async function refreshCategories() {
   const [{ data: cats, error: e1 }, { data: mods, error: e2 }] = await Promise.all([

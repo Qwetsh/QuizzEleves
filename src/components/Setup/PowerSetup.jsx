@@ -4,6 +4,13 @@ import { lighten } from '../../utils/colors';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 
+const FONT_DISPLAY = "'Archivo Black', system-ui, sans-serif";
+const FONT_UI = "'Hanken Grotesk', system-ui, sans-serif";
+const FONT_MONO = "'VT323', monospace";
+
+// Écran de choix des pouvoirs, habillé « console Curioscope » : fond bois à
+// lattes, panneau charbon, afficheur LCD d'étape, cartes-cartouches sombres
+// qui s'allument en LED verte au survol (cohérent avec SelectionCassettes).
 export default function PowerSetup() {
   const T = useT();
   const teams = useGameStore((s) => s.teams);
@@ -20,6 +27,7 @@ export default function PowerSetup() {
 
   const stepNum = powerSetupIndex * 2 + (isDef ? 1 : 2);
   const stepTotal = teams.length * 2;
+  const catColor = isDef ? '#6aa8ff' : '#ff7b6b';
 
   const handleSelect = (key) => {
     selectPower(powerSetupIndex, powerSetupCategory, key);
@@ -27,112 +35,98 @@ export default function PowerSetup() {
   };
 
   return (
-    <div className="absolute inset-0 overflow-y-auto flex items-center justify-center" style={{ padding: '40px 20px' }}>
-      <div style={{ width: 'min(820px, 100%)', textAlign: 'center' }}>
-        {/* Step tag */}
-        <div
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 18px', borderRadius: 999,
-            background: isDef
-              ? 'linear-gradient(180deg, #4d8aea, #2f6fd8)'
-              : 'linear-gradient(180deg, #e85d6b, #c9472f)',
-            color: '#fff',
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            fontSize: 13,
-            boxShadow: isDef
-              ? 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.2), 0 4px 0 rgba(28,61,110,0.4)'
-              : 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.2), 0 4px 0 rgba(110,30,18,0.4)',
-          }}
-        >
-          {isDef ? T('setup.powerDef') : T('setup.powerOff')}
-          {T('setup.powerStep', { n: stepNum, total: stepTotal })}
-        </div>
+    <div className="absolute inset-0 overflow-y-auto" style={{ background: 'linear-gradient(#b98f4e, #8a6636)' }}>
+      {/* Lattes de bois du fond (décor). */}
+      <div style={{ position: 'fixed', inset: 0, backgroundImage: 'repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 3px, transparent 3px 80px), repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 2px, transparent 2px 7px)', pointerEvents: 'none' }} />
 
-        {/* Team banner */}
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
-            margin: '18px 0 28px',
-            fontFamily: 'var(--font-display)',
-            fontSize: 28,
-            color: 'var(--ink-900)',
-          }}
-        >
-          <span className="text-4xl">{team.emoji}</span>
-          <span style={{ color: team.color }}>{team.name}</span>
-        </div>
+      <div style={{ position: 'relative', minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '36px 24px' }}>
+        <div style={{ width: 'min(980px, 100%)', background: '#241a10', border: '4px solid #120c06', borderRadius: 18, boxShadow: '0 24px 60px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.06)', padding: '22px 28px 24px' }}>
 
-        {/* Power cards */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {powers.map(([key, p]) => (
-            <div
-              key={key}
-              onClick={() => handleSelect(key)}
-              role="button"
-              tabIndex={0}
-              aria-label={T('setup.powerChooseAria', { name: locName(p) })}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(key); } }}
-              className="cursor-pointer"
-              style={{
-                padding: '24px 18px 22px',
-                borderRadius: 20,
-                background: '#fffefb',
-                border: '3px solid rgba(122, 94, 58, 0.18)',
-                textAlign: 'center',
-                boxShadow: '0 4px 0 rgba(46,31,16,0.10), 0 12px 24px rgba(46,31,16,0.10)',
-                transition: 'all 160ms ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.borderColor = 'var(--gold-500)';
-                e.currentTarget.style.boxShadow = '0 8px 0 rgba(110,78,16,0.4), 0 16px 32px rgba(46,31,16,0.20)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = '';
-                e.currentTarget.style.borderColor = 'rgba(122, 94, 58, 0.18)';
-                e.currentTarget.style.boxShadow = '0 4px 0 rgba(46,31,16,0.10), 0 12px 24px rgba(46,31,16,0.10)';
-              }}
-            >
+          {/* Bandeau haut : marque + afficheur LCD de l'étape */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: '3px solid #120c06', paddingBottom: 14, marginBottom: 18 }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 17, letterSpacing: 3, color: '#8a7656' }}>CURIOSCOPE</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 20, letterSpacing: 1, color: catColor, textShadow: `0 0 8px ${catColor}55`, background: '#120c06', border: '3px solid #5a4023', borderRadius: 6, padding: '3px 12px', whiteSpace: 'nowrap' }}>
+              {(isDef ? T('setup.powerDef') : T('setup.powerOff')) + T('setup.powerStep', { n: stepNum, total: stepTotal })}
+            </span>
+          </div>
+
+          {/* Bannière de l'équipe qui choisit */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, margin: '4px 0 22px' }}>
+            <span style={{ fontSize: 38 }}>{team.emoji}</span>
+            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, letterSpacing: 0.5, color: team.color, textShadow: '0 2px 0 #000' }}>{team.name}</span>
+          </div>
+
+          {/* Cartes-cartouches des pouvoirs */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {powers.map(([key, p]) => (
               <div
+                key={key}
+                onClick={() => handleSelect(key)}
+                role="button"
+                tabIndex={0}
+                aria-label={T('setup.powerChooseAria', { name: locName(p) })}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(key); } }}
+                className="cursor-pointer"
                 style={{
-                  width: 80, height: 80, borderRadius: 22,
-                  margin: '0 auto 14px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 40,
-                  background: `linear-gradient(180deg, ${lighten(p.color || '#888', 0.2)}, ${p.color || '#888'})`,
-                  boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.5), inset 0 -5px 0 rgba(0,0,0,0.18)',
+                  padding: '22px 16px 18px',
+                  borderRadius: 12,
+                  background: '#2a2117',
+                  border: '3px solid #150f08',
+                  textAlign: 'center',
+                  boxShadow: '0 4px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07)',
+                  transition: 'all 140ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.borderColor = '#57c84d';
+                  e.currentTarget.style.boxShadow = '0 8px 0 rgba(0,0,0,.45), 0 0 16px rgba(87,200,77,.45), inset 0 1px 0 rgba(255,255,255,.07)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.borderColor = '#150f08';
+                  e.currentTarget.style.boxShadow = '0 4px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07)';
                 }}
               >
-                {p.icon}
+                <div
+                  style={{
+                    width: 78, height: 78, borderRadius: 12,
+                    margin: '0 auto 12px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 38,
+                    background: `linear-gradient(180deg, ${lighten(p.color || '#888', 0.2)}, ${p.color || '#888'})`,
+                    border: '3px solid #150f08',
+                    boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -5px 0 rgba(0,0,0,0.25)',
+                  }}
+                >
+                  {p.icon}
+                </div>
+                <div style={{ fontFamily: FONT_DISPLAY, fontSize: 19, color: '#f4e7cc', marginBottom: 6, textShadow: '0 2px 0 rgba(0,0,0,.4)' }}>
+                  {locName(p)}
+                </div>
+                <div style={{ fontFamily: FONT_UI, fontSize: 13.5, color: '#a89878', lineHeight: 1.4, minHeight: 56 }}>
+                  {locDesc(p)}
+                </div>
               </div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ink-900)', marginBottom: 6 }}>
-                {locName(p)}
-              </div>
-              <div style={{ fontSize: 14, color: 'var(--ink-600)', lineHeight: 1.4, minHeight: 56 }}>
-                {locDesc(p)}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Team dots */}
-        <div style={{ marginTop: 28, display: 'flex', justifyContent: 'center', gap: 8 }}>
-          {teams.map((t, i) => (
-            <div
-              key={`dot-${t.name}-${i}`}
-              title={t.name}
-              aria-label={i === powerSetupIndex ? T('setup.powerTeamAriaCurrent', { name: t.name }) : T('setup.powerTeamAria', { name: t.name })}
-              style={{
-                width: 16, height: 16, borderRadius: '50%',
-                background: t.color,
-                opacity: i === powerSetupIndex ? 1 : 0.35,
-                boxShadow: i === powerSetupIndex ? '0 0 0 3px rgba(184, 134, 44, 0.5)' : 'none',
-              }}
-            />
-          ))}
+          {/* File des équipes (voyants) */}
+          <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+            {teams.map((t, i) => (
+              <div
+                key={`dot-${t.name}-${i}`}
+                title={t.name}
+                aria-label={i === powerSetupIndex ? T('setup.powerTeamAriaCurrent', { name: t.name }) : T('setup.powerTeamAria', { name: t.name })}
+                style={{
+                  width: 15, height: 15, borderRadius: 4,
+                  background: t.color,
+                  border: '2px solid #120c06',
+                  opacity: i === powerSetupIndex ? 1 : 0.35,
+                  boxShadow: i === powerSetupIndex ? '0 0 0 2px #57c84d, 0 0 10px rgba(87,200,77,.5)' : 'none',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

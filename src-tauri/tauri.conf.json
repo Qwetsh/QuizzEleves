@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Quete des Matieres",
+  "productName": "Curioscope",
   "version": "1.0.0",
   "identifier": "fr.quetematieres.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Quête des Matières",
+        "title": "Curioscope",
         "width": 1280,
         "height": 800,
         "resizable": true,

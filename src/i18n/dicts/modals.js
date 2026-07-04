@@ -155,7 +155,9 @@ export default {
 
   // ---- LootReveal ----
   'modal.loot.title': { fr: 'Objet obtenu !', en: 'Item obtained!' },
+  'modal.loot.pillageTitle': { fr: '🏴‍☠️ Objet pillé !', en: '🏴‍☠️ Item plundered!' },
   'modal.loot.consumable': { fr: 'Consommable', en: 'Consumable' },
+  'modal.loot.effects': { fr: 'Effets', en: 'Effects' },
 
   // ---- StarterChest ----
   'modal.chest.treasure': { fr: '{emoji} Trésor de départ !', en: '{emoji} Starting treasure!' },

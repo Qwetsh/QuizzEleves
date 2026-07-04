@@ -156,6 +156,40 @@
   color: #b6a884;
 }
 
+/* ---------- Effets de l'objet gagné ---------- */
+.loot-fx {
+  width: calc(100% - 40px);
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(243, 201, 105, 0.28);
+  text-align: left;
+}
+.loot-fx-title {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #f3c969;
+  margin-bottom: 6px;
+}
+.loot-fx-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e6d9b8;
+  margin-top: 3px;
+}
+.loot-fx-ic {
+  color: #f3c969;
+  font-size: 11px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
 /* ---------- Bouton ---------- */
 .loot-btn {
   margin-top: 18px;

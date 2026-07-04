@@ -68,12 +68,134 @@
   font-size: 14px;
 }
 .qed-body { flex: 1; min-height: 0; display: flex; }
+
+/* Colonne 1 : arbre des thèmes */
+.qed-tree {
+  width: 246px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid rgba(122, 94, 58, 0.2);
+  padding: 8px 6px;
+  background: rgba(255, 250, 240, 0.4);
+}
+.qed-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 8px;
+}
+.qed-tree-row.is-active { background: rgba(199, 145, 32, 0.16); }
+.qed-tree-caret {
+  width: 18px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-500, #8a7858);
+  font-size: 11px;
+  padding: 0;
+}
+.qed-tree-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 6px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-900, #3a2c14);
+}
+.qed-tree-ic { flex-shrink: 0; }
+.qed-tree-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qed-tree-row.is-active .qed-tree-name { font-weight: 700; }
+.qed-tree-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-500, #8a7858);
+  background: rgba(122, 94, 58, 0.12);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.qed-tree-orphans { margin-top: 10px; border-top: 1px dashed rgba(122, 94, 58, 0.3); padding-top: 8px; }
+
+/* Colonne 2 : liste des questions */
 .qed-list {
-  width: 42%;
-  min-width: 280px;
+  width: 34%;
+  min-width: 240px;
   overflow-y: auto;
   border-right: 1px solid rgba(122, 94, 58, 0.2);
   padding: 8px;
+}
+.qed-item-q { flex: 1; min-width: 0; }
+.qed-tier-dot {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  margin-top: 3px;
+  background: #cbb68e;
+}
+.qed-tier-dot.tier-am { background: #4fae63; }
+.qed-tier-dot.tier-co { background: #d9a521; }
+.qed-tier-dot.tier-ex { background: #c0392b; }
+.qed-tier-dot.tier-none { background: transparent; border: 1.5px dashed #b8a17a; }
+
+/* Filtres de palier (toolbar) */
+.qed-tf.tf-amateur.is-active { background: #4fae63; border-color: #3f9052; }
+.qed-tf.tf-connaisseur.is-active { background: #d9a521; border-color: #b98a16; }
+.qed-tf.tf-expert.is-active { background: #c0392b; border-color: #9c2c20; }
+
+/* Sélecteur de paliers (formulaire) */
+.qed-tiers { display: flex; gap: 6px; flex-wrap: wrap; }
+.qed-tier {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(122, 94, 58, 0.3);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-700, #5a4424);
+  cursor: pointer;
+}
+.qed-tier.tier-am.is-active { background: #4fae63; border-color: #3f9052; color: #fff; }
+.qed-tier.tier-co.is-active { background: #d9a521; border-color: #b98a16; color: #fff; }
+.qed-tier.tier-ex.is-active { background: #c0392b; border-color: #9c2c20; color: #fff; }
+.qed-tier.tier-none.is-active { background: #8a7858; border-color: #6f5f43; color: #fff; }
+
+/* Réglage fin 1-5 (difficulté / généralité) */
+.qed-fine { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.qed-fine-lab { font-size: 12px; color: var(--ink-500, #8a7858); }
+.qed-fine-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(122, 94, 58, 0.3);
+  background: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-700, #5a4424);
+  cursor: pointer;
+}
+.qed-fine-dot.is-active { background: var(--gold-500, #c79120); border-color: var(--gold-600, #a8771a); color: #fff; }
+.qed-badge {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink-500, #8a7858);
+  background: rgba(122, 94, 58, 0.12);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 6px;
 }
 .qed-item {
   display: flex;

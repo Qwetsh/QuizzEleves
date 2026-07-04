@@ -89,7 +89,7 @@ export async function refreshQuestions() {
 
 // --- CRUD pour l'éditeur in-game (lignes brutes, avec id) ---
 
-const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en';
+const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,difficulte,generalite,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en';
 
 // Toutes les lignes (paginé) avec leur id, pour l'édition.
 export async function fetchQuestionRows() {
@@ -125,6 +125,9 @@ function toPayload(row) {
     t: blank(row.t),
     enabled: row.enabled !== false,
     ord: row.ord ?? null,
+    // Métadonnées d'auteur (paliers de difficulté / généralité, 1-5, nullables).
+    difficulte: row.difficulte == null || row.difficulte === '' ? null : Number(row.difficulte),
+    generalite: row.generalite == null || row.generalite === '' ? null : Number(row.generalite),
     // Version anglaise (toutes nullables ; repli FR à l'affichage).
     q_en: blank(row.q_en),
     rep_a_en: blank(row.rep_a_en),

@@ -50,7 +50,7 @@ export default function BoardParams() {
         onChange={(v) => setBoardParam('voieFinale', v)}
       />
 
-      <div style={{ marginBottom: 14 }}>
+      <div>
         <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
           {T('setup.boardMixCorridors')}<strong>{params.couloirsMix}</strong>
         </div>
@@ -60,22 +60,7 @@ export default function BoardParams() {
           style={{ accentColor: '#b8862c', width: '100%' }}
         />
       </div>
-
-      <div>
-        <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
-          {T('setup.boardEvents')}
-          <strong>
-            {params.eventEveryX < 1
-              ? T('setup.boardEventsNone')
-              : T('setup.boardEventsEvery', { n: params.eventEveryX })}
-          </strong>
-        </div>
-        <input
-          type="range" min={0} max={6} value={params.eventEveryX}
-          onChange={(e) => setBoardParam('eventEveryX', Number(e.target.value))}
-          style={{ accentColor: '#b8862c', width: '100%' }}
-        />
-      </div>
+      {/* La fréquence d'événements a migré dans l'onglet RÉGLAGES → ÉVÉNEMENTS. */}
     </div>
   );
 }

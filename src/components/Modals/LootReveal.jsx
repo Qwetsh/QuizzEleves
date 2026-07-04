@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
+import { itemEffectLines } from '../../logic/effectText';
 import { soundClick } from '../../logic/sounds';
 import '../../styles/loot-reveal.css';
 
@@ -76,7 +77,14 @@ export default function LootReveal() {
   const T = useT();
   const lootReveal = useGameStore((s) => s.lootReveal);
   const dismissLoot = useGameStore((s) => s.dismissLoot);
+  const team = useGameStore((s) => s.teams[s.currentTeam]);
   const item = lootReveal ? ITEMS[lootReveal.itemKey] : null;
+  // Effets mécaniques de l'objet gagné (pillage, coffre, butin…) : on montre
+  // ce que l'objet FAIT, pas seulement son nom/description. Les ingrédients
+  // d'alchimie non découverts restent « ??? » (règle knownIngredients).
+  const effects = item
+    ? itemEffectLines(item, { key: lootReveal.itemKey, knownIngredients: team?.knownIngredients || [] })
+    : [];
 
   return createPortal(
     <AnimatePresence>
@@ -97,6 +105,14 @@ export default function LootReveal() {
             <div className="loot-modal">
               <div className="loot-banner">{lootReveal.title || T('modal.loot.title')}</div>
               <LootCard item={item} subtitle={lootReveal.subtitle} />
+              {effects.length > 0 && (
+                <div className="loot-fx">
+                  <div className="loot-fx-title">{T('modal.loot.effects')}</div>
+                  {effects.map((l, i) => (
+                    <div key={i} className="loot-fx-row"><span className="loot-fx-ic">◆</span><span>{l}</span></div>
+                  ))}
+                </div>
+              )}
               <button className="loot-btn" onClick={() => { soundClick(); dismissLoot(); }}>
                 {T('modal.nice')}
               </button>

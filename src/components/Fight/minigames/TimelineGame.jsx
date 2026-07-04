@@ -83,8 +83,10 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
     const strip = stripRef.current;
     if (!strip) return null;
     const rect = strip.getBoundingClientRect();
-    // Zone de depot : la bande de la frise, un peu elargie verticalement
-    if (clientY < rect.top - 40 || clientY > rect.bottom + 20) return null;
+    // Zone de depot : STRICTEMENT la bande de la frise. Pas de debordement vers
+    // le haut (sinon relacher la carte juste au-dessus de la frise declenche
+    // quand meme un placement) ; on ne place qu'au niveau de la frise elle-meme.
+    if (clientY < rect.top || clientY > rect.bottom) return null;
     if (clientX < rect.left - 20 || clientX > rect.right + 20) return null;
     let idx = 0;
     for (const card of placed) {

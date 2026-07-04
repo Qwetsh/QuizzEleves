@@ -7,7 +7,10 @@ const DICE_FACE_ROT = {
   3: { x: -90,  y: 0 },
   4: { x: 90,   y: 0 },
   5: { x: 0,    y: 90 },
-  6: { x: 180,  y: 0 },
+  // Face 6 = côté « back » (rotateY(180)). On l'amène au premier plan par
+  // rotateY(180) — et NON rotateX(180) — sinon la composition avec le rotateY
+  // de la face donne une rotation de 180° dans le plan (contenu à l'envers).
+  6: { x: 0,    y: 180 },
 };
 
 const PIPS = {

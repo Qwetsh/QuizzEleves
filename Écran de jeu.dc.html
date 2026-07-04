@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="46c6e033-d79c-49fb-a4f9-447c129d5928"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<style>/* latin-ext */
+@font-face {
+  font-family: 'Archivo Black';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("ce2d534e-535b-4467-bc87-912538fe4fe2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Archivo Black';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("f09bf920-616d-4ea4-a476-dea627f0309c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("819869fb-c16b-4c0d-ab84-a03ec5d2600e") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("c92b1558-d151-4669-b301-904cb5b2dee9") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("dc62c1a9-d83e-4fe3-9c95-6cfc25567495") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("43ea4db5-7a4a-4f54-b5b6-ce276dfa08a0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("819869fb-c16b-4c0d-ab84-a03ec5d2600e") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("c92b1558-d151-4669-b301-904cb5b2dee9") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("dc62c1a9-d83e-4fe3-9c95-6cfc25567495") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("43ea4db5-7a4a-4f54-b5b6-ce276dfa08a0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("819869fb-c16b-4c0d-ab84-a03ec5d2600e") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("c92b1558-d151-4669-b301-904cb5b2dee9") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("dc62c1a9-d83e-4fe3-9c95-6cfc25567495") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("43ea4db5-7a4a-4f54-b5b6-ce276dfa08a0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("819869fb-c16b-4c0d-ab84-a03ec5d2600e") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("c92b1558-d151-4669-b301-904cb5b2dee9") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("dc62c1a9-d83e-4fe3-9c95-6cfc25567495") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("43ea4db5-7a4a-4f54-b5b6-ce276dfa08a0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("819869fb-c16b-4c0d-ab84-a03ec5d2600e") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("c92b1558-d151-4669-b301-904cb5b2dee9") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("dc62c1a9-d83e-4fe3-9c95-6cfc25567495") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("43ea4db5-7a4a-4f54-b5b6-ce276dfa08a0") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("8983a063-896f-48f9-aaa5-e899a4680406") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("91815dd8-870e-4d12-8680-b3d7aaed37e4") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("7d6b74bc-4177-47b4-a43d-2ee7ca0472a5") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{overflow:hidden;background:#12100c;font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#241a10}
+  button{font-family:inherit}
+  @keyframes led-blink{0%,60%{opacity:1}61%,100%{opacity:.28}}
+  @keyframes dice-tumble{0%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(9deg) translateY(-5px)}100%{transform:rotate(-9deg) translateY(0)}}
+  @keyframes glow-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+  @keyframes tv-flicker{0%,100%{opacity:.05}50%{opacity:.11}}
+  @keyframes arrow-x{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+  @keyframes pop-in{0%{opacity:0}100%{opacity:1}}
+  @keyframes float-y{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  ::-webkit-scrollbar{width:14px;height:14px}
+  ::-webkit-scrollbar-thumb{background:#7d5330;border:3px solid #4a3019}
+  ::-webkit-scrollbar-track{background:#3a2616}
+</style>
+</helmet>
+<div ref="{{ outerRef }}" style="position:fixed;inset:0;overflow:hidden;background:#0d0b07">
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 130% at 50% 20%,#241d12,#0a0704);pointer-events:none"></div>
+  <div ref="{{ stageRef }}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale({{ scale }});width:1600px;height:900px;display:flex;gap:16px;padding:16px;background:linear-gradient(#b98f4e,#8a6636);overflow:hidden;border-radius:10px;box-shadow:0 0 0 6px #241a10,0 40px 90px rgba(0,0,0,.7)">
+    <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.05) 0 3px,transparent 3px 80px),repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+    <!-- ===================== LEFT : TV + HUD ===================== -->
+    <div style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+
+      <!-- ---------- CRT TELEVISION ---------- -->
+      <section data-screen-label="Télévision" style="position:relative;flex:1;min-height:0;border-radius:24px;background:linear-gradient(#4a4f55,#33383d 60%,#22262a);border:3px solid #14161a;box-shadow:inset 0 4px 0 rgba(255,255,255,.14),inset 0 -18px 0 rgba(0,0,0,.4),0 20px 40px rgba(0,0,0,.5);padding:20px 22px 0;display:flex;flex-direction:column">
+
+        <!-- screen bezel -->
+        <div style="position:relative;flex:1;min-height:0;border-radius:22px;background:#0c0d10;border:14px solid #1b1e22;box-shadow:inset 0 0 0 3px #05070a,inset 0 0 26px rgba(0,0,0,.9),0 6px 0 rgba(0,0,0,.4);padding:6px">
+          <div style="position:absolute;inset:6px;border-radius:16px;overflow:hidden;box-shadow:inset 0 0 40px 14px rgba(0,0,0,.75),inset 0 0 0 2px rgba(0,0,0,.6)">
+            <!-- BOARD (channel 1 : couleur) -->
+            <div style="position:absolute;inset:0;filter:{{ boardFilter }}">
+              <!-- water -->
+              <div style="position:absolute;inset:0;background:radial-gradient(140% 120% at 50% 40%,#3fc9e8,#1fa6cf 60%,#1787b0);background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 2px,transparent 2px 12px)"></div>
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 4px,transparent 4px 26px);opacity:.6"></div>
+              <!-- island sand -->
+              <div style="position:absolute;inset:4% 4%;border-radius:120px;background:radial-gradient(circle at 50% 30%,#f0d9a4,#e2c286);box-shadow:inset 0 0 0 6px rgba(255,255,255,.18),inset 0 -20px 40px rgba(150,110,60,.4)"></div>
+              <!-- grass -->
+              <div style="position:absolute;inset:9% 8%;border-radius:90px;background:radial-gradient(circle at 50% 30%,#93c85f,#77b04c 70%,#66992f);box-shadow:inset 0 0 0 5px rgba(120,170,70,.5),inset 0 -16px 34px rgba(60,90,25,.45)"></div>
+              <!-- decor -->
+              <div style="position:absolute;left:11%;top:20%;font-size:30px">🌴</div>
+              <div style="position:absolute;right:12%;top:24%;font-size:30px">🌴</div>
+              <div style="position:absolute;left:20%;bottom:15%;font-size:22px">🪨</div>
+              <div style="position:absolute;right:22%;bottom:14%;font-size:24px">🌲</div>
+              <div style="position:absolute;left:46%;top:14%;font-size:20px">🌲</div>
+
+              <!-- lanes -->
+              <sc-for list="{{ boardLanes }}" as="ln" hint-placeholder-count="3">
+                <div style="position:absolute;left:6%;right:6%;top:{{ ln.top }};height:64px;display:flex;align-items:center;justify-content:space-around">
+                  <div style="position:absolute;left:2%;right:2%;top:50%;border-top:5px dotted rgba(255,255,255,.7);transform:translateY(-50%);z-index:0"></div>
+                  <sc-for list="{{ ln.tiles }}" as="tl" hint-placeholder-count="6">
+                    <div style="position:relative;width:58px;height:58px;flex:0 0 auto;z-index:2">
+                      <sc-if value="{{ tl.isQ }}" hint-placeholder-val="{{ true }}">
+                        <button onclick="{{ tl.onQ }}" title="Répondre à une question" style="width:100%;height:100%;padding:0;border-radius:50%;background:radial-gradient(circle at 38% 28%,#d95fae,#b73490 68%,#8e2470);border:3px solid #5e163f;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 3px 0 rgba(255,255,255,.4),inset 0 -6px 0 rgba(0,0,0,.28),0 4px 0 rgba(0,0,0,.22);transition:transform .12s" style-hover="transform:translateY(-3px) scale(1.06)" style-focus="outline:3px solid #57c84d;outline-offset:2px"><span style="font-family:'Archivo Black';font-size:24px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35)">?</span></button>
+                      </sc-if>
+                      <sc-if value="{{ tl.isWheel }}" hint-placeholder-val="{{ false }}">
+                        <div style="width:100%;height:100%;border-radius:50%;border:3px solid #3a2a12;background:conic-gradient(#2f6db5 0 90deg,#4f9a4a 90deg 180deg,#e08a2e 180deg 270deg,#8a5bbf 270deg 360deg);box-shadow:inset 0 0 0 4px #f3e6c9,0 4px 0 rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center"><div style="width:22px;height:22px;border-radius:50%;background:#f3e6c9;border:2px solid #3a2a12;display:flex;align-items:center;justify-content:center;font-size:12px">🎓</div></div>
+                      </sc-if>
+                      <sc-if value="{{ tl.isChest }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:62px;height:44px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#efe0bd,#d8bd8b);box-shadow:inset 0 -6px 10px rgba(150,110,60,.5)"></div>
+                        <div style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:40px;height:32px;border-radius:6px;background:linear-gradient({{ tl.chestTop }},{{ tl.chestBot }});border:3px solid #3a2410;box-shadow:inset 0 3px 0 rgba(255,255,255,.3)"><div style="position:absolute;left:0;right:0;top:9px;height:7px;background:rgba(0,0,0,.25)"></div><div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);width:9px;height:9px;border-radius:2px;background:#f4d03f;border:1px solid #3a2410"></div></div>
+                      </sc-if>
+                      <sc-if value="{{ tl.isStart }}" hint-placeholder-val="{{ false }}">
+                        <div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 40% 30%,#cdb9a0,#9c8468);border:3px solid #4a3a28;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 rgba(0,0,0,.25)"><span style="font-size:26px">🧭</span></div>
+                      </sc-if>
+                      <sc-if value="{{ tl.hasToken }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;top:-12px;right:-8px;width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid {{ tl.tokenRing }};display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 3px 0 rgba(0,0,0,.28);z-index:5;animation:float-y 2.4s ease-in-out infinite">{{ tl.tokenEmoji }}</div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- screen FX -->
+            <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 120% at 50% 45%,transparent 58%,rgba(0,0,0,.55) 100%)"></div>
+            <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.05) 22%,transparent 42%)"></div>
+            <div style="position:absolute;inset:0;pointer-events:none;background:#cfe;animation:tv-flicker 4s steps(2) infinite;mix-blend-mode:overlay"></div>
+            <sc-if value="{{ showScan }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px)"></div>
+            </sc-if>
+            <!-- 8-bit overlay -->
+            <sc-if value="{{ pixel }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;pointer-events:none;z-index:6;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px),repeating-linear-gradient(90deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px);mix-blend-mode:multiply"></div>
+              <div style="position:absolute;inset:0;pointer-events:none;z-index:6;background:repeating-conic-gradient(rgba(255,255,255,.10) 0 25%,transparent 0 50%) 0 0/5px 5px;mix-blend-mode:overlay"></div>
+              <div style="position:absolute;inset:0;pointer-events:none;z-index:6;background:rgba(30,60,40,.14);mix-blend-mode:multiply"></div>
+            </sc-if>
+            <!-- channel badge -->
+            <div style="position:absolute;left:12px;top:10px;z-index:8;font-family:'VT323',monospace;font-size:16px;letter-spacing:1px;color:#66ff8a;text-shadow:0 0 6px rgba(80,255,120,.7);background:rgba(0,0,0,.35);padding:0 7px;border-radius:3px">{{ channelText }}</div>
+          </div>
+        </div>
+
+        <!-- TV control strip -->
+        <div style="flex:0 0 auto;height:74px;display:flex;align-items:center;gap:18px;padding:0 8px">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-family:'Archivo Black';font-size:20px;letter-spacing:1px;color:#d7dce1;text-shadow:0 2px 0 #000">{{ tvBrand }}</span>
+            <span style="font-family:'VT323',monospace;font-size:15px;color:#8b9096">TRINI-VISION™</span>
+          </div>
+          <!-- channel switch -->
+          <button onclick="{{ onToggleChannel }}" title="Changer de chaîne" style="display:flex;align-items:center;gap:9px;background:#1b1e22;border:2px solid #0a0c0f;border-radius:9px;padding:6px 10px;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.1),inset 0 -3px 0 rgba(0,0,0,.5)">
+            <span style="font-family:'VT323',monospace;font-size:13px;color:{{ ch1Color }}">COULEUR</span>
+            <span style="position:relative;width:52px;height:24px;border-radius:13px;background:#0a0c0f;box-shadow:inset 0 2px 4px rgba(0,0,0,.7)"><span style="position:absolute;top:2px;left:3px;width:22px;height:18px;border-radius:9px;background:linear-gradient(#e8e2d0,#b7ad92);border:1px solid #000;transition:transform .18s;transform:{{ knobX }}"></span></span>
+            <span style="font-family:'VT323',monospace;font-size:13px;color:{{ ch2Color }}">8-BIT</span>
+          </button>
+          <div style="flex:1"></div>
+          <!-- dials -->
+          <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 32%,#5a5f65,#26292d);border:3px solid #14161a;box-shadow:0 3px 0 rgba(0,0,0,.4)"><div style="position:absolute;left:50%;top:6px;width:4px;height:16px;background:#c9cdd2;transform:translateX(-50%);margin-left:22px"></div></div>
+          <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 32%,#5a5f65,#26292d);border:3px solid #14161a;box-shadow:0 3px 0 rgba(0,0,0,.4)"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:50%;background:#e8342c;box-shadow:0 0 10px #e8342c;animation:led-blink 3s infinite"></span><span style="font-family:'VT323',monospace;font-size:12px;color:#8b9096">PWR</span></div>
+        </div>
+      </section>
+
+      <!-- ---------- BOTTOM HUD (teams) ---------- -->
+      <section data-screen-label="HUD équipes" style="flex:0 0 auto;height:150px;display:flex;gap:12px">
+        <sc-for list="{{ teamsView }}" as="t" hint-placeholder-count="3">
+          <div style="position:relative;flex:1;min-width:0;border-radius:12px;background:linear-gradient(#3a2c1a,#2a1d0c);border:3px solid {{ t.frame }};padding:11px 12px;display:flex;gap:11px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),inset 0 -8px 0 rgba(0,0,0,.4),0 8px 16px rgba(0,0,0,.3);transform:{{ t.lift }}">
+            <sc-if value="{{ t.active }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:50%;top:-15px;transform:translateX(-50%);background:#57c84d;border:3px solid #0c2a0a;border-radius:8px;padding:1px 12px;font-family:'Archivo Black';font-size:12px;letter-spacing:1px;color:#0c2a0a;box-shadow:0 3px 0 rgba(0,0,0,.35);display:flex;align-items:center;gap:6px;z-index:3"><span style="font-size:13px;animation:arrow-x 1s infinite">▸</span>À TOI DE JOUER</div>
+            </sc-if>
+            <!-- cassette cap -->
+            <div style="width:70px;flex:0 0 auto;border-radius:9px;background:{{ t.color }};border:3px solid #14100a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:inset 0 3px 0 rgba(255,255,255,.3),inset 0 -6px 0 rgba(0,0,0,.25)"><span style="font-size:32px;line-height:1">{{ t.emoji }}</span><span style="width:9px;height:9px;border-radius:50%;background:{{ t.led }};box-shadow:0 0 7px {{ t.ledGlow }}"></span></div>
+            <!-- info -->
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:6px">
+              <div style="font-family:'Archivo Black';font-size:18px;letter-spacing:.5px;color:#f4e7cc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</div>
+              <div style="display:flex;align-items:center;gap:7px">
+                <div style="display:flex;align-items:center;gap:5px;background:#0a1206;border:2px solid #16301a;border-radius:5px;padding:1px 8px"><span style="font-size:14px">🪙</span><span style="font-family:'VT323',monospace;font-size:19px;color:#57c84d;min-width:34px">{{ t.coins }}</span></div>
+                <div style="font-family:'VT323',monospace;font-size:16px;color:#9db06a;background:rgba(0,0,0,.25);border-radius:4px;padding:0 6px">✓{{ t.correct }} ✕{{ t.wrong }}</div>
+              </div>
+              <div style="display:flex;gap:5px">
+                <sc-for list="{{ t.badges }}" as="bd" hint-placeholder-count="3">
+                  <span style="display:flex;align-items:center;gap:3px;background:rgba(0,0,0,.28);border-radius:4px;padding:0 5px;font-family:'VT323',monospace;font-size:14px;color:#e8d9bb">{{ bd.icon }}{{ bd.n }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <!-- equip slots (active only) -->
+            <sc-if value="{{ t.active }}" hint-placeholder-val="{{ false }}">
+              <div style="flex:0 0 auto;display:flex;flex-direction:column;gap:6px;justify-content:center">
+                <div style="display:flex;align-items:center;gap:6px;background:#1d160e;border:2px solid #0e0a06;border-radius:7px;padding:3px 8px"><span style="font-size:16px">🛡️</span><div style="line-height:1"><div style="font-family:'VT323',monospace;font-size:12px;color:#8a9db0">DÉFENSE</div><div style="font-family:'Archivo Black';font-size:12px;color:#e8d9bb">Bouclier</div></div></div>
+                <div style="display:flex;align-items:center;gap:6px;background:#1d160e;border:2px solid #0e0a06;border-radius:7px;padding:3px 8px"><span style="font-size:16px">⏳</span><div style="line-height:1"><div style="font-family:'VT323',monospace;font-size:12px;color:#c08bb0">ATTAQUE</div><div style="font-family:'Archivo Black';font-size:12px;color:#e8d9bb">Sablier</div></div></div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </section>
+
+      <!-- floating current-team badge -->
+      <div style="position:absolute;left:14px;top:12px;z-index:20;display:flex;align-items:center;gap:10px;background:linear-gradient(#efe3c6,#d9c79f);border:3px solid #14100a;border-radius:12px;padding:7px 14px 7px 8px;box-shadow:0 6px 0 rgba(0,0,0,.3)">
+        <div style="width:38px;height:38px;border-radius:8px;background:{{ curTeamColor }};border:2px solid #14100a;display:flex;align-items:center;justify-content:center;font-size:22px">{{ curTeamEmoji }}</div>
+        <div style="line-height:1.1"><div style="font-family:'Archivo Black';font-size:17px;color:#3a2410">{{ curTeamName }}</div><div style="font-family:'VT323',monospace;font-size:15px;color:#7a1f16;letter-spacing:.5px">C'EST TON TOUR !</div></div>
+        <span style="width:11px;height:11px;border-radius:50%;background:#57c84d;box-shadow:0 0 8px #57c84d;animation:led-blink 1.4s infinite"></span>
+      </div>
+
+      <!-- floating boutique / inventaire / debug -->
+      <div style="position:absolute;left:50%;bottom:164px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:10px">
+        <button onclick="{{ onBoutique }}" style="display:flex;align-items:center;gap:9px;background:linear-gradient(#efe3c6,#d3bd8f);border:3px solid #14100a;border-radius:11px;padding:9px 18px;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.28),0 5px 0 rgba(0,0,0,.25)" style-hover="filter:brightness(1.05)"><span style="font-size:22px">🛒</span><span style="font-family:'Archivo Black';font-size:17px;color:#3a2410">BOUTIQUE</span></button>
+        <button onclick="{{ onInventaire }}" style="display:flex;align-items:center;gap:9px;background:linear-gradient(#efe3c6,#d3bd8f);border:3px solid #14100a;border-radius:11px;padding:9px 18px;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.28),0 5px 0 rgba(0,0,0,.25)" style-hover="filter:brightness(1.05)"><span style="font-size:22px">🎒</span><span style="font-family:'Archivo Black';font-size:17px;color:#3a2410">INVENTAIRE</span></button>
+        <div style="width:2px;height:34px;background:rgba(0,0,0,.25);margin:0 2px"></div>
+        <sc-for list="{{ debugPills }}" as="d" hint-placeholder-count="4">
+          <button onclick="{{ d.onClick }}" style="background:linear-gradient(#f3ecd9,#e0d3b3);border:2px solid #3a2410;border-radius:9px;padding:8px 12px;cursor:pointer;font-family:'Archivo Black';font-size:14px;color:#3a2410;box-shadow:0 3px 0 rgba(0,0,0,.22)" style-hover="filter:brightness(1.06)">{{ d.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- ===================== RIGHT : WOOD COLUMN ===================== -->
+    <aside data-screen-label="Colonne bois" style="position:relative;flex:0 0 auto;width:372px;border-radius:16px;background:linear-gradient(90deg,#7d5330,#8a5c34 40%,#5f3f22);border:4px solid #3a2616;box-shadow:inset 0 4px 0 rgba(255,255,255,.14),inset 0 -14px 0 rgba(0,0,0,.35),0 16px 30px rgba(0,0,0,.4);padding:14px;display:flex;flex-direction:column;gap:13px;overflow:hidden">
+      <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 3px,transparent 3px 9px),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 26px);pointer-events:none"></div>
+      <div style="position:absolute;top:10px;left:10px;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#c9a56e,#5a3a20);z-index:3"></div>
+      <div style="position:absolute;top:10px;right:10px;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#c9a56e,#5a3a20);z-index:3"></div>
+
+      <!-- header plate -->
+      <div style="position:relative;z-index:2;display:flex;align-items:center;gap:11px;background:linear-gradient(#efe3c6,#d9c79f);border:3px solid #3a2616;border-radius:11px;padding:9px 12px;box-shadow:inset 0 2px 0 rgba(255,255,255,.5)">
+        <div style="width:44px;height:44px;border-radius:9px;background:#d2622b;border:2px solid #14100a;display:flex;align-items:center;justify-content:center;font-size:24px">🏝️</div>
+        <div style="line-height:1.15"><div style="font-family:'Archivo Black';font-size:18px;color:#3a2410">Curioscope</div><div style="font-family:'VT323',monospace;font-size:15px;color:#7a5a34;letter-spacing:1px">JEU DE PLATEAU · TOUR {{ turn }}</div></div>
+      </div>
+
+      <!-- dice tray -->
+      <div style="position:relative;z-index:2;border-radius:12px;background:linear-gradient(#5f3f22,#4a3019);border:3px solid #2a1b0e;padding:14px;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.1),inset 0 -8px 0 rgba(0,0,0,.35)">
+        <div style="width:96px;height:96px;border-radius:18px;background:linear-gradient(#fdfaf1,#e6ddc8);border:3px solid #b9ad8f;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 3px 0 rgba(255,255,255,.9),inset 0 -8px 12px rgba(150,130,90,.4),0 6px 0 rgba(0,0,0,.3);animation:{{ diceAnim }}">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:6px;width:72px;height:72px;padding:4px">
+            <sc-for list="{{ dicePips }}" as="p" hint-placeholder-count="9">
+              <span style="border-radius:50%;background:{{ p.bg }};box-shadow:{{ p.shadow }}"></span>
+            </sc-for>
+          </div>
+        </div>
+        <button onclick="{{ onRoll }}" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(#f2b64a,#d98a26);border:3px solid #6e3f12;border-radius:12px;padding:13px;cursor:pointer;box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -5px 0 rgba(0,0,0,.3),0 6px 0 rgba(90,50,10,.5);animation:{{ rollGlow }}" style-hover="filter:brightness(1.06)" style-active="transform:translateY(3px)"><span style="font-size:22px">🎲</span><span style="font-family:'Archivo Black';font-size:19px;letter-spacing:1px;color:#4a2a08">{{ rollLabel }}</span></button>
+        <!-- active item -->
+        <div style="width:100%;display:flex;align-items:center;gap:10px;background:#2a1d0c;border:2px solid #14100a;border-radius:10px;padding:8px 11px">
+          <div style="position:relative;width:42px;height:42px;border-radius:9px;background:#8a5bbf;border:2px solid #14100a;display:flex;align-items:center;justify-content:center;font-size:22px">⏳<span style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#e8342c;border:2px solid #14100a;font-family:'Archivo Black';font-size:11px;color:#fff;display:flex;align-items:center;justify-content:center">2</span></div>
+          <div style="line-height:1.2"><div style="font-family:'Archivo Black';font-size:14px;color:#f4e7cc">Sablier</div><div style="font-family:'VT323',monospace;font-size:14px;color:#c08bb0">ATTAQUE ACTIVE · 2 TOURS</div></div>
+        </div>
+      </div>
+
+      <!-- WIN95 JOURNAL -->
+      <div style="position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column;background:#c3c7cb;border-top:3px solid #f4f6f8;border-left:3px solid #f4f6f8;border-right:3px solid #4c5157;border-bottom:3px solid #4c5157;box-shadow:0 6px 14px rgba(0,0,0,.3),inset -1px -1px 0 #2a2d31,inset 1px 1px 0 #dfe3e6">
+        <!-- title bar -->
+        <div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;height:26px;padding:0 4px 0 6px;background:linear-gradient(90deg,#00007b,#1683d8)">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px">📓</span><span style="font-family:'VT323',monospace;font-size:16px;letter-spacing:1px;color:#fff">JOURNAL.EXE</span></div>
+          <div style="display:flex;gap:3px">
+            <span style="width:18px;height:16px;background:#c3c7cb;border-top:2px solid #f4f6f8;border-left:2px solid #f4f6f8;border-right:2px solid #4c5157;border-bottom:2px solid #4c5157;display:flex;align-items:flex-end;justify-content:center;font-family:'Archivo Black';font-size:9px;color:#000;line-height:.6">_</span>
+            <span style="width:18px;height:16px;background:#c3c7cb;border-top:2px solid #f4f6f8;border-left:2px solid #f4f6f8;border-right:2px solid #4c5157;border-bottom:2px solid #4c5157;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black';font-size:9px;color:#000">□</span>
+            <span style="width:18px;height:16px;background:#c3c7cb;border-top:2px solid #f4f6f8;border-left:2px solid #f4f6f8;border-right:2px solid #4c5157;border-bottom:2px solid #4c5157;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black';font-size:10px;color:#000">✕</span>
+          </div>
+        </div>
+        <!-- menu bar -->
+        <div style="flex:0 0 auto;display:flex;gap:12px;padding:2px 8px;background:#c3c7cb;border-bottom:1px solid #8a8f94;font-family:'VT323',monospace;font-size:15px;color:#000"><span style="text-decoration:underline">F</span>ichier <span style="text-decoration:underline">E</span>dition <span style="text-decoration:underline">?</span></div>
+        <!-- content -->
+        <div ref="{{ journalRef }}" style="flex:1;min-height:0;overflow-y:auto;background:#fbfbf7;border:2px solid #4c5157;margin:4px;box-shadow:inset 2px 2px 0 #8a8f94;padding:6px 8px;display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ journalView }}" as="j" hint-placeholder-count="14">
+            <sc-if value="{{ j.isHead }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:4px;font-family:'VT323',monospace;font-size:15px;letter-spacing:.5px;color:#00007b;border-bottom:1px dotted #9aa;padding-bottom:1px">▸ QUESTION — {{ j.text }}</div>
+            </sc-if>
+            <sc-if value="{{ j.isNormal }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:6px;align-items:flex-start;font-family:'VT323',monospace;font-size:15px;line-height:1.15;color:{{ j.color }}"><span style="flex:0 0 auto">{{ j.icon }}</span><span>{{ j.text }}</span></div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- bottom buttons -->
+      <div style="position:relative;z-index:2;flex:0 0 auto;display:flex;gap:8px">
+        <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(#efe3c6,#d3bd8f);border:2px solid #3a2616;border-radius:9px;padding:8px;cursor:pointer;font-family:'Archivo Black';font-size:13px;color:#3a2410;box-shadow:0 3px 0 rgba(0,0,0,.25)">📱 MOBILE</button>
+        <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(#efe3c6,#d3bd8f);border:2px solid #3a2616;border-radius:9px;padding:8px;cursor:pointer;font-family:'Archivo Black';font-size:13px;color:#3a2410;box-shadow:0 3px 0 rgba(0,0,0,.25)">⛶ PLEIN ÉCRAN</button>
+        <button style="flex:0 0 auto;width:40px;background:linear-gradient(#efe3c6,#d3bd8f);border:2px solid #3a2616;border-radius:9px;cursor:pointer;font-family:'Archivo Black';font-size:14px;color:#3a2410;box-shadow:0 3px 0 rgba(0,0,0,.25)">✕</button>
+      </div>
+    </aside>
+
+    <!-- ===================== MODALS ===================== -->
+    <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+      <button onclick="{{ onCloseModal }}" aria-label="Fermer" title="Fermer" style="position:absolute;inset:0;z-index:60;border:0;padding:0;cursor:default;background:rgba(10,7,4,.72);backdrop-filter:blur(3px)"></button>
+    </sc-if>
+
+    <!-- QUESTION MODAL -->
+    <sc-if value="{{ isQuestion }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;width:720px;max-width:92%;animation:pop-in .2s ease both">
+        <div style="border-radius:26px;background:linear-gradient(#33383d,#22262a);border:3px solid #14161a;padding:20px;box-shadow:inset 0 4px 0 rgba(255,255,255,.12),inset 0 -16px 0 rgba(0,0,0,.4),0 30px 70px rgba(0,0,0,.6)">
+          <!-- top bar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:9px;background:#0a1206;border:2px solid #16301a;border-radius:8px;padding:5px 12px"><span style="width:10px;height:10px;border-radius:50%;background:#e8a13a;box-shadow:0 0 8px #e8a13a;animation:led-blink 1.2s infinite"></span><span style="font-family:'VT323',monospace;font-size:18px;letter-spacing:1px;color:#e8a13a">CATÉGORIE : {{ qCategory }}</span></div>
+            <button onclick="{{ onCloseModal }}" style="display:flex;align-items:center;gap:6px;background:#5a2018;border:2px solid #14100a;border-radius:8px;padding:5px 12px;cursor:pointer;font-family:'Archivo Black';font-size:13px;color:#f4d9c0;box-shadow:inset 0 2px 0 rgba(255,255,255,.15)" style-hover="background:#7a2c20">⏏ FERMER</button>
+          </div>
+          <!-- clean question screen -->
+          <div style="background:#fdfdfa;border:3px solid #0a0c0f;border-radius:12px;padding:26px 28px;box-shadow:inset 0 0 0 3px #d7d2c2,inset 0 0 30px rgba(0,0,0,.06)">
+            <div style="font-family:'VT323',monospace;font-size:16px;letter-spacing:1px;color:#8a7656;margin-bottom:8px">QUESTION {{ qNum }}/10 · {{ qTeam }}</div>
+            <div style="font-family:'Hanken Grotesk';font-weight:800;font-size:27px;line-height:1.25;color:#241a10;text-wrap:pretty">{{ qText }}</div>
+          </div>
+          <!-- answers -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:14px">
+            <sc-for list="{{ qOptions }}" as="o" hint-placeholder-count="4">
+              <button onclick="{{ o.onPick }}" style="display:flex;align-items:center;gap:12px;background:{{ o.bg }};border:3px solid {{ o.border }};border-radius:12px;padding:13px 15px;cursor:{{ o.cursor }};text-align:left;box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -5px 0 rgba(0,0,0,.16),0 4px 0 rgba(0,0,0,.2)" style-hover="filter:brightness(1.04)"><span style="flex:0 0 auto;width:34px;height:34px;border-radius:8px;background:{{ o.keyBg }};border:2px solid #14100a;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black';font-size:16px;color:{{ o.keyFg }}">{{ o.letter }}</span><span style="font-family:'Hanken Grotesk';font-weight:700;font-size:18px;color:#241a10">{{ o.text }}</span><span style="flex:1"></span><span style="font-size:20px">{{ o.mark }}</span></button>
+            </sc-for>
+          </div>
+          <!-- timer / footer -->
+          <div style="display:flex;align-items:center;gap:12px;margin-top:14px">
+            <span style="font-family:'VT323',monospace;font-size:16px;color:#8b9096">TEMPS</span>
+            <div style="flex:1;display:flex;align-items:flex-end;gap:3px;height:22px">
+              <sc-for list="{{ timerBars }}" as="b" hint-placeholder-count="20">
+                <div style="flex:1;height:{{ b.h }};background:{{ b.color }};border-radius:1px"></div>
+              </sc-for>
+            </div>
+            <div style="min-width:150px;text-align:right;font-family:'Archivo Black';font-size:16px;color:{{ qFeedColor }}">{{ qFeedback }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- BOUTIQUE MODAL -->
+    <sc-if value="{{ isBoutique }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;width:1040px;max-width:95%;height:640px;max-height:90%;animation:pop-in .2s ease both;display:flex;flex-direction:column;border-radius:22px;background:linear-gradient(#33383d,#22262a);border:3px solid #14161a;padding:16px;box-shadow:inset 0 4px 0 rgba(255,255,255,.12),inset 0 -16px 0 rgba(0,0,0,.4),0 30px 70px rgba(0,0,0,.6)">
+        <!-- top -->
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:14px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:9px;background:#0a1206;border:2px solid #16301a;border-radius:9px;padding:6px 16px"><span style="font-size:20px">🛒</span><span style="font-family:'Archivo Black';font-size:22px;letter-spacing:2px;color:#e8a13a;text-shadow:0 0 10px rgba(232,161,58,.5)">BOUTIQUE</span></div>
+          <!-- tabs -->
+          <div style="display:flex;gap:8px">
+            <button onclick="{{ onTabObjets }}" style="background:{{ tabObjBg }};border:2px solid #14100a;border-radius:9px;padding:8px 18px;cursor:pointer;font-family:'Archivo Black';font-size:15px;letter-spacing:1px;color:{{ tabObjFg }};box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -3px 0 rgba(0,0,0,.3)">🎒 OBJETS</button>
+            <button onclick="{{ onTabPouvoirs }}" style="background:{{ tabPowBg }};border:2px solid #14100a;border-radius:9px;padding:8px 18px;cursor:pointer;font-family:'Archivo Black';font-size:15px;letter-spacing:1px;color:{{ tabPowFg }};box-shadow:inset 0 2px 0 rgba(255,255,255,.3),inset 0 -3px 0 rgba(0,0,0,.3)">⚡ POUVOIRS</button>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;background:#0a1206;border:2px solid #16301a;border-radius:8px;padding:4px 12px"><span style="font-size:16px">🪙</span><span style="font-family:'VT323',monospace;font-size:22px;color:#57c84d">{{ activeCoins }}</span></div>
+          <button onclick="{{ onCloseModal }}" style="width:44px;height:44px;border-radius:50%;background:#5a2018;border:3px solid #14100a;cursor:pointer;font-family:'Archivo Black';font-size:16px;color:#f4d9c0;box-shadow:inset 0 2px 0 rgba(255,255,255,.15),0 4px 0 rgba(0,0,0,.35)" style-hover="background:#7a2c20">✕</button>
+        </div>
+        <!-- body -->
+        <div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:6px 4px 4px;background:#1b1e22;border-radius:12px;box-shadow:inset 0 3px 12px rgba(0,0,0,.6)">
+          <sc-for list="{{ shopSections }}" as="sec" hint-placeholder-count="2">
+            <div style="padding:10px 8px 0">
+              <div style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(#3a2c1a,#2a1d0c);border:2px solid #14100a;border-radius:8px;padding:5px 14px;margin-left:6px;font-family:'Archivo Black';font-size:14px;letter-spacing:1px;color:#e8d9bb;box-shadow:0 3px 0 rgba(0,0,0,.3)">{{ sec.label }}</div>
+              <div style="display:flex;gap:12px;overflow-x:auto;padding:12px 6px 10px">
+                <sc-for list="{{ sec.items }}" as="c" hint-placeholder-count="5">
+                  <div style="flex:0 0 auto;width:210px;display:flex;flex-direction:column;background:linear-gradient(#efe3c6,#dccca6);border:3px solid #14100a;border-radius:12px;overflow:hidden;box-shadow:inset 0 2px 0 rgba(255,255,255,.5),0 6px 0 rgba(0,0,0,.28)">
+                    <div style="padding:9px 11px 6px;border-bottom:2px solid rgba(0,0,0,.12)"><div style="font-family:'Archivo Black';font-size:14px;line-height:1.05;color:#3a2410;min-height:30px">{{ c.n }}</div><div style="font-family:'VT323',monospace;font-size:13px;letter-spacing:.5px;color:{{ c.rare }}">{{ c.r }}</div></div>
+                    <div style="position:relative;margin:10px;height:96px;border-radius:9px;background:radial-gradient(circle at 50% 38%,#fbf4e2,#d8c8a2);border:2px solid #b7a067;box-shadow:inset 0 -6px 12px rgba(150,120,70,.3);display:flex;align-items:center;justify-content:center;font-size:46px"><span>{{ c.ic }}</span><span style="position:absolute;top:6px;right:6px;display:flex;align-items:center;gap:3px;background:#0a1206;border:2px solid #16301a;border-radius:6px;padding:1px 7px"><span style="font-size:11px">🪙</span><span style="font-family:'VT323',monospace;font-size:17px;color:#57c84d">{{ c.price }}</span></span></div>
+                    <div style="padding:0 11px;font-family:'Hanken Grotesk';font-size:12.5px;line-height:1.25;color:#5a4a34;min-height:52px">{{ c.desc }}</div>
+                    <button onclick="{{ c.onBuy }}" style="margin:9px 11px 11px;background:{{ c.buyBg }};border:2px solid #6e3f12;border-radius:9px;padding:8px;cursor:pointer;font-family:'Archivo Black';font-size:14px;color:{{ c.buyFg }};box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.28)" style-hover="filter:brightness(1.06)">ACHETER</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- INVENTAIRE MODAL -->
+    <sc-if value="{{ isInventaire }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;width:900px;max-width:94%;height:600px;max-height:90%;animation:pop-in .2s ease both;display:flex;flex-direction:column;border-radius:20px;background:linear-gradient(90deg,#7d5330,#8a5c34 40%,#5f3f22);border:4px solid #3a2616;padding:16px;box-shadow:inset 0 4px 0 rgba(255,255,255,.14),inset 0 -14px 0 rgba(0,0,0,.35),0 30px 70px rgba(0,0,0,.6)">
+        <div style="position:absolute;inset:0;border-radius:16px;background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.06) 0 3px,transparent 3px 10px);pointer-events:none"></div>
+        <!-- header -->
+        <div style="position:relative;z-index:2;flex:0 0 auto;display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;background:linear-gradient(#efe3c6,#d9c79f);border:3px solid #3a2616;border-radius:11px;padding:7px 18px;box-shadow:inset 0 2px 0 rgba(255,255,255,.5)"><span style="font-size:22px">🎒</span><span style="font-family:'Archivo Black';font-size:22px;letter-spacing:2px;color:#3a2410">INVENTAIRE</span></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:7px;background:#0a1206;border:2px solid #16301a;border-radius:8px;padding:5px 13px"><span style="font-size:18px">{{ curTeamEmoji }}</span><span style="font-family:'Archivo Black';font-size:14px;color:#e8d9bb">{{ curTeamName }}</span><span style="width:2px;height:16px;background:#2a3a24"></span><span style="font-size:14px">🪙</span><span style="font-family:'VT323',monospace;font-size:20px;color:#57c84d">{{ activeCoins }}</span></div>
+          <button onclick="{{ onCloseModal }}" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(#efe3c6,#d3bd8f);border:3px solid #3a2616;cursor:pointer;font-family:'Archivo Black';font-size:16px;color:#3a2410;box-shadow:0 4px 0 rgba(0,0,0,.3)" style-hover="filter:brightness(1.05)">✕</button>
+        </div>
+        <!-- body -->
+        <div style="position:relative;z-index:2;flex:1;min-height:0;display:flex;gap:14px">
+          <!-- equipment -->
+          <div style="flex:0 0 auto;width:220px;display:flex;flex-direction:column;background:linear-gradient(#5f3f22,#4a3019);border:3px solid #2a1b0e;border-radius:12px;padding:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.1)">
+            <div style="font-family:'Archivo Black';font-size:14px;letter-spacing:1px;color:#e8d9bb;text-align:center;margin-bottom:10px">⚙ ÉQUIPEMENT</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ equipView }}" as="e" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <div style="width:74px;height:74px;border-radius:12px;background:{{ e.face }};border:3px solid #2a1b0e;display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:inset 0 3px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.22)"><span style="color:{{ e.ink }}">{{ e.ic }}</span></div>
+                  <div style="font-family:'VT323',monospace;font-size:15px;letter-spacing:1px;color:#e8c88a">— {{ e.slot }} —</div>
+                  <div style="font-family:'Hanken Grotesk';font-size:12px;color:#cdb98f">{{ e.name }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <!-- bag -->
+          <div style="flex:1;display:flex;flex-direction:column;background:linear-gradient(#efe3c6,#e0d0aa);border:3px solid #b9976a;border-radius:12px;padding:14px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px"><span style="font-size:16px">👝</span><span style="font-family:'Archivo Black';font-size:15px;letter-spacing:2px;color:#5a4028">SAC — 12 EMPLACEMENTS</span></div>
+            <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:12px">
+              <sc-for list="{{ bagView }}" as="b" hint-placeholder-count="12">
+                <div style="border-radius:11px;background:#d8c7a0;border:3px solid #b09468;box-shadow:inset 0 3px 7px rgba(120,95,55,.4);display:flex;align-items:center;justify-content:center;font-size:34px">
+                  <sc-if value="{{ b.filled }}" hint-placeholder-val="{{ false }}"><span>{{ b.ic }}</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Télévision&quot;},&quot;tvBrand&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;SONOVISION&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Télévision&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.outerRef = React.createRef();
+    this.stageRef = React.createRef();
+    this.journalRef = React.createRef();
+    this.state = {
+      scale: 1, pixel: false, dice: 6, rolling: false, modal: null, turn: 7,
+      coins: { lions: 0, aigles: 20, tigres: 30 },
+      activeTeam: 'tigres', qPick: null, qResult: null, shopTab: 'objets',
+      journal: this.seedJournal()
+    };
+    this.PIP = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+    this.TEAMS = [
+      { id:'lions',  name:'LES LIONS',  emoji:'🦁', color:'#c0392b', correct:0, wrong:2, badges:[{icon:'🛡️',n:1},{icon:'🎯',n:1}] },
+      { id:'aigles', name:'LES AIGLES', emoji:'🦅', color:'#2f6db5', correct:2, wrong:1, badges:[{icon:'💧',n:2},{icon:'⚡',n:1}] },
+      { id:'tigres', name:'LES TIGRES', emoji:'🐯', color:'#2e8b57', correct:1, wrong:1, badges:[{icon:'🔥',n:1},{icon:'🎵',n:1}] }
+    ];
+    this.QUESTION = {
+      category: 'Musique classique & opéra',
+      num: 4,
+      text: "Quel compositeur, devenu sourd, a achevé sa célèbre 9ᵉ Symphonie et son « Ode à la joie » ?",
+      options: [ { t:'Wolfgang A. Mozart' }, { t:'Ludwig van Beethoven' }, { t:'Johann S. Bach' }, { t:'Frédéric Chopin' } ],
+      correct: 1
+    };
+    this.SHOP = {
+      consommables: [
+        { n:'BOMBE FUMIGÈNE', r:'RARE · CONSOMMABLE', ic:'💨', price:15, desc:'Déjoue le prochain pouvoir lancé contre toi.' },
+        { n:'COLLE DU PROVISEUR', r:'RARE · CONSOMMABLE', ic:'💀', price:18, desc:'Impose une rude question de niveau lycée à une équipe adverse.' },
+        { n:'DOIGTS AGILES', r:'COMMUN · CONSOMMABLE', ic:'👆', price:12, desc:'Dérobe quelques pièces à une équipe.' },
+        { n:'ÉLIXIR DU COFFRE-FORT', r:'COMMUN · CONSOMMABLE', ic:'🏛️', price:8, desc:'Ton or est involable pendant 3 tours.' },
+        { n:'LE CARILLON', r:'LÉGENDAIRE · CONSO.', ic:'🔔', price:40, desc:'Sonne le glas : chaque adversaire saute son prochain tour.' }
+      ],
+      equipements: [
+        { n:'TALISMAN DU DRAGON', r:'RARE · AMULETTE', ic:'🐉', price:30, desc:'Relance une mauvaise réponse une fois par partie.' },
+        { n:'CASQUE DE PATIENCE', r:'COMMUN · COIFFE', ic:'⛑️', price:14, desc:'+5 secondes de temps de réponse.' },
+        { n:'COURONNE DE FEUILLAGE', r:'RARE · COIFFE', ic:'👑', price:26, desc:'Gagne 1 pièce à chaque bonne réponse.' },
+        { n:'BRIGANDINE DU MARCHAND', r:'COMMUN · ARMURE', ic:'🦺', price:16, desc:'Réduit les reculs de 1 case.' }
+      ],
+      pouvoirs: [
+        { n:'POISON LENT', r:'POUVOIR · DURÉE', ic:'🧪', price:20, desc:'Inflige un recul progressif sur 2 tours.' },
+        { n:'BOUCLIER', r:'POUVOIR · DÉFENSE', ic:'🛡️', price:15, desc:'Bloque la prochaine attaque subie.' },
+        { n:'DÉCHARGE', r:'POUVOIR · ATTAQUE', ic:'⚡', price:22, desc:"Électrocute l'équipe en tête du plateau." },
+        { n:'SABLIER', r:'POUVOIR · ATTAQUE', ic:'⏳', price:18, desc:'Réduit le temps de réponse adverse.' }
+      ]
+    };
+    this.EQUIP = [ { slot:'COIFFE', ic:'🎩', filled:true, name:'Casque de Patience' }, { slot:'ARMURE', ic:'🏴', filled:false, name:'—' }, { slot:'AMULETTE', ic:'🧿', filled:false, name:'—' } ];
+    this.BAG = [ '💨', '🧪', '', '', '⏳', '', '', '', '', '', '', '' ];
+  }
+
+  rarityColor(r){ if(/LÉGENDAIRE/.test(r)) return '#e8a13a'; if(/RARE/.test(r)) return '#3f7fbf'; return '#8a8f79'; }
+  setShopTab(t){ this.setState({ shopTab: t }); }
+  buy(item){
+    const c = this.state.coins[this.state.activeTeam];
+    if(c >= item.price){ this.addCoins(-item.price); this.addJournal({ icon:'🛒', text: this.teamName(this.state.activeTeam) + ' achète ' + item.n + ' (−' + item.price + ' or).', color:'#186a2e' }); }
+    else this.addJournal({ icon:'⚠', text: "Pas assez d'or pour " + item.n + '.', color:'#8a6a1a' });
+  }
+
+  seedJournal(){
+    return [
+      { icon:'🎲', text:'Les Tigres lance le dé : 6' },
+      { icon:'🧪', text:'Les Tigres utilise Poison lent !' },
+      { icon:'⏳', text:'Effet de durée posé pour 2 tours.' },
+      { head:true, text:'Musique classique & opéra' },
+      { icon:'❌', text:'Mauvaise réponse ! Recul réduit à 4 cases.', color:'#a11' },
+      { icon:'⏳', text:"Un effet de durée de Les Lions s'est dissipé." },
+      { icon:'🎲', text:'Les Lions lance le dé : 3' },
+      { head:true, text:'Musique classique & opéra' },
+      { icon:'❌', text:'Mauvaise réponse ! Recul de 3 cases.', color:'#a11' },
+      { icon:'🎲', text:'Les Aigles lance le dé : 4' },
+      { icon:'🪤', text:'Les Aigles déclenche un piège : Caltrop !' },
+      { icon:'◀', text:'Les Aigles recule de 1 case.' },
+      { icon:'⚡', text:'Les Aigles tombe sur : Décharge électrique' },
+      { icon:'⚡', text:'Les Tigres prend la décharge et recule de 3 cases !', color:'#a11' },
+      { icon:'⚠', text:'Pas de question disponible en Multi-matière.', color:'#8a6a1a' }
+    ];
+  }
+
+  componentDidMount(){
+    this.fit();
+    this._onResize = () => this.fit();
+    window.addEventListener('resize', this._onResize);
+    this._jlen = this.state.journal.length;
+    this.scrollJournal();
+  }
+  componentWillUnmount(){ window.removeEventListener('resize', this._onResize); clearInterval(this._roll); }
+  componentDidUpdate(){ if(this._jlen !== this.state.journal.length){ this._jlen = this.state.journal.length; this.scrollJournal(); } }
+  fit(){ const o = this.outerRef.current; if(!o) return; const s = Math.min(o.clientWidth/1600, o.clientHeight/900); if(s && Math.abs(s - this.state.scale) > 0.002) this.setState({ scale: s }); }
+  scrollJournal(){ const j = this.journalRef.current; if(j) j.scrollTop = j.scrollHeight; }
+
+  teamName(id){ const t = this.TEAMS.find(x => x.id === id); return t ? t.name : ''; }
+  addJournal(entry){ this.setState(s => ({ journal: s.journal.concat([entry]) })); }
+
+  roll(){
+    if(this.state.rolling) return;
+    this.setState({ rolling: true });
+    let ticks = 0;
+    clearInterval(this._roll);
+    this._roll = setInterval(() => {
+      ticks++;
+      this.setState({ dice: 1 + Math.floor(Math.random()*6) });
+      if(ticks >= 8){
+        clearInterval(this._roll);
+        const final = 1 + Math.floor(Math.random()*6);
+        this.setState({ dice: final, rolling: false });
+        this.addJournal({ icon:'🎲', text: this.teamName(this.state.activeTeam) + ' lance le dé : ' + final });
+      }
+    }, 90);
+  }
+
+  toggleChannel(){ this.setState(s => ({ pixel: !s.pixel })); }
+  openModal(m){ this.setState({ modal: m, qPick: null, qResult: null }); }
+  closeModal(){ this.setState({ modal: null }); }
+  addCoins(n){ this.setState(s => ({ coins: Object.assign({}, s.coins, { [s.activeTeam]: s.coins[s.activeTeam] + n }) })); }
+
+  pickAnswer(i){
+    if(this.state.qResult != null) return;
+    const ok = i === this.QUESTION.correct;
+    this.setState({ qPick: i, qResult: ok });
+    this.addJournal({ head:true, text: this.QUESTION.category });
+    if(ok) this.addJournal({ icon:'✅', text: this.teamName(this.state.activeTeam) + ' : Bonne réponse ! +2 cases.', color:'#186a2e' });
+    else this.addJournal({ icon:'❌', text: this.teamName(this.state.activeTeam) + ' : Mauvaise réponse ! Recul de 3 cases.', color:'#a11' });
+  }
+
+  // ---------- render ----------
+  boardLanes(){
+    const T = (kind, extra) => Object.assign({ kind }, extra || {});
+    return [
+      { top:'7%',  tiles:[ T('q'), T('chest'), T('q',{token:{emoji:'🐯',ring:'#2e8b57'}}), T('q'), T('chest',{gold:true,token:{emoji:'🦁',ring:'#c0392b'}}), T('q') ] },
+      { top:'41%', tiles:[ T('start'), T('wheel'), T('wheel'), T('chest'), T('q'), T('q',{token:{emoji:'🦅',ring:'#2f6db5'}}), T('chest'), T('q'), T('wheel') ] },
+      { top:'74%', tiles:[ T('q'), T('q'), T('chest'), T('q'), T('chest') ] }
+    ];
+  }
+
+  renderVals(){
+    const self = this;
+    const st = this.state;
+    const P = st.pixel;
+
+    // board
+    const boardLanes = this.boardLanes().map(ln => ({
+      top: ln.top,
+      tiles: ln.tiles.map(tl => ({
+        isQ: tl.kind==='q', isWheel: tl.kind==='wheel', isChest: tl.kind==='chest', isStart: tl.kind==='start',
+        hasToken: !!tl.token, tokenEmoji: tl.token ? tl.token.emoji : '', tokenRing: tl.token ? tl.token.ring : '#000',
+        chestTop: tl.gold ? '#f4d03f' : '#a9713b', chestBot: tl.gold ? '#d4a520' : '#7a4a22',
+        onQ: () => self.openModal('question')
+      }))
+    }));
+
+    // dice pips
+    const on = this.PIP[st.dice] || [];
+    const dicePips = Array.from({length:9}, (_,i) => on.includes(i)
+      ? { bg:'#241a10', shadow:'inset 0 -2px 2px rgba(0,0,0,.5)' }
+      : { bg:'transparent', shadow:'none' });
+
+    // teams
+    const teamsView = this.TEAMS.map(t => {
+      const active = t.id === st.activeTeam;
+      return { id:t.id, name:t.name, emoji:t.emoji, color:t.color, coins:st.coins[t.id], correct:t.correct, wrong:t.wrong, badges:t.badges,
+        active, frame: active ? '#57c84d' : '#14100a', lift: active ? 'translateY(-4px)' : 'none',
+        led: active ? '#57c84d' : '#5a4a2c', ledGlow: active ? '#57c84d' : 'transparent' };
+    });
+    const cur = this.TEAMS.find(t => t.id === st.activeTeam);
+
+    // journal
+    const journalView = st.journal.map(j => ({ isHead: !!j.head, isNormal: !j.head, icon: j.icon || '•', text: j.text, color: j.color || '#151008' }));
+
+    // question options
+    const q = this.QUESTION;
+    const letters = ['A','B','C','D'];
+    const qOptions = q.options.map((o, i) => {
+      const picked = st.qPick === i;
+      const revealed = st.qResult != null;
+      const isCorrect = i === q.correct;
+      let bg = 'linear-gradient(#f4efe0,#e3dbc6)', border = '#b7ad92', keyBg = '#efe3c6', keyFg = '#3a2410', mark = '';
+      if(revealed){
+        if(isCorrect){ bg = 'linear-gradient(#c9efc0,#a7e39a)'; border = '#3f9a4a'; keyBg = '#3f9a4a'; keyFg = '#fff'; mark = '✅'; }
+        else if(picked){ bg = 'linear-gradient(#f4c4bd,#e79a92)'; border = '#c0392b'; keyBg = '#c0392b'; keyFg = '#fff'; mark = '❌'; }
+        else { bg = 'linear-gradient(#eee7d6,#ded6c0)'; border = '#c0b89e'; }
+      }
+      return { letter: letters[i], text: o.t, bg, border, keyBg, keyFg, mark, cursor: revealed ? 'default' : 'pointer', onPick: () => self.pickAnswer(i) };
+    });
+    const timerBars = Array.from({length:22}, (_,i) => {
+      const active = i < 15;
+      const h = (30 + ((i*29)%70)) + '%';
+      return { h, color: active ? (i < 10 ? '#57c84d' : (i < 13 ? '#e8a13a' : '#e14b3a')) : '#3a3f45' };
+    });
+    let qFeedback = 'RÉPONDS…', qFeedColor = '#8b9096';
+    if(st.qResult === true){ qFeedback = '✓ BONNE RÉPONSE'; qFeedColor = '#57c84d'; }
+    else if(st.qResult === false){ qFeedback = '✕ MAUVAISE RÉPONSE'; qFeedColor = '#e8574b'; }
+
+    // shop
+    const activeCoins = st.coins[st.activeTeam];
+    const cardOf = (item) => {
+      const rare = this.rarityColor(item.r);
+      const afford = activeCoins >= item.price;
+      return { n:item.n, r:item.r, ic:item.ic, price:item.price, desc:item.desc, rare, afford,
+        buyBg: afford ? 'linear-gradient(#f2b64a,#d98a26)' : 'linear-gradient(#6a6f66,#4c5049)',
+        buyFg: afford ? '#4a2a08' : '#c9cdc4', onBuy: () => self.buy(item) };
+    };
+    const shopSections = (st.shopTab === 'pouvoirs')
+      ? [ { label:'⚡ POUVOIRS', items: this.SHOP.pouvoirs.map(cardOf) } ]
+      : [ { label:'🧪 CONSOMMABLES', items: this.SHOP.consommables.map(cardOf) }, { label:'🛡️ ÉQUIPEMENTS', items: this.SHOP.equipements.map(cardOf) } ];
+    const tabObjBg = st.shopTab==='objets' ? 'linear-gradient(#f2b64a,#d98a26)' : 'linear-gradient(#3a2c1a,#2a1d0c)';
+    const tabObjFg = st.shopTab==='objets' ? '#4a2a08' : '#8a7656';
+    const tabPowBg = st.shopTab==='pouvoirs' ? 'linear-gradient(#f2b64a,#d98a26)' : 'linear-gradient(#3a2c1a,#2a1d0c)';
+    const tabPowFg = st.shopTab==='pouvoirs' ? '#4a2a08' : '#8a7656';
+
+    // inventory
+    const equipView = this.EQUIP.map(e => ({ slot:e.slot, ic:e.ic, filled:e.filled, name:e.name,
+      face: e.filled ? '#efe3c6' : '#2a1d0c', ink: e.filled ? '#3a2410' : '#5a4a2c' }));
+    const bagView = this.BAG.map(x => ({ filled: !!x, ic: x || '' }));
+
+    return {
+      outerRef: this.outerRef, stageRef: this.stageRef, journalRef: this.journalRef, scale: st.scale,
+      turn: st.turn,
+      // tv / channel
+      pixel: P, showScan: this.props.scanlines !== false, tvBrand: this.props.tvBrand || 'SONOVISION',
+      boardFilter: P ? 'saturate(1.5) contrast(1.16) brightness(1.02)' : 'none',
+      channelText: P ? 'CH.02 · 8-BIT' : 'CH.01 · COULEUR',
+      knobX: P ? 'translateX(27px)' : 'translateX(0)',
+      ch1Color: P ? '#5a5f65' : '#e8e2d0', ch2Color: P ? '#66ff8a' : '#5a5f65',
+      onToggleChannel: () => self.toggleChannel(),
+      boardLanes,
+      // dice
+      dicePips, diceAnim: st.rolling ? 'dice-tumble .18s ease-in-out infinite' : 'none',
+      rollLabel: st.rolling ? '…' : 'LANCER LE DÉ', rollGlow: st.rolling ? 'none' : 'glow-pulse 2.4s ease-in-out infinite',
+      onRoll: () => self.roll(),
+      // teams
+      teamsView, curTeamColor: cur.color, curTeamEmoji: cur.emoji, curTeamName: cur.name.replace('LES ','Les '),
+      // journal
+      journalView,
+      // buttons
+      onBoutique: () => self.openModal('boutique'), onInventaire: () => self.openModal('inventaire'),
+      debugPills: [
+        { label:'+10', onClick: () => self.addCoins(10) },
+        { label:'+100', onClick: () => self.addCoins(100) },
+        { label:'+1000', onClick: () => self.addCoins(1000) },
+        { label:'Objets', onClick: () => self.openModal('inventaire') }
+      ],
+      // modal
+      modalOpen: st.modal != null, onCloseModal: () => self.closeModal(),
+      isQuestion: st.modal === 'question', isBoutique: st.modal === 'boutique', isInventaire: st.modal === 'inventaire',
+      qCategory: q.category, qNum: q.num, qTeam: cur.name.replace('LES ','Les '), qText: q.text,
+      qOptions, timerBars, qFeedback, qFeedColor,
+      // shop
+      activeCoins, shopSections, curTeamNameShop: cur.name.replace('LES ','Les '),
+      tabObjBg, tabObjFg, tabPowBg, tabPowFg,
+      onTabObjets: () => self.setShopTab('objets'), onTabPouvoirs: () => self.setShopTab('pouvoirs'),
+      // inventory
+      equipView, bagView
+    };
+  }
+}
+</script>
+
+
+</body></html>

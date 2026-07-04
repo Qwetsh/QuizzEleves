@@ -8,7 +8,7 @@
 //
 // Une FEUILLE → voie identité (categoryPools[sk] = [sk]). Un NŒUD LARGE
 // (INTÉGRALE/domaine) → voie dont le pool = ses feuilles descendantes à contenu.
-import { THEMES, THEME_ROOTS, childrenOf, isLeaf, descendantLeaves } from '../data/themes.js';
+import { THEMES, THEME_ROOTS, childrenOf, isLeaf, isPureLeaf, descendantLeaves } from '../data/themes.js';
 
 // Cycles scolaires → niveaux (réutilise le champ `level` existant du moteur).
 export const CYCLES = {
@@ -32,7 +32,7 @@ export function buildPerimeter(selection = [], { level = 'cycle4', hasContent = 
     if (!node) continue;
     const excluded = sel.excludedSubjectKeys || [];
 
-    if (isLeaf(themeKey)) {
+    if (isPureLeaf(themeKey)) {
       const sk = node.subjectKey;
       if (!hasContent(sk) || categoryPools[sk]) continue;
       boardSubjects.push(sk);
@@ -55,13 +55,15 @@ export function buildPerimeter(selection = [], { level = 'cycle4', hasContent = 
 
 // --- Modèle pour l'écran cassette : THEMES → { DOMAINS, GROUPS } ---
 
-// Feuilles (NŒUDS) sous `key`, dans l'ordre de l'arbre.
+// Feuilles (NŒUDS) sous `key`, dans l'ordre de l'arbre. Nœud mixte : inclut le
+// nœud lui-même PUIS ses enfants (cohérent avec descendantLeaves).
 function leafNodesUnder(key) {
   const out = [];
+  const seen = new Set();
   const walk = (k) => {
     const node = THEMES[k];
     if (!node) return;
-    if (node.subjectKey) { out.push(node); return; }
+    if (node.subjectKey && !seen.has(node.subjectKey)) { seen.add(node.subjectKey); out.push(node); }
     for (const c of childrenOf(k)) walk(c.key);
   };
   walk(key);
@@ -92,30 +94,39 @@ export function themesToCassetteModel() {
     const items = [];
     const scolaire = root.kind === 'scolaire';
     const rootLeaves = leafNodesUnder(rootKey);
-    // INTÉGRALE du domaine (voie large) — seulement s'il a du contenu.
+    // INTÉGRALE du domaine (voie large, depth 0) — seulement s'il a du contenu.
     if (rootLeaves.length) {
       items.push({
         id: root.key,
         label: root.name,
         type: scolaire ? 'cartouche' : 'integrale',
         sub: rootLeaves.map((n) => ({ label: n.name, key: n.subjectKey })),
+        depth: 0, parentId: null,
       });
     }
-    // Cartes des enfants directs.
-    for (const child of childrenOf(rootKey)) {
-      if (isLeaf(child.key)) {
-        items.push({ id: child.key, label: child.name, type: scolaire ? 'cartouche' : 'theme' });
-      } else {
-        const childLeaves = leafNodesUnder(child.key);
-        if (!childLeaves.length) continue;
+    // DFS des sous-thèmes : chaque nœud = une carte. `depth` = niveau sous le
+    // domaine (1 = enfant direct, 2+ = mini-cassette imbriquée) ; `parentId` = la
+    // carte parente (null aux niveaux 0/1) → pilote le repli des sous-sous-thèmes.
+    // Un nœud à enfants (conteneur OU mixte) = INTÉGRALE (voie large insérable
+    // telle quelle) et on descend ; une feuille pure = carte thème.
+    const emit = (key, depth, parentId) => {
+      const node = THEMES[key];
+      if (!node) return;
+      const kids = childrenOf(key);
+      if (kids.length) {
+        const leaves = leafNodesUnder(key);
+        if (!leaves.length) return; // conteneur sans contenu → ignoré
         items.push({
-          id: child.key,
-          label: child.name,
-          type: 'integrale',
-          sub: childLeaves.map((n) => ({ label: n.name, key: n.subjectKey })),
+          id: key, label: node.name, type: scolaire ? 'cartouche' : 'integrale',
+          sub: leaves.map((n) => ({ label: n.name, key: n.subjectKey })), depth, parentId,
         });
+        for (const c of kids) emit(c.key, depth + 1, key);
+      } else if (isLeaf(key)) {
+        items.push({ id: key, label: node.name, type: scolaire ? 'cartouche' : 'theme', depth, parentId });
       }
-    }
+    };
+    // Les enfants directs (depth 1) ne sont jamais repliés → parentId null.
+    for (const child of childrenOf(rootKey)) emit(child.key, 1, null);
     GROUPS.push({ domain: root.key, items });
   }
   return { DOMAINS, GROUPS };

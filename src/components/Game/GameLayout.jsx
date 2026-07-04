@@ -50,8 +50,9 @@ import ActionDiceOverlay from './ActionDiceOverlay';
 import SubjectPickerModal from '../Modals/SubjectPickerModal';
 import TrapInspectModal from '../Modals/TrapInspectModal';
 import EffectToast from './EffectToast';
-import btnBoutique from '../../assets/inventory/btn-boutique.png';
-import btnInventaire from '../../assets/inventory/btn-inventaire.png';
+import '@fontsource/vt323/400.css';
+import '@fontsource/archivo-black/400.css';
+import '../../styles/retro-game.css';
 
 function useFullscreen() {
   const [isFs, setIsFs] = useState(false);
@@ -84,39 +85,64 @@ export default function GameLayout() {
   const triggerWeather = useGameStore((s) => s.triggerWeather);
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
+  // Chaîne de la TV : COULEUR (normal) ou 8-BIT (trame pixel décorative).
+  // Pur habillage — aucun effet sur le plateau ni le gameplay.
+  const [pixelChannel, setPixelChannel] = useState(false);
+  const turnCount = useGameStore((s) => s.turnCount);
 
   const team = teams[currentTeam];
 
   return (
-    <div className="flex absolute inset-0">
+    <div className="flex absolute inset-0 rg-root">
       {/* Board area — leaves space for right HUD and bottom bar */}
       <div className="flex-1 relative" style={{ marginRight: 320, marginBottom: 148 }}>
-        <BoardSVG />
+        {/* Le plateau vit dans une TV CRT : coque grise, écran bombé, effets
+            scanlines/8-bit en overlays non interactifs, bandeau de commandes. */}
+        <section className="rg-tv">
+          <div className="rg-tv-screen">
+            <div className="rg-tv-screen-inner">
+              <BoardSVG />
+              <div className="rg-tv-fx rg-tv-fx--vignette" />
+              <div className="rg-tv-fx rg-tv-fx--glare" />
+              <div className="rg-tv-fx rg-tv-fx--flicker" />
+              <div className="rg-tv-fx rg-tv-fx--scan" />
+              {pixelChannel && (<>
+                <div className="rg-tv-fx rg-tv-fx--pixel" />
+                <div className="rg-tv-fx rg-tv-fx--pixel2" />
+                <div className="rg-tv-fx rg-tv-fx--pixel3" />
+              </>)}
+              <div className="rg-tv-badge">CH·{pixelChannel ? 2 : 1} {pixelChannel ? T('game.tvPixel') : T('game.tvColor')}</div>
+            </div>
+          </div>
+          <div className="rg-tv-strip">
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span className="rg-tv-brand">SONOVISION</span>
+              <span className="rg-tv-sub">TRINI-VISION™</span>
+            </div>
+            <button className="rg-tv-switch" onClick={() => setPixelChannel((p) => !p)} title={T('game.tvSwitch')} aria-label={T('game.tvSwitch')}>
+              <span className="rg-tv-switch-label" style={{ color: pixelChannel ? '#565b60' : '#66ff8a' }}>{T('game.tvColor')}</span>
+              <span className="rg-tv-switch-track"><span className="rg-tv-switch-knob" style={{ transform: pixelChannel ? 'translateX(24px)' : 'none' }} /></span>
+              <span className="rg-tv-switch-label" style={{ color: pixelChannel ? '#66ff8a' : '#565b60' }}>{T('game.tvPixel')}</span>
+            </button>
+            <div style={{ flex: 1 }} />
+            <div className="rg-tv-dial" />
+            <div className="rg-tv-dial" style={{ transform: 'rotate(120deg)' }} />
+            <div className="rg-tv-pwr"><span className="rg-tv-pwr-led" /><span className="rg-tv-pwr-txt">PWR</span></div>
+          </div>
+        </section>
 
         {/* Bandeau météo (préavis / météo ambiante en cours) — pilule centrée */}
         {weatherOn && <WeatherBanner />}
 
         {/* Top bar overlay — current team */}
         {team && (
-          <div
-            className="absolute top-3 left-3 flex items-center gap-3 z-50"
-            style={{
-              background: 'var(--surface-card)',
-              borderRadius: 16,
-              padding: '8px 16px 8px 8px',
-              boxShadow: 'var(--sh-md)',
-              border: '1px solid rgba(122, 94, 58, 0.2)',
-            }}
-          >
-            <span className="text-3xl">{team.emoji}</span>
+          <div className="absolute top-4 left-5 z-50 rg-team-badge">
+            <div className="rg-team-badge__tile" style={{ background: team.color }}>{team.emoji}</div>
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: team.color }}>
-                {team.name}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: -2 }}>
-                {T('game.yourTurn')}
-              </div>
+              <div className="rg-team-badge__name">{team.name}</div>
+              <div className="rg-team-badge__sub">{T('game.yourTurn')}</div>
             </div>
+            <span className="rg-team-badge__led" />
           </div>
         )}
 
@@ -133,36 +159,32 @@ export default function GameLayout() {
             }}
           >
             {itemsOn && (
-              <button onClick={openShop} aria-label={T('game.openShop')} className="hud-imgbtn">
-                <img src={btnBoutique} alt="Boutique" draggable={false} />
-                <span className="hud-imgbtn-badge">
-                  {team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} />
-                </span>
+              <button onClick={openShop} aria-label={T('game.openShop')} className="rg-btn">
+                <span className="rg-btn__emoji">{'\u{1F6D2}'}</span>{T('game.shopBtn')}
+                <span className="rg-btn__badge">{team.money ?? 0} <span className="coin" style={{ filter: 'brightness(1.3)' }} /></span>
               </button>
             )}
 
             {itemsOn && (
-              <button onClick={openInventory} aria-label={T('game.openInventory')} className="hud-imgbtn">
-                <img src={btnInventaire} alt="Inventaire" draggable={false} />
+              <button onClick={openInventory} aria-label={T('game.openInventory')} className="rg-btn">
+                <span className="rg-btn__emoji">{'\u{1F392}'}</span>{T('game.invBtn')}
                 {bagUnitCount(team.bag) > 0 && (
-                  <span className="hud-imgbtn-badge">{bagUnitCount(team.bag)}</span>
+                  <span className="rg-btn__badge">{bagUnitCount(team.bag)}</span>
                 )}
               </button>
             )}
 
             {/* Autel du Scribe (extension Enchantement) : créer un parchemin custom */}
             {itemsOn && scribeOn && (
-              <button onClick={openScribe} aria-label={T('game.openScribe')} title={T('game.openScribe')}
-                style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 18px', borderRadius: 18, border: '2px solid #b98cff', background: 'linear-gradient(180deg,#7a4fae,#5a2f8e)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 16, cursor: 'pointer', boxShadow: '0 6px 16px rgba(90,47,142,0.45), inset 0 1px 0 rgba(255,255,255,0.25)' }}>
-                <span style={{ fontSize: 26 }}>{'\u{2712}\u{FE0F}'}</span>{T('game.scribeBtn')}
+              <button onClick={openScribe} aria-label={T('game.openScribe')} title={T('game.openScribe')} className="rg-btn" style={{ borderColor: '#5a2f8e' }}>
+                <span className="rg-btn__emoji">{'\u{2712}\u{FE0F}'}</span>{T('game.scribeBtn')}
               </button>
             )}
 
             {/* Atelier d'alchimie (extension Alchimie) : distiller des potions sur le TBI */}
             {itemsOn && alchemyOn && (
-              <button onClick={openAlchemy} aria-label={T('game.openAlchemy')} title={T('game.openAlchemy')}
-                style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 18px', borderRadius: 18, border: '2px solid #6fbf8c', background: 'linear-gradient(180deg,#3f9d6b,#2c7a4f)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 16, cursor: 'pointer', boxShadow: '0 6px 16px rgba(44,122,79,0.45), inset 0 1px 0 rgba(255,255,255,0.25)' }}>
-                <span style={{ fontSize: 26 }}>{'\u{2697}\u{FE0F}'}</span>{T('game.alchBtn')}
+              <button onClick={openAlchemy} aria-label={T('game.openAlchemy')} title={T('game.openAlchemy')} className="rg-btn" style={{ borderColor: '#2c7a4f' }}>
+                <span className="rg-btn__emoji">{'\u{2697}\u{FE0F}'}</span>{T('game.alchBtn')}
               </button>
             )}
 
@@ -173,17 +195,7 @@ export default function GameLayout() {
                 onClick={() => devAddMoney(n)}
                 aria-label={`Dev : ajouter ${n} pièces`}
                 title={`Dev — ajoute ${n} pièces à l'équipe active`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '10px 16px',
-                  borderRadius: 999,
-                  border: '2px dashed rgba(110, 78, 16, 0.5)',
-                  background: 'rgba(255, 250, 240, 0.85)',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 14,
-                  color: 'var(--ink-700)',
-                  cursor: 'pointer',
-                }}
+                className="rg-pill"
               >
                 {"\u{1F6E0}️"} +{n} <span className="coin" />
               </button>
@@ -193,7 +205,7 @@ export default function GameLayout() {
             {import.meta.env.DEV && weatherOn && ['ventContraire', 'ventArriere', 'soleil', 'orage', 'pluieAcide', 'seisme', 'pluieMaudite'].map((id) => (
               <button key={id} onClick={() => triggerWeather(id, { forced: true })}
                 title={`Dev — déclenche la météo « ${id} »`} aria-label={`Dev météo ${id}`}
-                style={{ padding: '8px 12px', borderRadius: 999, border: '2px dashed rgba(70,100,150,0.5)', background: 'rgba(240,246,255,0.85)', fontSize: 13, color: 'var(--ink-700)', cursor: 'pointer' }}>
+                className="rg-pill" style={{ fontSize: 12 }}>
                 🌦️ {id}
               </button>
             ))}
@@ -204,76 +216,48 @@ export default function GameLayout() {
       {/* Bottom bar — team cards */}
       <BottomBar />
 
-      {/* HUD — right rail */}
+      {/* HUD — right rail (colonne bois façon meuble hi-fi) */}
       <div
-        className="absolute top-0 right-0 flex flex-col z-[60]"
-        style={{
-          width: 320,
-          height: '100%',
-          background: 'linear-gradient(180deg, rgba(255, 250, 240, 0.98), rgba(244, 234, 213, 0.95))',
-          borderLeft: '1px solid rgba(122, 94, 58, 0.22)',
-          boxShadow: '-8px 0 24px rgba(0,0,0,0.08)',
-          backdropFilter: 'blur(6px)',
-        }}
+        className="absolute top-0 right-0 flex flex-col z-[60] rg-rail"
+        style={{ width: 320, height: '100%', padding: '12px 12px 10px', gap: 11 }}
       >
-        {/* Header */}
-        <div
-          style={{
-            padding: '18px 18px 14px',
-            display: 'flex', alignItems: 'center', gap: 14,
-            borderBottom: '1px solid rgba(122, 94, 58, 0.18)',
-          }}
-        >
-          <div
-            style={{
-              width: 38, height: 38, borderRadius: 10,
-              background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 20,
-              boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18)',
-            }}
-          >
-            {"\u{1F3B2}"}
-          </div>
+        <span className="rg-screw" style={{ top: 8, left: 8 }} />
+        <span className="rg-screw" style={{ top: 8, right: 8 }} />
+
+        {/* Header — plaque crème titre + tour courant */}
+        <div className="rg-plaque" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto' }}>
+          <div className="rg-plaque__tile">{"\u{1F3DD}\u{FE0F}"}</div>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-900)', lineHeight: 1.05 }}>
-              {T('game.title')}
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>
-              {T('game.boardGame')}
-            </div>
+            <div className="rg-plaque__title">{T('game.title')}</div>
+            <div className="rg-plaque__sub">{T('game.boardGame')} · {T('game.turnN', { n: (turnCount || 0) + 1 })}</div>
           </div>
         </div>
 
-        {/* Dice area */}
-        <div style={{ padding: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        {/* Dice area — plateau de dé en bois sombre */}
+        <div className="rg-tray" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <Dice />
           <PowerButtons />
           <ConsumableBar />
         </div>
 
-        {/* Journal section */}
-        <div style={{
-          padding: '14px 18px', flex: 1, minHeight: 0,
-          display: 'flex', flexDirection: 'column',
-          borderTop: '1px solid rgba(122, 94, 58, 0.14)',
-        }}>
-          <h4 style={{
-            fontFamily: 'var(--font-display)', fontSize: 12,
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            color: 'var(--ink-500)', marginBottom: 8,
-          }}>
-            {T('game.journal')}
-          </h4>
-          <GameLog />
+        {/* Journal section — fenêtre Win95 */}
+        <div className="rg-win95" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0 }}>
+          <div className="rg-win95-bar">
+            <div className="rg-win95-bar__title"><span style={{ fontSize: 12 }}>{"\u{1F4D3}"}</span>JOURNAL.EXE</div>
+            <div style={{ display: 'flex', gap: 3 }}>
+              <span className="rg-win95-bar__btn" style={{ alignItems: 'flex-end', lineHeight: 0.6 }}>_</span>
+              <span className="rg-win95-bar__btn">□</span>
+              <span className="rg-win95-bar__btn">✕</span>
+            </div>
+          </div>
+          <div className="rg-win95-menu"><span><u>F</u>ichier</span><span><u>E</u>dition</span><span><u>?</u></span></div>
+          <div className="rg-win95-body">
+            <GameLog />
+          </div>
         </div>
 
         {/* Bottom actions */}
-        <div style={{
-          padding: '12px 16px',
-          borderTop: '1px solid rgba(122, 94, 58, 0.18)',
-          display: 'flex', gap: 8,
-        }}>
+        <div className="rg-rail-actions" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', display: 'flex', gap: 8 }}>
           {!OFFLINE && <MobileSessionPanel />}
           <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label={T('game.fullscreen')} style={{ flex: 1 }}>
             {isFs ? `\u2716 ${T('game.exitFullscreen')}` : `\u26F6 ${T('game.fullscreen')}`}

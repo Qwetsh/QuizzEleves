@@ -6,7 +6,7 @@ import Setup from './components/Setup/Setup';
 import PowerSetup from './components/Setup/PowerSetup';
 import GameLayout from './components/Game/GameLayout';
 
-// Console de setup « SONORAMA » (écran principal) : paresseuse. Repli vers
+// Console de setup « CURIOSCOPE » (écran principal) : paresseuse. Repli vers
 // l'ancien Setup via ?classic (filet de sécurité pendant la transition).
 const SelectionCassettes = lazy(() => import('./components/Setup/SelectionCassettes'));
 const CLASSIC_SETUP = new URLSearchParams(window.location.search).has('classic');

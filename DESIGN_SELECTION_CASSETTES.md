@@ -1,7 +1,7 @@
 # Brief design — Écran de sélection « Lecteur de cassettes »
 
 > **Pour :** Claude Design.
-> **Objet :** maquetter l'écran de **sélection des thèmes d'une partie** du jeu de quiz « La Quête des Matières ».
+> **Objet :** maquetter l'écran de **sélection des thèmes d'une partie** du jeu de quiz « Curioscope ».
 > **Statut :** brief autonome. Tout le contexte nécessaire est ici.
 > **Hors périmètre :** la logique de jeu, la base de données, et la géométrie réelle du plateau (cases, déplacements). On ne maquette QUE l'écran de sélection et ses états.
 

@@ -3,6 +3,12 @@ import { useGameStore } from '../../store/gameStore';
 import { EMOJI_OPTIONS } from '../../data/teamPresets';
 import { useT } from '../../i18n';
 
+const FONT_MONO = "'VT323', monospace";
+const FONT_UI = "'Hanken Grotesk', system-ui, sans-serif";
+
+// Fiches d'équipe façon « étiquettes de cassette » : carton crème, bordure
+// charbon épaisse, bande de couleur d'équipe, nom écrit sur une ligne
+// pointillée. Le picker d'emoji s'ouvre dans un tiroir sombre (console).
 export default function TeamCustomization() {
   const T = useT();
   const setupTeams = useGameStore((s) => s.setupTeams);
@@ -20,20 +26,25 @@ export default function TeamCustomization() {
           <div
             key={`setup-team-${i}`}
             style={{
-              padding: 10,
-              borderRadius: 14,
-              background: 'var(--parch-50)',
-              border: '1px solid rgba(122, 94, 58, 0.16)',
+              padding: '10px 12px',
+              borderRadius: 10,
+              background: '#f6ead0',
+              border: '3px solid #150f08',
+              boxShadow: '0 3px 0 rgba(21,15,8,.35), inset 0 1px 0 rgba(255,255,255,.5)',
             }}
           >
             <div className="flex items-center gap-3">
+              <span style={{ fontFamily: FONT_MONO, fontSize: 20, color: '#8a7656', width: 24, flexShrink: 0 }}>
+                {String(i + 1).padStart(2, '0')}
+              </span>
               <div
                 aria-label={T('setup.teamColorAria', { name: team.name, color: team.color })}
                 role="img"
                 style={{
-                  width: 18, height: 38, borderRadius: 5,
+                  width: 16, height: 40, borderRadius: 4, flexShrink: 0,
                   background: team.color,
-                  boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4)',
+                  border: '2px solid #150f08',
+                  boxShadow: 'inset 0 -4px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.35)',
                 }}
               />
               <button
@@ -43,9 +54,12 @@ export default function TeamCustomization() {
                 aria-expanded={isOpen}
                 className="text-2xl"
                 style={{
-                  width: 44, height: 44, borderRadius: 10,
-                  background: isOpen ? 'rgba(232, 169, 88, 0.25)' : '#fffefb',
-                  border: `2px solid ${isOpen ? 'var(--gold-600)' : 'rgba(122, 94, 58, 0.22)'}`,
+                  width: 46, height: 46, borderRadius: 8,
+                  background: isOpen ? '#16331a' : '#e3d0aa',
+                  border: `3px solid ${isOpen ? '#57c84d' : '#150f08'}`,
+                  boxShadow: isOpen
+                    ? '0 0 10px rgba(87,200,77,.4)'
+                    : '0 2px 0 rgba(21,15,8,.35), inset 0 1px 0 rgba(255,255,255,.4)',
                   cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all 120ms ease',
@@ -65,10 +79,13 @@ export default function TeamCustomization() {
                   flex: 1,
                   background: 'transparent',
                   border: 'none',
-                  padding: '8px 10px',
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: 16,
-                  color: 'var(--ink-900)',
+                  borderBottom: '2px dashed rgba(90,64,35,.5)',
+                  borderRadius: 0,
+                  padding: '6px 8px',
+                  fontFamily: FONT_UI,
+                  fontWeight: 700,
+                  fontSize: 17,
+                  color: '#241a10',
                   outline: 'none',
                 }}
               />
@@ -76,7 +93,7 @@ export default function TeamCustomization() {
 
             {lv2Mode && (
               <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-600)', flexShrink: 0 }}>{T('setup.lv2Inline')}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, color: '#5a4023', textTransform: 'uppercase', flexShrink: 0 }}>{T('setup.lv2Inline')}</span>
                 {[['allemand', '🦅 Allemand'], ['espagnol', '☀️ Espagnol']].map(([key, label]) => {
                   const cur = (team.lv2 || 'espagnol') === key;
                   return (
@@ -85,10 +102,13 @@ export default function TeamCustomization() {
                       type="button"
                       onClick={() => updateSetupTeam(i, { lv2: key })}
                       style={{
-                        flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 9, cursor: 'pointer',
-                        fontSize: 12.5, fontWeight: 600,
-                        border: `2px solid ${cur ? 'var(--gold-600)' : 'rgba(122,94,58,0.2)'}`,
-                        background: cur ? 'rgba(232,169,88,0.15)' : '#fffefb',
+                        flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 6, cursor: 'pointer',
+                        fontFamily: FONT_UI, fontSize: 12.5, fontWeight: 700,
+                        border: `2px solid ${cur ? '#57c84d' : '#150f08'}`,
+                        background: cur ? '#16331a' : '#efe3c6',
+                        color: cur ? '#9be88f' : '#5a4a2f',
+                        boxShadow: cur ? '0 0 8px rgba(87,200,77,.3)' : '0 2px 0 rgba(21,15,8,.25)',
+                        transition: 'all 120ms ease',
                       }}
                     >
                       {label}
@@ -105,9 +125,10 @@ export default function TeamCustomization() {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))',
                   marginTop: 10,
                   padding: 8,
-                  borderRadius: 10,
-                  background: '#fffefb',
-                  border: '1px solid rgba(122, 94, 58, 0.16)',
+                  borderRadius: 8,
+                  background: '#241a10',
+                  border: '3px solid #150f08',
+                  boxShadow: 'inset 0 2px 8px rgba(0,0,0,.5)',
                 }}
               >
                 {EMOJI_OPTIONS.map((emoji, ei) => {
@@ -120,14 +141,15 @@ export default function TeamCustomization() {
                       aria-label={T('setup.avatarAria', { emoji })}
                       className="text-xl"
                       style={{
-                        height: 40, borderRadius: 8,
-                        border: selected ? '2px solid var(--gold-600)' : '2px solid transparent',
-                        background: selected ? 'rgba(232, 169, 88, 0.25)' : 'transparent',
+                        height: 40, borderRadius: 6,
+                        border: selected ? '2px solid #57c84d' : '2px solid transparent',
+                        background: selected ? '#16331a' : 'transparent',
+                        boxShadow: selected ? '0 0 8px rgba(87,200,77,.35)' : 'none',
                         cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 100ms ease',
                       }}
-                      onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = 'rgba(232, 169, 88, 0.12)'; }}
+                      onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = 'rgba(232,161,58,0.22)'; }}
                       onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
                     >
                       {emoji}
