@@ -20,6 +20,22 @@ export function randomSubject() {
 }
 
 /**
+ * Durée (en secondes) du timer d'une question, à partir des champs de
+ * `showQuestion`. MÊME formule que l'affichage (QuestionModal) et que le calcul
+ * de gain (answerQuestion) : base 30 s ÷ diviseur Sablier + bonus d'équipement,
+ * ou chrono partagé de rafale (Double L5), plafonnée par Sablier brisé.
+ * Source unique pour poser `showQuestion.deadline` (askQuestion, reroll).
+ */
+export function questionDuration(sq) {
+  if (!sq) return 30;
+  const divisor = sq.timerDivisor || (sq.timerHalved ? 2 : 1);
+  const base = sq.sharedStart != null
+    ? Math.max(1, sq.sharedStart)
+    : Math.floor(30 / divisor) + (sq.itemBonusTime || 0);
+  return Math.min(sq.timerCap || Infinity, base);
+}
+
+/**
  * Applique TOUTE la cha\u00eene de r\u00e9duction de recul \u00E0 un recul de `base` cases,
  * puis d\u00e9place l'\u00e9quipe. Ordre :
  *   0. buff \u00ab noRecul \u00bb (effet de dur\u00e9e)         \u2014 annule tout

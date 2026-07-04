@@ -18,6 +18,8 @@ import '@fontsource/hanken-grotesk/600.css';
 import '@fontsource/hanken-grotesk/700.css';
 import '@fontsource/hanken-grotesk/800.css';
 import '../../styles/cassettes.css';
+import cassetteTop from '../../assets/cassette-top.png';
+import separatorPlaque from '../../assets/separator-plaque.png';
 import { useGameStore } from '../../store/gameStore';
 import { themesToCassetteModel, buildPerimeter, levelForCycle } from '../../logic/perimeter';
 import { getQuestions } from '../../data/questions';
@@ -28,13 +30,61 @@ import LobbyPanel from './LobbyPanel';
 import ExtensionsChecklist from './ExtensionsChecklist';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
-import ItemsChecklist from './ItemsChecklist';
+import ItemsChecklist, { equipmentItemKeys } from './ItemsChecklist';
 import StarterChestConfig from './StarterChestConfig';
 import RulesConfig from './RulesConfig';
+import QuestionsEditor from './QuestionsEditor';
+import BalanceEditor from './BalanceEditor';
+import EventsEditor from './EventsEditor';
+import { OFFLINE } from '../../logic/offline';
+import { EXTENSIONS, extOn } from '../../extensions/registry';
+import { EVENTS } from '../../data/events';
 
 const FONT_DISPLAY = "'Archivo Black', system-ui, sans-serif";
 const FONT_UI = "'Hanken Grotesk', system-ui, sans-serif";
 const FONT_MONO = "'VT323', monospace";
+
+// Pile « crate-digging » : chaque carte (bouton) fait EXACTEMENT la hauteur de sa
+// tranche visible (STRIP) — la face déployée au survol vit en absolu dans __box et
+// déborde librement. Ainsi la zone de survol = la zone visible : pas de « queue »
+// invisible qui capterait la souris au-dessus du séparateur suivant.
+// Dimensions en px du stage 1600×900 (mis à l'échelle uniformément → fiable).
+const STRIP = 42;              // tranche visible au repos (= étiquette « vue du dessus »)
+const FACE_CLEAR = 194;        // débord max de la face déployée sous sa tranche (ratio 1,33 + ombre)
+// Glissement des cartes SOUS la K7 survolée : doit dégager la hauteur de la face
+// révélée en entier (largeur colonne ≈ 288px / ratio 1,4 ≈ 206px, × cos(32°) ≈ 175px
+// sous la charnière) pour que leurs tranches restent lisibles sous la cassette.
+const SLIDE = 180;
+
+// Visuels de cassette thématisés (vue de face) : 1 fichier par clé de thème dans
+// src/assets/cassettes/<themeKey>.png. Map auto → déposer un PNG suffit à l'activer.
+// Les thèmes sans visuel dédié gardent la cassette générique (vue du dessus).
+const CASSETTE_ART = Object.entries(
+  import.meta.glob('../../assets/cassettes/*.png', { eager: true, import: 'default' }),
+).reduce((acc, [path, url]) => {
+  const key = path.split('/').pop().replace(/\.png$/, '');
+  acc[key] = url;
+  return acc;
+}, {});
+
+// Les thèmes GÉNÉRAUX (carte intégrale/cartouche du rayon) n'ont pas de jaquette
+// dédiée : on leur prête celle d'un sous-thème représentatif du rayon. Clés =
+// clés racines de l'arbre quete_themes ; un PNG dédié déposé plus tard (ex.
+// sport_g.png) reprend automatiquement la main.
+const GENERAL_ART = {
+  scolaire: 'francais',
+  histoire_g: 'moyen_age',
+  geographie_g: 'pays_capitales',
+  sciences_g: 'astronomie_espace',
+  nature_g: 'animaux',
+  arts_g: 'peinture_sculpture',
+  divertissement_g: 'cinema',
+  sport_g: 'athletisme_jo',
+  societe_g: 'politique_institutions',
+};
+for (const [gen, sub] of Object.entries(GENERAL_ART)) {
+  if (!CASSETTE_ART[gen] && CASSETTE_ART[sub]) CASSETTE_ART[gen] = CASSETTE_ART[sub];
+}
 
 // --- Données mock (preview ?cassettes ; le mode `live` lit l'arbre réel) -----
 const MOCK_DOMAINS = [
@@ -83,8 +133,6 @@ const VU = Array.from({ length: 30 }, (_, i) => {
   return { color, dur: (0.7 + ((i * 37) % 50) / 100).toFixed(2), delay: ((i * 53) % 90) / 100 };
 });
 
-const WORLD_MODES = ['Mini-monde', 'Serpentin', 'Ruban'];
-
 // Sélecteur de fonction de la console (onglets stylés « boutons illuminés »).
 const CONSOLE_TABS = [
   { id: 'themes', label: 'THÈMES', emblem: '📼' },
@@ -92,12 +140,29 @@ const CONSOLE_TABS = [
   { id: 'reglages', label: 'RÉGLAGES', emblem: '🎛' },
 ];
 
-// Modes de jeu. Les 2 premiers sont actifs (mappés sur connectionMode board/phone) ;
-// les 2 suivants sont visibles mais « prochainement ».
+// Sous-catégories de l'onglet RÉGLAGES (rail vertical « façon menu d'options »).
+// Une seule catégorie visible à la fois → fini la colonne fourre-tout.
+const REGLAGES_CATS = [
+  { id: 'extensions', emblem: '🧩', label: 'EXTENSIONS' },
+  { id: 'plateau', emblem: '🗺️', label: 'PLATEAU' },
+  { id: 'regles', emblem: '⚔️', label: 'RÈGLES' },
+  { id: 'butin', emblem: '🎁', label: 'BUTIN & OBJETS' },
+  { id: 'events', emblem: '✨', label: 'ÉVÉNEMENTS' },
+];
+
+// Catégorie RÉGLAGES « Outils/Éditeurs » : ajoutée au rail uniquement quand les
+// outils sont déverrouillés (dev, ou triple-clic sur le logo + code, hors ligne exclu).
+const OUTILS_CAT = { id: 'outils', emblem: '🛠️', label: 'OUTILS / ÉDITEURS' };
+const TOOLS_UNLOCK_KEY = 'quete_tools_unlock';
+const TOOLS_CODE = '54150';
+
+// Modes de jeu. Les 3 premiers sont actifs : ils pilotent connectionMode
+// (board/phone) + phoneController (manette téléphone — l'équipe active joue
+// son tour depuis son mobile, le TBI reste maître et utilisable en parallèle).
 const GAME_MODES = [
-  { id: 'tbi', conn: 'board', emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
-  { id: 'companion', conn: 'phone', emblem: '📱', name: 'Téléphone + TBI', desc: 'Les élèves rejoignent par QR ; on joue sur le TBI.', ready: true },
-  { id: 'manette', emblem: '🕹️', name: 'Téléphone-manette', desc: 'Le téléphone devient manette et interface joueur.', ready: false },
+  { id: 'tbi', conn: 'board', controller: false, emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
+  { id: 'companion', conn: 'phone', controller: false, emblem: '📱', name: 'Téléphone + TBI', desc: 'Les élèves rejoignent par QR ; on joue sur le TBI.', ready: true },
+  { id: 'manette', conn: 'phone', controller: true, emblem: '🕹️', name: 'Téléphone-manette', desc: 'Les élèves rejoignent par QR ; l’équipe active joue son tour (dé, réponses, choix) sur son téléphone.', ready: true },
   { id: 'online', emblem: '🌐', name: 'Jeu en ligne', desc: 'Partie et connexion 100 % en ligne.', ready: false },
 ];
 
@@ -115,6 +180,45 @@ const themeById = (id) => {
   return null;
 };
 
+// Outils/éditeurs habillés « console » : boutons plastique foncé sur l'encart
+// crème (panelInset), au lieu du panneau bleu générique de l'ancien Setup. Les
+// éditeurs eux-mêmes s'ouvrent en plein écran (portail) — inchangés.
+function ConsoleEditorTools() {
+  const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
+  const [showBalanceEditor, setShowBalanceEditor] = useState(false);
+  const [showEventsEditor, setShowEventsEditor] = useState(false);
+  const btn = {
+    fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 0.4, padding: '14px 14px',
+    borderRadius: 9, cursor: 'pointer', border: '2px solid #150f08', background: '#3a2e22',
+    color: '#f4e7cc', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.12),inset 0 -3px 0 rgba(0,0,0,.4)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textAlign: 'center',
+  };
+  const openAnalyse = () =>
+    window.open(`${window.location.origin}${import.meta.env.BASE_URL || '/'}?analyse`, '_blank', 'noopener');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, letterSpacing: 0.5, color: '#3a2c1a' }}>🛠️ Outils d'édition</div>
+        <div style={{ fontSize: 13, color: '#6b5f48', marginTop: 5, lineHeight: 1.45 }}>
+          Questions, équilibrage (objets · pouvoirs · loot · alchimie) et événements. Les modifications sont écrites dans la base.
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <button style={btn} onClick={() => setShowQuestionsEditor(true)}>📚 Éditer les questions</button>
+        <button style={btn} onClick={() => setShowBalanceEditor(true)}>⚖️ Éditer l'équilibrage</button>
+        <button style={btn} onClick={() => setShowEventsEditor(true)}>✨ Éditer les événements</button>
+        <button style={btn} onClick={openAnalyse}>📊 Analyse des parties</button>
+      </div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 14, color: '#7a6a4f', borderTop: '1px solid rgba(122,94,58,.28)', paddingTop: 11, lineHeight: 1.4 }}>
+        ⚗️ L'alchimie (ingrédients, potions, recettes) se règle dans l'éditeur d'équilibrage → onglet « Alchimie ».
+      </div>
+      {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
+      {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}
+      {showEventsEditor && <EventsEditor onClose={() => setShowEventsEditor(false)} />}
+    </div>
+  );
+}
+
 export default function SelectionCassettes({ voies = 6, reperesRatio = true, live = false, main = false }) {
   const liveData = live || main; // `main` (console de setup) implique les données réelles
   // Source de données : arbre réel (live/main) ou mocks (preview ?cassettes).
@@ -127,16 +231,53 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const useBrevet = useGameStore((s) => s.useBrevet);
   const [cycle, setCycle] = useState('cycle4');
   const [tab, setTab] = useState('themes');
+  const [reglSub, setReglSub] = useState('extensions'); // sous-onglet actif de RÉGLAGES
+  // Accès aux outils/éditeurs hors dev : triple-clic sur le logo de la console + code.
+  const [toolsUnlocked, setToolsUnlocked] = useState(() => {
+    try { return localStorage.getItem(TOOLS_UNLOCK_KEY) === '1'; } catch { return false; }
+  });
+  const logoClicks = useRef({ n: 0, t: 0 });
+  const showTools = import.meta.env.DEV || toolsUnlocked;
+  const toolsAvailable = showTools && !OFFLINE; // éditeurs = écritures Supabase
+  const handleLogoClick = () => {
+    const now = Date.now();
+    const c = logoClicks.current;
+    if (now - c.t > 700) c.n = 0;
+    c.t = now; c.n += 1;
+    if (c.n < 3) return;
+    c.n = 0;
+    if (toolsUnlocked) return;
+    const code = window.prompt('Code de déverrouillage des outils :');
+    if (code == null) return;
+    if (code.trim() === TOOLS_CODE) {
+      try { localStorage.setItem(TOOLS_UNLOCK_KEY, '1'); } catch { /* quota */ }
+      setToolsUnlocked(true);
+      setTab('reglages'); setReglSub('outils');
+    } else {
+      window.alert('Code incorrect.');
+    }
+  };
   const englishMode = useGameStore((s) => s.englishMode);
   const setEnglishMode = useGameStore((s) => s.setEnglishMode);
   const classLabel = useGameStore((s) => s.classLabel);
   const setClassLabel = useGameStore((s) => s.setClassLabel);
   const connectionMode = useGameStore((s) => s.connectionMode);
   const setConnectionMode = useGameStore((s) => s.setConnectionMode);
+  // Manette téléphone : piloté par la carte « Téléphone-manette » du MODE DE JEU.
+  const phoneController = useGameStore((s) => s.phoneController);
+  const setPhoneController = useGameStore((s) => s.setPhoneController);
+  const extensions = useGameStore((s) => s.extensions);
+  // Lectures pour les résumés du rail RÉGLAGES + le slider de fréquence d'événements.
+  const boardParams = useGameStore((s) => s.boardParams);
+  const setBoardParam = useGameStore((s) => s.setBoardParam);
+  const forcedDuels = useGameStore((s) => s.forcedDuels);
+  const enabledEvents = useGameStore((s) => s.enabledEvents);
+  const enabledItems = useGameStore((s) => s.enabledItems);
+  const starterChestConfig = useGameStore((s) => s.starterChestConfig);
   const phoneMode = connectionMode === 'phone';
+  const itemsOn = extOn(extensions, 'equipment'); // coffre/objets dépendent de l'extension « Objets »
 
   const [slots, setSlots] = useState([]);
-  const [revealed, setRevealed] = useState([]);
   const [drag, setDrag] = useState(null);
   const [hoverSlot, setHoverSlot] = useState(-1);
   const [lastCard, setLastCard] = useState(null);
@@ -144,14 +285,22 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const [launching, setLaunching] = useState(false);
   const [full, setFull] = useState(false); // eslint-disable-line no-unused-vars
   const [scale, setScale] = useState(1);
-  const [openDomain, setOpenDomain] = useState(DOMAINS[0]?.id ?? null);
-  const [worldStyle, setWorldStyle] = useState('Mini-monde');
+  // Rayons ouverts : PLUSIEURS à la fois (Set d'ids) — la place se gère par le
+  // scroll vertical du bac. Le 1er rayon démarre ouvert.
+  const [openDomains, setOpenDomains] = useState(() => new Set(DOMAINS[0]?.id ? [DOMAINS[0].id] : []));
+  // Rayons dont l'accordéon est stabilisé OUVERT (fin de transition) : on leur rend
+  // overflow:visible pour que le pop-out 3D des cassettes ne soit pas rogné.
+  // Pendant l'animation (repli/dépli) un rayon reste hidden → clip propre.
+  const [settledDomains, setSettledDomains] = useState(() => new Set(DOMAINS[0]?.id ? [DOMAINS[0].id] : []));
+  // Cassette survolée (crate-digging) : { domain, idx }. Sert à incliner la K7
+  // ET à écarter ses voisines du même rayon pour lui faire de la place.
+  const [hoverTape, setHoverTape] = useState(null);
+  // Sous-thèmes (depth 1) dont on a déroulé les sous-sous-thèmes (mini-cassettes).
+  // Repliés par défaut → l'étagère reste lisible ; la flèche discrète les ouvre.
+  const [expandedSubs, setExpandedSubs] = useState(() => new Set());
+  const toggleSubtree = (id) => setExpandedSubs((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const outerRef = useRef(null);
-  // Map domaine → élément du tiroir. Clés DYNAMIQUES (mock 'div'/… ou arbre réel
-  // 'scolaire'/…) : un objet à clés fixes casserait l'accordéon en mode live.
-  const groupEls = useRef({});
-  const appliedOpenRef = useRef(openDomain);
 
   // Refs transitoires pour le drag (évite les closures périmées des listeners window).
   const dragIdRef = useRef(null);
@@ -182,69 +331,36 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     return () => window.removeEventListener('resize', onResize);
   }, [fit]);
 
-  // ---------- accordéon : état initial des tiroirs ----------
-  useEffect(() => {
-    for (const [id, el] of Object.entries(groupEls.current)) {
-      if (!el) continue;
-      if (id === appliedOpenRef.current) { el.style.maxWidth = 'none'; el.style.overflow = 'visible'; }
-      else { el.style.maxWidth = '0px'; el.style.overflow = 'hidden'; }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const animateGroup = useCallback((el, open) => {
-    if (!el) return;
-    const cards = [...el.querySelectorAll('[data-card]')];
-    clearTimeout(el._drawerT);
-    el.style.overflow = 'hidden';
-    if (open) {
-      el.style.maxWidth = '0px';
-      void el.offsetWidth;
-      el.style.animation = 'qm-drawer-open .5s cubic-bezier(.16,1,.3,1) forwards';
-      cards.forEach((c, i) => {
-        c.style.animation = 'none';
-        void c.offsetWidth;
-        c.style.animation = `qm-card-out .56s cubic-bezier(.16,1,.3,1) ${(0.05 + i * 0.075)}s backwards`;
-      });
-      el._drawerT = setTimeout(() => {
-        el.style.animation = ''; el.style.maxWidth = 'none'; el.style.overflow = 'visible';
-        cards.forEach((c) => { c.style.animation = ''; });
-      }, 720);
-    } else {
-      el.style.maxWidth = '340px';
-      void el.offsetWidth;
-      el.style.animation = 'qm-drawer-close .32s cubic-bezier(.55,0,.68,.19) forwards';
-      el._drawerT = setTimeout(() => { el.style.animation = ''; el.style.maxWidth = '0px'; }, 380);
-    }
-  }, []);
-
-  // ---------- accordéon : animation au changement de rayon ouvert ----------
-  useEffect(() => {
-    const cur = openDomain;
-    if (cur !== appliedOpenRef.current) {
-      const old = appliedOpenRef.current;
-      appliedOpenRef.current = cur;
-      if (old) animateGroup(groupEls.current[old], false);
-      if (cur) animateGroup(groupEls.current[cur], true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openDomain, animateGroup]);
-
-  const toggleDomain = (id) => setOpenDomain((cur) => (cur === id ? null : id));
+  // Accordéon vertical : chaque plaque déplie/replie SON rayon indépendamment
+  // (plusieurs rayons ouverts en même temps). Seul le rayon qui bouge est
+  // « désettlé » (overflow hidden le temps de son animation), les autres gardent
+  // leur pop-out 3D intact.
+  const toggleDomain = (id) => {
+    setOpenDomains((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+    setSettledDomains((cur) => {
+      if (!cur.has(id)) return cur;
+      const next = new Set(cur);
+      next.delete(id);
+      return next;
+    });
+  };
 
   // ---------- modèle de voie ----------
   const makeVoie = (t) => {
     const dom = domainById(t.domain);
     return {
       uid: `${t.id}_${Math.random().toString(36).slice(2, 7)}`,
-      themeId: t.id, label: t.label, type: t.type, domain: t.domain,
+      themeId: t.id, label: t.label, type: t.type, domain: t.domain, depth: t.depth ?? 0,
       domainName: dom.name, color: t.type === 'integrale' ? '#e2b43a' : dom.color, ink: dom.ink,
       subs: (t.sub || []).map((s) => (typeof s === 'string'
         ? { label: s, subjectKey: null, excluded: false }
         : { label: s.label, subjectKey: s.key ?? null, excluded: false })),
     };
   };
-  const recomputeRevealed = (arr) => Array.from(new Set(arr.filter(Boolean).map((v) => v.domain)));
   const firstEmpty = () => {
     for (let i = 0; i < voiesCount; i++) { if (!slotsRef.current[i]) return i; }
     return -1;
@@ -259,11 +375,13 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const commit = useCallback((id, idx) => {
     const t = themeById(id);
     if (!t) return;
+    // Anti-doublon : un thème déjà inséré dans le Curioscope ne peut pas l'être une
+    // 2e fois (garde ici = couvre tap ET drag, quel que soit le chemin d'entrée).
+    if (slotsRef.current.some((v) => v && v.themeId === id)) return;
     const voie = makeVoie(t);
     setSlots((prev) => {
       const next = prev.slice();
       next[idx] = voie;
-      setRevealed(recomputeRevealed(next));
       return next;
     });
     setLastCard({ label: t.label, color: voie.color });
@@ -342,7 +460,6 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     setSlots((prev) => {
       const next = prev.slice();
       next[i] = null;
-      setRevealed(recomputeRevealed(next));
       return next;
     });
   };
@@ -357,7 +474,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     });
   };
 
-  const reset = () => { setSlots([]); setRevealed([]); setLastCard(null); };
+  const reset = () => { setSlots([]); setLastCard(null); };
 
   const loaded = slots.filter(Boolean);
   const hasScolaire = loaded.some((v) => v.domain === 'scolaire'); // cycle utile seulement si scolaire chargé
@@ -392,7 +509,6 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     while (next.length < voiesCount) next.push(null);
     const sliced = next.slice(0, voiesCount);
     setSlots(sliced);
-    setRevealed(recomputeRevealed(sliced));
     setLastCard({ label: c.domainName, color: c.color });
     setBoost(true);
     clearTimeout(timers.current.boost);
@@ -403,7 +519,12 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const voieLabel = (v) => {
     if (v.type === 'integrale') {
       const ex = v.subs.filter((s) => s.excluded).map((s) => s.label);
-      return v.domainName.charAt(0) + v.domainName.slice(1).toLowerCase() + (ex.length ? ` sauf ${ex.join(', ')}` : '');
+      // Intégrale de DOMAINE (depth 0) → nom du domaine « joliment casé » ; intégrale
+      // plus profonde (Harry Potter, Jeux vidéo…) → son propre nom.
+      const base = (v.depth ?? 0) === 0
+        ? v.domainName.charAt(0) + v.domainName.slice(1).toLowerCase()
+        : v.label;
+      return base + (ex.length ? ` sauf ${ex.join(', ')}` : '');
     }
     return v.label;
   };
@@ -419,7 +540,6 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   // ---------- vues dérivées ----------
   const loadedCount = loaded.length;
   const title = genTitle();
-  const mode = worldStyle;
 
   const tagOf = (v) => (v.type === 'integrale' ? 'LARGE' : (v.type === 'import' ? 'POINTU' : (v.type === 'cartouche' ? 'SCOLAIRE' : 'THÈME')));
 
@@ -454,18 +574,6 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     }
   }
 
-  const biomesView = DOMAINS.map((d) => {
-    const rev = revealed.includes(d.id);
-    return { id: d.id, name: d.biome, color: d.color, sceneBg: d.sceneBg, emblem: d.emblem, revealed: rev, locked: !rev };
-  });
-  const revealedCount = revealed.length;
-  const pathProgress = revealedCount <= 0 ? 0 : Math.min(100, (revealedCount / 5) * 100);
-
-  const segView = loaded.map((v) => {
-    const d = domainById(v.domain);
-    return { color: v.color, emblem: d.emblem, short: d.id.toUpperCase(), label: voieLabel(v) };
-  });
-
   const statusText = loadedCount === 0 ? '0 VOIE · PRÊT' : `${loadedCount}/${voiesCount} VOIES`;
   const launchOn = loadedCount > 0;
   const deckSpin = loadedCount > 0 ? 'running' : 'paused';
@@ -473,95 +581,95 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const windowTint = lastCard ? lastCard.color : '#2c2419';
   const vuScale = boost ? 1.25 : 1;
 
-  // ---------- rendu d'une cassette (tranche) selon son type ----------
-  const renderCassette = (it, dom, idx) => {
+  // ---------- rendu d'une CASSETTE (carte de face, pile « crate-digging ») ----------
+  // Chaque bouton = sa tranche visible (hauteur STRIP, empilement flush) ; au survol
+  // la carte pivote vers soi et se révèle en entier (débord absolu via __box), tandis
+  // que les cartes du dessous glissent vers le bas (éventail). Tout via `transform`
+  // (jamais la marge) → pas de reflow.
+  const renderCassette = (it, dom, idx, hIdx = -1, hasSub = false) => {
+    const domId = dom?.id;
     const isLoaded = slots.some((v) => v && v.themeId === it.id);
-    const dim = (drag && drag.id === it.id) ? 0.22 : (isLoaded ? 0.4 : 1);
-    const ml = idx === 0 ? 8 : -10;
-    const common = {
-      'data-card': '1',
-      onPointerDown: (ev) => startDrag(it.id, ev),
-      onClick: () => onTap(it.id),
-    };
+    const dimBase = (drag && drag.id === it.id) ? 0.3 : (isLoaded ? 0.5 : 1);
+    const front = CASSETTE_ART[it.id]; // jaquette illustrée (si dispo)
+    const dragging = !!drag;
+    const isFocus = !dragging && hIdx === idx; // carte déployée (même sans jaquette)
+    const isInt = it.type === 'integrale';
+    const faceColor = isInt ? '#e2b43a' : (dom?.color || '#8a6a3a');
+    const faceInk = dom?.ink || '#2a1c0e';
+    // Profondeur dans l'arbre : 0 = INTÉGRALE domaine, 1 = enfant direct,
+    // 2+ = sous-sous-thème → mini-cassette (moitié, via --slab-k). L'indentation
+    // est portée par le wrapper (cf. rendu de la pile).
+    const depth = it.depth || 0;
+    const mini = depth >= 2;
+    const k = mini ? 0.5 : 1;               // facteur d'échelle (tranche + face 3D)
+    const strip = Math.round(STRIP * k);
+    const indent = depth >= 1 ? (depth - 1) * 20 : 0;
+    const subOpen = expandedSubs.has(it.id);
 
-    if (it.type === 'integrale') {
-      return (
-        <button key={it.id} {...common} title={`${it.label} — glisse-moi dans le Sonorama`} className="qm-card qm-card--int"
-          style={{ position: 'relative', flex: '0 0 auto', width: 56, height: 224, marginLeft: ml, border: 0, padding: 0, background: 'transparent', cursor: 'grab', touchAction: 'none', userSelect: 'none', opacity: dim, zIndex: 9 }}>
-          <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', width: 30, height: 30, background: '#c0392b', clipPath: 'polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 100%,50% 72%,21% 100%,32% 57%,2% 35%,39% 35%)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}>
-            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 11, color: '#fff', transform: 'translateY(-1px)' }}>★</span>
-          </div>
-          <div style={{ position: 'absolute', inset: 0, background: '#e2b43a', border: '3px solid #241a10', borderRadius: '9px 9px 3px 3px', boxShadow: 'inset 4px 0 0 rgba(255,255,255,.5),inset -6px 0 0 rgba(120,80,0,.3),inset 0 -8px 0 rgba(120,80,0,.3)' }} />
-          <div style={{ position: 'absolute', top: 15, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_DISPLAY, fontSize: 9, letterSpacing: '.5px', color: '#7a1f16' }}>INT.</div>
-          <div style={{ position: 'absolute', top: 32, bottom: 28, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: FONT_DISPLAY, fontSize: 14, letterSpacing: 1, color: '#3a2600', whiteSpace: 'nowrap', maxHeight: 152, overflow: 'hidden' }}>{it.label}</span>
-          </div>
-          <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 12, color: '#7a1f16' }}>★ BEST OF</div>
-        </button>
-      );
-    }
+    // Au repos : AUCUNE inclinaison → le bac se lit « vraiment vu du dessus » (pile
+    // d'étiquettes à plat). Le volume 3D (bascule rigide tranche+face, voir CSS
+    // .qm-slab__box) n'apparaît QUE sur la K7 survolée ; les cartes du dessous
+    // glissent vers le bas pour que leurs tranches restent visibles sous la face révélée.
+    // Le bouton, lui, ne subit que des translations 2D (la 3D vit dans __box).
+    let transform;
+    if (isFocus) transform = 'translateY(-4px)';
+    else if (hIdx >= 0) transform = idx > hIdx ? `translateY(${SLIDE}px)` : 'translateY(-4px)';
 
-    if (it.type === 'theme') {
-      return (
-        <button key={it.id} {...common} title={`${it.label} — glisse-moi dans le Sonorama`} className="qm-card"
-          style={{ position: 'relative', flex: '0 0 auto', width: 46, height: 202, marginLeft: ml, border: 0, padding: 0, background: 'transparent', cursor: 'grab', touchAction: 'none', userSelect: 'none', opacity: dim, zIndex: 2 }}>
-          <div style={{ position: 'absolute', inset: 0, background: dom.color, border: '3px solid #241a10', borderRadius: '7px 7px 3px 3px', boxShadow: 'inset 4px 0 0 rgba(255,255,255,.22),inset -5px 0 0 rgba(0,0,0,.2),inset 0 -6px 0 rgba(0,0,0,.16)' }} />
-          <div style={{ position: 'absolute', top: 9, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 12, color: 'rgba(0,0,0,.45)' }}>●</div>
-          <div style={{ position: 'absolute', top: 27, bottom: 27, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 1, color: '#fff', textShadow: '0 1px 0 rgba(0,0,0,.35)', whiteSpace: 'nowrap', maxHeight: 146, overflow: 'hidden' }}>{it.label}</span>
-          </div>
-          <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 11, color: 'rgba(0,0,0,.5)' }}>K7</div>
-        </button>
-      );
-    }
+    const enter = () => { if (!dragging) setHoverTape({ domain: domId, idx }); };
+    const leave = () => setHoverTape((h) => (h && h.domain === domId && h.idx === idx ? null : h));
 
-    if (it.type === 'cartouche') {
-      return (
-        <button key={it.id} {...common} title={`${it.label} — cartouche scolaire`} className="qm-card"
-          style={{ position: 'relative', flex: '0 0 auto', width: 60, height: 200, marginLeft: ml, border: 0, padding: 0, background: 'transparent', cursor: 'grab', touchAction: 'none', userSelect: 'none', opacity: dim, zIndex: 4 }}>
-          <div style={{ position: 'absolute', left: 4, right: 4, top: 0, bottom: 0, background: dom.color, border: '3px solid #241a10', borderRadius: '6px 6px 8px 8px', boxShadow: 'inset 4px 0 0 rgba(255,255,255,.2),inset -5px 0 0 rgba(0,0,0,.22),inset 0 -7px 0 rgba(0,0,0,.22)' }} />
-          <div style={{ position: 'absolute', left: 4, right: 4, top: 0, height: 20, background: 'repeating-linear-gradient(90deg,#241a10 0 4px,transparent 4px 11px)', opacity: .4, borderRadius: '6px 6px 0 0' }} />
-          <div style={{ position: 'absolute', left: -3, top: 56, width: 11, height: 52, background: '#2a1f12', border: '2px solid #241a10', borderRadius: 3, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '3px 0', zIndex: 3 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', margin: '0 auto', background: '#3a322a' }} />
-            <span style={{ width: 6, height: 6, borderRadius: '50%', margin: '0 auto', background: '#57c84d' }} />
-            <span style={{ width: 6, height: 6, borderRadius: '50%', margin: '0 auto', background: '#3a322a' }} />
-          </div>
-          <div style={{ position: 'absolute', top: 30, bottom: 26, left: 6, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: 1, color: '#fff', textShadow: '0 1px 0 rgba(0,0,0,.35)', whiteSpace: 'nowrap', maxHeight: 140, overflow: 'hidden' }}>SCOLAIRE · {it.label}</span>
-          </div>
-          <div style={{ position: 'absolute', bottom: 8, left: 6, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 11, color: 'rgba(0,0,0,.55)' }}>CARTOUCHE</div>
-        </button>
-      );
-    }
-
-    // import / bootleg
-    const tilt = (it.id.charCodeAt(4) % 5) - 2;
     return (
-      <button key={it.id} {...common} title={`${it.label} — import communautaire`} className="qm-card qm-card--imp"
-        style={{ position: 'relative', flex: '0 0 auto', width: 44, height: 190, marginLeft: ml, border: 0, padding: 0, background: 'transparent', cursor: 'grab', touchAction: 'none', userSelect: 'none', opacity: dim, zIndex: 3, '--tilt': `${tilt}deg` }}>
-        <div style={{ position: 'absolute', inset: 0, background: '#ece3cf', border: '3px solid #241a10', borderRadius: '5px 5px 3px 3px', boxShadow: 'inset 0 0 0 2px #fff,inset 0 -6px 0 rgba(0,0,0,.1)' }} />
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, background: dom.color, borderRight: '2px solid #241a10' }} />
-        <div style={{ position: 'absolute', inset: '9px 4px 4px 13px', background: 'repeating-linear-gradient(0deg,rgba(0,0,0,.05) 0 2px,transparent 2px 5px)' }} />
-        <div style={{ position: 'absolute', top: 25, bottom: 25, left: 9, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: FONT_DISPLAY, fontSize: 12, fontStyle: 'italic', letterSpacing: '.5px', color: '#241a10', whiteSpace: 'nowrap', maxHeight: 132, overflow: 'hidden' }}>{it.label}</span>
-        </div>
-        <div style={{ position: 'absolute', top: -7, left: 5, background: '#e8a13a', border: '2px solid #241a10', fontFamily: FONT_DISPLAY, fontSize: 8, color: '#241a10', padding: '1px 4px', transform: 'rotate(-7deg)', zIndex: 3 }}>IMP</div>
-        <div style={{ position: 'absolute', bottom: 7, left: 9, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 11, color: '#9a3a4f' }}>◇</div>
+      <button key={it.id} data-card="1"
+        onPointerDown={isLoaded ? undefined : (ev) => startDrag(it.id, ev)}
+        onClick={isLoaded ? undefined : () => onTap(it.id)}
+        onMouseEnter={enter} onMouseLeave={leave}
+        onFocus={enter} onBlur={leave}
+        title={isLoaded ? `${it.label} — déjà dans le Curioscope` : `${it.label} — glisse-moi dans le Curioscope`}
+        className={`qm-slab${isFocus ? ' is-focus' : ''}${mini ? ' qm-slab--mini' : ''}`}
+        style={{ '--slab-k': k, width: mini ? '48%' : undefined, height: strip, marginLeft: indent, opacity: dimBase, transform, zIndex: isFocus ? 60 : undefined, cursor: isLoaded ? 'not-allowed' : undefined }}>
+        {/* Flèche de repli des sous-sous-thèmes : DANS le bouton (donc solidaire du
+            translateY de la cassette au survol), posée dans la marge gauche, hors du
+            groupe 3D (.qm-slab__box) pour ne pas basculer avec lui. */}
+        {hasSub && depth >= 1 && (
+          <span role="button" tabIndex={0} className="qm-subtoggle"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); toggleSubtree(it.id); }}
+            title={subOpen ? 'Masquer les sous-thèmes' : 'Voir les sous-thèmes'}>
+            {subOpen ? '▾' : '▸'}
+          </span>
+        )}
+        {/* Volume rigide : face avant + tranche haute soudées dans un même groupe 3D
+            (charnière à y=STRIP). Au repos le groupe est vu pile du dessus (seule la
+            tranche se présente) ; au survol il bascule vers le spectateur (voir CSS). */}
+        <span className="qm-slab__box">
+          <span className="qm-slab__front">
+            {front
+              ? <img className="qm-slab__art" src={front} alt="" draggable={false} />
+              : (<span className="qm-slab__shell" style={{ background: `linear-gradient(157deg, ${faceColor}, ${faceInk})` }}>
+                  <span className="qm-slab__window" />
+                </span>)}
+          </span>
+          {/* Tranche haute (cassette-top.png) = dessus de la boîte. Le titre s'y pose. */}
+          <span className="qm-slab__label" style={{ height: strip }}>
+            <img className="qm-slab__labelimg" src={cassetteTop} alt="" draggable={false} />
+            <span className="qm-slab__title">{isInt ? `★ ${it.label}` : it.label}</span>
+          </span>
+        </span>
       </button>
     );
   };
-
-  const cycleWorld = () => setWorldStyle((w) => WORLD_MODES[(WORLD_MODES.indexOf(w) + 1) % WORLD_MODES.length]);
 
   // Panneau central des onglets autres que « thèmes » : héberge les composants
   // Setup existants dans un encart clair (façon afficheur intégré à la machine).
   const panelInset = { border: '5px solid #150f08', borderRadius: 14, background: '#efe3c6', boxShadow: 'inset 0 0 0 3px #b79a63, inset 0 2px 8px rgba(0,0,0,.15)', padding: '18px 22px', fontFamily: 'var(--font-ui)', color: 'var(--ink-700, #241a10)' };
 
   // Carte « mode de jeu » (rétro, harmonisée avec la console).
+  const selectedModeId = phoneMode ? (phoneController ? 'manette' : 'companion') : 'tbi';
   const renderModeCard = (m) => {
-    const sel = m.ready && m.id === (phoneMode ? 'companion' : 'tbi');
+    const sel = m.ready && m.id === selectedModeId;
     return (
-      <button key={m.id} type="button" disabled={!m.ready} onClick={() => m.ready && setConnectionMode(m.conn)}
+      <button key={m.id} type="button" disabled={!m.ready}
+        onClick={() => { if (!m.ready) return; setConnectionMode(m.conn); setPhoneController(!!m.controller); }}
         style={{ flex: 1, textAlign: 'left', position: 'relative', padding: '14px 16px', borderRadius: 12, cursor: m.ready ? 'pointer' : 'not-allowed', border: '3px solid ' + (sel ? '#57c84d' : '#150f08'), background: sel ? '#16331a' : (m.ready ? '#2a2117' : '#211a12'), opacity: m.ready ? 1 : 0.75, boxShadow: sel ? '0 0 14px rgba(87,200,77,.4),inset 0 2px 0 rgba(255,255,255,.1)' : 'inset 0 -3px 0 rgba(0,0,0,.4)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ fontSize: 22 }}>{m.emblem}</span>
@@ -587,15 +695,90 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
         </div>
       );
     }
+    // Onglet RÉGLAGES : rail vertical de catégories (gauche) + panneau de la
+    // catégorie active (droite). Une seule rubrique visible → fini le scroll fourre-tout.
+    // Résumés d'une ligne affichés sous chaque catégorie du rail.
+    const bp = boardParams || {};
+    const extCount = EXTENSIONS.filter((e) => extOn(extensions, e.id)).length;
+    const evTotal = Object.keys(EVENTS).length;
+    const evOn = (enabledEvents || []).length;
+    const evOff = (bp.eventEveryX ?? 0) < 1;
+    const itemKeys = equipmentItemKeys();
+    const itemsCount = (enabledItems || []).filter((k) => itemKeys.includes(k)).length;
+    const chestOn = starterChestConfig ? starterChestConfig.enabled !== false : false;
+    const REGL_SUMMARY = {
+      extensions: `${extCount} module${extCount > 1 ? 's' : ''} actif${extCount > 1 ? 's' : ''}`,
+      plateau: `${bp.casesParVoie ?? '?'} cases × ${bp.nbVoies ?? '?'} voies`,
+      regles: forcedDuels ? 'Duels forcés' : 'Duels au choix',
+      butin: itemsOn ? `${itemsCount} objets · coffre ${chestOn ? 'on' : 'off'}` : 'Extension requise',
+      events: evOff ? 'Désactivés' : `1 tous les ${bp.eventEveryX} · ${evOn}/${evTotal}`,
+      outils: 'Questions · Équilibrage · Événements',
+    };
+    const cats = toolsAvailable ? [...REGLAGES_CATS, OUTILS_CAT] : REGLAGES_CATS;
     return (
-      <div className="qm-console-panel" style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', ...panelInset }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <ExtensionsChecklist embedded />
-          <BoardParams />
-          <StarterChestConfig />
-          <ItemsChecklist embedded />
-          <EventsChecklist embedded />
-          <RulesConfig />
+      <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 14 }}>
+        {/* Rail de catégories */}
+        <nav style={{ flex: '0 0 214px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto', paddingRight: 2 }}>
+          {cats.map((c) => {
+            const on = reglSub === c.id;
+            return (
+              <button key={c.id} onClick={() => setReglSub(c.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', width: '100%', fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 0.5, padding: '11px 13px', borderRadius: 8, cursor: 'pointer', border: '2px solid #150f08', background: on ? '#57c84d' : '#3a2e22', color: on ? '#0c2a0a' : '#cdbf9e', boxShadow: on ? '0 0 10px rgba(87,200,77,.5),inset 0 2px 0 rgba(255,255,255,.35)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
+                <span style={{ fontSize: 18, flex: '0 0 auto' }}>{c.emblem}</span>
+                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span>{c.label}</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 400, letterSpacing: 0.5, color: on ? 'rgba(12,42,10,.72)' : '#8a7656', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{REGL_SUMMARY[c.id]}</span>
+                </span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', flex: '0 0 auto', background: on ? '#0c2a0a' : '#241a10', boxShadow: on ? '0 0 6px #9be88f' : 'none' }} />
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Panneau de la catégorie active */}
+        <div className="qm-console-panel" style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', ...panelInset }}>
+          {reglSub === 'extensions' && <div className="qm-ext-compact"><ExtensionsChecklist embedded /></div>}
+          {reglSub === 'plateau' && <BoardParams />}
+          {reglSub === 'regles' && <RulesConfig />}
+          {reglSub === 'events' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div>
+                <div className="field-label" style={{ marginBottom: 8 }}>Fréquence des événements</div>
+                <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 6 }}>
+                  Un événement {evOff ? <strong>jamais (désactivés)</strong> : <>en moyenne <strong>tous les {bp.eventEveryX} tours</strong></>}
+                </div>
+                <input
+                  type="range" min={0} max={6} value={bp.eventEveryX ?? 0}
+                  onChange={(e) => setBoardParam('eventEveryX', Number(e.target.value))}
+                  style={{ accentColor: '#b8862c', width: '100%' }}
+                />
+              </div>
+              <div style={{ borderTop: '1px solid rgba(122,94,58,0.2)', paddingTop: 16 }}>
+                <EventsChecklist embedded />
+              </div>
+            </div>
+          )}
+          {reglSub === 'butin' && (itemsOn ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <StarterChestConfig />
+              <div style={{ borderTop: '1px solid rgba(122,94,58,0.2)', paddingTop: 16 }}>
+                <ItemsChecklist embedded />
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '34px 20px', color: '#6b5f48' }}>
+              <div style={{ fontSize: 42, marginBottom: 10 }}>🎁</div>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, color: '#5a3a24', marginBottom: 8 }}>Objets désactivés</div>
+              <div style={{ fontSize: 13.5, lineHeight: 1.45, maxWidth: 360, margin: '0 auto 16px' }}>
+                Le coffre de départ, le butin et l'équipement dépendent de l'extension « Objets ». Active-la pour régler cette rubrique.
+              </div>
+              <button onClick={() => setReglSub('extensions')}
+                style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 0.5, padding: '9px 16px', borderRadius: 8, cursor: 'pointer', border: '2px solid #150f08', background: '#3a2e22', color: '#f4e7cc', boxShadow: 'inset 0 2px 0 rgba(255,255,255,.12),inset 0 -3px 0 rgba(0,0,0,.4)' }}>
+                🧩 → Aller aux EXTENSIONS
+              </button>
+            </div>
+          ))}
+          {reglSub === 'outils' && toolsAvailable && <ConsoleEditorTools />}
         </div>
       </div>
     );
@@ -604,27 +787,27 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   return (
     <div ref={outerRef} className="qm-cassettes" style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#160f08', color: '#241a10', fontFamily: FONT_UI, WebkitFontSmoothing: 'antialiased' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(130% 130% at 50% 28%,#2a1d0c,#0d0703)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%,-50%) scale(${scale})`, width: 1600, height: 900, display: 'grid', gridTemplateRows: main ? 'auto auto minmax(0,1fr) auto' : 'auto minmax(0,1fr) auto', background: '#e3d0aa', overflow: 'hidden', borderRadius: 8, boxShadow: '0 0 0 6px #120c06,0 40px 90px rgba(0,0,0,.7)' }}>
+      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%,-50%) scale(${scale})`, width: 1600, height: 900, display: 'grid', gridTemplateRows: main ? 'auto auto minmax(0,1fr)' : 'auto minmax(0,1fr)', background: '#e3d0aa', overflow: 'hidden', borderRadius: 8, boxShadow: '0 0 0 6px #120c06,0 40px 90px rgba(0,0,0,.7)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(135deg,rgba(210,98,43,.05) 0 22px,transparent 22px 44px),repeating-linear-gradient(45deg,rgba(22,153,140,.05) 0 22px,transparent 22px 44px)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 90% at 50% 0%,transparent 55%,rgba(70,40,16,.22) 100%)', pointerEvents: 'none' }} />
 
         {/* ============ HEADER ============ */}
         <header style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', gap: 20, padding: '14px 26px', background: '#241a10', borderBottom: '4px solid #120c06', boxShadow: '0 6px 0 rgba(70,40,16,.25)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 13, flex: '0 0 auto' }}>
-            <div style={{ width: 50, height: 33, border: '3px solid #e8d9bb', borderRadius: 5, position: 'relative', background: '#d2622b', boxShadow: 'inset 0 0 0 2px #241a10' }}>
+            <div onClick={handleLogoClick} style={{ width: 50, height: 33, border: '3px solid #e8d9bb', borderRadius: 5, position: 'relative', background: '#d2622b', boxShadow: 'inset 0 0 0 2px #241a10' }}>
               <div style={{ position: 'absolute', top: '50%', left: 9, width: 9, height: 9, borderRadius: '50%', background: '#241a10', transform: 'translateY(-50%)' }} />
               <div style={{ position: 'absolute', top: '50%', right: 9, width: 9, height: 9, borderRadius: '50%', background: '#241a10', transform: 'translateY(-50%)' }} />
               <div style={{ position: 'absolute', top: '50%', left: 21, width: 8, height: 3, background: '#241a10', transform: 'translateY(-50%)' }} />
             </div>
             <div style={{ lineHeight: 1 }}>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 3, color: '#e8a13a' }}>LA QUÊTE DES MATIÈRES</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 3, color: '#e8a13a' }}>CURIOSCOPE</div>
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 1, color: '#7a6a4f' }}>COMPOSEUR DE PARTIE</div>
             </div>
           </div>
 
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <div style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 2, color: '#8a7656', marginBottom: 2 }}>TITRE DE LA PARTIE</div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 30, lineHeight: 1, letterSpacing: '.3px', color: title ? '#f4e7cc' : '#6b5a3c', maxWidth: 820, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 2px 0 rgba(0,0,0,.35)' }}>{title || 'La Quête des …'}</div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 30, lineHeight: 1, letterSpacing: '.3px', color: title ? '#f4e7cc' : '#6b5a3c', maxWidth: 820, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 2px 0 rgba(0,0,0,.35)' }}>{title || 'Nomme ta partie…'}</div>
           </div>
 
           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -686,50 +869,98 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
           {/* ---- SHELF ---- */}
           <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 1, color: '#5a3a24' }}>LE BAC À CASSETTES — OUVRE UN RAYON</div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 16, color: '#8a7656', letterSpacing: 1 }}>CLIQUE UN RAYON POUR L'OUVRIR · GLISSE UNE K7 →</div>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 1, color: '#5a3a24' }}>LE BAC À CASSETTES — FEUILLETTE ET SURVOLE</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 16, color: '#8a7656', letterSpacing: 1 }}>GLISSE UNE K7 DANS LE CURIOSCOPE →</div>
             </div>
             <div style={{ flex: 1, minHeight: 0, position: 'relative', border: '4px solid #4a3019', borderRadius: 12, backgroundColor: '#6e4a2c', backgroundImage: 'repeating-linear-gradient(90deg,rgba(0,0,0,.09) 0 2px,transparent 2px 68px),repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 5px)', boxShadow: 'inset 0 4px 0 #875b36,inset 0 -16px 0 rgba(0,0,0,.28),0 14px 28px rgba(70,40,16,.3)' }}>
-              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 34, background: '#3a2616', borderTop: '3px solid #2a1b0e', borderRadius: '0 0 8px 8px', zIndex: 5, pointerEvents: 'none', boxShadow: 'inset 0 3px 0 rgba(255,255,255,.06)' }} />
+              {/* vis d'angle + filigrane (décor, sous le contenu) */}
               <div style={{ position: 'absolute', top: 9, left: 9, width: 9, height: 9, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#b98d5f,#5a3a20)', boxShadow: '0 1px 0 rgba(0,0,0,.4)', zIndex: 5, pointerEvents: 'none' }} />
               <div style={{ position: 'absolute', top: 9, right: 9, width: 9, height: 9, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#b98d5f,#5a3a20)', boxShadow: '0 1px 0 rgba(0,0,0,.4)', zIndex: 5, pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', bottom: 44, right: 20, transform: 'rotate(-6deg)', background: '#e8d9bb', border: '2px solid #2a1b0e', fontFamily: FONT_MONO, fontSize: 13, letterSpacing: 1, color: '#7a1f16', padding: '1px 7px', zIndex: 5, pointerEvents: 'none', boxShadow: '1px 2px 0 rgba(0,0,0,.25)' }}>€1 / K7</div>
-              <div style={{ position: 'absolute', top: 16, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_DISPLAY, fontSize: 30, letterSpacing: 8, color: 'rgba(255,236,200,.06)', pointerEvents: 'none', zIndex: 0 }}>★ BAC À CASSETTES ★</div>
-              <div style={{ position: 'absolute', top: 50, left: 24, fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 2, color: 'rgba(255,236,200,.14)', pointerEvents: 'none', zIndex: 0 }}>OCCAZ' K7 · TOUT À 1 VOIE</div>
-              <div style={{ position: 'absolute', inset: 0, overflowX: 'auto', overflowY: 'hidden', display: 'flex', alignItems: 'flex-end', padding: '52px 26px 44px' }}>
-                {GROUPS.map((g, gi) => {
-                  const dom = domainById(g.domain);
-                  const open = openDomain === g.domain;
-                  return (
-                    <React.Fragment key={g.domain}>
-                      {/* INTERCALAIRE (bouton accordéon) */}
-                      <button onClick={() => toggleDomain(g.domain)} title="Ouvrir / fermer ce rayon" className="qm-drawer-btn"
-                        style={{ position: 'relative', flex: '0 0 auto', alignSelf: 'stretch', width: 46, marginLeft: gi === 0 ? 0 : 6, border: 0, padding: 0, background: 'transparent', cursor: 'pointer', zIndex: 13 }}>
-                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,#664324,#7d5330 46%,#573921)', border: '3px solid #2a1b0e', borderRadius: '8px 8px 0 0', boxShadow: 'inset 0 3px 0 rgba(255,255,255,.14),inset 0 -12px 0 rgba(0,0,0,.32)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' }}>
-                          <div style={{ width: '100%', height: 40, background: dom.color, borderBottom: '3px solid #2a1b0e', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `inset 0 3px 0 ${open ? 'rgba(255,255,255,.6)' : 'rgba(255,255,255,.26)'}` }}>
-                            <div style={{ width: 26, height: 26, border: '2px solid #2a1b0e', borderRadius: 5, background: '#f3e6c9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: dom.color }}>{dom.emblem}</div>
-                          </div>
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 0' }}>
-                            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 2, color: '#f4e7cc', textShadow: '0 1px 0 rgba(0,0,0,.5)', whiteSpace: 'nowrap' }}>{dom.name}</span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, paddingBottom: 9 }}>
-                            <div style={{ width: 20, height: 5, borderRadius: 3, background: 'rgba(0,0,0,.4)', boxShadow: 'inset 0 1px 0 rgba(0,0,0,.5)' }} />
-                            <span style={{ fontFamily: FONT_MONO, fontSize: 14, color: '#241a10', background: '#e8d9bb', border: '2px solid #2a1b0e', borderRadius: 9, minWidth: 20, textAlign: 'center', lineHeight: 1.35, padding: '0 3px' }}>{g.items.length}</span>
-                            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 14, color: open ? '#2a1b0e' : '#f0deb8' }}>{open ? '▾' : '▸'}</span>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: open ? '#57c84d' : '#3a2a1a', boxShadow: `0 0 7px ${open ? '#57c84d' : 'transparent'}` }} />
-                          </div>
-                        </div>
-                      </button>
+              <div style={{ position: 'absolute', top: 11, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_DISPLAY, fontSize: 22, letterSpacing: 7, color: 'rgba(255,236,200,.06)', pointerEvents: 'none', zIndex: 0 }}>★ BAC À CASSETTES ★</div>
 
-                      {/* TIROIR (contenu du rayon) */}
-                      <div ref={(el) => { groupEls.current[g.domain] = el; }} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', alignItems: 'flex-end', overflow: 'hidden', perspective: 1400, boxShadow: 'inset 24px 0 26px -18px rgba(0,0,0,.62)' }}>
-                        {g.items.map((it, idx) => renderCassette(it, dom, idx))}
+              {/* CONTENU — 3 colonnes. Clic sur un séparateur (plaque rétro) =
+                  déplie/replie ses cassettes « vue du dessus » à la verticale. */}
+              <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', overflowX: 'hidden', padding: '38px 16px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'stretch', minHeight: '100%' }}>
+                  {(() => {
+                    const cols = [[], [], []];
+                    GROUPS.forEach((g, i) => cols[i % 3].push(g));
+                    // Tasseau de bois séparant deux compartiments de la caisse.
+                    const divider = (k) => (
+                      <div key={`div${k}`} aria-hidden="true" style={{ flex: '0 0 auto', width: 15, alignSelf: 'stretch', margin: '2px 0', position: 'relative', borderRadius: 7, border: '2px solid #2a1b0e', background: 'linear-gradient(90deg,#4a3019 0%,#7d5330 46%,#573921 100%)', boxShadow: 'inset 0 3px 0 rgba(255,255,255,.14), inset 0 -12px 0 rgba(0,0,0,.28), 2px 0 5px rgba(0,0,0,.28), -2px 0 5px rgba(0,0,0,.22)' }}>
+                        <span style={{ position: 'absolute', top: 7, left: '50%', transform: 'translateX(-50%)', width: 7, height: 7, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#b98d5f,#5a3a20)', boxShadow: '0 1px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35)' }} />
+                        <span style={{ position: 'absolute', bottom: 7, left: '50%', transform: 'translateX(-50%)', width: 7, height: 7, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#b98d5f,#5a3a20)', boxShadow: '0 1px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35)' }} />
                       </div>
-                    </React.Fragment>
-                  );
-                })}
+                    );
+                    const out = [];
+                    cols.forEach((col, ci) => {
+                      if (ci > 0) out.push(divider(ci));
+                      out.push(
+                      <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 11, padding: '0 11px' }}>
+                        {col.map((g) => {
+                          const dom = domainById(g.domain);
+                          const open = openDomains.has(g.domain);
+                          return (
+                            <div key={g.domain}>
+                              {/* séparateur = plaque rétro cliquable */}
+                              <button onClick={() => toggleDomain(g.domain)} title="Ouvrir / fermer ce rayon" className="qm-sep"
+                                style={{ position: 'relative', display: 'block', width: '100%', border: 0, padding: 0, background: 'transparent', cursor: 'pointer', userSelect: 'none', lineHeight: 0 }}>
+                                <img src={separatorPlaque} alt="" draggable={false} style={{ display: 'block', width: '100%', height: 'auto' }} />
+                                {/* teinte douce du thème sur l'étiquette crème */}
+                                <span style={{ position: 'absolute', top: '26%', bottom: '26%', left: '11%', right: '11%', background: dom.color, opacity: open ? 0.34 : 0.2, borderRadius: 2, pointerEvents: 'none' }} />
+                                {/* contenu : emblème + nom + compteur + chevron
+                                    (lineHeight rétabli : le bouton force lineHeight:0 pour l'image,
+                                    ce qui, combiné à overflow:hidden, clippait le nom à 0 de haut) */}
+                                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', gap: 7, padding: '0 10%', lineHeight: 1.15 }}>
+                                  <span style={{ flex: '0 0 auto', fontSize: 14 }}>{dom.emblem}</span>
+                                  <span style={{ flex: 1, minWidth: 0, fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: '.3px', color: '#3a2410', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 0 rgba(255,248,230,.55)' }}>{dom.name}</span>
+                                  <span style={{ flex: '0 0 auto', fontFamily: FONT_MONO, fontSize: 12, color: '#5a3a1e' }}>{g.items.length}</span>
+                                  <span style={{ flex: '0 0 auto', fontFamily: FONT_DISPLAY, fontSize: 12, color: '#5a3a1e' }}>{open ? '▾' : '▸'}</span>
+                                </span>
+                              </button>
+                              {/* cassettes repliables (vertical) — repli doux via grid-rows
+                                  (anime jusqu'à la hauteur réelle du contenu, sans à-coup). */}
+                              <div style={{ display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', transition: 'grid-template-rows .34s cubic-bezier(.4,0,.2,1)' }}
+                                onTransitionEnd={(e) => {
+                                  if (e.propertyName !== 'grid-template-rows' || !openDomains.has(g.domain)) return;
+                                  setSettledDomains((cur) => (cur.has(g.domain) ? cur : new Set(cur).add(g.domain)));
+                                }}>
+                                <div style={{ overflow: (open && settledDomains.has(g.domain)) ? 'visible' : 'hidden', minHeight: 0 }}>
+                                  {(() => {
+                                    const hIdx = (hoverTape && hoverTape.domain === g.domain) ? hoverTape.idx : -1;
+                                    // Repli des sous-sous-thèmes : un item de depth ≥ 2 n'est visible que
+                                    // si toute sa chaîne de parents est dépliée (expandedSubs).
+                                    const idToItem = {};
+                                    for (const x of g.items) idToItem[x.id] = x;
+                                    const hasKids = (id) => g.items.some((x) => x.parentId === id);
+                                    const isVisible = (it) => {
+                                      let p = it.parentId;
+                                      while (p) { if (!expandedSubs.has(p)) return false; p = idToItem[p]?.parentId; }
+                                      return true;
+                                    };
+                                    const vis = g.items.filter(isVisible);
+                                    // Survol : le rayon s'agrandit du débord de la K7 révélée
+                                    // (cartes glissées de SLIDE, ou face seule si dernière carte)
+                                    // → la plaque du rayon suivant est POUSSÉE, pas recouverte.
+                                    const extra = hIdx < 0 ? 0 : (hIdx < vis.length - 1 ? SLIDE : FACE_CLEAR);
+                                    return (
+                                      <div className="qm-stack" style={{ padding: '12px 6px 8px', paddingBottom: 8 + extra, transition: 'padding-bottom .3s cubic-bezier(.32,1.15,.5,1)' }}>
+                                        {vis.map((it, idx) => renderCassette(it, dom, idx, hIdx, it.depth >= 1 && hasKids(it.id)))}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      );
+                    });
+                    return out;
+                  })()}
+                </div>
               </div>
-              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 34, width: 40, background: 'linear-gradient(to right,rgba(110,74,44,0),rgba(110,74,44,.5))', pointerEvents: 'none', zIndex: 4 }} />
             </div>
           </section>
 
@@ -741,7 +972,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               {/* brand plate */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: '0 0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, color: '#e8d9bb', textShadow: '0 2px 0 #000' }}>SONORAMA</span>
+                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, color: '#e8d9bb', textShadow: '0 2px 0 #000' }}>CURIOSCOPE</span>
                   <span style={{ fontFamily: FONT_MONO, fontSize: 15, color: '#16998c' }}>stéréo</span>
                 </div>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, color: '#e8a13a', border: '1px solid #5a4a2c', borderRadius: 3, padding: '0 6px' }}>QV-600 · {voiesCount} VOIES</span>
@@ -835,70 +1066,22 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
           </section>
           </>) : renderConsolePanel()}
         </main>
-
-        {/* ============ WORLD PREVIEW ============ */}
-        <footer style={{ position: 'relative', zIndex: 2, padding: '4px 22px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 15, letterSpacing: 1, color: '#5a3a24' }}>LE MONDE QUE TU CONSTRUIS <span style={{ fontFamily: FONT_MONO, fontWeight: 400, color: '#8a7656', letterSpacing: 1 }}>— aperçu, pas la vraie carte</span></div>
-            <button onClick={cycleWorld} title="Changer l'aperçu" style={{ fontFamily: FONT_MONO, fontSize: 16, color: '#8a7656', letterSpacing: 1, background: 'transparent', border: '2px solid #5a4023', borderRadius: 4, padding: '0 8px', cursor: 'pointer' }}>{mode.toUpperCase()} · {revealedCount}/5 BIOMES</button>
-          </div>
-
-          {/* MINI-MONDE */}
-          {mode === 'Mini-monde' && (
-            <div style={{ height: 124, border: '4px solid #4a3019', borderRadius: 12, overflow: 'hidden', display: 'flex', background: '#2a1b0e', boxShadow: 'inset 0 4px 10px rgba(0,0,0,.4)', position: 'relative' }}>
-              {biomesView.map((b) => (
-                <div key={b.id} style={{ flex: 1, position: 'relative', borderRight: '2px dashed rgba(255,255,255,.12)', overflow: 'hidden', background: b.sceneBg }}>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '42%', background: b.color, opacity: .5 }} />
-                  {b.revealed ? (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
-                      <div style={{ width: 46, height: 46, border: '3px solid #241a10', borderRadius: 10, background: b.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#fff', boxShadow: '0 4px 0 rgba(0,0,0,.25)' }}>{b.emblem}</div>
-                      <div style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, color: '#241a10' }}>{b.name}</div>
-                    </div>
-                  ) : (
-                    <div style={{ position: 'absolute', inset: 0, background: '#15100a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                      <span style={{ fontFamily: FONT_DISPLAY, fontSize: 26, color: 'rgba(255,255,255,.2)' }}>?</span>
-                      <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: 'rgba(255,255,255,.32)', letterSpacing: 1 }}>VERROUILLÉ</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div style={{ position: 'absolute', left: 0, top: '50%', height: 5, width: `${pathProgress}%`, background: 'repeating-linear-gradient(90deg,#e8d9bb 0 9px,transparent 9px 18px)', transform: 'translateY(-50%)', pointerEvents: 'none', boxShadow: '0 0 8px rgba(232,217,187,.5)' }} />
-            </div>
-          )}
-
-          {/* SERPENTIN */}
-          {mode === 'Serpentin' && (
-            <div style={{ height: 172, border: '4px solid #4a3019', borderRadius: 12, background: '#3a2616', display: 'flex', alignItems: 'center', padding: '0 30px', overflowX: 'auto' }}>
-              {segView.map((g, i) => (
-                <div key={i} style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', border: '4px solid #241a10', background: g.color, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                    <span style={{ fontSize: 20 }}>{g.emblem}</span>
-                    <span style={{ fontFamily: FONT_MONO, fontSize: 12 }}>{g.short}</span>
-                  </div>
-                  <div style={{ width: 46, height: 5, background: 'repeating-linear-gradient(90deg,#e8d9bb 0 8px,transparent 8px 16px)' }} />
-                </div>
-              ))}
-              <div style={{ flex: '0 0 auto', width: 60, height: 60, borderRadius: '50%', border: '4px dashed #6b5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', textAlign: 'center' }}>SUITE…</div>
-            </div>
-          )}
-
-          {/* RUBAN */}
-          {mode === 'Ruban' && (
-            <div style={{ height: 172, border: '4px solid #4a3019', borderRadius: 12, background: '#3a2616', display: 'flex', alignItems: 'center', padding: 14 }}>
-              {segView.map((g, i) => (
-                <div key={i} style={{ flex: 1, height: '100%', background: g.color, border: '3px solid #241a10', borderRightWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                  <span style={{ fontSize: 24 }}>{g.emblem}</span>
-                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 12, textTransform: 'uppercase', textAlign: 'center', padding: '0 4px' }}>{g.label}</span>
-                </div>
-              ))}
-              <div style={{ flex: 1.4, height: '100%', border: '3px dashed #6b5a3c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_MONO, fontSize: 15, color: '#8a7656', letterSpacing: 1 }}>…LE RUBAN S'ALLONGE À CHAQUE VOIE</div>
-            </div>
-          )}
-        </footer>
       </div>
 
-      {/* drag ghost */}
-      {drag && (
+      {/* drag ghost — la vraie jaquette illustrée n'apparaît QU'ICI (pendant le drag). */}
+      {drag && CASSETTE_ART[drag.id] && (
+        <div style={{ position: 'fixed', left: drag.x, top: drag.y, zIndex: 400, pointerEvents: 'none', transform: 'translate(-120px,-86px) rotate(-4deg)' }}>
+          <div style={{ position: 'relative', width: 240, filter: 'drop-shadow(0 22px 30px rgba(20,12,4,.55))' }}>
+            <img src={CASSETTE_ART[drag.id]} alt="" draggable={false} style={{ display: 'block', width: '100%', height: 'auto' }} />
+            <span style={{ position: 'absolute', top: '11.5%', left: '13%', right: '13%', height: '15%', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: 14, letterSpacing: '.2px', color: '#2a1c0e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{drag.label}</span>
+            </span>
+            <div style={{ position: 'absolute', right: -10, bottom: -8, background: '#241a10', color: '#57c84d', fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '2px 8px', borderRadius: 4, transform: 'rotate(3deg)', whiteSpace: 'nowrap' }}>▸ DÉPOSE DANS LE CURIOSCOPE</div>
+          </div>
+        </div>
+      )}
+      {/* drag ghost générique (thèmes sans jaquette dédiée) */}
+      {drag && !CASSETTE_ART[drag.id] && (
         <div style={{ position: 'fixed', left: drag.x, top: drag.y, zIndex: 400, pointerEvents: 'none', transform: 'translate(-44px,-58px) rotate(-4deg)' }}>
           <div style={{ position: 'relative', width: 238, height: 158, border: '3px solid #241a10', borderRadius: 10, background: drag.color, boxShadow: '0 24px 36px rgba(20,12,4,.55),inset 0 3px 0 rgba(255,255,255,.32),inset 0 -7px 0 rgba(0,0,0,.2)' }}>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 46, borderRight: '3px solid #241a10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -914,7 +1097,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 <span style={{ fontFamily: FONT_DISPLAY, fontSize: 14, color: '#f4e7cc', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{drag.label}</span>
               </div>
             </div>
-            <div style={{ position: 'absolute', right: -8, bottom: -12, background: '#241a10', color: '#57c84d', fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '2px 8px', borderRadius: 4, transform: 'rotate(3deg)', whiteSpace: 'nowrap' }}>▸ DÉPOSE DANS LE SONORAMA</div>
+            <div style={{ position: 'absolute', right: -8, bottom: -12, background: '#241a10', color: '#57c84d', fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '2px 8px', borderRadius: 4, transform: 'rotate(3deg)', whiteSpace: 'nowrap' }}>▸ DÉPOSE DANS LE CURIOSCOPE</div>
           </div>
         </div>
       )}

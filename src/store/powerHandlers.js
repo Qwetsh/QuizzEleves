@@ -132,7 +132,12 @@ export function useIndice(set, get) {
 
   // Bonus de temps (palier + Sérénité + Maître du temps) et Antisèche (or si bonne réponse).
   const patchQ = {};
-  if (bonusTime > 0) patchQ.bonusTime = (get().showQuestion?.bonusTime || 0) + bonusTime;
+  if (bonusTime > 0) {
+    patchQ.bonusTime = (get().showQuestion?.bonusTime || 0) + bonusTime;
+    // L'horloge de la question vit dans le store (deadline) : on la prolonge
+    // d'autant — la modale ET la manette téléphone relisent le temps depuis là.
+    if (get().showQuestion?.deadline) patchQ.deadline = get().showQuestion.deadline + bonusTime * 1000;
+  }
   if (effect.hintLoot && effect.hintGold) patchQ.indiceBonusMoney = (get().showQuestion?.indiceBonusMoney || 0) + effect.hintGold;
   if (Object.keys(patchQ).length) set({ showQuestion: { ...get().showQuestion, ...patchQ } });
 }

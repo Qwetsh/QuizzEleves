@@ -1,7 +1,7 @@
 // Panneau « Mode mobile » côté TBI : crée une session, publie en continu
 // l'état des équipes vers Supabase, et affiche le QR + code d'appairage. Tout
 // est optionnel — si on ne l'active pas, rien n'est publié et le jeu tourne seul.
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore } from '../../store/gameStore';
 import { createSession, publishSession, buildSessionPayload, joinUrl } from '../../logic/sessionConfig';
@@ -30,24 +30,81 @@ export default function MobileSessionPanel() {
   // déplacement), les téléphones ne peuvent pas modifier l'équipement.
   const locked = useGameStore((s) => !!(s.showQuestion || s.showEvent || s.showFight || s.showDuelChoice
     || s.rolling || s.showDiceModal || s.awaitingChoice || s.pendingActions || s.pendingLanding));
+  // Manette téléphone : états du tour publiés dans le bloc `turn` du payload.
+  // ⚠️ Chaque état lu par buildTurnPayload DOIT être abonné ici ET listé dans
+  // les deps du useEffect de publication — sinon un changement interne à une
+  // résolution (révélation de réponse, phase d'événement…) ne republierait pas
+  // et la manette se figerait silencieusement.
+  const phoneController = useGameStore((s) => s.phoneController);
+  const board = useGameStore((s) => s.board);
+  const rolling = useGameStore((s) => s.rolling);
+  const showDiceModal = useGameStore((s) => s.showDiceModal);
+  const diceValue = useGameStore((s) => s.diceValue);
+  const awaitingChoice = useGameStore((s) => s.awaitingChoice);
+  const pendingMove = useGameStore((s) => s.pendingMove);
+  const pendingLanding = useGameStore((s) => s.pendingLanding);
+  const showQuestion = useGameStore((s) => s.showQuestion);
+  const showEvent = useGameStore((s) => s.showEvent);
+  const showFight = useGameStore((s) => s.showFight);
+  const showDuelChoice = useGameStore((s) => s.showDuelChoice);
+  const showTargetPicker = useGameStore((s) => s.showTargetPicker);
+  const showTilePicker = useGameStore((s) => s.showTilePicker);
+  const showSubjectPicker = useGameStore((s) => s.showSubjectPicker);
+  const showChargePicker = useGameStore((s) => s.showChargePicker);
+  const showActionDice = useGameStore((s) => s.showActionDice);
+  const lootReveal = useGameStore((s) => s.lootReveal);
+  const showStarterChest = useGameStore((s) => s.showStarterChest);
+  const lastStarterReward = useGameStore((s) => s.lastStarterReward);
+  const showShopPrompt = useGameStore((s) => s.showShopPrompt);
+  const showMetierPicker = useGameStore((s) => s.showMetierPicker);
+  const indiceHidden = useGameStore((s) => s.indiceHidden);
+  const indiceUsed = useGameStore((s) => s.indiceUsed);
+  const rerollUsed = useGameStore((s) => s.rerollUsed);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  const turnState = {
+    finished, teams, currentTeam, board,
+    rolling, showDiceModal, diceValue, awaitingChoice, pendingMove, pendingLanding,
+    showQuestion, showEvent, showFight, showDuelChoice,
+    showTargetPicker, showTilePicker, showSubjectPicker, showChargePicker, showActionDice,
+    lootReveal, showStarterChest, lastStarterReward, showShopPrompt, showMetierPicker, indiceHidden, indiceUsed, rerollUsed,
+  };
 
   // Tant que la session est active, republie à chaque changement pertinent
   // (débounce léger pour grouper les rafales de mise à jour).
   useEffect(() => {
     if (!code) return;
-    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService });
+    const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService, phoneController, turnState });
     const id = setTimeout(() => { publishSession(code, payload).catch(() => {}); }, 250);
     return () => clearTimeout(id);
-  }, [code, teams, currentTeam, finished, shopStock, shopFaceStock, log, extensions, locked, englishMode, gameStats, forgeService]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, teams, currentTeam, finished, shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService,
+    phoneController, board, rolling, showDiceModal, diceValue, awaitingChoice, pendingMove, pendingLanding,
+    showQuestion, showEvent, showFight, showDuelChoice, showTargetPicker, showTilePicker, showSubjectPicker,
+    showChargePicker, showActionDice, lootReveal, showStarterChest, lastStarterReward, showShopPrompt, showMetierPicker, indiceHidden, indiceUsed, rerollUsed]);
+
+  // Heartbeat : republication périodique même sans changement d'état, pour que
+  // les téléphones distinguent « rien ne bouge » de « liaison morte » (bandeau
+  // reconnexion de la manette). Le payload courant est lu via une ref (toujours
+  // frais, sans réarmer l'intervalle à chaque rendu).
+  const heartbeatRef = useRef(null);
+  heartbeatRef.current = { code, args: { teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService, phoneController, turnState } };
+  useEffect(() => {
+    if (!code) return;
+    const id = setInterval(() => {
+      const h = heartbeatRef.current;
+      if (h?.code) publishSession(h.code, buildSessionPayload(h.args)).catch(() => {});
+    }, 15000);
+    return () => clearInterval(id);
+  }, [code]);
 
   async function activate() {
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService });
+      const payload = buildSessionPayload({ teams, currentTeam, status: finished ? 'finished' : 'playing', shopStock, shopFaceStock, log, extensions, locked, lv2Mode, englishMode, gameStats, forgeService, phoneController, turnState });
       setSessionCode(await createSession(payload));
       setOpen(true);
     } catch (e) { setError(e.message || 'Connexion impossible'); }

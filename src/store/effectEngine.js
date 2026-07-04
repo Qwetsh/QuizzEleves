@@ -8,7 +8,7 @@
 // ============================================================
 import { moveForward } from '../logic/pathfinding.js';
 import { reducedSteal, applyStealProtection, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect } from '../logic/itemEffects.js';
-import { applyRecul } from '../logic/turnHelpers.js';
+import { applyRecul, questionDuration } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
 import { SUBJECTS } from '../data/subjects.js';
@@ -392,8 +392,11 @@ function applyReroll(set, get, action, ctx) {
   const asked = askedQuestions[subject] || new Set();
   const result = pickQuestion(pool, asked);
   if (!result) { addLog(tg('log.fx.noQuestionIn', { subject: loc(SUBJECTS[subject], 'name') || subject })); return { done: true }; }
+  // Nouvelle question → nouveau chrono (deadline) + sélection/révélation remises
+  // à zéro (l'horloge et l'état de réponse vivent dans le store).
+  const nsq = { ...showQuestion, question: result.question, subject, index: result.index };
   set({
-    showQuestion: { ...showQuestion, question: result.question, subject, index: result.index },
+    showQuestion: { ...nsq, deadline: Date.now() + questionDuration(nsq) * 1000, selected: null, answerRevealed: false, timeLeftAtReveal: null },
     askedQuestions: { ...askedQuestions, [subject]: result.newAsked },
     indiceUsed: false, indiceHidden: [], rerollUsed: true,
   });
@@ -523,8 +526,9 @@ function stepHead(set, get, action, ctx) {
       const sq = get().showQuestion;
       if (sq?.question) {
         // Question DÉJÀ ouverte (ex. déclencheur on:questionSubject) : prolonge la
-        // question COURANTE — la modale relit itemBonusTime et réajuste le timer.
-        set({ showQuestion: { ...sq, itemBonusTime: (sq.itemBonusTime || 0) + et } });
+        // question COURANTE — deadline (horloge du store) + itemBonusTime (échelle
+        // du gain d'or dans answerQuestion).
+        set({ showQuestion: { ...sq, itemBonusTime: (sq.itemBonusTime || 0) + et, ...(sq.deadline ? { deadline: sq.deadline + et * 1000 } : {}) } });
         get().addLog(tg('log.fx.extraTimeThis', { n: et }));
         announce(set, get, '⌛', tg('log.fx.extraTimeThis.toast', { n: et, tag: dieTag(action.n) }), '#3b6cb3');
       } else {

@@ -82,8 +82,9 @@ function EliminatedAnswer({ idx, answer }) {
 
 export default function QuestionModal() {
   const showQuestion = useGameStore((s) => s.showQuestion);
-  const answerQuestion = useGameStore((s) => s.answerQuestion);
-  const timeoutQuestion = useGameStore((s) => s.timeoutQuestion);
+  const selectAnswer = useGameStore((s) => s.selectAnswer);
+  const continueQuestion = useGameStore((s) => s.continueQuestion);
+  const revealQuestionTimeout = useGameStore((s) => s.revealQuestionTimeout);
   const usePower = useGameStore((s) => s.usePower);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
@@ -93,8 +94,13 @@ export default function QuestionModal() {
   const useQuestionReroll = useGameStore((s) => s.useQuestionReroll);
   const englishMode = useGameStore((s) => s.englishMode);
 
-  const [selected, setSelected] = useState(null);
-  const [revealed, setRevealed] = useState(false);
+  // Sélection + révélation vivent dans le STORE (manette téléphone : le TBI et
+  // le téléphone de l'équipe active doivent voir le même état). `timeLeft` reste
+  // un état local d'AFFICHAGE, recalculé depuis la deadline du store (le TBI est
+  // l'horloge de référence : c'est lui qui déclenche le timeout).
+  const selected = showQuestion?.selected ?? null;
+  const revealed = !!showQuestion?.answerRevealed;
+  const deadline = showQuestion?.deadline || null;
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
   const [showTrans, setShowTrans] = useState(false); // afficher la traduction (autre langue)
   // Modeleur de l'espace (Sablier voie) : les réponses changent de place toutes
@@ -132,8 +138,8 @@ export default function QuestionModal() {
   const otherE = englishMode ? question?.e : question?.e_en;
   const hasTranslation = !!otherQ;
   const L = englishMode
-    ? { explanation: 'Explanation:', correct: 'Correct!', wrong: 'Wrong answer', timeout: "Time's up!", choose: 'Choose your answer', continue: 'Continue', showTrans: '🇫🇷 Voir en français', hideTrans: '🇫🇷 Masquer le français' }
-    : { explanation: 'Explication :', correct: 'Bonne réponse !', wrong: 'Mauvaise réponse', timeout: 'Temps écoulé !', choose: 'Choisis ta réponse', continue: 'Continuer', showTrans: '🇬🇧 Voir en anglais', hideTrans: '🇬🇧 Masquer l’anglais' };
+    ? { explanation: 'Explanation:', correct: 'Correct!', wrong: 'Wrong answer', timeout: "Time's up!", choose: 'Choose your answer', continue: 'Continue', time: 'TIME', showTrans: '🇫🇷 Voir en français', hideTrans: '🇫🇷 Masquer le français' }
+    : { explanation: 'Explication :', correct: 'Bonne réponse !', wrong: 'Mauvaise réponse', timeout: 'Temps écoulé !', choose: 'Choisis ta réponse', continue: 'Continuer', time: 'TEMPS', showTrans: '🇬🇧 Voir en anglais', hideTrans: '🇬🇧 Masquer l’anglais' };
   const subject = showQuestion?.subject;
   const timerHalved = showQuestion?.timerHalved;
   // Sablier niv.2/3 divise par 3/4 — meme base que le calcul d'argent du store
@@ -159,18 +165,11 @@ export default function QuestionModal() {
   // Objets « changer la question » (équipement plafonné + consommables du sac)
   const rerollOptions = !revealed ? questionRerollOptions(team, rerollUsedState, showQuestion?.subject) : [];
 
-  // Reset uniquement quand la QUESTION change (pas quand showQuestion est
-  // re-cree par l'ajout de bonusTime apres usage de l'Indice).
-  const bonusApplied = useRef(false);
+  // Reset d'affichage quand la QUESTION change (sélection/révélation sont déjà
+  // remises à zéro par le store avec la nouvelle question).
   useEffect(() => {
-    if (question) {
-      setSelected(null);
-      setRevealed(false);
-      setShowTrans(false);
-      setTimeLeft(sharedStart != null ? sharedStart : Math.floor(TIMER_DURATION / timerDivisor) + itemBonusTime);
-      bonusApplied.current = false;
-    }
-  }, [question, timerDivisor, itemBonusTime, sharedStart]);
+    if (question) setShowTrans(false);
+  }, [question]);
 
   // Confusion : l'énoncé est flouté pendant ~3 s au début de la question.
   const [blurStmt, setBlurStmt] = useState(false);
@@ -183,13 +182,8 @@ export default function QuestionModal() {
     setBlurStmt(false);
   }, [confused, question]);
 
-  // Indice niv.2 : secondes bonus ajoutees une seule fois
-  useEffect(() => {
-    if (bonusTime > 0 && !bonusApplied.current) {
-      bonusApplied.current = true;
-      setTimeLeft((t) => t + bonusTime);
-    }
-  }, [bonusTime]);
+  // (Indice niv.2 : les secondes bonus prolongent la deadline DANS le store —
+  // l'affichage suit automatiquement via le tick ci-dessous.)
 
   // Son de katana à chaque NOUVELLE réponse barrée (ouverture avec éliminations
   // passives, ou ajout par le pouvoir Indice). On compare au compte précédent
@@ -205,50 +199,56 @@ export default function QuestionModal() {
     slashTrack.current = { q: question, count };
   }, [question, indiceHidden]);
 
-  // Un SEUL intervalle par question (décrément régulier, pas de dérive ni de
-  // recréation à chaque tick) ; s'arrête à la révélation. Le bonus de temps
-  // (Indice niv.2) reste pris en compte via la mise à jour fonctionnelle.
+  // Affichage du temps : recalcul régulier depuis la deadline du store (pas de
+  // dérive, et un bonus de temps — qui décale la deadline — est suivi sans code
+  // dédié). S'arrête à la révélation.
   useEffect(() => {
-    if (!showQuestion || revealed) return;
-    const iv = setInterval(() => setTimeLeft((t) => (t <= 0 ? 0 : t - 1)), 1000);
+    if (!showQuestion || revealed || !deadline) return;
+    const tick = () => setTimeLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    tick();
+    const iv = setInterval(tick, 250);
     return () => clearInterval(iv);
-  }, [question, revealed, showQuestion]);
+  }, [question, revealed, deadline, showQuestion]);
 
-  // Sons (compte à rebours / temps écoulé) + bascule en révélation à 0.
+  // Sons (compte à rebours) + TIMEOUT : le TBI est l'horloge de référence —
+  // c'est LUI qui bascule la révélation à 0 (le téléphone ne fait que refléter).
   useEffect(() => {
     if (!showQuestion || revealed) return;
-    if (timeLeft <= 0) { soundWrong(); setRevealed(true); return; }
+    if (timeLeft <= 0) { revealQuestionTimeout(); return; }
     if (timeLeft <= 5) soundTimer();
-  }, [timeLeft, revealed, showQuestion]);
+  }, [timeLeft, revealed, showQuestion, revealQuestionTimeout]);
+
+  // Sons de verdict à la RÉVÉLATION (transition), que la réponse vienne du TBI
+  // ou du téléphone. Fige aussi l'affichage du temps sur la valeur retenue.
+  const prevRevealedRef = useRef(false);
+  useEffect(() => {
+    if (revealed && !prevRevealedRef.current) {
+      if (selected != null && selected === question?.c) soundCorrect();
+      else soundWrong();
+      if (showQuestion?.timeLeftAtReveal != null) setTimeLeft(showQuestion.timeLeftAtReveal);
+    }
+    prevRevealedRef.current = revealed;
+  }, [revealed, selected, question, showQuestion]);
 
   const handleAnswer = useCallback((idx) => {
     if (revealed) return;
-    setSelected(idx);
-    setRevealed(true);
-    if (idx === question?.c) soundCorrect();
-    else soundWrong();
-  }, [revealed, question]);
+    selectAnswer(idx);
+  }, [revealed, selectAnswer]);
 
   const handleContinue = useCallback(() => {
     if (!revealed) return;
-    if (selected != null) {
-      answerQuestion(selected, timeLeft);
-    } else {
-      timeoutQuestion();
-    }
-  }, [revealed, selected, timeLeft, answerQuestion, timeoutQuestion]);
+    continueQuestion();
+  }, [revealed, continueQuestion]);
 
   // Temps total réellement disponible (base 30 s + bonus d'équipement déjà inclus
   // dans `duration`, + bonus d'Indice ajouté à timeLeft). Sert d'échelle stable
   // pour la barre afin de matérialiser la zone « bonus » au-delà des 30 s.
   const barMax = Math.max(duration + bonusTime, TIMER_DURATION);
   const timerRatio = Math.min(1, timeLeft / barMax);
-  const timerColor = timerRatio > 0.5 ? '#fff' : timerRatio > 0.2 ? '#f3c969' : '#e85d6b';
   // Zone bonus : portion de la barre située au-delà des 30 s de base.
   const hasBonus = barMax > TIMER_DURATION + 0.5;
   const baseFrac = TIMER_DURATION / barMax;       // position du repère 30 s (0..1)
   const bonusSeconds = Math.round(barMax - TIMER_DURATION);
-  const inBonus = timeLeft > TIMER_DURATION;      // le chrono est encore dans le bonus
   const isOpen = !!(showQuestion && question);
   const bgColor = subjectInfo.color || '#888';
 
@@ -256,33 +256,41 @@ export default function QuestionModal() {
   const isWrong = revealed && (selected == null || selected !== question?.c);
   const isHardcore = subject === 'hardcore';
 
+  // Barres d'égaliseur du timer (habillage rétro) : hauteurs pseudo-aléatoires
+  // stables par index, allumées jusqu'au ratio restant, dorées dans la zone bonus.
+  const BAR_COUNT = 22;
+  const bars = Array.from({ length: BAR_COUNT }, (_, i) => {
+    const h = 30 + ((i * 29) % 70);
+    const on = i < Math.ceil(timerRatio * BAR_COUNT);
+    const frac = i / BAR_COUNT;
+    let color = '#3a3f45';
+    if (on) {
+      if (hasBonus && frac >= baseFrac) color = '#f3c969';
+      else if (frac < 0.5) color = '#57c84d';
+      else if (frac < 0.78) color = '#e8a13a';
+      else color = '#e14b3a';
+    }
+    return { h: `${h}%`, color };
+  });
+  const feedColor = !revealed ? '#8b9096' : (isCorrect ? '#57c84d' : '#e8574b');
+  const feedText = !revealed ? L.choose : (isCorrect ? `✓ ${L.correct}` : (selected != null ? `✕ ${L.wrong}` : `✕ ${L.timeout}`));
+
   return (
     <AnimatePresence>
       {isOpen && (
         <ModalOverlay className={`max-w-[820px] ${isCorrect ? 'quiz-correct' : ''} ${isWrong ? 'quiz-wrong' : ''} ${isBurst ? 'quiz-cursed' : ''} ${isHardcore ? 'quiz-hardcore' : ''}`} panelStyle={STONE_PANEL}>
-          <div className="tm-stone"><div className="tm-parch">
-          {/* Quiz Header */}
-          <div
-            className="relative overflow-hidden text-center text-white"
-            style={{
-              padding: 28,
-              background: `linear-gradient(180deg, ${bgColor} 0%, ${bgColor}dd 100%)`,
-            }}
-          >
-            {/* Shine sweep */}
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                top: '-40%', left: '-10%', width: '60%', height: '200%',
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)',
-                transform: 'rotate(20deg)',
-              }}
-            />
-
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="text-xl">{team?.emoji}</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, opacity: 0.85 }}>{team?.name}</span>
+          <div className="rq-frame">
+          {/* Barre du haut : bandeau LED catégorie + équipe */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div className="rq-lcd" style={{ maxWidth: '68%' }}>
+              <span className="rq-lcd__led" style={{ background: bgColor, boxShadow: `0 0 8px ${bgColor}` }} />
+              <span className="rq-lcd__txt">
+                {subjectInfo.icon} {locName(subjectInfo)}{subjectInfo.biome ? ` · ${loc(subjectInfo, 'biome')}` : ''}
+              </span>
             </div>
+            <div className="rq-teamchip"><span style={{ fontSize: 17 }}>{team?.emoji}</span>{team?.name}</div>
+          </div>
+          <div className="rq-topbadges">
 
             {isBurst && (
               <div className="quiz-curse-badge">
@@ -298,70 +306,32 @@ export default function QuestionModal() {
               </div>
             )}
 
-            <div
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '6px 14px', borderRadius: 999,
-                background: 'rgba(255,255,255,0.18)',
-                fontFamily: 'var(--font-display)',
-                fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.08em',
-                marginBottom: 14,
-              }}
-            >
-              <span>{subjectInfo.icon}</span>
-              <span>{locName(subjectInfo)} {subjectInfo.biome ? `\u00b7 ${loc(subjectInfo, 'biome')}` : ''}</span>
-            </div>
+          </div>
 
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.25, marginTop: 6, textShadow: '0 2px 0 rgba(0,0,0,0.15)', filter: blurStmt ? 'blur(8px)' : 'none', transition: 'filter 0.4s ease', userSelect: blurStmt ? 'none' : 'auto' }}>
+          {/* Ecran creme : enonce (+ confusion, traduction) */}
+          <div className="rq-screen">
+            <div className="rq-screen__kicker">
+              {subjectInfo.icon} QUESTION{isBurst ? ` ${multiIndex}/${multiTotal}` : ''} {'\u00b7'} {team?.name}
+            </div>
+            <div className="rq-screen__text" style={{ filter: blurStmt ? 'blur(8px)' : 'none', transition: 'filter 0.4s ease', userSelect: blurStmt ? 'none' : 'auto' }}>
               {qText}
             </div>
             {blurStmt && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>🌀 Confusion… l'énoncé se précise.</div>}
             {/* Traduction de la question (autre langue) — bouton + ligne révélée */}
             {hasTranslation && !blurStmt && (
-              <button type="button" onClick={() => setShowTrans((v) => !v)}
-                style={{ marginTop: 8, padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+              <button type="button" className="rq-transbtn" onClick={() => setShowTrans((v) => !v)}>
                 {showTrans ? L.hideTrans : L.showTrans}
               </button>
             )}
             {showTrans && otherQ && (
-              <div style={{ fontSize: 18, fontStyle: 'italic', opacity: 0.92, marginTop: 8, lineHeight: 1.3 }}>{otherQ}</div>
+              <div className="rq-screen__trans">{otherQ}</div>
             )}
 
-            {/* Timer bar */}
-            <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'visible', marginTop: 18 }}>
-              <div
-                className={inBonus ? 'qz-fill-bonus' : undefined}
-                style={{
-                  height: '100%',
-                  background: `linear-gradient(90deg, #fff, ${timerColor})`,
-                  borderRadius: 4,
-                  width: `${timerRatio * 100}%`,
-                  transition: 'width 1s linear',
-                }}
-              />
-              {/* Zone « bonus » dorée au-delà des 30 s + repère */}
-              {hasBonus && <div className="qz-bonus-zone" style={{ left: `${baseFrac * 100}%` }} />}
-              {hasBonus && <div className="qz-bonus-tick" style={{ left: `${baseFrac * 100}%` }} />}
-            </div>
-            <div aria-live="polite" style={{ fontSize: 12, marginTop: 8, opacity: 0.85 }}>
-              {timeLeft}s
-              {hasBonus && <span className="qz-bonus-label">{`⭐ +${bonusSeconds}s bonus`}</span>}
-            </div>
 
-            {timerHalved && (
-              <div style={{ fontSize: 12, marginTop: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>
-                {`\u23F1\uFE0F Sablier actif \u2014 ${duration}s`}
-              </div>
-            )}
-            {itemBonusTime > 0 && (
-              <div style={{ fontSize: 12, marginTop: 6, marginLeft: 6, padding: '2px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}>
-                {`\u{1F392} \u00C9quipement : +${itemBonusTime}s`}
-              </div>
-            )}
           </div>
 
           {/* Choices - 2x2 grid */}
-          <div className={'grid gap-3 p-5 grid-cols-1 sm:grid-cols-2' + (modeleur ? ' quiz-modeleur' : '')}>
+          <div className={'grid gap-3 grid-cols-1 sm:grid-cols-2' + (modeleur ? ' quiz-modeleur' : '')} style={{ marginTop: 14 }}>
             {(order || question.a.map((_, i) => i)).map((idx, pos) => {
               const shown = ansText(idx); // texte affiché (EN si dispo, sinon FR)
               if (indiceHidden.includes(idx)) {
@@ -394,13 +364,13 @@ export default function QuestionModal() {
               return (
                 <button
                   key={idx}
-                  className={'tm-choice' + (modeleur ? ' tm-choice--modeleur' : '')}
+                  className={'rq-choice' + (modeleur ? ' tm-choice--modeleur' : '')}
                   onClick={() => handleAnswer(idx)}
                   disabled={revealed}
                   aria-label={`Option ${letter}: ${shown}`}
                   style={(choiceStyle || modeleurStyle) ? { ...choiceStyle, ...modeleurStyle } : undefined}
                 >
-                  <span className="tm-choice-letter" style={letterStyle || undefined}>
+                  <span className="rq-choice-letter" style={letterStyle || undefined}>
                     {letter}
                   </span>
                   <span style={{ display: 'flex', flexDirection: 'column' }}>
@@ -412,15 +382,24 @@ export default function QuestionModal() {
             })}
           </div>
 
+          {/* Timer egaliseur + feedback */}
+          <div className="rq-timer">
+            <span className="rq-timer__label">{L.time}</span>
+            <div className="rq-bars">
+              {bars.map((b, i) => <div key={i} className="rq-bar" style={{ height: b.h, background: b.color }} />)}
+              {hasBonus && <div className="rq-bars__tick" style={{ left: `${baseFrac * 100}%` }} />}
+            </div>
+            <span className="rq-timer__secs" aria-live="polite">{timeLeft}s</span>
+            <span className="rq-timer__feed" style={{ color: feedColor }}>{feedText}</span>
+          </div>
+          <div>
+            {hasBonus && <span className="rq-chip" style={{ color: '#f3c969' }}>{`+${bonusSeconds}s bonus`}</span>}
+            {timerHalved && <span className="rq-chip">{`Sablier actif : ${duration}s`}</span>}
+            {itemBonusTime > 0 && <span className="rq-chip">{`Equipement : +${itemBonusTime}s`}</span>}
+          </div>
+
           {/* Actions bar */}
-          <div
-            style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '16px 22px 22px',
-              borderTop: '1px solid rgba(122,94,58,0.16)',
-              background: 'var(--parch-50)',
-            }}
-          >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, minHeight: 40 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {canUseIndice && !revealed && (
                 <button
@@ -443,20 +422,9 @@ export default function QuestionModal() {
                   <span>Changer</span>
                 </button>
               ))}
-              <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
-                {revealed && selected != null && selected === question.c ? (
-                  <strong style={{ color: '#2f9d5a' }}>{L.correct}</strong>
-                ) : revealed && selected != null ? (
-                  <strong style={{ color: '#c9472f' }}>{L.wrong}</strong>
-                ) : revealed ? (
-                  <strong style={{ color: '#c9472f' }}>{L.timeout}</strong>
-                ) : (
-                  <span>{L.choose}</span>
-                )}
-              </div>
             </div>
             {revealed && (
-              <button className="tm-btn-gold" onClick={handleContinue}>
+              <button className="rg-btn" onClick={handleContinue}>
                 {L.continue}
               </button>
             )}
@@ -464,19 +432,12 @@ export default function QuestionModal() {
 
           {/* Explanation */}
           {revealed && eText && (
-            <div style={{ padding: '0 22px 22px' }}>
-              <div style={{
-                padding: 14, borderRadius: 14,
-                background: 'var(--parch-50)',
-                border: '1px solid rgba(122,94,58,0.16)',
-                fontSize: 17, lineHeight: 1.5, color: 'var(--ink-700)',
-              }}>
-                <strong>{L.explanation}</strong> {eText}
-                {showTrans && otherE && <div style={{ fontSize: 14, fontStyle: 'italic', opacity: 0.78, marginTop: 4 }}>{otherE}</div>}
-              </div>
+            <div className="rq-explain">
+              <strong>{L.explanation}</strong> {eText}
+              {showTrans && otherE && <div style={{ fontSize: 14, fontStyle: 'italic', opacity: 0.78, marginTop: 4 }}>{otherE}</div>}
             </div>
           )}
-          </div></div>
+          </div>
         </ModalOverlay>
       )}
     </AnimatePresence>

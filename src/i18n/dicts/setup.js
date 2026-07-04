@@ -2,7 +2,7 @@
 // Clés namespacées `setup.*`. { fr, en }.
 export default {
   // --- Setup.jsx (hero + colonne gauche/droite) ---
-  'setup.appTitle': { fr: 'Quête des Matières', en: 'Subject Quest' },
+  'setup.appTitle': { fr: 'Curioscope', en: 'Curioscope' },
   'setup.appTagline': { fr: 'Jeu de plateau pédagogique · Cycle 4', en: 'Educational board game · Cycle 4' },
   'setup.launch': { fr: '🚀 Lancer la partie', en: '🚀 Launch game' },
   'setup.resume': { fr: '▶️ Reprendre la partie', en: '▶️ Resume game' },

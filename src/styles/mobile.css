@@ -486,3 +486,131 @@
 @media (prefers-reduced-motion: reduce) {
   .mob-deal-wrap, .mob-deal, .mob-deal-emoji { animation: none; }
 }
+
+/* --- Manette téléphone (ControllerView) --- */
+/* z-index 60 : au-dessus des onglets, SOUS le picker de métier (80), l'admin
+   (70+) et la cinématique de hack — ces overlays gardent la priorité. */
+.mob-ctrl {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column;
+  padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
+  background: rgba(14, 9, 3, 0.94); backdrop-filter: blur(4px);
+  color: #f3e9d3; overflow-y: auto;
+}
+.mob-ctrl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0; }
+.mob-ctrl-title { font-family: var(--font-display, sans-serif); font-size: 21px; color: #ffe9b8; }
+.mob-ctrl-body {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px; text-align: center; padding: 12px 0;
+}
+.mob-ctrl-subtitle { font-family: var(--font-display, sans-serif); font-size: 20px; color: #ffe9b8; }
+.mob-ctrl-hint { font-size: 14px; color: #caa45f; }
+
+/* Gros bouton « lancer le dé » */
+.mob-ctrl-roll {
+  width: 164px; height: 164px; border-radius: 50%; font-size: 68px; cursor: pointer;
+  border: 3px solid #f3c969; background: radial-gradient(circle at 30% 25%, #f3c969, #b8862c);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.5);
+}
+.mob-ctrl-roll:active { transform: scale(0.95); }
+.mob-ctrl-roll:disabled { opacity: 0.55; }
+
+/* Reflet du dé (résultat) */
+.mob-ctrl-die {
+  width: 118px; height: 118px; border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 62px; font-weight: 800; color: #3a2a10;
+  background: linear-gradient(180deg, #fffefb, #f4e8cf);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+.mob-ctrl-die.is-rolling { animation: mob-ctrl-shake 0.5s infinite; }
+@keyframes mob-ctrl-shake { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+
+/* Cartes-directions (jonction) et case d'arrivée */
+.mob-ctrl-opts { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 380px; }
+.mob-ctrl-opt {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  padding: 13px 16px; border-radius: 16px; cursor: pointer; font-size: 16px;
+  border: 2px solid var(--opt-color, #e0a458);
+  background: rgba(255, 255, 255, 0.06); color: #fff;
+}
+.mob-ctrl-opt:active { transform: scale(0.98); }
+.mob-ctrl-opt:disabled { opacity: 0.5; }
+.mob-ctrl-opt-icon {
+  width: 46px; height: 46px; flex-shrink: 0; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+  background: var(--opt-color, #e0a458); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.mob-ctrl-tile {
+  display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 16px;
+  border: 2px solid var(--opt-color, #e0a458); background: rgba(255, 255, 255, 0.06);
+  font-size: 18px; color: #fff;
+}
+
+/* Panneau QCM (la question complète se joue sur le téléphone) */
+.mob-ctrl-qwrap { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; text-align: left; }
+.mob-ctrl-qhead { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
+.mob-ctrl-qburst { margin-left: auto; font-size: 12px; color: #e8a13a; }
+.mob-ctrl-qtext { font-size: 19px; line-height: 1.4; color: #fffefb; font-weight: 600; }
+.mob-ctrl-qtimer { position: relative; height: 22px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.mob-ctrl-qtimer-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; transition: width 0.25s linear; }
+.mob-ctrl-qtimer-secs { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 800; color: #1c1206; text-shadow: 0 0 4px rgba(255,255,255,0.5); }
+.mob-ctrl-qans { display: flex; flex-direction: column; gap: 10px; }
+.mob-ctrl-ans {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 13px 14px; border-radius: 14px; cursor: pointer; font-size: 16px;
+  border: 2px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.06); color: #fffefb;
+}
+.mob-ctrl-ans:active { transform: scale(0.98); }
+.mob-ctrl-ans-letter {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; background: rgba(255,255,255,0.14);
+}
+.mob-ctrl-ans.is-hidden { opacity: 0.4; text-decoration: line-through; }
+.mob-ctrl-ans.is-picked { border-color: #f3c969; background: rgba(243,201,105,0.18); }
+.mob-ctrl-ans.is-correct { border-color: #5b8c3a; background: rgba(87,200,77,0.2); }
+.mob-ctrl-ans.is-correct .mob-ctrl-ans-letter { background: #5b8c3a; }
+.mob-ctrl-ans.is-wrong { border-color: #c9472f; background: rgba(201,71,47,0.22); }
+.mob-ctrl-ans.is-wrong .mob-ctrl-ans-letter { background: #c9472f; }
+.mob-ctrl-ans.is-dim { opacity: 0.45; }
+.mob-ctrl-verdict { font-family: var(--font-display, sans-serif); font-size: 20px; text-align: center; }
+.mob-ctrl-explain { font-size: 14px; line-height: 1.45; color: #f3e9d3; background: rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 12px; }
+
+/* Rangée d'actions contextuelles (pouvoirs / consommables / indice / reroll) */
+.mob-ctrl-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; max-width: 420px; }
+.mob-ctrl-action {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 9px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 700;
+  border: 1.5px solid var(--opt-color, rgba(255,255,255,0.3));
+  background: rgba(255, 255, 255, 0.07); color: #fffefb;
+}
+.mob-ctrl-action:active { transform: scale(0.97); }
+.mob-ctrl-action:disabled { opacity: 0.5; }
+.mob-ctrl-action.is-armed { background: var(--opt-color, #b8862c); color: #1c1206; }
+.mob-ctrl-action-ic { font-size: 17px; display: inline-flex; align-items: center; }
+.mob-ctrl-action-ic img { width: 20px; height: 20px; object-fit: contain; }
+.mob-ctrl-action-n { font-size: 11.5px; opacity: 0.8; }
+
+/* Liaison morte : bandeau d'avertissement (heartbeat TBI silencieux) */
+.mob-ctrl-stale {
+  margin-top: 10px; padding: 9px 12px; border-radius: 12px; text-align: center;
+  font-size: 13px; font-weight: 700; color: #ffd9a0;
+  background: rgba(201, 71, 47, 0.25); border: 1px solid rgba(232, 161, 58, 0.5);
+}
+
+/* Bandeau réduit (la manette s'efface mais reste accessible) */
+.mob-ctrl-banner {
+  position: fixed; left: 10px; right: 10px;
+  bottom: calc(66px + env(safe-area-inset-bottom)); z-index: 60;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 16px; border-radius: 16px; border: none; cursor: pointer;
+  background: linear-gradient(180deg, #f3c969, #b8862c); color: #3a2a10;
+  font-weight: 800; font-size: 15px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  animation: mob-ctrl-pulse 2s infinite;
+}
+@keyframes mob-ctrl-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+@media (prefers-reduced-motion: reduce) {
+  .mob-ctrl-die.is-rolling, .mob-ctrl-banner { animation: none; }
+}

@@ -16,7 +16,7 @@ import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock,
 import { getQuestions } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
-import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul } from '../logic/turnHelpers.js';
+import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul, questionDuration } from '../logic/turnHelpers.js';
 import { resolvePowerEffect } from '../logic/powerEffects.js';
 import { soundShield, soundTrap } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
@@ -138,6 +138,11 @@ function scanTraversedTraps(board, touched, immune = false) {
   }
   return { idx: -1, missed };
 }
+
+// Manette téléphone : uid des intents `turn*` déjà appliqués (anti-doublon —
+// fetch de rattrapage + realtime peuvent livrer la même ligne, et certains
+// handlers ne sont pas idempotents). Module-level : jamais publié ni persisté.
+const turnIntentSeen = new Set();
 
 // UI state reset shared by nextTurn, resumeGame, reset.
 // NB: movePath n'est PAS reset ici — les animations de deplacement doivent
@@ -295,6 +300,14 @@ export const useGameStore = create((set, get) => ({
   // arrive sur une case occupée CHOISIT de défier (et qui) ou non.
   forcedDuels: false,
   setForcedDuels: (v) => set({ forcedDuels: v }),
+
+  // Manette téléphone : l'équipe ACTIVE peut piloter son tour depuis son
+  // téléphone (dé, réponse, choix…) via les intents `turn*`. Le TBI reste
+  // maître et utilisable en parallèle (premier arrivé gagne). Piloté par la
+  // carte « 🕹️ Téléphone-manette » du MODE DE JEU (console Setup) — implique
+  // le mode connexion 'phone' (les téléphones doivent posséder leur équipe).
+  phoneController: false,
+  setPhoneController: (v) => set({ phoneController: !!v }),
 
   // Mode de connexion (Setup) : 'board' = équipes créées au tableau (historique) ;
   // 'phone' = équipes créées depuis les téléphones (lobby + QR).
@@ -1401,8 +1414,14 @@ export const useGameStore = create((set, get) => ({
       set({ teams: nt });
     }
 
+    // L'horloge de la question vit dans le STORE (deadline = instant limite) :
+    // le TBI est l'horloge de référence, la modale et la manette téléphone ne
+    // font qu'afficher le temps restant. `selected`/`answerRevealed` (sélection
+    // et révélation) y vivent aussi pour que TBI et téléphone restent synchrones.
+    // NB : `revealed` (ci-dessous) est le marqueur CLAIRVOYANCE (stats) — rien à voir.
+    const sq = { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused, timerCap: team.maxTimerCap || null, modeleur, revealHint: !!team.clairvoyanceTurn, revealed: !!team.clairvoyanceTurn };
     set({
-      showQuestion: { question: q, subject, index: result.index, timerHalved, timerDivisor, itemBonusTime, multiIndex, multiTotal, sharedStart, confused, timerCap: team.maxTimerCap || null, modeleur, revealHint: !!team.clairvoyanceTurn, revealed: !!team.clairvoyanceTurn },
+      showQuestion: { ...sq, deadline: Date.now() + questionDuration(sq) * 1000, selected: null, answerRevealed: false, timeLeftAtReveal: null },
       askedQuestions: { ...askedQuestions, [subject]: newAsked },
       indiceUsed: false, indiceUses: 0, indiceHidden, rerollUsed: false,
     });
@@ -1413,6 +1432,44 @@ export const useGameStore = create((set, get) => ({
     // question, bouclier préventif, gain d'or, avancer…).
     const subjActions = effectH.equipTriggerActions(get().teams[currentTeam], 'questionSubject', subject);
     if (subjActions.length) effectH.runEffects(set, get, subjActions, { source: 'item' });
+  },
+
+  // --- Sélection & révélation de réponse (source de vérité : le STORE) ---
+  // Flux : sélection (TBI ou téléphone) → révélation (vert/rouge partout) →
+  // « Continuer » → answerQuestion/timeoutQuestion. Le temps restant est FIGÉ à
+  // la révélation (timeLeftAtReveal), calculé depuis la deadline — l'ancienne
+  // horloge locale de QuestionModal ne fait plus foi.
+  selectAnswer: (index) => {
+    const sq = get().showQuestion;
+    if (!sq || sq.answerRevealed || !sq.question) return;
+    if (!Number.isInteger(index) || index < 0 || index >= (sq.question.a?.length || 0)) return;
+    if ((get().indiceHidden || []).includes(index)) return; // réponse barrée
+    const timeLeft = Math.max(0, Math.round(((sq.deadline || Date.now()) - Date.now()) / 1000));
+    set({ showQuestion: { ...sq, selected: index, answerRevealed: true, timeLeftAtReveal: timeLeft } });
+  },
+
+  // Temps écoulé (tick du TBI à deadline atteinte) : révélation sans sélection.
+  revealQuestionTimeout: () => {
+    const sq = get().showQuestion;
+    if (!sq || sq.answerRevealed) return;
+    set({ showQuestion: { ...sq, selected: null, answerRevealed: true, timeLeftAtReveal: 0 } });
+  },
+
+  // « Continuer » après révélation (TBI ou téléphone) : route vers la résolution.
+  // Idempotent : answerQuestion/timeoutQuestion ferment ou remplacent showQuestion
+  // (une nouvelle question de rafale repart avec answerRevealed=false).
+  continueQuestion: () => {
+    const sq = get().showQuestion;
+    if (!sq || !sq.answerRevealed) return;
+    if (sq.selected != null) get().answerQuestion(sq.selected, sq.timeLeftAtReveal || 0);
+    else get().timeoutQuestion();
+  },
+
+  // Prolonge le timer de la question courante (Indice L2, action extraTime…).
+  extendQuestionDeadline: (sec) => {
+    const sq = get().showQuestion;
+    if (!sq || !sq.deadline || !(sec > 0)) return;
+    set({ showQuestion: { ...sq, deadline: sq.deadline + sec * 1000 } });
   },
 
   answerQuestion: (chosenIndex, timeLeft = 0) => {
@@ -2384,6 +2441,10 @@ export const useGameStore = create((set, get) => ({
     if (type === 'forgeServiceRemove') { get().forgeServiceRemove(payload.slotIndex, idx); return; }
     if (type === 'forgeServiceValidate') { get().forgeServiceValidate(idx); return; }
     if (type === 'forgeServiceCancel') { get().forgeServiceCancel(idx); return; }
+    // Manette téléphone : les intents « de tour » (turn*) sont réservés à
+    // l'équipe ACTIVE et autorisés PENDANT sa résolution (c'est leur raison
+    // d'être) — ils passent donc AVANT le verrou, avec leurs propres gardes.
+    if (typeof type === 'string' && type.startsWith('turn')) { get().applyTurnIntent(idx, type, payload); return; }
     const resolving = !!(st.showQuestion || st.showEvent || st.showFight || st.showDuelChoice
       || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
     // Bloqué si partie finie, ou si c'est l'équipe ACTIVE en pleine résolution.
@@ -2455,6 +2516,196 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'chooseMetier') {
       // Métiers : le propriétaire choisit son métier depuis le téléphone.
       get().chooseMetier(payload.craft, idx);
+    }
+  },
+
+  // --- Manette téléphone : intents « de tour » (turn*) ---
+  // L'équipe ACTIVE pilote SA résolution depuis son téléphone. Chaque intent est
+  // mappé sur le handler TBI existant (qui garde ses propres gardes internes —
+  // double filet) après trois étages de garde :
+  //   1. global   : toggle actif, partie en cours, émetteur = équipe active ;
+  //   2. anti-doublon : `payload.uid` (fetch + realtime peuvent livrer deux fois,
+  //      et certains handlers ne sont pas idempotents, ex. usePower) ;
+  //   3. phase    : l'intent n'est valide que si l'état de tour correspondant est
+  //      ouvert (turnAnswerSelect ⇒ question affichée, etc.).
+  // Course TBI/téléphone : premier arrivé gagne, le second est no-op (voulu — le
+  // prof peut toujours débloquer un téléphone à plat depuis le tableau).
+  applyTurnIntent: (idx, type, payload = {}) => {
+    const st = get();
+    if (!st.phoneController || st.finished || idx !== st.currentTeam) return;
+    const uid = payload.uid;
+    if (uid != null) {
+      if (turnIntentSeen.has(uid)) return;
+      turnIntentSeen.add(uid);
+      // Plafond FIFO : on ne garde que les ~100 derniers uid (Set ordonné par insertion).
+      if (turnIntentSeen.size > 100) turnIntentSeen.delete(turnIntentSeen.values().next().value);
+    }
+    const team = st.teams[idx];
+    if (!team) return;
+    switch (type) {
+      // --- Déplacement ---
+      case 'turnRoll':
+        get().rollDice(); // gardes internes complètes (résolution, gel…)
+        return;
+      case 'turnChooseJunction': {
+        const opts = st.board?.[team.pos]?.next || [];
+        if (st.awaitingChoice && opts.includes(payload.nodeId)) get().chooseJunction(payload.nodeId);
+        return;
+      }
+      case 'turnConfirmLanding':
+        if (st.pendingLanding) get().confirmLanding();
+        return;
+      // --- Question ---
+      case 'turnAnswerSelect':
+        // selectAnswer garde déjà : question ouverte, non révélée, index valide
+        // et non barré (indiceHidden).
+        if (st.showQuestion) get().selectAnswer(payload.index);
+        return;
+      case 'turnQuestionContinue':
+        if (st.showQuestion?.answerRevealed) get().continueQuestion();
+        return;
+      // --- Pouvoirs & consommables ---
+      case 'turnUsePower':
+        // usePower garde tout (charges, contexte via canUsePowerInContext…).
+        if (typeof payload.key === 'string') get().usePower(payload.key);
+        return;
+      case 'turnUseConsumable': {
+        // Par CLÉ (le sac mobile est compacté, le sac TBI est positionnel).
+        const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
+        if (i >= 0) get().useConsumable(i);
+        return;
+      }
+      case 'turnUseReroll': {
+        // Le téléphone renvoie l'INDEX de la liste publiée ; on la recalcule ici
+        // (même état ⇒ même liste — le TBI reste maître de la résolution).
+        if (!st.showQuestion || st.showQuestion.answerRevealed) return;
+        const opts = effectH.questionRerollOptions(team, st.rerollUsed, st.showQuestion.subject);
+        const opt = opts[payload.optIndex];
+        if (opt) get().useQuestionReroll(opt);
+        return;
+      }
+      // --- Pickers (interrupts du moteur d'effets / pouvoirs) ---
+      case 'turnSelectTarget': {
+        const stp = st.showTargetPicker;
+        if (!stp || !Number.isInteger(payload.index) || !st.teams[payload.index]) return;
+        // Mêmes règles que la modale TBI : pas soi-même sans allowSelf, pas de
+        // cible sous Immunité totale. (La trahison de pacte est confirmée côté
+        // téléphone avant l'envoi — comme la modale TBI confirme avant d'agir.)
+        if (payload.index === idx && !stp.allowSelf) return;
+        if (payload.index !== idx && (st.teams[payload.index].totalImmuneTurns ?? 0) > 0) return;
+        get().selectTarget(payload.index);
+        return;
+      }
+      case 'turnCancelTarget':
+        if (st.showTargetPicker) get().cancelTargetPicker();
+        return;
+      case 'turnSelectSubject':
+        if (st.showSubjectPicker && typeof payload.key === 'string') get().selectSubject(payload.key);
+        return;
+      case 'turnChargePick':
+        if (st.showChargePicker && typeof payload.key === 'string') get().chargePickerChoice(payload.key);
+        return;
+      case 'turnChargeSkip':
+        if (st.showChargePicker) get().chargePickerSkip();
+        return;
+      // --- Duel (choix de l'arrivant) ---
+      case 'turnDuelChoose':
+        // chooseDuel garde déjà defenders.includes (les immunisés n'y sont pas).
+        if (st.showDuelChoice && Number.isInteger(payload.index)) get().chooseDuel(payload.index);
+        return;
+      case 'turnDuelDecline':
+        if (st.showDuelChoice) get().declineDuel();
+        return;
+      // --- Événements (chaque intent est gardé par la phase de showEvent) ---
+      case 'turnEventAccept':
+        if (st.showEvent?.phase === 'intro') get().acceptEvent();
+        return;
+      case 'turnEventDecline':
+        // decline sert aussi de « passer mon chemin » dans les choix marchands.
+        if (st.showEvent && (st.showEvent.phase === 'intro' || st.showEvent.phase === 'choice')) get().declineEvent();
+        return;
+      case 'turnEventTarget':
+        if (st.showEvent?.phase === 'target' && Number.isInteger(payload.index)
+          && payload.index !== idx && st.teams[payload.index]) get().eventSelectTarget(payload.index);
+        return;
+      case 'turnEventAnswer': {
+        const d = st.showEvent?.data;
+        if (st.showEvent?.phase === 'question' && d?.eventQuestion && !d.questionRevealed
+          && Number.isInteger(payload.index)) get().eventAnswerQuestion(payload.index);
+        return;
+      }
+      case 'turnEventVaToutContinue':
+        if (st.showEvent?.phase === 'vaToutChoice') get().eventVaToutContinue();
+        return;
+      case 'turnEventVaToutCashOut':
+        if (st.showEvent?.phase === 'vaToutChoice') get().eventVaToutCashOut();
+        return;
+      case 'turnEventGift':
+        // eventChooseGift re-vérifie que l'objet fait partie des coffres proposés.
+        if (st.showEvent?.phase === 'choice' && st.showEvent.key === 'troisCoffres') get().eventChooseGift(payload.itemKey);
+        return;
+      case 'turnEventRecharge':
+        if (st.showEvent?.phase === 'choice' && st.showEvent.key === 'recharge'
+          && team.powers?.[payload.key]) get().eventRechargeChoice(payload.key);
+        return;
+      case 'turnEventMarcheNoir':
+        if (st.showEvent?.phase === 'choice' && st.showEvent.key === 'marcheNoir'
+          && team.powers?.[payload.key]) get().eventMarcheNoirBuy(payload.key);
+        return;
+      case 'turnEventBuy':
+        if (st.showEvent?.phase === 'choice' && st.showEvent.key === 'marchandAmbulant'
+          && (st.showEvent.data?.merchandise || []).includes(payload.itemKey)) get().eventMerchantBuy(payload.itemKey);
+        return;
+      case 'turnEventVol': {
+        const se = st.showEvent;
+        if (se?.phase === 'choice' && se.key === 'vol') {
+          const tgt = st.teams[se.data?.targetIndex];
+          if (tgt && (tgt.powers?.[payload.stealKey]?.charges || 0) > 0 && team.powers?.[payload.giveKey]) {
+            get().eventVolApply(payload.stealKey, payload.giveKey);
+          }
+        }
+        return;
+      }
+      case 'turnEventBoss':
+        if (st.showEvent?.phase === 'choice' && st.showEvent.key === 'bossProf'
+          && typeof payload.subject === 'string') get().startBossFight(payload.subject);
+        return;
+      case 'turnEventClose':
+        if (st.showEvent?.phase === 'result') get().closeEvent();
+        return;
+      // --- Loot / coffre de départ / prompt boutique ---
+      case 'turnLootDismiss':
+        if (st.lootReveal) get().dismissLoot();
+        return;
+      case 'turnStarterChest':
+        // closeStarterChest valide les clés contre les coffres proposés (≤ keep).
+        if (st.showStarterChest && Array.isArray(payload.keys)) get().closeStarterChest(payload.keys);
+        return;
+      case 'turnShopAccept':
+        if (st.showShopPrompt) get().acceptShopPrompt();
+        return;
+      case 'turnShopDismiss':
+        if (st.showShopPrompt) get().dismissShopPrompt();
+        return;
+      // --- Combat : périphérie seulement (le mini-jeu se joue au TBI) ---
+      case 'turnFightBegin':
+        if (st.showFight?.phase === 'versus') get().fightBegin();
+        return;
+      case 'turnFightReward': {
+        const sf = st.showFight;
+        if (sf?.phase === 'reward' && ['steal', 'knockback', 'loot'].includes(payload.choice) && !sf.reward?.choice) {
+          // La récompense revient au VAINQUEUR : seul son téléphone peut choisir
+          // (s'il n'est pas l'équipe active, il passe par le TBI — limite v1).
+          const wIdx = sf.winnerSide === 'attacker' ? sf.attackerIndex : sf.defenderIndex;
+          if (wIdx === idx) get().fightChooseReward(payload.choice);
+        }
+        return;
+      }
+      case 'turnFightClose':
+        if (st.showFight?.phase === 'result') get().closeFight();
+        return;
+      default:
+        return;
     }
   },
 

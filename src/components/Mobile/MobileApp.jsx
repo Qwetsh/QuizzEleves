@@ -12,6 +12,7 @@ import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines, enchantEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import AlchemyView from './AlchemyView';
+import ControllerView from './ControllerView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2299,6 +2300,10 @@ function MetierPickerMobile({ team, en, T, onPick }) {
 export default function MobileApp() {
   const [code, setCode] = useState(readInitialCode());
   const [session, setSession] = useState(null);
+  // Horodatage local de la DERNIÈRE réception (fetch ou realtime) : la manette
+  // affiche un bandeau « reconnexion » si l'état devient trop vieux (heartbeat
+  // TBI toutes les ~15 s → silence prolongé = liaison morte).
+  const [lastSync, setLastSync] = useState(0);
   // Langue globale (getLang) synchronisée avec le mode anglais de la session, pour
   // que les helpers de contenu (effectText, noms) s'affichent dans la bonne langue.
   // SYNCHRONE pendant le rendu (et non dans un effet) : sinon locName/locDesc lus
@@ -2345,17 +2350,57 @@ export default function MobileApp() {
   useEffect(() => {
     if (!code || code.length < 4) return;
     let alive = true;
+    let unsub = null;
+    let retryId = null;
+    let attempt = 0;
+    let gen = 0; // ignore les statuts des canaux périmés (résiliation → CLOSED)
     setConnecting(true); setError(null); setSession(null);
+    const receive = (data) => { if (alive && data) { setSession(data); setError(null); setLastSync(Date.now()); } };
+    const refetch = () => fetchSession(code).then(receive).catch(() => {});
+    // Canal auto-réparant : le WebSocket Realtime peut mourir (écran verrouillé,
+    // réseau) — sur erreur/timeout on recrée le canal avec un léger backoff, et
+    // à chaque (ré)abonnement réussi on refetch pour combler le trou.
+    const connect = () => {
+      if (!alive) return;
+      const myGen = ++gen;
+      unsub?.();
+      unsub = subscribeSession(code, receive, (status) => {
+        if (!alive || myGen !== gen) return;
+        if (status === 'SUBSCRIBED') { attempt = 0; refetch(); return; }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          const delay = [1000, 3000, 10000][Math.min(attempt, 2)];
+          attempt += 1;
+          clearTimeout(retryId);
+          retryId = setTimeout(connect, delay);
+        }
+      });
+    };
     fetchSession(code)
       .then((data) => {
         if (!alive) return;
         if (!data) setError(tFor(false)('mobile.noGameForCode'));
-        else setSession(data);
+        else receive(data);
         setConnecting(false);
       })
       .catch((e) => { if (alive) { setError(e.message || tFor(false)('mobile.connectFailed')); setConnecting(false); } });
-    const unsub = subscribeSession(code, (data) => { if (alive && data) { setSession(data); setError(null); } });
-    return () => { alive = false; unsub(); };
+    connect();
+    return () => { alive = false; gen += 1; clearTimeout(retryId); unsub?.(); };
+  }, [code]);
+
+  // Rattrapage d'état : le WebSocket Realtime meurt SILENCIEUSEMENT quand le
+  // téléphone verrouille l'écran ou perd le réseau — sans ceci, l'app resterait
+  // figée sur un vieil état. Le payload étant un instantané complet, un simple
+  // refetch au retour de visibilité / de connexion suffit à se resynchroniser.
+  useEffect(() => {
+    if (!code || code.length < 4) return;
+    const refetch = () => { fetchSession(code).then((d) => { if (d) { setSession(d); setLastSync(Date.now()); } }).catch(() => {}); };
+    const onVis = () => { if (document.visibilityState === 'visible') refetch(); };
+    window.addEventListener('online', refetch);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('online', refetch);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [code]);
 
   useEffect(() => {
@@ -2509,6 +2554,12 @@ export default function MobileApp() {
         {session.forgeService
           && (session.forgeService.providerIdx === teamIdx || session.forgeService.customerIdx === teamIdx)
           && <ForgeServiceView session={session} teamIdx={teamIdx} code={code} token={token} owned={owned} T={T} />}
+        {/* Manette téléphone : overlay de pilotage du tour, UNIQUEMENT sur le
+            téléphone PROPRIÉTAIRE de l'équipe active (toggle Setup `controller`).
+            La cinématique de hack et le picker de métier gardent la priorité. */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn && session.turn.team === teamIdx && !team.hacked
+          && <ControllerView session={session} teamIdx={teamIdx} code={code} token={token} T={T} lastSync={lastSync} />}
       </>
     );
   }

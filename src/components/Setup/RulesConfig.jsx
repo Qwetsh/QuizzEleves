@@ -2,6 +2,8 @@
 //  - OFF (défaut) : l'équipe qui arrive sur une case occupée CHOISIT de défier
 //    (et qui) ou de jouer la case normalement.
 //  - ON : duel automatique avec l'adversaire présent (comportement historique).
+// NB : la « manette téléphone » n'est PAS ici — c'est un MODE DE JEU (carte
+// « 🕹️ Téléphone-manette » de la console, qui pilote phoneController).
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 

@@ -3,7 +3,7 @@ const STORAGE_KEY = 'quete-matieres-save';
 const SAVE_FIELDS = [
   'teams', 'currentTeam', 'board', 'boardDecor', 'viewBox', 'finished',
   'askedQuestions', 'questions', 'log', 'phase', 'boardSubjects', 'categoryPools',
-  'extensions', 'enabledEvents', 'knownEventKeys', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'forcedDuels', 'connectionMode', 'sessionCode', 'boardParams', 'englishMode',
+  'extensions', 'enabledEvents', 'knownEventKeys', 'enabledItems', 'knownItemKeys', 'level', 'useBrevet', 'forcedDuels', 'phoneController', 'connectionMode', 'sessionCode', 'boardParams', 'englishMode',
   'shopStock', 'shopStockTurns', 'shopFaceStock',
   // Prestation de forgeage en cours : la réserve du forgeron est en ESCROW DANS
   // cet objet (sa faceStock est vidée). Sans persistance, un reload du TBI en

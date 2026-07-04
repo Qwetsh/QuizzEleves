@@ -6,6 +6,8 @@ import { supabase } from './supabaseClient.js';
 import { logText } from './logFormat.js';
 import { extOn } from '../extensions/registry.js';
 import { getDieFaces } from './forge.js';
+import { hasActivePromise } from './pacts.js';
+import { questionRerollOptions } from '../store/effectEngine.js';
 
 const TABLE = 'quete_game_sessions';
 const LOBBY_TABLE = 'quete_lobby_teams';
@@ -35,9 +37,185 @@ export function joinUrl(code) {
   return `${window.location.origin}${base}?join=${code}`;
 }
 
+// --- Manette téléphone : état du tour publié vers les mobiles ---
+// La « phase de tour » n'existe pas côté TBI (combinaison de flags) : on la
+// dérive ici pour le mobile. Premier flag actif gagne — l'ordre est calqué sur
+// la priorité de rendu des modales TBI (GameLayout).
+export function deriveTurnPhase(s) {
+  if (s.finished) return 'finished';
+  if (s.showStarterChest) return 'starterChest';
+  if (s.showMetierPicker) return 'metier';
+  if (s.showFight) return 'fight';
+  if (s.showDuelChoice) return 'duelChoice';
+  if (s.showQuestion) return 'question';
+  if (s.showEvent) return 'event';
+  if (s.showTargetPicker) return 'targetPicker';
+  if (s.showTilePicker) return 'tilePicker';
+  if (s.showSubjectPicker) return 'subjectPicker';
+  if (s.showChargePicker) return 'chargePicker';
+  if (s.showActionDice) return 'actionDice';
+  if (s.lootReveal) return 'loot';
+  if (s.showShopPrompt) return 'shopPrompt';
+  if (s.awaitingChoice) return 'junction';
+  if (s.rolling || s.showDiceModal) return 'dice';
+  if (s.pendingLanding) return 'landing';
+  return 'idle';
+}
+
+// Bloc `turn` du payload de session : ce que le téléphone de l'équipe ACTIVE
+// doit savoir pour rendre sa « manette ». Fonction PURE et isolée : le jour où
+// on veut un canal broadcast à faible latence, on republie ce même bloc tel
+// quel sans toucher au mobile (qui ne lit que session.turn).
+//
+// ⚠️ CHECKLIST : tout état du store consommé ici doit AUSSI être abonné dans
+// MobileSessionPanel (sélecteur + deps du useEffect), sinon la phase se fige
+// silencieusement côté mobile. États lus : finished, teams, currentTeam, board,
+// rolling, showDiceModal, diceValue, awaitingChoice, pendingMove, pendingLanding,
+// showQuestion, showEvent, showFight, showDuelChoice, showTargetPicker,
+// showTilePicker, showSubjectPicker, showChargePicker, showActionDice,
+// lootReveal, showStarterChest, lastStarterReward, showShopPrompt,
+// showMetierPicker, indiceHidden, indiceUsed, rerollUsed.
+//
+// ⚠️ ANTI-TRICHE : le payload est reçu par TOUS les téléphones (y compris les
+// équipes adverses, devtools ouverts). Ne JAMAIS publier la bonne réponse
+// (question.c), l'explication (question.e) ni l'indice Clairvoyance avant la
+// révélation. Ne jamais publier de token ni de fonction (deferredTurnEnd).
+export function buildTurnPayload(s) {
+  if (!s) return null;
+  const phase = deriveTurnPhase(s);
+  const team = s.teams?.[s.currentTeam];
+  const turn = { team: s.currentTeam, phase };
+  if (phase === 'dice') {
+    // Le téléphone REFLÈTE le dé (gros chiffre) — l'animation 3D reste au TBI.
+    // Anti-spoiler : la valeur finale est connue dès rollDice() mais on ne la
+    // publie pas tant que l'animation TBI roule (sinon le téléphone révèle le
+    // résultat avant le tableau).
+    turn.dice = { value: s.rolling ? null : (s.diceValue ?? null), rolling: !!s.rolling };
+  } else if (phase === 'question' && s.showQuestion?.question) {
+    const sq = s.showQuestion;
+    const q = sq.question;
+    const revealed = !!sq.answerRevealed;
+    turn.question = {
+      q: q.q, q_en: q.q_en || null,
+      a: q.a || [], a_en: q.a_en || null,
+      subject: sq.subject || null,
+      hidden: s.indiceHidden || [],       // réponses barrées (Indice / équipement)
+      deadline: sq.deadline || null,       // le téléphone affiche le temps restant
+      selected: revealed ? (sq.selected ?? null) : null,
+      answerRevealed: revealed,
+      timerHalved: !!sq.timerHalved,
+      multiIndex: sq.multiIndex || null,
+      multiTotal: sq.multiTotal || null,
+      confused: !!sq.confused,
+      modeleur: sq.modeleur || null,
+      indiceUsed: !!s.indiceUsed,
+      // Objets « changer la question » : noms/icônes pour les boutons du
+      // téléphone. L'intent turnUseReroll renvoie l'INDEX de cette liste — le
+      // TBI la recalcule à l'application (même état ⇒ même liste, TBI maître).
+      rerollOptions: revealed ? [] : questionRerollOptions(team, s.rerollUsed, sq.subject)
+        .map((o) => ({ itemName: o.itemName, icon: o.icon || null })),
+      // ANTI-TRICHE : la bonne réponse et l'explication ne partent qu'APRÈS la
+      // révélation (tous les téléphones reçoivent ce payload, devtools compris).
+      // La Clairvoyance (revealHint) n'est JAMAIS publiée.
+      ...(revealed ? { correctIndex: q.c, explanation: q.e || null, explanation_en: q.e_en || null } : {}),
+    };
+  } else if (phase === 'event' && s.showEvent) {
+    const se = s.showEvent;
+    const ev = se.event || {};
+    const d = se.data || {};
+    const evq = d.eventQuestion;
+    const qRevealed = !!d.questionRevealed;
+    turn.event = {
+      key: se.key,
+      phase: se.phase, // roulette | intro | target | dice | question | choice | vaToutChoice | result
+      icon: ev.icon || null,
+      name: ev.name || null, name_en: ev.name_en || null,
+      desc: ev.desc || null, desc_en: ev.desc_en || null,
+      data: {
+        targetIndex: d.targetIndex ?? null,
+        // Dé d'événement reflété (anti-spoiler : valeur masquée pendant l'anim TBI).
+        diceRolling: !!d.diceRolling,
+        diceValue: d.diceRolling ? null : (d.diceValue ?? null),
+        vaToutPot: d.vaToutPot ?? null,
+        vaToutStreak: d.vaToutStreak ?? null,
+        lastGain: d.lastGain ?? null,
+        gifts: d.gifts || null,           // troisCoffres
+        merchandise: d.merchandise || null, // marchandAmbulant
+        message: d.message || null,       // phase result
+        // Question d'événement : MÊME stripping anti-triche que turn.question.
+        question: evq ? {
+          q: evq.q, q_en: evq.q_en || null, a: evq.a || [], a_en: evq.a_en || null,
+          subject: d.eventSubject || null,
+          revealed: qRevealed,
+          selected: qRevealed ? (d.questionSelected ?? null) : null,
+          ...(qRevealed ? { correctIndex: evq.c, result: !!d.questionResult } : {}),
+        } : null,
+      },
+    };
+  } else if (phase === 'duelChoice' && s.showDuelChoice) {
+    const dc = s.showDuelChoice;
+    turn.duel = { defenders: dc.defenders || [], blocked: dc.blocked || [], subject: dc.subject || null };
+  } else if (phase === 'loot' && s.lootReveal) {
+    turn.loot = { itemKey: s.lootReveal.itemKey || null, title: s.lootReveal.title || null };
+  } else if (phase === 'starterChest' && s.lastStarterReward) {
+    const r = s.lastStarterReward;
+    turn.starterChest = { gold: r.gold || 0, choices: r.choices || [], keep: r.keep || 1 };
+  } else if (phase === 'shopPrompt') {
+    turn.shopPrompt = true;
+  } else if (phase === 'fight' && s.showFight) {
+    const sf = s.showFight;
+    const winnerIdx = sf.winnerSide ? (sf.winnerSide === 'attacker' ? sf.attackerIndex : sf.defenderIndex) : null;
+    turn.fight = {
+      phase: sf.phase, // versus | briefing | minigame | reward | result
+      attackerIndex: sf.attackerIndex ?? null,
+      defenderIndex: sf.defenderIndex ?? null,
+      subject: sf.subject || null,
+      winnerIndex: winnerIdx,
+      rewardChosen: !!sf.reward?.choice,
+      resultMessage: sf.resultMessage || null,
+      boss: !!(sf.boss || sf.bossFight),
+    };
+  } else if (phase === 'targetPicker' && s.showTargetPicker) {
+    const stp = s.showTargetPicker;
+    turn.targetPicker = {
+      powerKey: stp.powerKey || null,
+      source: stp.source || null,
+      banish: !!stp.banish,
+      allowSelf: !!stp.allowSelf,
+      amount: stp.amount ?? null,
+      // Mêmes règles que la modale TBI : immunité totale = non ciblable ;
+      // pacte actif = ciblable mais confirmation de trahison (vrais pouvoirs
+      // offensifs seulement, pas les ciblages du moteur d'effets).
+      immune: (s.teams || []).map((t, i) => ((t.totalImmuneTurns ?? 0) > 0 ? i : -1)).filter((i) => i >= 0),
+      pact: !stp.source && team
+        ? (s.teams || []).map((_, i) => i).filter((i) => i !== s.currentTeam && hasActivePromise(team, i))
+        : [],
+    };
+  } else if (phase === 'subjectPicker') {
+    turn.subjectPicker = true; // le mobile liste les thèmes localement (SUBJECT_KEYS)
+  } else if (phase === 'chargePicker') {
+    turn.chargePicker = { amount: s.showChargePicker?.amount ?? 1 };
+  } else if (phase === 'tilePicker') {
+    turn.tilePicker = { label: s.showTilePicker?.label || null }; // v1 : se joue au TBI
+  } else if (phase === 'junction' && team) {
+    // Options dérivées côté TBI (le mobile n'a pas le plateau) : cartes-directions.
+    turn.junction = {
+      remaining: s.pendingMove?.remaining ?? 1,
+      options: (s.board?.[team.pos]?.next || []).map((id) => {
+        const n = s.board?.[id] || {};
+        return { id, type: n.type || null, subject: n.subject || null, label: n.label || null };
+      }),
+    };
+  } else if (phase === 'landing' && team) {
+    const n = s.board?.[team.pos] || {};
+    turn.landing = { type: n.type || null, subject: n.subject || null };
+  }
+  return turn;
+}
+
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
-export function buildSessionPayload({ teams, currentTeam, status, shopStock, shopFaceStock = [], log, extensions, locked = false, lv2Mode = false, englishMode = false, gameStats = null, forgeService = null }) {
+export function buildSessionPayload({ teams, currentTeam, status, shopStock, shopFaceStock = [], log, extensions, locked = false, lv2Mode = false, englishMode = false, gameStats = null, forgeService = null, phoneController = false, turnState = null }) {
   // Historique de questions par équipe (onglet mobile « anciennes questions ») :
   // dérivé du journal analytique, compacté aux derniers ~20 par équipe et aux
   // seuls champs utiles à la revue. Le mobile filtre ensuite sur SON équipe.
@@ -56,6 +234,13 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
     questionLog,
     status,
     currentTeam,
+    // Manette téléphone : toggle (Setup) + bloc d'état du tour en cours. Le
+    // mobile n'affiche la manette que si controller=true ET turn.team = lui.
+    controller: !!phoneController,
+    turn: turnState ? buildTurnPayload(turnState) : null,
+    // Horodatage de publication : le mobile s'en sert pour détecter un état
+    // périmé (bandeau « reconnexion » si > quelques secondes pendant son tour).
+    publishedAt: Date.now(),
     // Édition d'équipement bloquée côté mobile pendant une résolution (question,
     // duel, événement, déplacement…) — le TBI reste maître du timing.
     locked: !!locked,
@@ -158,13 +343,15 @@ export async function fetchSession(code) {
 }
 
 // S'abonne aux mises à jour de la session ; renvoie une fonction de désabonnement.
-export function subscribeSession(code, onData) {
+// `onStatus` (optionnel) reçoit l'état du canal ('SUBSCRIBED', 'CHANNEL_ERROR',
+// 'TIMED_OUT', 'CLOSED') — le mobile s'en sert pour se réabonner (manette).
+export function subscribeSession(code, onData, onStatus) {
   const channel = supabase
     .channel(`quete-session-${code}`)
     .on('postgres_changes',
       { event: '*', schema: 'public', table: TABLE, filter: `code=eq.${code}` },
       (payload) => onData(payload.new?.data ?? null))
-    .subscribe();
+    .subscribe((status) => onStatus?.(status));
   return () => { supabase.removeChannel(channel); };
 }
 
