@@ -7,7 +7,6 @@ import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
-import btnBoutique from '../../assets/inventory/btn-boutique.png';
 
 export default function ShopPromptModal() {
   const T = useT();
@@ -27,7 +26,14 @@ export default function ShopPromptModal() {
               transition={{ type: 'spring', damping: 12, stiffness: 240, delay: 0.05 }}
               style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}
             >
-              <img src={btnBoutique} alt="" draggable={false} style={{ width: 150, height: 'auto', filter: 'drop-shadow(0 8px 14px rgba(46,31,16,0.4))' }} />
+              {/* Tuile rétro (plaque crème) — remplace l'ancien PNG peint. */}
+              <span aria-hidden style={{
+                width: 116, height: 116, borderRadius: 18,
+                display: 'grid', placeItems: 'center', fontSize: 64,
+                background: 'linear-gradient(#efe3c6, #d3bd8f)',
+                border: '3px solid #14100a',
+                boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.5), inset 0 -6px 0 rgba(0,0,0,0.18), 0 8px 14px rgba(46,31,16,0.4)',
+              }}>🛒</span>
             </motion.div>
 
             <h2 style={{

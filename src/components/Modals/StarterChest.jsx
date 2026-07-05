@@ -33,34 +33,19 @@ function ChoiceCard({ itemKey, index, onPick, selected }) {
   return (
     <motion.button
       type="button"
+      className={'loot-choice' + (selected ? ' is-selected' : '')}
+      style={{ '--rar': r.color }}
       onClick={() => onPick(itemKey)}
       initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + index * 0.1 }}
       whileHover={{ scale: 1.04, y: -3 }} whileTap={{ scale: 0.96 }}
-      style={{
-        position: 'relative',
-        flex: '1 1 0', minWidth: 0,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-        padding: '12px 8px 10px', borderRadius: 14, cursor: 'pointer',
-        border: `${selected ? 3 : 2}px solid ${r.color}`,
-        background: selected ? `linear-gradient(180deg, ${r.color}40, #fffefb)` : `linear-gradient(180deg, ${r.color}1f, #fffefb)`,
-        boxShadow: selected ? `0 0 0 3px ${r.color}55, 0 6px 14px rgba(46,31,16,0.25)` : '0 4px 10px rgba(46,31,16,0.18)',
-      }}
     >
-      {selected && (
-        <span style={{
-          position: 'absolute', top: -9, right: -9, width: 24, height: 24, borderRadius: '50%',
-          background: r.color, color: '#fff', display: 'grid', placeItems: 'center',
-          fontSize: 14, fontWeight: 800, boxShadow: '0 2px 5px rgba(0,0,0,0.3)', border: '2px solid #fffefb',
-        }}>✓</span>
-      )}
+      {selected && <span className="loot-choice__check">✓</span>}
       {img
-        ? <img src={img} alt="" draggable={false} style={{ width: '64%', maxWidth: 56, aspectRatio: '1 / 1', objectFit: 'contain', filter: `drop-shadow(0 0 10px ${r.color}88)` }} />
-        : <span style={{ fontSize: 36, lineHeight: 1 }}>{item.icon}</span>}
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, lineHeight: 1.1, textAlign: 'center', color: 'var(--ink-800)' }}>{locName(item)}</span>
-      <span style={{ fontSize: 8.5, fontWeight: 700, color: '#fff', background: r.color, borderRadius: 6, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{r.name}</span>
-      {desc && (
-        <span style={{ fontSize: 11, lineHeight: 1.25, textAlign: 'center', color: 'var(--ink-600)', marginTop: 1 }}>{desc}</span>
-      )}
+        ? <img className="loot-choice__img" src={img} alt="" draggable={false} style={{ filter: `drop-shadow(0 0 10px ${r.color}88)` }} />
+        : <span className="loot-choice__emoji">{item.icon}</span>}
+      <span className="loot-choice__name">{locName(item)}</span>
+      <span className="loot-choice__rar">{r.name}</span>
+      {desc && <span className="loot-choice__desc">{desc}</span>}
     </motion.button>
   );
 }
@@ -136,7 +121,7 @@ function ChestInner({ team }) {
               <motion.div
                 initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', damping: 10, delay: 0.25 }}
-                style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: '#b8862c', textShadow: '0 1px 0 #fff', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                style={{ fontFamily: "'Archivo Black', var(--font-display), sans-serif", fontSize: 30, color: '#f2b64a', textShadow: '0 2px 0 rgba(0,0,0,0.5)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
               >
                 +{gold} <span className="coin" />
               </motion.div>
@@ -157,7 +142,7 @@ function ChestInner({ team }) {
                       {T('modal.chest.validate')}
                     </button>
                   )}
-                  <p style={{ fontSize: 11, color: 'var(--ink-500)' }}>{T('modal.chest.final')}</p>
+                  <p style={{ fontSize: 11, color: '#8b9096' }}>{T('modal.chest.final')}</p>
                 </>
               ) : (
                 <button className="loot-btn" onClick={done}>{T('modal.nice')}</button>

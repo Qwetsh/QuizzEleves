@@ -1,8 +1,8 @@
-// Inventaire — habillage image (panneau « INVENTAIRE » illustré). Le décor
-// (titre, colonne ÉQUIPEMENT, onglet SAC, fleurs, plaques) est peint dans
-// panel.png ; on ne superpose QUE les zones interactives, positionnées en % du
-// panneau : 3 cases d'équipement (eqframe.png) dans la colonne bois, la grille
-// du sac (slot.png) sur le parchemin, et le bouton fermer (close.png).
+// Inventaire — habillage RÉTRO (maquette « Écran de jeu.dc.html ») : panneau
+// bois à lattes, plaque crème 🎒 INVENTAIRE, chip équipe LCD, colonne
+// ÉQUIPEMENT en bois sombre (3 slots + légendes VT323) et SAC en parchemin
+// crème (grille 4×3). Tout est CSS (section rgi- de retro-game.css) — l'ancien
+// décor peint (panel.png) est supprimé.
 // La mécanique de drag & drop est inchangée (rects des cases figés au grab).
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal, flushSync } from 'react-dom';
@@ -10,15 +10,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
-import { ITEMS, RARITIES } from '../../data/items';
+import { ITEMS, RARITIES, SLOTS } from '../../data/items';
 import { isValidMove, normalizeBag, cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { soundClick } from '../../logic/sounds';
 import { itemImg } from '../../logic/itemAssets';
 import ItemActionCard from './ItemActionCard';
-import panelImg from '../../assets/inventory/panel.png';
-import slotImg from '../../assets/inventory/slot.png';
-import eqframeImg from '../../assets/inventory/eqframe.png';
-import closeImg from '../../assets/inventory/close.png';
 import '../../styles/inventory.css';
 
 // Silhouettes gravées des slots d'équipement vides (viewBox 0 0 64 64)
@@ -28,30 +24,23 @@ const SLOT_GLYPHS = {
   feet: '<path fill-rule="evenodd" d="M32 6 C16 6 8 20 8 34 C8 44 12 52 18 58 L26 51 C21 46 17 40 17 34 C17 24 23 14 32 14 C41 14 47 24 47 34 C47 40 43 46 38 51 L46 58 C52 52 56 44 56 34 C56 20 48 6 32 6 Z"/>',
 };
 
-// Positions (en % du panneau) des 3 cases d'équipement dans la colonne bois.
-const EQUIP_SLOTS = [
-  { key: 'head', cy: '32%' },
-  { key: 'body', cy: '53%' },
-  { key: 'feet', cy: '74%' },
-];
+const EQUIP_SLOT_KEYS = ['head', 'body', 'feet'];
 
-/* ---------- Case (équipement ou sac), habillage image ---------- */
-function ImgSlot({ k, variant, glyph, itemKey, count = 1, enchanted = 0, style, refCb, onGrab, state, popStamp, away }) {
+/* ---------- Case (équipement ou sac), habillage rétro ---------- */
+function Slot({ k, variant, glyph, itemKey, count = 1, enchanted = 0, refCb, onGrab, state, popStamp, away }) {
   const item = ITEMS[itemKey];
   const rarityColor = item ? RARITIES[item.rarity]?.color : null;
   const legendary = item?.rarity === 'legendaire';
   const img = item ? itemImg(item) : null;
-  const bg = variant === 'equip' ? eqframeImg : slotImg;
   return (
     <div
-      className={'invimg-slot invimg-slot--' + variant + (state ? ' is-' + state : '')}
-      style={{ ...style, backgroundImage: `url(${bg})` }}
+      className={'rgi-slot rgi-slot--' + variant + (item ? ' is-filled' : '') + (state ? ' is-' + state : '')}
       ref={refCb}
       data-slot={k}
     >
       {item && rarityColor && (
         <span
-          className="invimg-glow"
+          className="rgi-glow"
           style={{ background: `radial-gradient(circle, ${rarityColor}${legendary ? '66' : '40'}, transparent 68%)` }}
         />
       )}
@@ -258,65 +247,85 @@ export default function InventoryModal() {
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', damping: 18, stiffness: 220 }}
           >
-            <div ref={dialogRef} className="invimg-panel" style={{ backgroundImage: `url(${panelImg})` }}>
-              {/* Cases d'équipement (colonne bois) */}
-              {EQUIP_SLOTS.map((s) => {
-                const k = 'equip:' + s.key;
-                return (
-                  <ImgSlot
-                    key={s.key}
-                    k={k}
-                    variant="equip"
-                    glyph={SLOT_GLYPHS[s.key]}
-                    itemKey={cellKey(equipment[s.key])}
-                    enchanted={cellEnchants(equipment[s.key]).length}
-                    style={{ left: '21.3%', top: s.cy }}
-                    refCb={(el) => { slotEls.current[k] = el; }}
-                    onGrab={onGrab}
-                    state={slotState(k)}
-                    popStamp={pops[k]}
-                    away={drag && !drag.flyback && drag.key === k}
-                  />
-                );
-              })}
-
-              {/* Grille du sac (parchemin) */}
-              <div className="invimg-bag">
-                {bag.map((cell, i) => {
-                  const k = 'bag:' + i;
-                  return (
-                    <ImgSlot
-                      key={i}
-                      k={k}
-                      variant="bag"
-                      itemKey={cellKey(cell)}
-                      count={cellN(cell)}
-                      enchanted={cellEnchants(cell).length}
-                      refCb={(el) => { slotEls.current[k] = el; }}
-                      onGrab={onGrab}
-                      state={slotState(k)}
-                      popStamp={pops[k]}
-                      away={drag && !drag.flyback && drag.key === k}
-                    />
-                  );
-                })}
+            <div ref={dialogRef} className="rgi-panel">
+              {/* En-tête : plaque titre + chip équipe LCD + fermer */}
+              <div className="rgi-head">
+                <div className="rgi-title">
+                  <span className="rgi-title__emoji">🎒</span>
+                  <span className="rgi-title__text">{T('modal.inv.title')}</span>
+                </div>
+                <div className="rgi-teamchip">
+                  <span className="rgi-teamchip__emoji">{team.emoji}</span>
+                  <span className="rgi-teamchip__name">{team.name}</span>
+                  <span className="rgi-teamchip__sep" />
+                  <span className="rgi-teamchip__coin">🪙</span>
+                  <span className="rgi-teamchip__money">{team.money ?? 0}</span>
+                </div>
+                <button
+                  className="rgi-close"
+                  onClick={() => { soundClick(); closeInventory(); }}
+                  aria-label={T('common.close')}
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Bouton fermer */}
-              <button
-                className="invimg-close"
-                style={{ backgroundImage: `url(${closeImg})` }}
-                onClick={() => { soundClick(); closeInventory(); }}
-                aria-label={T('common.close')}
-              />
+              <div className="rgi-body">
+                {/* Colonne ÉQUIPEMENT (bois sombre) */}
+                <div className="rgi-equip">
+                  <div className="rgi-equip__title">{T('modal.inv.equipTitle')}</div>
+                  {EQUIP_SLOT_KEYS.map((sk) => {
+                    const k = 'equip:' + sk;
+                    const equipped = ITEMS[cellKey(equipment[sk])];
+                    return (
+                      <div key={sk} className="rgi-eqcell">
+                        <Slot
+                          k={k}
+                          variant="equip"
+                          glyph={SLOT_GLYPHS[sk]}
+                          itemKey={cellKey(equipment[sk])}
+                          enchanted={cellEnchants(equipment[sk]).length}
+                          refCb={(el) => { slotEls.current[k] = el; }}
+                          onGrab={onGrab}
+                          state={slotState(k)}
+                          popStamp={pops[k]}
+                          away={drag && !drag.flyback && drag.key === k}
+                        />
+                        <div className="rgi-eqcell__cap">— {locName(SLOTS[sk]).toUpperCase()} —</div>
+                        <div className="rgi-eqcell__name">{equipped ? locName(equipped) : ' '}</div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {/* Étiquette équipe + pièces */}
-              <div className="invimg-team" style={{ '--team': team.color }}>
-                <span className="invimg-team-emoji">{team.emoji}</span>
-                <span className="invimg-team-name">{team.name}</span>
+                {/* SAC (parchemin crème) */}
+                <div className="rgi-bag">
+                  <div className="rgi-bag__title">
+                    <span>👝</span>
+                    <span>{T('modal.inv.bagTitle', { n: bag.length })}</span>
+                  </div>
+                  <div className="rgi-bag__grid">
+                    {bag.map((cell, i) => {
+                      const k = 'bag:' + i;
+                      return (
+                        <Slot
+                          key={i}
+                          k={k}
+                          variant="bag"
+                          itemKey={cellKey(cell)}
+                          count={cellN(cell)}
+                          enchanted={cellEnchants(cell).length}
+                          refCb={(el) => { slotEls.current[k] = el; }}
+                          onGrab={onGrab}
+                          state={slotState(k)}
+                          popStamp={pops[k]}
+                          away={drag && !drag.flyback && drag.key === k}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-              {/* La pièce est déjà peinte dans la plaque : on n'affiche que le nombre */}
-              <div className="invimg-money">{team.money ?? 0}</div>
             </div>
           </motion.div>
 

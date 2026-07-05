@@ -101,6 +101,8 @@ export default {
 
   // ---- InventoryModal ----
   'modal.inv.title': { fr: 'Inventaire', en: 'Inventory' },
+  'modal.inv.equipTitle': { fr: '⚙ ÉQUIPEMENT', en: '⚙ EQUIPMENT' },
+  'modal.inv.bagTitle': { fr: 'Sac — {n} emplacements', en: 'Bag — {n} slots' },
 
   // ---- VictoryModal ----
   'modal.victory.title': { fr: 'VICTOIRE !', en: 'VICTORY!' },

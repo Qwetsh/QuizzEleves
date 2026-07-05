@@ -1,18 +1,19 @@
 /* Boutons de cast des pouvoirs offensifs (HUD droit) — visibles seulement
-   quand le pouvoir est utilisable, mis en avant avec pulsation. */
+   quand le pouvoir est utilisable, mis en avant avec pulsation.
+   Habillage RÉTRO : plaque crème bord bois (la lueur --cast-color reste). */
 .power-cast-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 8px 10px 7px;
-  border-radius: 14px;
+  border-radius: 11px;
   cursor: pointer;
-  background: linear-gradient(180deg, #fffefb, #f5ead2);
-  border: 2px solid var(--cast-color, var(--gold-500));
+  background: linear-gradient(180deg, #efe3c6, #d3bd8f);
+  border: 2px solid #3a2616;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    0 4px 10px rgba(0, 0, 0, 0.12),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    0 3px 0 rgba(0, 0, 0, 0.25),
     0 0 14px color-mix(in srgb, var(--cast-color, #888) 45%, transparent);
   font-family: var(--font-ui);
   animation: cast-pulse 1.4s ease-in-out infinite;
@@ -46,20 +47,20 @@
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  border-radius: 9px;
-  background: #fff;
-  color: var(--cast-color, #555);
-  font-size: 11px;
-  font-weight: 800;
+  border-radius: 5px;
+  background: #0a1206;
+  color: #57c84d;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
   display: grid;
   place-items: center;
-  border: 2px solid var(--cast-color, #888);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  border: 2px solid #16301a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .power-cast-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink-700);
+  font-family: 'Archivo Black', var(--font-display), sans-serif;
+  font-size: 10px;
+  color: #3a2410;
 }
 
 @keyframes cast-pulse {

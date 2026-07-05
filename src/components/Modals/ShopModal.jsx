@@ -277,10 +277,11 @@ function UnlockStall({ unownedPowers, money, onBuyNew }) {
                 </div>
               </div>
               <div className="shop-card-desc">{locDesc(power)}</div>
+              {/* Pas de couleur inline : le doré rétro (retro-game.css) fait foi ;
+                  l'identité du pouvoir reste portée par l'icône et le sous-titre. */}
               <button
                 className="shop-buy"
                 disabled={!canAfford}
-                style={canAfford ? { background: `linear-gradient(180deg, ${power.color}cc, ${power.color})` } : undefined}
                 onClick={() => { soundClick(); onBuyNew(key); }}
               >
                 {T('modal.shop.unlockBtn')} <Price value={power.price} />
