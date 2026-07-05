@@ -177,8 +177,12 @@ const SCHOOL_LEVELS = [
   { id: '3e', label: '3e' },
   { id: 'lycee', label: 'Lycée' },
 ];
-// Valeur `level` passée à getQuestions/buildPerimeter pour un id de niveau.
-const levelArg = (id) => (id === 'lycee' ? LYCEE_LEVELS : id);
+// Valeur `level` (tableau à plat) passée à getQuestions/buildPerimeter pour un
+// ou plusieurs id de niveau ('lycee' se déplie en ses 3 niveaux).
+const levelArg = (ids) => {
+  const arr = Array.isArray(ids) ? ids : [ids];
+  return arr.flatMap((id) => (id === 'lycee' ? LYCEE_LEVELS : [id]));
+};
 
 // Modèle actif (mock en preview ?cassettes, arbre réel en mode live). Un seul
 // écran SelectionCassettes est monté à la fois → variable de module sûre.
@@ -243,8 +247,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const startGameFromPerimeter = useGameStore((s) => s.startGameFromPerimeter);
   const setPhase = useGameStore((s) => s.setPhase);
   const useBrevet = useGameStore((s) => s.useBrevet);
-  const [cycle, setCycle] = useState('6e'); // niveau scolaire choisi au lancement
-  const [showLaunch, setShowLaunch] = useState(false); // menu de lancement (niveau + classe)
+  // Niveaux scolaires choisis au lancement — MULTI-sélection (ex. 6e + 5e).
+  const [levels, setLevels] = useState(['6e', '5e', '4e', '3e']);
+  const toggleLevel = (id) => setLevels((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const [showLaunch, setShowLaunch] = useState(false); // menu de lancement (niveaux + classe)
   const [tab, setTab] = useState('themes');
   const [reglSub, setReglSub] = useState('extensions'); // sous-onglet actif de RÉGLAGES
   // Accès aux outils/éditeurs hors dev : triple-clic sur le logo de la console + code.
@@ -499,25 +505,27 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     themeKey: v.themeId,
     excludedSubjectKeys: (v.subs || []).filter((s) => s.excluded).map((s) => s.subjectKey).filter(Boolean),
   }));
-  const perimeterFor = (levelId, list = loaded) => {
-    const level = levelArg(levelId);
+  const perimeterFor = (levelIds, list = loaded) => {
+    const level = levelArg(levelIds);
     const questions = getQuestions(level, { brevet: useBrevet });
     const hasContent = (k) => !!questions[k]?.length;
     return buildPerimeter(selectionOf(list), { level, hasContent });
   };
 
-  // Nb de voies posables par niveau — pour marquer/désactiver les niveaux sans
-  // contenu dans le menu de lancement (ex. Lycée = 0). Calculé à l'ouverture.
+  // Menu de lancement : nb de voies posables PAR niveau (marqueur « 0 question »,
+  // ex. Lycée) + nb pour la sélection courante (bouton « C'EST PARTI »).
   const levelInfo = useMemo(() => {
-    if (!showLaunch || !liveData) return {};
-    const out = {};
-    for (const lv of SCHOOL_LEVELS) out[lv.id] = perimeterFor(lv.id).boardSubjects.length;
-    return out;
+    if (!showLaunch || !liveData) return { counts: {}, selected: 0 };
+    const counts = {};
+    for (const lv of SCHOOL_LEVELS) counts[lv.id] = perimeterFor([lv.id]).boardSubjects.length;
+    const selected = levels.length ? perimeterFor(levels).boardSubjects.length : 0;
+    return { counts, selected };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showLaunch, liveData, slots, useBrevet]);
+  }, [showLaunch, liveData, slots, useBrevet, levels]);
 
   // Clic sur LANCER : en preview → flash direct ; en jeu réel → menu de lancement
-  // (choix du niveau scolaire + nom de classe) avant de composer la partie.
+  // UNIQUEMENT si une matière scolaire est chargée (choix des niveaux + nom de
+  // classe). Sans matière scolaire (culture G…), lancement direct sans menu.
   const onLaunchClick = () => {
     if (!loaded.length) return;
     if (!liveData) {
@@ -526,14 +534,15 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
       timers.current.launch = setTimeout(() => setLaunching(false), 1400);
       return;
     }
+    if (!hasScolaire) { doLaunch(); return; }
     setShowLaunch(true);
   };
 
-  // Validation du menu : compose le périmètre pour le niveau choisi et démarre
-  // (contourne FINE_MIX via startGameFromPerimeter).
+  // Compose le périmètre pour les niveaux choisis et démarre (contourne FINE_MIX
+  // via startGameFromPerimeter). Les voies non scolaires ignorent le niveau.
   const doLaunch = () => {
     if (!loaded.length) return;
-    const perimeter = perimeterFor(cycle);
+    const perimeter = perimeterFor(levels);
     if (!perimeter.boardSubjects.length) return;
     setShowLaunch(false);
     startGameFromPerimeter(perimeter);
@@ -1146,33 +1155,37 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               {title || 'La Quête'} — {loadedCount} voie{loadedCount > 1 ? 's' : ''}
             </div>
 
-            {/* Niveau scolaire — seulement si une matière scolaire est chargée. */}
-            {hasScolaire && (
-              <div style={{ marginTop: 22 }}>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e8a13a' }}>NIVEAU DES QUESTIONS SCOLAIRES</div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
-                  {SCHOOL_LEVELS.map((lv) => {
-                    const on = cycle === lv.id;
-                    const empty = (levelInfo[lv.id] || 0) === 0;
-                    return (
-                      <button key={lv.id} onClick={() => setCycle(lv.id)}
-                        style={{ minWidth: 78, fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 1, padding: '10px 14px', borderRadius: 9, cursor: 'pointer',
-                          border: '2px solid ' + (on ? '#57c84d' : '#5a4023'), background: on ? '#16331a' : '#3a2c1a',
-                          color: on ? '#9be88f' : (empty ? '#8a7656' : '#e3d0aa'),
-                          boxShadow: on ? '0 0 12px rgba(87,200,77,.45)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
-                        {lv.label}
-                        {empty && <span style={{ display: 'block', fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '.5px', color: '#e08a3a', marginTop: 3 }}>0 question</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {(levelInfo[cycle] || 0) === 0 && (
-                  <div style={{ fontFamily: FONT_UI, fontSize: 12.5, color: '#e14b3a', marginTop: 9 }}>
-                    Aucune question scolaire pour ce niveau — choisis-en un autre.
-                  </div>
-                )}
+            {/* Niveaux scolaires — multi-sélection (le menu ne s'ouvre que si une
+                matière scolaire est chargée). */}
+            <div style={{ marginTop: 22 }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e8a13a' }}>NIVEAUX DES QUESTIONS SCOLAIRES</div>
+              <div style={{ fontFamily: FONT_UI, fontSize: 12, color: '#8a7656', marginTop: 3 }}>Choisis un ou plusieurs niveaux — les questions seront mélangées.</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
+                {SCHOOL_LEVELS.map((lv) => {
+                  const on = levels.includes(lv.id);
+                  const empty = (levelInfo.counts[lv.id] || 0) === 0;
+                  return (
+                    <button key={lv.id} onClick={() => toggleLevel(lv.id)}
+                      style={{ minWidth: 78, fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 1, padding: '10px 14px', borderRadius: 9, cursor: 'pointer',
+                        border: '2px solid ' + (on ? '#57c84d' : '#5a4023'), background: on ? '#16331a' : '#3a2c1a',
+                        color: on ? '#9be88f' : (empty ? '#8a7656' : '#e3d0aa'),
+                        boxShadow: on ? '0 0 12px rgba(87,200,77,.45)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
+                      {on ? '✓ ' : ''}{lv.label}
+                      {empty && <span style={{ display: 'block', fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '.5px', color: '#e08a3a', marginTop: 3 }}>0 question</span>}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+              {levels.length === 0 ? (
+                <div style={{ fontFamily: FONT_UI, fontSize: 12.5, color: '#e14b3a', marginTop: 9 }}>
+                  Choisis au moins un niveau.
+                </div>
+              ) : levelInfo.selected === 0 ? (
+                <div style={{ fontFamily: FONT_UI, fontSize: 12.5, color: '#e14b3a', marginTop: 9 }}>
+                  Aucune question scolaire pour ce choix — sélectionne d'autres niveaux.
+                </div>
+              ) : null}
+            </div>
 
             {/* Nom de classe / séance — sert aux statistiques. */}
             <div style={{ marginTop: 22 }}>
@@ -1187,7 +1200,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               <button onClick={() => setShowLaunch(false)}
                 style={{ flex: '0 0 auto', fontFamily: FONT_DISPLAY, fontSize: 15, letterSpacing: 1, padding: '12px 20px', borderRadius: 10, cursor: 'pointer', border: '2px solid #5a4023', background: '#3a2c1a', color: '#e3d0aa' }}>ANNULER</button>
               {(() => {
-                const canLaunch = loadedCount > 0 && (levelInfo[cycle] || 0) > 0;
+                const canLaunch = loadedCount > 0 && levels.length > 0 && levelInfo.selected > 0;
                 return (
                   <button onClick={doLaunch} disabled={!canLaunch}
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '12px 20px', borderRadius: 10,
