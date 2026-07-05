@@ -9,7 +9,7 @@
  * l'arbre de thèmes + startGame se fera quand le modèle de données sera en place.
  * Voir DESIGN_SELECTION_CASSETTES.md et DESIGN_MODULES.md.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '@fontsource/vt323/400.css';
 import '@fontsource/archivo-black/400.css';
 import '@fontsource/hanken-grotesk/400.css';
@@ -21,7 +21,7 @@ import '../../styles/cassettes.css';
 import cassetteTop from '../../assets/cassette-top.png';
 import separatorPlaque from '../../assets/separator-plaque.png';
 import { useGameStore } from '../../store/gameStore';
-import { themesToCassetteModel, buildPerimeter, levelForCycle } from '../../logic/perimeter';
+import { themesToCassetteModel, buildPerimeter } from '../../logic/perimeter';
 import { getQuestions } from '../../data/questions';
 // Composants Setup existants hébergés dans les panneaux de la console.
 import TeamCount from './TeamCount';
@@ -166,6 +166,20 @@ const GAME_MODES = [
   { id: 'online', emblem: '🌐', name: 'Jeu en ligne', desc: 'Partie et connexion 100 % en ligne.', ready: false },
 ];
 
+// Niveaux scolaires proposés au lancement (un par classe, choisis dans le menu
+// de lancement — plus dans le header). Le Lycée est présent même sans contenu :
+// le menu marque « 0 question » et désactive le lancement le cas échéant.
+const LYCEE_LEVELS = ['2nde', '1ere', 'terminale'];
+const SCHOOL_LEVELS = [
+  { id: '6e', label: '6e' },
+  { id: '5e', label: '5e' },
+  { id: '4e', label: '4e' },
+  { id: '3e', label: '3e' },
+  { id: 'lycee', label: 'Lycée' },
+];
+// Valeur `level` passée à getQuestions/buildPerimeter pour un id de niveau.
+const levelArg = (id) => (id === 'lycee' ? LYCEE_LEVELS : id);
+
 // Modèle actif (mock en preview ?cassettes, arbre réel en mode live). Un seul
 // écran SelectionCassettes est monté à la fois → variable de module sûre.
 let ACTIVE = { DOMAINS: MOCK_DOMAINS, GROUPS: MOCK_GROUPS };
@@ -229,7 +243,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const startGameFromPerimeter = useGameStore((s) => s.startGameFromPerimeter);
   const setPhase = useGameStore((s) => s.setPhase);
   const useBrevet = useGameStore((s) => s.useBrevet);
-  const [cycle, setCycle] = useState('cycle4');
+  const [cycle, setCycle] = useState('6e'); // niveau scolaire choisi au lancement
+  const [showLaunch, setShowLaunch] = useState(false); // menu de lancement (niveau + classe)
   const [tab, setTab] = useState('themes');
   const [reglSub, setReglSub] = useState('extensions'); // sous-onglet actif de RÉGLAGES
   // Accès aux outils/éditeurs hors dev : triple-clic sur le logo de la console + code.
@@ -479,25 +494,49 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const loaded = slots.filter(Boolean);
   const hasScolaire = loaded.some((v) => v.domain === 'scolaire'); // cycle utile seulement si scolaire chargé
 
-  const launch = () => {
+  // Sélection courante → format buildPerimeter (thème + sous-thèmes exclus).
+  const selectionOf = (list) => list.map((v) => ({
+    themeKey: v.themeId,
+    excludedSubjectKeys: (v.subs || []).filter((s) => s.excluded).map((s) => s.subjectKey).filter(Boolean),
+  }));
+  const perimeterFor = (levelId, list = loaded) => {
+    const level = levelArg(levelId);
+    const questions = getQuestions(level, { brevet: useBrevet });
+    const hasContent = (k) => !!questions[k]?.length;
+    return buildPerimeter(selectionOf(list), { level, hasContent });
+  };
+
+  // Nb de voies posables par niveau — pour marquer/désactiver les niveaux sans
+  // contenu dans le menu de lancement (ex. Lycée = 0). Calculé à l'ouverture.
+  const levelInfo = useMemo(() => {
+    if (!showLaunch || !liveData) return {};
+    const out = {};
+    for (const lv of SCHOOL_LEVELS) out[lv.id] = perimeterFor(lv.id).boardSubjects.length;
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLaunch, liveData, slots, useBrevet]);
+
+  // Clic sur LANCER : en preview → flash direct ; en jeu réel → menu de lancement
+  // (choix du niveau scolaire + nom de classe) avant de composer la partie.
+  const onLaunchClick = () => {
     if (!loaded.length) return;
-    if (liveData) {
-      // Sélection → périmètre → vraie partie (contourne FINE_MIX via startGameFromPerimeter).
-      const selection = loaded.map((v) => ({
-        themeKey: v.themeId,
-        excludedSubjectKeys: (v.subs || []).filter((s) => s.excluded).map((s) => s.subjectKey).filter(Boolean),
-      }));
-      const level = levelForCycle(cycle);
-      const questions = getQuestions(level, { brevet: useBrevet });
-      const hasContent = (k) => !!questions[k]?.length;
-      const perimeter = buildPerimeter(selection, { level, hasContent });
-      if (!perimeter.boardSubjects.length) return;
-      startGameFromPerimeter(perimeter);
+    if (!liveData) {
+      setLaunching(true);
+      clearTimeout(timers.current.launch);
+      timers.current.launch = setTimeout(() => setLaunching(false), 1400);
       return;
     }
-    setLaunching(true);
-    clearTimeout(timers.current.launch);
-    timers.current.launch = setTimeout(() => setLaunching(false), 1400);
+    setShowLaunch(true);
+  };
+
+  // Validation du menu : compose le périmètre pour le niveau choisi et démarre
+  // (contourne FINE_MIX via startGameFromPerimeter).
+  const doLaunch = () => {
+    if (!loaded.length) return;
+    const perimeter = perimeterFor(cycle);
+    if (!perimeter.boardSubjects.length) return;
+    setShowLaunch(false);
+    startGameFromPerimeter(perimeter);
   };
 
   const demo = () => {
@@ -813,27 +852,19 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
               <div style={{ fontFamily: FONT_MONO, fontSize: 18, letterSpacing: 1, color: '#57c84d' }}>{statusText}</div>
-              {main ? (hasScolaire ? (
+              {/* Le choix du niveau scolaire est désormais dans le menu de lancement
+                  (clic sur LANCER). Ici on ne garde que le retour (mode live) et la
+                  démo (preview). */}
+              {live && !main ? (
                 <div style={{ marginTop: 4, display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 1 }}>CYCLE</span>
-                  {[['cycle3', '6e'], ['cycle4', '5e→3e']].map(([c, lab]) => (
-                    <button key={c} onClick={() => setCycle(c)} style={{ fontFamily: FONT_MONO, fontSize: 13, letterSpacing: 1, padding: '1px 7px', borderRadius: 4, cursor: 'pointer', border: '2px solid ' + (cycle === c ? '#57c84d' : '#5a4023'), background: cycle === c ? '#16331a' : '#3a2c1a', color: cycle === c ? '#9be88f' : '#e3d0aa' }}>{lab}</button>
-                  ))}
-                </div>
-              ) : null) : live ? (
-                <div style={{ marginTop: 4, display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 1 }}>CYCLE</span>
-                  {[['cycle3', '6e'], ['cycle4', '5e→3e']].map(([c, lab]) => (
-                    <button key={c} onClick={() => setCycle(c)} style={{ fontFamily: FONT_MONO, fontSize: 13, letterSpacing: 1, padding: '1px 7px', borderRadius: 4, cursor: 'pointer', border: '2px solid ' + (cycle === c ? '#57c84d' : '#5a4023'), background: cycle === c ? '#16331a' : '#3a2c1a', color: cycle === c ? '#9be88f' : '#e3d0aa' }}>{lab}</button>
-                  ))}
                   <button onClick={() => setPhase('setup')} style={{ fontFamily: FONT_MONO, fontSize: 13, letterSpacing: 1, padding: '1px 7px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: '#3a2c1a', color: '#e3d0aa' }}>← RETOUR</button>
                 </div>
-              ) : (
+              ) : !liveData ? (
                 <button onClick={demo} style={{ marginTop: 3, fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e3d0aa', background: '#3a2c1a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 8px', cursor: 'pointer' }}>▸ SCÉNARIO DÉMO</button>
-              )}
+              ) : null}
             </div>
             {!(main && phoneMode) && (
-              <button onClick={launch} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
+              <button onClick={onLaunchClick} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
                 <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
                 <span>LANCER</span>
               </button>
@@ -857,7 +888,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               })}
             </div>
             <div style={{ flex: 1 }} />
-            <input value={classLabel || ''} onChange={(e) => setClassLabel(e.target.value)} placeholder="📚 Classe / séance" style={{ fontFamily: FONT_MONO, fontSize: 16, color: '#241a10', background: '#e8d9bb', border: '2px solid #5a4023', borderRadius: 4, padding: '3px 9px', width: 190 }} />
+            {/* Le nom de classe est demandé dans le menu de lancement (il ne sert
+                qu'aux statistiques d'une partie jouée avec des élèves). */}
             <button onClick={() => setEnglishMode(!englishMode)} title="Langue des questions" style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: englishMode ? '#16331a' : '#3a2c1a', color: englishMode ? '#9be88f' : '#e3d0aa' }}>{englishMode ? '🇬🇧 EN ✓' : '🇬🇧 FR'}</button>
           </div>
         )}
@@ -1098,6 +1130,76 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               </div>
             </div>
             <div style={{ position: 'absolute', right: -8, bottom: -12, background: '#241a10', color: '#57c84d', fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '2px 8px', borderRadius: 4, transform: 'rotate(3deg)', whiteSpace: 'nowrap' }}>▸ DÉPOSE DANS LE CURIOSCOPE</div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ MENU DE LANCEMENT (niveau + classe) ============ */}
+      {showLaunch && (
+        <div onClick={() => setShowLaunch(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,7,3,.74)' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: 580, maxWidth: '92vw', maxHeight: '90vh', overflow: 'auto', background: '#241a10', border: '5px solid #e8a13a', borderRadius: 18, padding: '26px 30px', boxShadow: '0 24px 70px rgba(0,0,0,.6)', fontFamily: FONT_UI }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 2, color: '#8a7656' }}>CURIOSCOPE</div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 27, letterSpacing: '.5px', color: '#f4e7cc', textShadow: '0 2px 0 #000', marginTop: 2 }}>▶ Prêt à lancer</div>
+            <div style={{ fontFamily: FONT_UI, fontSize: 14, color: '#a89878', marginTop: 6, lineHeight: 1.4 }}>
+              {title || 'La Quête'} — {loadedCount} voie{loadedCount > 1 ? 's' : ''}
+            </div>
+
+            {/* Niveau scolaire — seulement si une matière scolaire est chargée. */}
+            {hasScolaire && (
+              <div style={{ marginTop: 22 }}>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e8a13a' }}>NIVEAU DES QUESTIONS SCOLAIRES</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
+                  {SCHOOL_LEVELS.map((lv) => {
+                    const on = cycle === lv.id;
+                    const empty = (levelInfo[lv.id] || 0) === 0;
+                    return (
+                      <button key={lv.id} onClick={() => setCycle(lv.id)}
+                        style={{ minWidth: 78, fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 1, padding: '10px 14px', borderRadius: 9, cursor: 'pointer',
+                          border: '2px solid ' + (on ? '#57c84d' : '#5a4023'), background: on ? '#16331a' : '#3a2c1a',
+                          color: on ? '#9be88f' : (empty ? '#8a7656' : '#e3d0aa'),
+                          boxShadow: on ? '0 0 12px rgba(87,200,77,.45)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
+                        {lv.label}
+                        {empty && <span style={{ display: 'block', fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '.5px', color: '#e08a3a', marginTop: 3 }}>0 question</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {(levelInfo[cycle] || 0) === 0 && (
+                  <div style={{ fontFamily: FONT_UI, fontSize: 12.5, color: '#e14b3a', marginTop: 9 }}>
+                    Aucune question scolaire pour ce niveau — choisis-en un autre.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Nom de classe / séance — sert aux statistiques. */}
+            <div style={{ marginTop: 22 }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e8a13a' }}>CLASSE / SÉANCE</div>
+              <div style={{ fontFamily: FONT_UI, fontSize: 12, color: '#8a7656', marginTop: 3 }}>Facultatif — sert à retrouver les statistiques d'une partie jouée avec des élèves.</div>
+              <input value={classLabel || ''} onChange={(e) => setClassLabel(e.target.value)} placeholder="Ex. 6e B — mardi"
+                style={{ marginTop: 8, width: '100%', boxSizing: 'border-box', fontFamily: FONT_MONO, fontSize: 17, color: '#241a10', background: '#e8d9bb', border: '2px solid #5a4023', borderRadius: 7, padding: '9px 12px' }} />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 12, marginTop: 26 }}>
+              <button onClick={() => setShowLaunch(false)}
+                style={{ flex: '0 0 auto', fontFamily: FONT_DISPLAY, fontSize: 15, letterSpacing: 1, padding: '12px 20px', borderRadius: 10, cursor: 'pointer', border: '2px solid #5a4023', background: '#3a2c1a', color: '#e3d0aa' }}>ANNULER</button>
+              {(() => {
+                const canLaunch = loadedCount > 0 && (levelInfo[cycle] || 0) > 0;
+                return (
+                  <button onClick={doLaunch} disabled={!canLaunch}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '12px 20px', borderRadius: 10,
+                      cursor: canLaunch ? 'pointer' : 'not-allowed', border: '3px solid #150f08',
+                      background: canLaunch ? '#57c84d' : '#3a2e22', color: canLaunch ? '#0c2a0a' : '#6b5f48',
+                      boxShadow: canLaunch ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
+                    <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
+                    <span>C'EST PARTI</span>
+                  </button>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
