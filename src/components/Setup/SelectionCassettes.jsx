@@ -247,6 +247,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const { DOMAINS, GROUPS } = model;
   // Actions store (toujours appelées ; utilisées seulement en live/main).
   const startGameFromPerimeter = useGameStore((s) => s.startGameFromPerimeter);
+  const startOnlineGame = useGameStore((s) => s.startOnlineGame);
+  const onlineLobbyTeams = useGameStore((s) => s.lobbyTeams);
   const setPhase = useGameStore((s) => s.setPhase);
   const useBrevet = useGameStore((s) => s.useBrevet);
   // Niveaux scolaires choisis au lancement — MULTI-sélection (ex. 6e + 5e).
@@ -549,7 +551,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     const perimeter = perimeterFor(levels);
     if (!perimeter.boardSubjects.length) return;
     setShowLaunch(false);
-    startGameFromPerimeter(perimeter);
+    // En ligne : les équipes viennent du LOBBY (créées par les joueurs), pas des
+    // équipes locales par défaut. Sinon flux normal (cassettes).
+    if (connectionMode === 'online') startOnlineGame(perimeter);
+    else startGameFromPerimeter(perimeter);
   };
 
   const demo = () => {
@@ -627,7 +632,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   }
 
   const statusText = loadedCount === 0 ? '0 VOIE · PRÊT' : `${loadedCount}/${voiesCount} VOIES`;
-  const launchOn = loadedCount > 0;
+  // En ligne : on ne peut lancer que si ≥1 équipe a rejoint ET que toutes sont prêtes.
+  const onlineTeamsLive = (onlineLobbyTeams || []).filter((r) => !r.removed);
+  const onlineReady = connectionMode !== 'online' || (onlineTeamsLive.length >= 1 && onlineTeamsLive.every((r) => r.ready));
+  const launchOn = loadedCount > 0 && onlineReady;
   const deckSpin = loadedCount > 0 ? 'running' : 'paused';
   const lcdText = lastCard ? lastCard.label.toUpperCase() : '— — — — —';
   const windowTint = lastCard ? lastCard.color : '#2c2419';

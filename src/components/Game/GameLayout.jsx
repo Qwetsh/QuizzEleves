@@ -91,6 +91,10 @@ export default function GameLayout() {
   // l'autorité → on ne monte aucun consumer réseau (sinon il volerait/supprimerait
   // les intents/trades du vrai hôte).
   const mirror = useGameStore((s) => !!s._mirror);
+  // En ligne, l'ÉCRAN (hôte comme spectateur) est un affichage partagé : on
+  // neutralise les clics du plateau — tout le jeu passe par les manettes des
+  // joueurs (intents). Ça évite que l'hôte pilote toutes les équipes.
+  const boardInert = mirror || onlineMode;
   const triggerWeather = useGameStore((s) => s.triggerWeather);
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
@@ -102,7 +106,7 @@ export default function GameLayout() {
   const team = teams[currentTeam];
 
   return (
-    <div className="flex absolute inset-0 rg-root" style={mirror ? { pointerEvents: 'none' } : undefined}>
+    <div className="flex absolute inset-0 rg-root" style={boardInert ? { pointerEvents: 'none' } : undefined}>
       {/* Board area — leaves space for right HUD and bottom bar */}
       <div className="flex-1 relative" style={{ marginRight: 320, marginBottom: 148 }}>
         {/* Le plateau vit dans une TV CRT : coque grise, écran bombé, effets

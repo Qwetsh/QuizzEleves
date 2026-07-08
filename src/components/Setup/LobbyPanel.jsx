@@ -155,12 +155,23 @@ export default function LobbyPanel({ online = false }) {
             })}
           </div>
 
-          {/* Gros bouton arcade lumineux — en ligne : actif seulement si tout le monde est prêt */}
-          <button className="lobby90-start" onClick={start} disabled={!canStart}>
-            ▶▶ {T('setup.lobbyStart', { n: teamsLive.length })}
-          </button>
-          {online && teamsLive.length > 0 && !allReady && (
-            <div className="lobby90-waiting" style={{ textAlign: 'center' }}>En attente que tous les joueurs soient prêts…</div>
+          {online ? (
+            <>
+              {/* L'hôte joue AUSSI via un client : il ouvre sa propre fenêtre de jeu
+                  (l'onglet actuel = l'écran/serveur partagé). Le lancement se fait
+                  par le bouton « LANCER » de l'en-tête (thème + tout le monde prêt). */}
+              <button className="lobby90-start" onClick={() => window.open(url, '_blank', 'noopener')}>
+                🎮 Jouer / créer mon équipe
+              </button>
+              <div className="lobby90-waiting" style={{ textAlign: 'center' }}>
+                Ouvre ta fenêtre de jeu (bouton ci-dessus) pour créer ton équipe. Cet onglet est l’écran partagé.
+                Insère un thème puis clique « LANCER » (en haut) quand {allReady ? 'tout le monde est prêt' : 'tous les joueurs sont prêts'}.
+              </div>
+            </>
+          ) : (
+            <button className="lobby90-start" onClick={start} disabled={!canStart}>
+              ▶▶ {T('setup.lobbyStart', { n: teamsLive.length })}
+            </button>
           )}
 
           {devOn() && (

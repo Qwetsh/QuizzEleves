@@ -21,6 +21,7 @@ export default function OnlineHost() {
   const mirror = useGameStore((s) => s._mirror);
   const code = useGameStore((s) => s.sessionCode);
   const setSessionCode = useGameStore((s) => s.setSessionCode);
+  const reset = useGameStore((s) => s.reset);
   const [open, setOpen] = useState(true);
   const [viewers, setViewers] = useState(0);
   const creatingRef = useRef(false);
@@ -82,6 +83,13 @@ export default function OnlineHost() {
         title={url}
       >
         📋 Copier le lien
+      </button>
+      <button
+        onClick={() => { if (window.confirm('Quitter la partie en ligne ?')) reset(); }}
+        style={{ cursor: 'pointer', background: '#2a0e0c', color: '#ff8a7a', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 12 }}
+        title="Quitter la partie"
+      >
+        ⏹ Quitter
       </button>
       <button
         onClick={() => setOpen(false)}

@@ -725,6 +725,20 @@ export const useGameStore = create((set, get) => ({
     get()._beginGameWithBoard({ boardSubjects, categoryPools, questions, displayInject, statsSubjects: boardSubjects, lv2On: false });
   },
 
+  // Lancement « jeu en ligne » : les équipes viennent du LOBBY (créées par les
+  // joueurs, jeton conservé), le plateau du périmètre (thèmes insérés). Comme les
+  // fiches du lobby portent déjà leurs pouvoirs, on enchaîne directement en jeu.
+  startOnlineGame: (perimeter) => {
+    const setup = buildLobbySetupTeams(get().lobbyTeams);
+    if (!setup.length) return false;
+    set({ setupTeams: setup, nbTeams: setup.length });
+    get().startGameFromPerimeter(perimeter);
+    if (get().phase === 'powerSelect' && setup.every((t) => t.powerDef && t.powerOff)) {
+      get().finalizePowersAndPlay();
+    }
+    return true;
+  },
+
   openCompose: () => set({ phase: 'compose' }),
 
   // Queue commune de démarrage (partagée par startGame et startGameFromPerimeter) :
