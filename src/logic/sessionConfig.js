@@ -357,8 +357,22 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
 
 // --- Côté TBI (publication) ---
 
+// Purge best-effort des sessions périmées : une ligne de session est un état de
+// jeu TRANSITOIRE (companion classe ou snapshot « en ligne »). Rien ne les
+// supprimait → elles s'empilaient (150+ lignes, dont des snapshots multi-Mo) et
+// alimentaient l'usure du Disk IO. On les nettoie à la création d'une nouvelle
+// session (moment naturel, hors chemin critique). Non bloquant : une erreur ici
+// (RLS, réseau) ne doit jamais empêcher de lancer une partie.
+async function purgeStaleSessions() {
+  try {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from(TABLE).delete().lt('updated_at', cutoff);
+  } catch { /* best-effort */ }
+}
+
 // Crée une session avec un code unique (réessaie sur collision de code).
 export async function createSession(payload) {
+  purgeStaleSessions(); // fire-and-forget : ne bloque pas le lancement
   for (let attempt = 0; attempt < 6; attempt++) {
     const code = randomCode();
     const { error } = await supabase.from(TABLE).insert({ code, data: payload });

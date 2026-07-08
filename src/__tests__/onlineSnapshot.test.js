@@ -35,6 +35,16 @@ describe('onlineSnapshot', () => {
     expect(new Set(SNAPSHOT_FIELDS).size).toBe(SNAPSHOT_FIELDS.length);
   });
 
+  it('EXCLUT le pool `questions` du snapshot (bande passante : ~3 Mo évités par publish)', () => {
+    expect(SNAPSHOT_FIELDS).not.toContain('questions');
+    const snap = serializeSnapshot(makeState({ questions: { maths: [{ q: 'grosse liste' }] } }));
+    expect('questions' in snap).toBe(false);
+    // Le miroir ne pioche jamais de question (l'hôte pousse `showQuestion`) → son
+    // pool local ne doit pas être écrasé par l'hydratation.
+    const hydrated = hydrateSnapshot(snap);
+    expect('questions' in hydrated).toBe(false);
+  });
+
   it('sérialise askedQuestions (Set → array) et le rehydrate (array → Set)', () => {
     const snap = serializeSnapshot(makeState());
     expect(snap.v).toBe(SNAPSHOT_VERSION);

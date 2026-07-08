@@ -24,8 +24,19 @@ const RENDER_FIELDS = [
   'indiceHidden', 'weatherCeremony',
 ];
 
-// Union des champs diffusés (socle de jeu + rendu transitoire), dédupliquée.
-export const SNAPSHOT_FIELDS = [...new Set([...SAVE_FIELDS, ...RENDER_FIELDS])];
+// Champs JAMAIS diffusés (Disk IO) : volumineux et inutiles au miroir. En tête,
+// `questions` = TOUT le pool chargé (~3 Mo) — c'était 96 % du snapshot, réécrit
+// dans Supabase à chaque changement d'état + heartbeat 15 s. Le miroir n'en a pas
+// besoin : il ne tire jamais de question (l'hôte est l'autorité et pousse la
+// question courante via `showQuestion`, déjà nettoyée par l'anti-triche), et il
+// charge lui-même son catalogue au démarrage. `hydrateSnapshot` ignore les clés
+// absentes, donc ne pas l'envoyer n'écrase pas le pool local du client.
+const BROADCAST_EXCLUDE = new Set(['questions']);
+
+// Union des champs diffusés (socle de jeu + rendu transitoire), dédupliquée,
+// moins les champs exclus de diffusion.
+export const SNAPSHOT_FIELDS = [...new Set([...SAVE_FIELDS, ...RENDER_FIELDS])]
+  .filter((key) => !BROADCAST_EXCLUDE.has(key));
 
 // askedQuestions : { [subject]: Set<id> } → besoin d'une (dé)sérialisation dédiée.
 function askedToArrays(asked) {
