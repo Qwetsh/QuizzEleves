@@ -91,7 +91,7 @@ export default {
   'setup.connBoardLabel': { fr: 'Au tableau', en: 'On the board' },
   'setup.connBoardDesc': { fr: 'Tu crées les équipes ici.', en: 'You create the teams here.' },
   'setup.connPhoneLabel': { fr: 'Par téléphone', en: 'By phone' },
-  'setup.connPhoneDesc': { fr: 'Les élèves créent leur équipe via QR.', en: 'Students create their team via QR code.' },
+  'setup.connPhoneDesc': { fr: 'Les joueurs créent leur équipe via QR.', en: 'Players create their team via QR code.' },
 
   // --- TeamCount.jsx ---
   'setup.teamsInPlay': { fr: 'Équipes — {n} en lice', en: 'Teams — {n} in play' },
@@ -106,8 +106,8 @@ export default {
   // --- LobbyPanel.jsx ---
   'setup.lobbyTitle': { fr: '📱 Lobby téléphone', en: '📱 Phone lobby' },
   'setup.lobbyIntro': {
-    fr: 'Ouvre un lobby : les élèves scannent le QR et créent leur équipe (nom + logo + pouvoir).',
-    en: 'Open a lobby: students scan the QR code and create their team (name + logo + power).',
+    fr: 'Ouvre un lobby : les joueurs scannent le QR et créent leur équipe (nom + logo + pouvoir).',
+    en: 'Open a lobby: players scan the QR code and create their team (name + logo + power).',
   },
   'setup.lobbyOpen': { fr: 'Ouvrir le lobby', en: 'Open the lobby' },
   'setup.lobbyConnFailed': { fr: 'Connexion impossible', en: 'Connection failed' },
@@ -121,10 +121,10 @@ export default {
   'setup.lobbyRemoveTeam': { fr: 'Retirer cette équipe', en: 'Remove this team' },
   'setup.lobbyStart': { fr: '🚀 Démarrer la partie ({n})', en: '🚀 Start game ({n})' },
   'setup.lobbySimTitle': { fr: '🧪 Simuler des téléphones (test)', en: '🧪 Simulate phones (test)' },
-  'setup.lobbySimStudent': { fr: '📱 Élève {n}', en: '📱 Student {n}' },
+  'setup.lobbySimStudent': { fr: '📱 Joueur {n}', en: '📱 Player {n}' },
   'setup.lobbySimDesc': {
-    fr: 'Chaque fenêtre = un élève distinct qui crée son équipe (nom, pouvoirs, LV2). Autoriser les pop-ups si bloqué.',
-    en: 'Each window = a separate student creating their team (name, powers, L2). Allow pop-ups if blocked.',
+    fr: 'Chaque fenêtre = un joueur distinct qui crée son équipe (nom, pouvoirs, LV2). Autoriser les pop-ups si bloqué.',
+    en: 'Each window = a separate player creating their team (name, powers, L2). Allow pop-ups if blocked.',
   },
 
   // --- ExtensionsChecklist.jsx ---

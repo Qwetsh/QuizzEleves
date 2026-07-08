@@ -12,6 +12,24 @@ import {
   fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
 } from '../../logic/sessionConfig';
 import { useT } from '../../i18n';
+import '@fontsource/vt323/400.css';
+import '@fontsource/archivo-black/400.css';
+import '../../styles/lobby-retro.css';
+
+// Barre de titre commune (fenêtre logicielle « LOBBY.EXE »).
+function TitleBar() {
+  return (
+    <div className="lobby90-titlebar">
+      <span className="lobby90-rec" />
+      <span className="lobby90-tt">LOBBY.EXE</span>
+      <span className="lobby90-winbtns">
+        <span className="lobby90-winbtn">_</span>
+        <span className="lobby90-winbtn">□</span>
+        <span className="lobby90-winbtn">✕</span>
+      </span>
+    </div>
+  );
+}
 
 export default function LobbyPanel() {
   const T = useT();
@@ -59,80 +77,105 @@ export default function LobbyPanel() {
 
   if (!sessionCode) {
     return (
-      <div>
-        <div className="field-label" style={{ marginBottom: 8 }}>{T('setup.lobbyTitle')}</div>
-        <p style={{ fontSize: 12, color: 'var(--ink-500)', margin: '0 0 10px', lineHeight: 1.4 }}>
-          {T('setup.lobbyIntro')}
-        </p>
-        <button className="btn btn--green" onClick={openLobby} disabled={busy}>{busy ? '…' : T('setup.lobbyOpen')}</button>
-        {err && <div style={{ fontSize: 11, color: '#b5341f', marginTop: 6 }}>{err}</div>}
+      <div className="lobby90">
+        <div className="lobby90-win">
+          <TitleBar />
+          <div className="lobby90-body">
+            <div className="lobby90-offline">
+              &gt; {T('setup.lobbyIntro')}<br />
+              &gt; STATUT : <b>HORS LIGNE</b>_
+            </div>
+            <div>
+              <button className="lobby90-btn" onClick={openLobby} disabled={busy}>{busy ? '…' : `► ${T('setup.lobbyOpen')}`}</button>
+            </div>
+            {err && <div className="lobby90-err">! {err}</div>}
+          </div>
+        </div>
       </div>
     );
   }
 
   const url = joinUrl(sessionCode);
   return (
-    <div>
-      <div className="field-label" style={{ marginBottom: 8 }}>
-        {T('setup.lobbyTitleCount', { n: teamsLive.length, teams: T.plural('setup.teamCount', teamsLive.length) })}
-      </div>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ display: 'inline-block', padding: 10, background: '#fff', borderRadius: 14, boxShadow: 'inset 0 0 0 1px rgba(122,94,58,0.2)' }}>
-            <QRCodeSVG value={url} size={150} level="M" />
+    <div className="lobby90">
+      <div className="lobby90-win">
+        <TitleBar />
+        <div className="lobby90-body">
+          {/* Écran CRT : QR (clair, scannable) + instructions + code à segments */}
+          <div className="lobby90-crt">
+            <div className="lobby90-qrwrap">
+              <span className="lobby90-qrframe">
+                <QRCodeSVG value={url} size={150} level="M" />
+              </span>
+              <div className="lobby90-scanlabel">SCANNE-MOI</div>
+            </div>
+            <div className="lobby90-crt-side">
+              <div className="lobby90-lines">
+                &gt; SCANNE LE CODE<br />
+                &gt; POUR <b>REJOINDRE</b><br />
+                &gt; LA PARTIE
+              </div>
+              <div>
+                <div className="lobby90-codelabel">CODE DE SESSION</div>
+                <div className="lobby90-led">
+                  {sessionCode.split('').map((ch, i) => <span key={i}>{ch}</span>)}
+                </div>
+              </div>
+              <div className="lobby90-url">{url}</div>
+            </div>
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, letterSpacing: '0.25em', textIndent: '0.25em', color: 'var(--ink-900)', marginTop: 8 }}>{sessionCode}</div>
-          <div style={{ fontSize: 10, color: 'var(--ink-500)', wordBreak: 'break-all', maxWidth: 170 }}>{url}</div>
-        </div>
-        <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {teamsLive.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--ink-500)', fontStyle: 'italic' }}>{T('setup.lobbyWaiting')}</div>
-          ) : teamsLive.map((r) => {
-            const dup = nameCounts[(r.name || '').trim().toLowerCase()] > 1;
-            return (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 10, border: `1px solid ${r.color || 'rgba(122,94,58,0.25)'}`, background: '#fffefb' }}>
-                <span style={{ fontSize: 20 }}>{r.emoji || '🦁'}</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 14, color: r.color || 'var(--ink-800)' }}>
-                    {r.name || T('setup.lobbyNoName')} {dup && <span title={T('setup.lobbyDupName')} style={{ color: '#c9472f' }}>⚠</span>}
+
+          {/* Liste terminal des équipes connectées */}
+          <div className="lobby90-list">
+            <div className="lobby90-list-h">
+              CONNECTÉS ─ {teamsLive.length} {T.plural('setup.teamCount', teamsLive.length)}
+            </div>
+            {teamsLive.length === 0 ? (
+              <div className="lobby90-waiting">{T('setup.lobbyWaiting')}</div>
+            ) : teamsLive.map((r) => {
+              const dup = nameCounts[(r.name || '').trim().toLowerCase()] > 1;
+              return (
+                <div key={r.id} className="lobby90-row">
+                  <span className="lobby90-emoji">{r.emoji || '🦁'}</span>
+                  <span className="lobby90-name" style={{ color: r.color || '#d9ffe6' }}>
+                    {r.name || T('setup.lobbyNoName')} {dup && <span title={T('setup.lobbyDupName')} style={{ color: '#ffb64a' }}>⚠</span>}
                   </span>
-                  <span style={{ display: 'block', fontSize: 10, color: 'var(--ink-500)' }}>
-                    {r.ready ? T('setup.lobbyReady') : T('setup.lobbyInProgress')}
+                  <span className="lobby90-sub">
+                    <span className="lobby90-dot">●</span> {r.ready ? T('setup.lobbyReady') : T('setup.lobbyInProgress')}
                     {r.power_def ? ` · 🛡️ ${locName(POWERS[r.power_def]) || r.power_def}` : ''}
                     {r.power_off ? ` · ⚔️ ${locName(POWERS[r.power_off]) || r.power_off}` : ''}
                   </span>
-                </span>
-                <button className="btn btn--ghost btn--sm" onClick={() => removeLobbyTeam(r.id)} title={T('setup.lobbyRemoveTeam')}>✕</button>
+                  <span className="lobby90-cursor" />
+                  <button className="lobby90-x" onClick={() => removeLobbyTeam(r.id)} title={T('setup.lobbyRemoveTeam')}>✕</button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Gros bouton arcade lumineux */}
+          <button className="lobby90-start" onClick={start} disabled={!teamsLive.length}>
+            ▶▶ {T('setup.lobbyStart', { n: teamsLive.length })}
+          </button>
+
+          {devOn() && (
+            <div className="lobby90-sim">
+              <div className="lobby90-sim-h">{T('setup.lobbySimTitle')}</div>
+              <div className="lobby90-chips">
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <button
+                    key={n}
+                    className="lobby90-chip"
+                    onClick={() => window.open(`${joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
+                  >
+                    {T('setup.lobbySimStudent', { n })}
+                  </button>
+                ))}
               </div>
-            );
-          })}
+              <div className="lobby90-sim-desc">{T('setup.lobbySimDesc')}</div>
+            </div>
+          )}
         </div>
       </div>
-      <button className="btn btn--green btn--lg" style={{ width: '100%', marginTop: 12 }} onClick={start} disabled={!teamsLive.length}>
-        {T('setup.lobbyStart', { n: teamsLive.length })}
-      </button>
-
-      {devOn() && (
-        <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 10, border: '1px dashed rgba(122,94,58,0.5)', background: 'rgba(255,254,251,0.92)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-700)', marginBottom: 6 }}>
-            {T('setup.lobbySimTitle')}
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <button
-                key={n}
-                className="btn btn--ghost btn--sm"
-                onClick={() => window.open(`${joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
-              >
-                {T('setup.lobbySimStudent', { n })}
-              </button>
-            ))}
-          </div>
-          <div style={{ fontSize: 10.5, color: 'var(--ink-500)', marginTop: 5, lineHeight: 1.3 }}>
-            {T('setup.lobbySimDesc')}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

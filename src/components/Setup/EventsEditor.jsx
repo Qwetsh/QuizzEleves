@@ -112,7 +112,7 @@ export default function EventsEditor({ onClose }) {
                 </div>
 
                 <label>
-                  <div className="field-label">Description (affichée à l'élève)</div>
+                  <div className="field-label">Description (affichée au joueur)</div>
                   <textarea className="qed-input" style={{ width: '100%', minHeight: 56, resize: 'vertical' }} value={draft.desc} onChange={(e) => upd({ desc: e.target.value })} />
                 </label>
 

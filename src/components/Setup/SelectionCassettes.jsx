@@ -162,8 +162,8 @@ const TOOLS_CODE = '54150';
 // son tour depuis son mobile, le TBI reste maître et utilisable en parallèle).
 const GAME_MODES = [
   { id: 'tbi', conn: 'board', controller: false, emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
-  { id: 'companion', conn: 'phone', controller: false, emblem: '📱', name: 'Téléphone + TBI', desc: 'Les élèves rejoignent par QR ; on joue sur le TBI.', ready: true },
-  { id: 'manette', conn: 'phone', controller: true, emblem: '🕹️', name: 'Téléphone-manette', desc: 'Les élèves rejoignent par QR ; l’équipe active joue son tour (dé, réponses, choix) sur son téléphone.', ready: true },
+  { id: 'companion', conn: 'phone', controller: false, emblem: '📱', name: 'Téléphone + TBI', desc: 'Les joueurs rejoignent par QR ; on joue sur le TBI.', ready: true },
+  { id: 'manette', conn: 'phone', controller: true, emblem: '🕹️', name: 'Téléphone-manette', desc: 'Les joueurs rejoignent par QR ; l’équipe active joue son tour (dé, réponses, choix) sur son téléphone.', ready: true },
   { id: 'online', emblem: '🌐', name: 'Jeu en ligne', desc: 'Partie et connexion 100 % en ligne.', ready: false },
 ];
 
@@ -1224,7 +1224,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
             {/* Nom de classe / séance — sert aux statistiques. */}
             <div style={{ marginTop: 22 }}>
               <div style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e8a13a' }}>CLASSE / SÉANCE</div>
-              <div style={{ fontFamily: FONT_UI, fontSize: 12, color: '#8a7656', marginTop: 3 }}>Facultatif — sert à retrouver les statistiques d'une partie jouée avec des élèves.</div>
+              <div style={{ fontFamily: FONT_UI, fontSize: 12, color: '#8a7656', marginTop: 3 }}>Facultatif — sert à retrouver les statistiques d'une partie jouée avec des joueurs.</div>
               <input value={classLabel || ''} onChange={(e) => setClassLabel(e.target.value)} placeholder="Ex. 6e B — mardi"
                 style={{ marginTop: 8, width: '100%', boxSizing: 'border-box', fontFamily: FONT_MONO, fontSize: 17, color: '#241a10', background: '#e8d9bb', border: '2px solid #5a4023', borderRadius: 7, padding: '9px 12px' }} />
             </div>

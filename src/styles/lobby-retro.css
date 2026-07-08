@@ -1,0 +1,121 @@
+/* Lobby « terminal MS-DOS / CRT » — habillage 90s du lobby téléphone (LobbyPanel).
+   Tout est scopé sous .lobby90 pour ne rien laisser fuir sur le reste du setup. */
+.lobby90 { font-family: 'VT323', monospace; color: #bfeccb; }
+.lobby90 *, .lobby90 *::before, .lobby90 *::after { box-sizing: border-box; }
+
+/* --- Fenêtre logicielle : barre de titre + corps noir --- */
+.lobby90-win {
+  border: 2px solid #05070a; border-radius: 10px; overflow: hidden;
+  background: #0b0e12;
+  box-shadow: 0 10px 26px rgba(0,0,0,.5), inset 0 0 0 2px #202832;
+}
+.lobby90-titlebar {
+  display: flex; align-items: center; gap: 8px; padding: 5px 9px;
+  background: linear-gradient(#2b3440, #1b222b);
+  border-bottom: 2px solid #05070a;
+}
+.lobby90-rec { width: 10px; height: 10px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 8px #ff3b30; animation: lb90-blink 1.4s steps(1) infinite; }
+.lobby90-tt { font-size: 16px; letter-spacing: 1px; color: #d7e6dc; }
+.lobby90-winbtns { margin-left: auto; display: flex; gap: 4px; }
+.lobby90-winbtn { width: 16px; height: 15px; display: grid; place-items: center; font-size: 11px; background: #c3ccd6; color: #1b222b; border: 1px solid #05070a; border-radius: 2px; }
+
+.lobby90-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+/* --- Écran CRT (QR + instructions + code) --- */
+.lobby90-crt {
+  position: relative; border-radius: 12px; padding: 14px;
+  background: radial-gradient(120% 120% at 50% 12%, #0f2417, #060d09 75%);
+  border: 3px solid #05070a;
+  box-shadow: inset 0 0 34px rgba(0,255,120,.10), inset 0 0 0 2px #16351f, 0 4px 0 rgba(0,0,0,.5);
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap; overflow: hidden;
+}
+.lobby90-crt::after { /* scanlines */
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: 12px;
+  background: repeating-linear-gradient(rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 4px);
+  mix-blend-mode: multiply;
+}
+.lobby90-crt::before { /* halo phosphore */
+  content: ''; position: absolute; top: -30%; left: -10%; width: 70%; height: 60%;
+  background: radial-gradient(closest-side, rgba(120,255,170,.10), transparent); pointer-events: none;
+}
+
+/* Cadre du QR — reste clair pour rester parfaitement scannable */
+.lobby90-qrwrap { position: relative; z-index: 1; text-align: center; }
+.lobby90-qrframe {
+  display: inline-block; padding: 9px; border-radius: 8px; background: #dff6e6; border: 2px solid #16351f;
+  box-shadow: inset 0 0 0 2px #0b0e12, 0 0 16px rgba(0,255,120,.28);
+}
+.lobby90-scanlabel { margin-top: 7px; font-size: 15px; letter-spacing: 2px; color: #66ff8a; text-shadow: 0 0 8px rgba(102,255,138,.6); }
+.lobby90-scanlabel::after { content: '▮'; margin-left: 3px; animation: lb90-blink 1s steps(1) infinite; }
+
+.lobby90-crt-side { position: relative; z-index: 1; flex: 1; min-width: 152px; display: flex; flex-direction: column; gap: 10px; }
+.lobby90-lines { font-size: 17px; line-height: 1.35; color: #7bffa6; text-shadow: 0 0 6px rgba(102,255,138,.45); }
+.lobby90-lines b { color: #d9ffe6; }
+
+/* Afficheur à segments du code de session */
+.lobby90-codelabel { font-size: 14px; letter-spacing: 2px; color: #3ea862; }
+.lobby90-led { display: inline-flex; gap: 5px; padding: 6px 8px; background: #050805; border: 2px solid #16351f; border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,.8); }
+.lobby90-led span {
+  font-size: 30px; line-height: 1; min-width: 22px; text-align: center;
+  color: #ffb64a; text-shadow: 0 0 10px rgba(255,150,40,.85);
+}
+.lobby90-url { font-size: 13px; color: #3ea862; word-break: break-all; max-width: 230px; }
+
+/* --- Liste « CONNECTÉS » façon terminal --- */
+.lobby90-list { border-radius: 8px; background: #060a07; border: 2px solid #16351f; box-shadow: inset 0 0 20px rgba(0,255,120,.06); padding: 8px 10px; }
+.lobby90-list-h { font-size: 15px; letter-spacing: 2px; color: #66ff8a; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.lobby90-list-h::before { content: 'C:\\>'; color: #3ea862; }
+.lobby90-waiting { font-size: 16px; color: #3ea862; }
+.lobby90-waiting::after { content: '_'; animation: lb90-blink 1s steps(1) infinite; }
+.lobby90-row { display: flex; align-items: center; gap: 8px; padding: 4px 4px; border-bottom: 1px dashed rgba(102,255,138,.18); }
+.lobby90-row:last-child { border-bottom: 0; }
+.lobby90-emoji { font-size: 18px; }
+.lobby90-name { flex: 1; min-width: 0; font-size: 18px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lobby90-sub { font-size: 13px; color: #3ea862; white-space: nowrap; }
+.lobby90-dot { color: #66ff8a; text-shadow: 0 0 8px rgba(102,255,138,.7); }
+.lobby90-cursor::after { content: '▮'; color: #66ff8a; animation: lb90-blink 1s steps(1) infinite; }
+.lobby90-x { background: #2a0e0c; color: #ff8a7a; border: 1px solid #05070a; border-radius: 3px; font-size: 15px; width: 22px; height: 22px; cursor: pointer; flex: 0 0 auto; }
+.lobby90-x:hover { background: #4a1512; }
+
+/* --- Bouton DÉMARRER : gros bouton arcade lumineux --- */
+.lobby90-start {
+  width: 100%; cursor: pointer;
+  font-family: 'Archivo Black', 'VT323', monospace; font-size: 20px; letter-spacing: 2px;
+  color: #06210f; text-transform: uppercase; padding: 14px 12px; border-radius: 10px;
+  background: linear-gradient(#8effb0, #34c85a 55%, #199a3f);
+  border: 3px solid #05070a;
+  box-shadow: 0 6px 0 #0d5f27, 0 8px 16px rgba(52,200,90,.4), inset 0 2px 0 rgba(255,255,255,.5);
+  animation: lb90-glow 1.8s ease-in-out infinite;
+}
+.lobby90-start:hover { filter: brightness(1.06); }
+.lobby90-start:active { transform: translateY(4px); box-shadow: 0 2px 0 #0d5f27, inset 0 2px 6px rgba(0,0,0,.3); }
+.lobby90-start:disabled { cursor: not-allowed; filter: grayscale(.7) brightness(.8); animation: none; box-shadow: 0 6px 0 #333, inset 0 2px 0 rgba(255,255,255,.2); color: #2a3a2e; }
+
+/* Bouton secondaire terminal (Ouvrir le lobby) */
+.lobby90-btn {
+  cursor: pointer; font-size: 18px; letter-spacing: 1px; color: #06210f; text-transform: uppercase;
+  padding: 10px 16px; border-radius: 8px; background: linear-gradient(#8effb0, #2fb551);
+  border: 3px solid #05070a; box-shadow: 0 4px 0 #0d5f27, inset 0 2px 0 rgba(255,255,255,.5);
+}
+.lobby90-btn:hover { filter: brightness(1.06); }
+.lobby90-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #0d5f27; }
+.lobby90-btn:disabled { filter: grayscale(.6) brightness(.85); cursor: not-allowed; }
+
+/* État hors-ligne (pas encore de session) */
+.lobby90-offline { font-size: 17px; color: #7bffa6; text-shadow: 0 0 6px rgba(102,255,138,.4); line-height: 1.45; }
+.lobby90-offline b { color: #ffb64a; }
+.lobby90-err { font-size: 15px; color: #ff8a7a; text-shadow: 0 0 6px rgba(255,80,60,.4); }
+
+/* Bloc simulation (dev/outils) */
+.lobby90-sim { border: 2px dashed #16351f; border-radius: 8px; padding: 8px 10px; background: #060a07; }
+.lobby90-sim-h { font-size: 14px; letter-spacing: 1px; color: #e8a13a; margin-bottom: 6px; }
+.lobby90-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.lobby90-chip { font-family: 'VT323', monospace; font-size: 14px; color: #bfeccb; background: #0d1712; border: 1px solid #16351f; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+.lobby90-chip:hover { background: #14251b; }
+.lobby90-sim-desc { font-size: 13px; color: #3ea862; margin-top: 5px; line-height: 1.3; }
+
+@keyframes lb90-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+@keyframes lb90-glow {
+  0%, 100% { box-shadow: 0 6px 0 #0d5f27, 0 8px 16px rgba(52,200,90,.35), inset 0 2px 0 rgba(255,255,255,.5); }
+  50% { box-shadow: 0 6px 0 #0d5f27, 0 8px 26px rgba(80,255,140,.7), inset 0 2px 0 rgba(255,255,255,.55); }
+}

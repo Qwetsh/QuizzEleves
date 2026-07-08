@@ -1500,7 +1500,7 @@ export default function BalanceEditor({ onClose }) {
                   {subtab === 'textes' && (
                     <>
                       <div className="qed-field">
-                        <label className="qed-label">Description simple (vue par les élèves)</label>
+                        <label className="qed-label">Description simple (vue par les joueurs)</label>
                         <textarea className="qed-textarea" value={draft.desc} onChange={(ev) => set({ desc: ev.target.value })}
                           placeholder="Effet en clair, sans chiffres (le détail exact est sous le bouton « Détail de l'effet »)." />
                       </div>
