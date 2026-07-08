@@ -4,6 +4,7 @@ import { EVENTS } from '../data/events.js';
 import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES } from '../data/subjects.js';
 import { POWERS, addCharge, MAX_CHARGES } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
+import { composeSpaceBoard } from '../logic/mapComposer.js';
 import { generateDecor } from '../logic/decorGenerator.js';
 import { moveForward, moveBack } from '../logic/pathfinding.js';
 import { boardCategoriesFor } from '../logic/boardCategories';
@@ -325,6 +326,9 @@ export const useGameStore = create((set, get) => ({
   classLabel: '',
   setClassLabel: (v) => { if (get().phase === 'setup') set({ classLabel: String(v || '').slice(0, 40) }); },
 
+  // Style de carte des nouvelles parties (toggle DEV) : 'space' | 'legacy'
+  setMapStyle: (v) => set({ mapStyle: v === 'legacy' ? 'legacy' : 'space' }),
+
   nbTeams: 3,
   setNbTeams: (n) => set({ nbTeams: n, setupTeams: createDefaultTeams(n) }),
 
@@ -413,6 +417,13 @@ export const useGameStore = create((set, get) => ({
   currentTeam: 0,
   board: null,
   boardDecor: null,
+  // Mode « espace » (maps v2) : couches de rendu (continents, socles par case,
+  // étoiles/nébuleuses/constellations). null = plateau procédural legacy —
+  // c'est CE champ (persisté) qui pilote le mode de rendu de BoardSVG.
+  boardSpace: null,
+  // Style de carte pour les NOUVELLES parties : 'space' (défaut) | 'legacy'
+  // (île/océan procédural, conservé derrière le toggle DEV le temps du chantier).
+  mapStyle: 'space',
   viewBox: { w: 2400, h: 620 },
   finished: false,
   askedQuestions: {},
@@ -727,7 +738,11 @@ export const useGameStore = create((set, get) => ({
         if (!SUBJECTS[key]) SUBJECTS[key] = cat;
       }
     }
-    const { nodes, viewBox } = generateBoard({ ...boardParams, subjects: boardSubjects });
+    // Plateau : espace (continents flottants, défaut) ou procédural legacy
+    const useSpace = get().mapStyle !== 'legacy';
+    const { nodes, viewBox, space } = useSpace
+      ? composeSpaceBoard({ ...boardParams, subjects: boardSubjects })
+      : generateBoard({ ...boardParams, subjects: boardSubjects });
     const forgeOn = extOn(get().extensions, 'forge');
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
@@ -751,7 +766,8 @@ export const useGameStore = create((set, get) => ({
       phase: 'powerSelect', teams, board: nodes, viewBox, questions,
       boardSubjects,
       categoryPools,
-      boardDecor: generateDecor(nodes),
+      boardDecor: useSpace ? null : generateDecor(nodes),
+      boardSpace: useSpace ? space : null,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       // Journal analytique neuf pour cette partie (cf. recordStat / dashboard).
       gameStats: {
@@ -2202,7 +2218,8 @@ export const useGameStore = create((set, get) => ({
   // --- Dev : simulateur de combat (localhost uniquement, voir Setup) ---
   devStartFight: (subject, forceDefault = false) => {
     const { setupTeams, boardParams, level, useBrevet } = get();
-    const { nodes, viewBox } = generateBoard(boardParams);
+    const useSpace = get().mapStyle !== 'legacy';
+    const { nodes, viewBox, space } = useSpace ? composeSpaceBoard(boardParams) : generateBoard(boardParams);
     // Deux equipes de test, equipees pour rendre la recompense interessante
     const forgeOn = extOn(get().extensions, 'forge');
     const teams = setupTeams.slice(0, 2).map((t) => ({
@@ -2220,7 +2237,8 @@ export const useGameStore = create((set, get) => ({
     set({
       devSandbox: true,
       phase: 'game', teams, board: nodes, viewBox, questions,
-      boardDecor: generateDecor(nodes),
+      boardDecor: useSpace ? null : generateDecor(nodes),
+      boardSpace: useSpace ? space : null,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       ...TURN_RESET, movePath: null,
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
@@ -3388,9 +3406,13 @@ export const useGameStore = create((set, get) => ({
     const dec = get().boardDecor;
     const oldFormat = !dec?.length
       || dec.some((d) => ('layer' in d) || /^(pont|plage|bridge|clairiere|disc)-/.test(d.img || ''));
-    if (get().board && oldFormat) {
+    // (le décor procédural ne concerne que le mode legacy — une save « espace »
+    // porte boardSpace et n'a pas de decor à régénérer)
+    if (get().board && oldFormat && !get().boardSpace) {
       set({ boardDecor: generateDecor(get().board) });
     }
+    // Saves antérieures au mode espace : champ absent → legacy explicite.
+    if (saved.boardSpace === undefined) set({ boardSpace: null });
     // Extensions : une save porte son propre jeu d'extensions. Sauvegardes
     // antérieures (champ absent) → tout activé (comportement historique).
     if (saved.extensions == null) set({ extensions: defaultExtensions() });
@@ -3410,7 +3432,7 @@ export const useGameStore = create((set, get) => ({
     if (!get().devSandbox) clearSave();
     set({
       devSandbox: false,
-      phase: 'setup', teams: [], currentTeam: 0, board: null, boardDecor: null, finished: false,
+      phase: 'setup', teams: [], currentTeam: 0, board: null, boardDecor: null, boardSpace: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
       shopStock: [], shopStockTurns: 0,
       starterChestConfig: defaultStarterChestConfig(), starterGold: null,

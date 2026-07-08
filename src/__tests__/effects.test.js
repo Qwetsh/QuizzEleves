@@ -163,6 +163,45 @@ describe('actions : or', () => {
     expect(team(1).money).toBe(40);
     expect(team(0).money).toBe(60);
   });
+
+  // --- Feedback bourse vide / vol partiel ---
+  const lastLogText = () => {
+    const last = S().log.at(-1);
+    return typeof last === 'string' ? last : last.text;
+  };
+
+  it('steal sur bourse vide : rien transféré + message « bourse vide »', () => {
+    freshGame([{}, { money: 0 }]);
+    exec([{ action: 'money', mode: 'steal', target: 'target', n: 10, unit: 'flat' }], { source: 'item' });
+    S().selectTarget(1);
+    expect(team(0).money).toBe(50);
+    expect(team(1).money).toBe(0);
+    expect(lastLogText()).toMatch(/bourse vide/i);
+  });
+
+  it('steal partiel (bourse < montant visé) : plafonné et signalé', () => {
+    freshGame([{}, { money: 4 }]);
+    exec([{ action: 'money', mode: 'steal', target: 'target', n: 10, unit: 'flat' }], { source: 'item' });
+    S().selectTarget(1);
+    expect(team(1).money).toBe(0);
+    expect(team(0).money).toBe(54);
+    expect(lastLogText()).toMatch(/vide la bourse/i);
+    expect(lastLogText()).toMatch(/sur 10/);
+  });
+
+  it('lose plafonné à la bourse : le journal donne la perte réelle', () => {
+    freshGame([{ money: 3 }, {}]);
+    exec([{ action: 'money', mode: 'lose', target: 'self', n: 10, unit: 'flat' }], { source: 'item' });
+    expect(team(0).money).toBe(0);
+    expect(lastLogText()).toMatch(/perd 3 pièces — toute sa bourse/);
+  });
+
+  it('lose sur bourse vide : message explicite (pas « perd 10 »)', () => {
+    freshGame([{ money: 0 }, {}]);
+    exec([{ action: 'money', mode: 'lose', target: 'self', n: 10, unit: 'flat' }], { source: 'item' });
+    expect(team(0).money).toBe(0);
+    expect(lastLogText()).toMatch(/bourse déjà vide/i);
+  });
 });
 
 // --- Déplacement -------------------------------------------------------

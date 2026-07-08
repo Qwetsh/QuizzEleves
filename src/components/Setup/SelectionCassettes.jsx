@@ -21,6 +21,7 @@ import '../../styles/cassettes.css';
 import cassetteTop from '../../assets/cassette-top.png';
 import separatorPlaque from '../../assets/separator-plaque.png';
 import { useGameStore } from '../../store/gameStore';
+import { useAudioStore } from '../../store/audioStore';
 import { themesToCassetteModel, buildPerimeter } from '../../logic/perimeter';
 import { getQuestions } from '../../data/questions';
 // Composants Setup existants hébergés dans les panneaux de la console.
@@ -280,6 +281,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   };
   const englishMode = useGameStore((s) => s.englishMode);
   const setEnglishMode = useGameStore((s) => s.setEnglishMode);
+  const audioMuted = useAudioStore((s) => s.muted);
+  const toggleAudioMuted = useAudioStore((s) => s.toggleMuted);
   const classLabel = useGameStore((s) => s.classLabel);
   const setClassLabel = useGameStore((s) => s.setClassLabel);
   const connectionMode = useGameStore((s) => s.connectionMode);
@@ -670,7 +673,6 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
       <button key={it.id} data-card="1"
         onPointerDown={isLoaded ? undefined : (ev) => startDrag(it.id, ev)}
         onClick={isLoaded ? undefined : () => onTap(it.id)}
-        onMouseEnter={enter} onMouseLeave={leave}
         onFocus={enter} onBlur={leave}
         title={isLoaded ? `${it.label} — déjà dans le Curioscope` : `${it.label} — glisse-moi dans le Curioscope`}
         className={`qm-slab${isFocus ? ' is-focus' : ''}${mini ? ' qm-slab--mini' : ''}`}
@@ -899,6 +901,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
             <div style={{ flex: 1 }} />
             {/* Le nom de classe est demandé dans le menu de lancement (il ne sert
                 qu'aux statistiques d'une partie jouée avec des élèves). */}
+            <button onClick={toggleAudioMuted} title={audioMuted ? 'Rétablir le son' : 'Couper le son'} aria-label={audioMuted ? 'Rétablir le son' : 'Couper le son'} style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: audioMuted ? '#3a1a1d' : '#3a2c1a', color: audioMuted ? '#e88f8f' : '#e3d0aa' }}>{audioMuted ? '🔇 SON' : '🔊 SON'}</button>
             <button onClick={() => setEnglishMode(!englishMode)} title="Langue des questions" style={{ fontFamily: FONT_MONO, fontSize: 15, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: englishMode ? '#16331a' : '#3a2c1a', color: englishMode ? '#9be88f' : '#e3d0aa' }}>{englishMode ? '🇬🇧 EN ✓' : '🇬🇧 FR'}</button>
           </div>
         )}
@@ -984,8 +987,39 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                                     // (cartes glissées de SLIDE, ou face seule si dernière carte)
                                     // → la plaque du rayon suivant est POUSSÉE, pas recouverte.
                                     const extra = hIdx < 0 ? 0 : (hIdx < vis.length - 1 ? SLIDE : FACE_CLEAR);
+                                    // Survol piloté par la POSITION du curseur (pas par mouseenter/leave
+                                    // sur des cibles qui bougent → timing capricieux, cible qui « fuit »
+                                    // en descendant). Chaque K7 possède sa tranche PUIS l'espace de sa
+                                    // face déployée (SLIDE, comme l'éventail visible) : on résout
+                                    // mathématiquement la cassette visée. Modèle continu → aucun saut,
+                                    // stable dans les deux sens. L'updater fonctionnel lit l'état le plus
+                                    // frais (pas de closure périmée en mouvement rapide).
+                                    const stripH = (it) => (it.depth >= 2 ? Math.round(STRIP * 0.5) : STRIP);
+                                    const tops = []; { let acc = 0; for (const it of vis) { tops.push(acc); acc += stripH(it); } }
+                                    const domain = g.domain;
+                                    const onStackMove = (e) => {
+                                      if (drag) return;
+                                      const el = e.currentTarget;
+                                      const rect = el.getBoundingClientRect();
+                                      const scale = (el.offsetHeight ? rect.height / el.offsetHeight : 1) || 1;
+                                      const y = (e.clientY - rect.top) / scale - 12; // 12 = padding-top de la pile
+                                      const n = vis.length;
+                                      setHoverTape((prev) => {
+                                        const cur = (prev && prev.domain === domain) ? prev.idx : -1;
+                                        let next;
+                                        if (cur < 0) { next = 0; for (let i = 0; i < n; i++) if (tops[i] <= y) next = i; }
+                                        else if (y < tops[cur]) { next = 0; for (let i = 0; i < cur; i++) if (tops[i] <= y) next = i; }
+                                        else if (y >= tops[cur] + stripH(vis[cur]) + SLIDE) { next = cur; for (let j = cur + 1; j < n; j++) if (tops[j] + SLIDE <= y) next = j; }
+                                        else next = cur;
+                                        if (next < 0 || next >= n) return prev;
+                                        if (prev && prev.domain === domain && prev.idx === next) return prev;
+                                        return { domain, idx: next };
+                                      });
+                                    };
+                                    const clearHover = () => setHoverTape((h) => (h && h.domain === domain ? null : h));
                                     return (
-                                      <div className="qm-stack" style={{ padding: '12px 6px 8px', paddingBottom: 8 + extra, transition: 'padding-bottom .3s cubic-bezier(.32,1.15,.5,1)' }}>
+                                      <div className="qm-stack" onMouseMove={onStackMove} onMouseLeave={clearHover}
+                                        style={{ padding: '12px 6px 8px', paddingBottom: 8 + extra, transition: 'padding-bottom .3s cubic-bezier(.32,1.15,.5,1)' }}>
                                         {vis.map((it, idx) => renderCassette(it, dom, idx, hIdx, it.depth >= 1 && hasKids(it.id)))}
                                       </div>
                                     );

@@ -106,6 +106,39 @@
 .rg-tv-pwr-led { width: 11px; height: 11px; border-radius: 50%; background: #e8342c; box-shadow: 0 0 10px #e8342c; animation: rg-led-blink 3s infinite; }
 .rg-tv-pwr-txt { font-family: 'VT323', monospace; font-size: 12px; color: #8b9096; }
 
+/* Réglage du son — bouton sur le bandeau TV + panneau flottant */
+.rg-vol { position: relative; display: flex; }
+.rg-vol-btn { gap: 7px; }
+.rg-vol-ico { font-size: 16px; line-height: 1; }
+.rg-vol-pop {
+  position: absolute; bottom: calc(100% + 12px); right: 0;
+  width: 236px; padding: 12px 13px 13px;
+  background: linear-gradient(#20242a, #14171b);
+  border: 2px solid #0a0c0f; border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.08);
+  z-index: 120;
+  display: flex; flex-direction: column; gap: 11px;
+}
+.rg-vol-pop::after {
+  content: ''; position: absolute; top: 100%; right: 26px;
+  border: 8px solid transparent; border-top-color: #14171b;
+}
+.rg-vol-pop__title {
+  font-family: 'VT323', monospace; font-size: 15px; letter-spacing: 1px;
+  color: #66ff8a; text-align: center; text-shadow: 0 0 8px rgba(102,255,138,.4);
+}
+.rg-vol-row { display: grid; grid-template-columns: 82px 1fr 30px; align-items: center; gap: 8px; }
+.rg-vol-row > span { font-family: 'VT323', monospace; font-size: 15px; color: #d7dce1; }
+.rg-vol-row > b { font-family: 'VT323', monospace; font-size: 14px; color: #8b9096; text-align: right; font-weight: normal; }
+.rg-vol-row input[type=range] { width: 100%; accent-color: #66ff8a; cursor: pointer; }
+.rg-vol-row input[type=range]:disabled { opacity: .4; cursor: not-allowed; }
+.rg-vol-mute {
+  font-family: 'VT323', monospace; font-size: 14px; letter-spacing: .5px; color: #efe3c6;
+  background: #2a1416; border: 2px solid #0a0c0f; border-radius: 8px;
+  padding: 7px; cursor: pointer;
+}
+.rg-vol-mute:hover { background: #3a1a1d; }
+
 /* ------------------------------------------------------ plaques & boutons */
 /* Plaque crème générique (badge équipe, boutons flottants, boutons du rail). */
 .rg-btn {

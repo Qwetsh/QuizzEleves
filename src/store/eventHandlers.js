@@ -763,12 +763,16 @@ export function applyEventEffect(set, get) {
         // Banque fortifiée (Bouclier L10) : or impossible à voler.
         const vaulted = target.powers?.bouclier?.spec10 === 'goldVault';
         // Equipement de la cible (stealProtection) : vol attenue voire annule
-        const stolen = vaulted ? 0 : reducedSteal(target, Math.min(10, target.money ?? 0));
+        const purse = target.money ?? 0;
+        const stolen = vaulted ? 0 : reducedSteal(target, Math.min(10, purse));
         newTeams[targetIndex] = { ...target, money: target.money - stolen };
         newTeams[currentTeam] = { ...team, money: team.money + stolen };
+        // Bourse vide ≠ protection : deux messages distincts.
         message = stolen > 0
           ? tg('log.ev.volArgent', { emoji: team.emoji, name: team.name, stolen, vemoji: target.emoji, vname: target.name })
-          : tg('log.ev.volArgentProt', { vemoji: target.emoji, vname: target.name });
+          : (!vaulted && purse <= 0)
+            ? tg('log.ev.volArgentEmpty', { vemoji: target.emoji, vname: target.name })
+            : tg('log.ev.volArgentProt', { vemoji: target.emoji, vname: target.name });
       }
       break;
     }

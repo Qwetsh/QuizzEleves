@@ -19,3 +19,7 @@ backups/
 
 # Captures temporaires de design (DesignSync / tests visuels)
 .tmp-*
+
+# Fichiers de travail design des cartes (blockout, détourages sources, captures
+# de contrôle) — lourds (~340 Mo) et non utilisés à l'exécution. Restent en local.
+map-design/

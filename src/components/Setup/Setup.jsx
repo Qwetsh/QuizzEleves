@@ -33,6 +33,8 @@ import { OFFLINE } from '../../logic/offline';
 function DevFightPanel() {
   const devStartFight = useGameStore((s) => s.devStartFight);
   const showLoot = useGameStore((s) => s.showLoot);
+  const mapStyle = useGameStore((s) => s.mapStyle);
+  const setMapStyle = useGameStore((s) => s.setMapStyle);
 
   const revealRandomLoot = () => {
     const keys = Object.keys(ITEMS);
@@ -79,6 +81,18 @@ function DevFightPanel() {
           style={{ gridColumn: '1 / -1', justifyContent: 'center' }}
         >
           {"\u{1F381} Aperçu gain d'objet"}
+        </button>
+      </div>
+
+      {/* Rendu de carte : espace (maps v2, défaut) vs île/océan procédural
+          (legacy, conservé le temps de valider le mode espace en classe) */}
+      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{'\u{1FA90}'} Rendu de carte :</span>
+        <button
+          onClick={() => setMapStyle(mapStyle === 'legacy' ? 'space' : 'legacy')}
+          className="btn btn--ghost btn--sm"
+        >
+          {mapStyle === 'legacy' ? '\u{1F3DD}\u{FE0F} Île / océan (legacy)' : '\u{1F30C} Espace (continents flottants)'}
         </button>
       </div>
 

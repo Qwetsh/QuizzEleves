@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useGameStore } from './store/gameStore';
 import { AnimatePresence, motion } from 'framer-motion';
 import { setLang } from './i18n';
+import { playMusic } from './logic/music';
 import Setup from './components/Setup/Setup';
 import PowerSetup from './components/Setup/PowerSetup';
 import GameLayout from './components/Game/GameLayout';
@@ -28,6 +29,12 @@ export default function App() {
   // mauvaise langue au moindre basculement live (accueil).
   const englishMode = useGameStore((s) => s.englishMode);
   setLang(englishMode ? 'en' : 'fr');
+
+  // Musique de fond : « Stellar Drift » en jeu, « Star Map Menu » partout ailleurs
+  // (accueil, sélection, choix des pouvoirs). Fondu enchaîné géré par music.js.
+  useEffect(() => {
+    playMusic(phase === 'game' ? 'game' : 'menu');
+  }, [phase]);
 
   return (
     <div className="absolute inset-0 no-select" style={{ fontFamily: 'var(--font-ui)' }}>

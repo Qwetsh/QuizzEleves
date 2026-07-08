@@ -3,6 +3,7 @@ import { motion, useMotionValue, useSpring, AnimatePresence } from 'framer-motio
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { NODE_RADIUS, TILE_SCALE, islandCircles as buildIslandCircles, bezierPoint } from '../../logic/boardGeometry';
+import { SPACE_ASSET_DIMS, SOCLE_W, ILOT_W, SOCLE_TOP_DY, ILOT_TOP_DY, SPECIAL_CASE_ASSET, CASE_W_CONTINENT, CASE_W_SPACE, CASE_TOP_DY, PIEGE_W } from '../../data/maps/espace.js';
 import { getPendingMalus } from '../../logic/teamStatus';
 import { useT } from '../../i18n';
 
@@ -12,6 +13,15 @@ const BOARD_ASSETS = Object.fromEntries(
   Object.entries(BOARD_ASSET_URLS).map(([p, url]) => [p.split('/').pop().replace(/\.(png|jpg)$/, ''), url])
 );
 const bimg = (name) => BOARD_ASSETS[name];
+
+// Assets de l'univers « espace » (maps v2) — socles/îlots en PNG
+// (scripts/space-assets.mjs), continents thématiques en WebP
+// (scripts/space-continents.mjs).
+const SPACE_ASSET_URLS = import.meta.glob('../../assets/space/*.{png,webp}', { eager: true, query: '?url', import: 'default' });
+const SPACE_ASSETS = Object.fromEntries(
+  Object.entries(SPACE_ASSET_URLS).map(([p, url]) => [p.split('/').pop().replace(/\.(png|webp)$/, ''), url])
+);
+const simg = (name) => SPACE_ASSETS[name];
 
 // Taille (en unités viewBox) d'une tuile de la texture d'herbe
 const GRASS_TILE = 460;
@@ -254,6 +264,118 @@ const Terrain = React.memo(function Terrain({ board, islandCircles, viewBox }) {
   );
 });
 
+// --- Mode « espace » (maps v2) : fond spatial + continents flottants ---
+// Toutes les données (étoiles, nébuleuses, constellations, position des
+// continents) viennent du mapComposer et sont persistées avec la partie :
+// le rendu est pur et stable au resume.
+
+// Lévitation : bob vertical très léger et asynchrone (paramètres amp/durée/
+// déphasage générés par le mapComposer, persistés). Les socles d'un continent
+// partagent le float de leur continent — ils bobbent EN PHASE avec lui.
+// (keyframes sp-float dans le <style> du composant principal)
+const floatStyle = (f) => (f ? {
+  animation: `sp-float ${f.dur}s ease-in-out ${f.delay}s infinite`,
+  '--sp-amp': `${f.amp}px`,
+} : undefined);
+
+// Traînée d'étoiles entre deux cases dont l'une au moins flotte dans l'espace
+// (sur un continent, le chemin est déjà peint dans l'illustration).
+function StardustTrail({ x0, y0, x1, y1 }) {
+  const cx = x0 + (x1 - x0) * 0.5;
+  const d = `M ${x0} ${y0} C ${cx} ${y0}, ${cx} ${y1}, ${x1} ${y1}`;
+  return (
+    <>
+      <path d={d} fill="none" stroke="#cbb8ff" strokeWidth={7} strokeLinecap="round"
+        strokeDasharray="0.5 22" opacity={0.18} />
+      <path d={d} fill="none" stroke="#efe6ff" strokeWidth={3} strokeLinecap="round"
+        strokeDasharray="0.5 22" opacity={0.55} />
+    </>
+  );
+}
+
+const SpaceTerrain = React.memo(function SpaceTerrain({ space, board, viewBox }) {
+  const hues = [...new Set((space.nebulae || []).map((n) => n.hue))];
+  const isIlot = (id) => (space.socles?.[id] || '').startsWith('ilot');
+  return (
+    <>
+      <defs>
+        <filter id="glow-active">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <linearGradient id="sp-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#241245" />
+          <stop offset="45%" stopColor="#2e1a55" />
+          <stop offset="100%" stopColor="#170b30" />
+        </linearGradient>
+        {hues.map((h) => (
+          <radialGradient key={h} id={`sp-neb-${h}`}>
+            <stop offset="0%" stopColor={`hsla(${h}, 78%, 62%, 0.30)`} />
+            <stop offset="55%" stopColor={`hsla(${h}, 80%, 52%, 0.12)`} />
+            <stop offset="100%" stopColor={`hsla(${h}, 80%, 50%, 0)`} />
+          </radialGradient>
+        ))}
+      </defs>
+
+      {/* Fond : dégradé profond, débordant du viewBox (marges du <svg>) */}
+      <rect x={-70} y={-12} width={viewBox.w + 110} height={viewBox.h + 24} fill="url(#sp-bg)" />
+
+      {/* Nébuleuses */}
+      {(space.nebulae || []).map((n, i) => (
+        <circle key={i} cx={n.x} cy={n.y} r={n.r} fill={`url(#sp-neb-${n.hue})`} />
+      ))}
+
+      {/* Champ d'étoiles (~8% scintillent) */}
+      <g fill="#fff">
+        {(space.stars || []).map((s, i) => (
+          <circle key={i} cx={s.x} cy={s.y} r={s.r} opacity={s.tw ? 0.9 : 0.22 + (s.r - 0.7) * 0.3}>
+            {s.tw === 1 && (
+              <animate attributeName="opacity" values="0.9;0.15;0.9" dur={`${2.2 + (i % 5) * 0.7}s`} repeatCount="indefinite" />
+            )}
+          </circle>
+        ))}
+      </g>
+
+      {/* Constellations (derrière les continents) */}
+      <g stroke="rgba(216, 195, 255, 0.30)" strokeWidth={2}>
+        {(space.constellations || []).map((c, ci) => (
+          <g key={ci}>
+            {c.links.map(([a, b], li) => (
+              <line key={li} x1={c.pts[a].x} y1={c.pts[a].y} x2={c.pts[b].x} y2={c.pts[b].y} />
+            ))}
+            {c.pts.map((p, pi) => (
+              <g key={pi} stroke="none">
+                <circle cx={p.x} cy={p.y} r={7} fill="rgba(216, 195, 255, 0.18)" />
+                <circle cx={p.x} cy={p.y} r={2.6} fill="#eee4ff" />
+              </g>
+            ))}
+          </g>
+        ))}
+      </g>
+
+      {/* Continents flottants (lévitation asynchrone) */}
+      {(space.layers || []).map((l, i) => (
+        <g key={i} style={floatStyle(l.float)}>
+          <image href={simg(l.img)} x={l.x} y={l.y} width={l.w} height={l.h} />
+        </g>
+      ))}
+
+      {/* Traînées d'étoiles entre les cases de l'espace */}
+      {Object.entries(board).map(([id, node]) =>
+        node.next.map((toId) => {
+          const target = board[toId];
+          if (!target) return null;
+          if (!isIlot(id) && !isIlot(toId)) return null; // chemin peint sur le continent
+          return <StardustTrail key={`${id}-${toId}`} x0={node.x} y0={node.y} x1={target.x} y1={target.y} />;
+        })
+      )}
+    </>
+  );
+});
+
 // Props thématiques + tuiles des cases : une seule couche triée par Y pour
 // des chevauchements cohérents (prop devant une case → dessiné par-dessus,
 // prop derrière → masqué par la tuile)
@@ -271,7 +393,7 @@ const DecorImage = ({ d, i }) => {
   );
 };
 
-const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon, inspectTrapAt, trapTitle }) {
+const BoardItems = React.memo(function BoardItems({ board, boardDecor, space, choiceNodes, chooseJunction, tilePicking, selectTile, tilePickIcon, inspectTrapAt, trapTitle }) {
   return [
     ...(boardDecor || []).flatMap((d, i) => {
       if (!bimg(d.img)) return [];
@@ -283,7 +405,52 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
 
       // Visuel selon le type de case — largeurs depuis boardGeometry.TILE_SCALE
       let tile = null;
-      if (node.type === 'depart') {
+      // Mode espace : socle pierre (continent) ou îlot rocheux (espace), NU —
+      // aucune indication de thème (choix de design maps v2). L'ancre logique
+      // (node.x, node.y) est le centre de la FACE du socle, pas de l'image
+      // (les îlots traînent des débris flottants sous eux). Les cases SPÉCIALES
+      // (départ/arrivée/événement) ont leur propre plateforme gravée.
+      let socleEl = null;
+      if (space) {
+        const socleKey = space.socles?.[id];
+        const onContinent = (socleKey || '').startsWith('socle');
+        const specialKey = SPECIAL_CASE_ASSET[node.type];
+        if (specialKey && simg(specialKey)) {
+          // Plateforme dédiée : remplace le socle générique (pas de monument/badge)
+          const dims = SPACE_ASSET_DIMS[specialKey];
+          const w = onContinent ? CASE_W_CONTINENT : CASE_W_SPACE;
+          const h = (w * dims.h) / dims.w;
+          const topDy = CASE_TOP_DY * h;
+          socleEl = (
+            <image
+              href={simg(specialKey)}
+              x={node.x - w / 2}
+              y={node.y - topDy - h / 2}
+              width={w}
+              height={h}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          );
+        } else {
+          const dims = socleKey && SPACE_ASSET_DIMS[socleKey];
+          if (dims && simg(socleKey)) {
+            const ilot = socleKey.startsWith('ilot');
+            const w = ilot ? ILOT_W : SOCLE_W;
+            const h = (w * dims.h) / dims.w;
+            const topDy = (ilot ? ILOT_TOP_DY : SOCLE_TOP_DY) * h;
+            socleEl = (
+              <image
+                href={simg(socleKey)}
+                x={node.x - w / 2}
+                y={node.y - topDy - h / 2}
+                width={w}
+                height={h}
+                preserveAspectRatio="xMidYMid meet"
+              />
+            );
+          }
+        }
+      } else if (node.type === 'depart') {
         // Monument à la rose des vents (pierre + drapeau doré + laurier)
         tile = { src: bimg('socle-depart-v2'), w: r * 4.4, dy: -r * 0.85 };
       } else if (node.type === 'arrivee') {
@@ -308,7 +475,11 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
           key={id}
           className={pickable ? 'tile-pick' : undefined}
           onClick={isChoice ? () => chooseJunction(id) : (pickable ? () => selectTile(id) : undefined)}
-          style={{ cursor: (isChoice || pickable) ? 'pointer' : 'default' }}
+          style={{
+            cursor: (isChoice || pickable) ? 'pointer' : 'default',
+            // lévitation : la case bobbe avec son continent (ou en solo si îlot)
+            ...(space ? floatStyle(space.nodeFloat?.[id]) : null),
+          }}
         >
           {isChoice && <ChoiceHighlight cx={node.x} cy={node.y} r={r} />}
           {pickable && (
@@ -330,6 +501,7 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
             </>
           )}
 
+          {socleEl}
           {tile && tile.src ? (
             <image
               href={tile.src}
@@ -339,7 +511,7 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
               height={tile.w}
               preserveAspectRatio="xMidYMid meet"
             />
-          ) : (
+          ) : socleEl ? null : (
             // Filet de sécurité si un asset manque : couleur + emoji lisibles
             <>
               <circle cx={node.x} cy={node.y} r={r} fill={SUBJECTS[node.subject]?.color || '#d9cda5'} stroke="#a3946f" strokeWidth={2} />
@@ -355,13 +527,37 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, choiceNod
             </>
           )}
 
+          {/* Mode espace : la plateforme case-event porte déjà les symboles
+              d'événement → plus de badge coffre (l'asset se suffit). */}
           {node.trap && (
             <g style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); inspectTrapAt?.(id); }}>
               <title>{trapTitle}</title>
-              <circle cx={node.x} cy={node.y - r * 0.9} r={r * 0.42} fill="#2b1c10" stroke="#c9472f" strokeWidth={2} opacity={0.92} />
-              <text x={node.x} y={node.y - r * 0.9 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.5} style={{ pointerEvents: 'none' }}>
-                {node.trap.icon || '\u{1FAA4}'}
-              </text>
+              {simg('piege') ? (
+                // Marqueur de piège dédié (plateforme d'énergie), flottant au-dessus
+                (() => {
+                  const pd = SPACE_ASSET_DIMS.piege;
+                  const pw = PIEGE_W;
+                  const ph = (pw * pd.h) / pd.w;
+                  return (
+                    <image
+                      href={simg('piege')}
+                      x={node.x - pw / 2}
+                      y={node.y - r * 0.9 - ph / 2}
+                      width={pw}
+                      height={ph}
+                      preserveAspectRatio="xMidYMid meet"
+                      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
+                    />
+                  );
+                })()
+              ) : (
+                <>
+                  <circle cx={node.x} cy={node.y - r * 0.9} r={r * 0.42} fill="#2b1c10" stroke="#c9472f" strokeWidth={2} opacity={0.92} />
+                  <text x={node.x} y={node.y - r * 0.9 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={r * 0.5} style={{ pointerEvents: 'none' }}>
+                    {node.trap.icon || '\u{1FAA4}'}
+                  </text>
+                </>
+              )}
             </g>
           )}
         </g>
@@ -377,6 +573,7 @@ export default function BoardSVG() {
   const T = useT();
   const board = useGameStore((s) => s.board);
   const boardDecor = useGameStore((s) => s.boardDecor);
+  const boardSpace = useGameStore((s) => s.boardSpace);
   const viewBox = useGameStore((s) => s.viewBox);
   const teams = useGameStore((s) => s.teams);
   const awaitingChoice = useGameStore((s) => s.awaitingChoice);
@@ -431,15 +628,21 @@ export default function BoardSVG() {
     const scale = svgWidth / viewBox.w;
     const targetPixelX = node.x * scale;
 
-    // Center the pawn in the container
+    // Center the pawn in the container. En mode espace le plateau est aussi
+    // HAUT (éventail de continents parallèles) : on centre également en y.
     const scrollTarget = targetPixelX - containerWidth / 2;
-    container.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
+    const scrollTargetY = node.y * scale - container.clientHeight / 2;
+    container.scrollTo({ left: Math.max(0, scrollTarget), top: Math.max(0, scrollTargetY), behavior: 'smooth' });
   }, [board, teams, currentTeam, viewBox]);
 
   // Île procédurale : cercles disposés le long des cases et des chemins
   // (boardGeometry, partagé avec decorGenerator), fusionnés en forme
   // organique par le filtre "gooey" (blur + seuil alpha).
-  const islandCircles = useMemo(() => (board ? buildIslandCircles(board) : []), [board]);
+  // Inutile en mode espace (le terrain est un continent peint).
+  const islandCircles = useMemo(
+    () => (board && !boardSpace ? buildIslandCircles(board) : []),
+    [board, boardSpace]
+  );
 
   const choiceNodes = useMemo(() => {
     const set = new Set();
@@ -460,7 +663,11 @@ export default function BoardSVG() {
     <div
       ref={containerRef}
       className="absolute inset-0 overflow-auto"
-      style={{
+      style={boardSpace ? {
+        // Espace : le fond du conteneur prolonge le dégradé du SVG (zones
+        // au-delà du viewBox lors du scroll caméra)
+        background: 'linear-gradient(180deg, #241245 0%, #2e1a55 45%, #170b30 100%)',
+      } : {
         background: `url(${bimg('texture-eau')}) repeat`,
         backgroundSize: '460px 460px',
       }}
@@ -469,6 +676,12 @@ export default function BoardSVG() {
         .tile-pick-hover { opacity: 0; transition: opacity 120ms ease; }
         .tile-pick:hover .tile-pick-hover { opacity: 1; }
         .tile-pick:hover { filter: drop-shadow(0 0 10px rgba(201,71,47,0.8)); }
+        /* Lévitation des continents/îlots de l'espace (amplitude par élément
+           via --sp-amp, phase désynchronisée via animation-delay négatif) */
+        @keyframes sp-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(calc(var(--sp-amp, 5px) * -1)); }
+        }
       `}</style>
       {showTilePicker && (
         <div style={{
@@ -494,9 +707,13 @@ export default function BoardSVG() {
         className="block"
         style={{ minWidth: Math.max(1200, Math.round(viewBox.w / 1.2)) + 'px' }}
       >
-        <Terrain board={board} islandCircles={islandCircles} viewBox={viewBox} />
+        {boardSpace ? (
+          <SpaceTerrain space={boardSpace} board={board} viewBox={viewBox} />
+        ) : (
+          <Terrain board={board} islandCircles={islandCircles} viewBox={viewBox} />
+        )}
 
-        <BoardItems board={board} boardDecor={boardDecor} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} inspectTrapAt={inspectTrapAt} trapTitle={T('game.seeTrapEffect')} />
+        <BoardItems board={board} boardDecor={boardSpace ? null : boardDecor} space={boardSpace} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} inspectTrapAt={inspectTrapAt} trapTitle={T('game.seeTrapEffect')} />
 
         {/* Animated Pawns */}
         {teams.map((team, idx) => {

@@ -8,6 +8,9 @@ const DashboardApp = lazy(() => import('./components/Dashboard/DashboardApp'));
 // Preview autonome du nouvel écran de sélection « Lecteur de cassettes » (?cassettes) :
 // données mock, non câblé au jeu. Paresseux pour ne pas l'embarquer dans le flux TBI.
 const CassettesPreview = lazy(() => import('./components/Setup/SelectionCassettes'));
+// Calibrateur de continents de l'univers espace (?calibrate) : outil DEV
+// autonome (maps v2), aucune donnée Supabase requise.
+const MapCalibrator = lazy(() => import('./components/Dev/MapCalibrator'));
 // Polices auto-hébergées (bundlées) au lieu du CDN Google Fonts : fonctionnent
 // hors ligne et évitent tout appel réseau. Familles : Lilita One (display),
 // Fredoka (UI), Inter (corps) — cf. --font-display/--font-ui/--font-body.
@@ -39,6 +42,8 @@ const joinMode = params.has('join');
 const analyseMode = params.has('analyse');
 // Preview de l'écran de sélection cassettes : autonome, aucune donnée requise.
 const cassettesMode = params.has('cassettes');
+// Calibrateur de continents (maps v2) : autonome, aucune donnée requise.
+const calibrateMode = params.has('calibrate');
 
 // Build hors ligne : aucun appel réseau, données figées dans le bundle. Le test
 // littéral (et non un import) garantit que cette branche — et donc l'instantané
@@ -51,8 +56,8 @@ if (import.meta.env.VITE_OFFLINE === '1') {
     st.syncEnabledEvents();
     st.bumpQuestionsVersion();
   });
-} else if (cassettesMode) {
-  // Preview mock : rien à charger.
+} else if (cassettesMode || calibrateMode) {
+  // Preview mock / outil de calibration : rien à charger.
 } else if (joinMode || analyseMode) {
   // Mobile / dashboard : catalogue d'objets (noms/images) + recettes + équilibrage
   // (noms de pouvoirs) pour résoudre ITEMS/POWERS dans les libellés.
@@ -111,6 +116,7 @@ if (import.meta.env.VITE_OFFLINE === '1') {
 
 function Root() {
   if (import.meta.env.VITE_OFFLINE === '1') return <App />;
+  if (calibrateMode) return <Suspense fallback={null}><MapCalibrator /></Suspense>;
   if (cassettesMode) return <Suspense fallback={null}><CassettesPreview /></Suspense>;
   if (analyseMode) return <Suspense fallback={null}><DashboardApp /></Suspense>;
   if (joinMode) return <MobileApp />;

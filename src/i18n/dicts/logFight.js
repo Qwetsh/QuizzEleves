@@ -62,9 +62,17 @@ export default {
     fr: ['\u{1F4B0} {winner} pille {n} pièce à {loser} !', '\u{1F4B0} {winner} pille {n} pièces à {loser} !'],
     en: ['\u{1F4B0} {winner} loots {n} coin from {loser}!', '\u{1F4B0} {winner} loots {n} coins from {loser}!'],
   },
+  'log.ft.steal.goldAll': {
+    fr: ['\u{1F4B0} {winner} vide la bourse de {loser} : {n} pièce pillée (sur {want} visées) !', '\u{1F4B0} {winner} vide la bourse de {loser} : {n} pièces pillées (sur {want} visées) !'],
+    en: ["\u{1F4B0} {winner} empties {loser}'s purse: {n} coin looted (out of {want} intended)!", "\u{1F4B0} {winner} empties {loser}'s purse: {n} coins looted (out of {want} intended)!"],
+  },
   'log.ft.steal.protected': {
     fr: '\u{1F9B9} {loser} protège ses pièces : rien à piller !',
     en: '\u{1F9B9} {loser} protects their coins: nothing to loot!',
+  },
+  'log.ft.steal.empty': {
+    fr: '\u{1F4B8} La bourse de {loser} était vide : rien à piller !',
+    en: "\u{1F4B8} {loser}'s purse was empty: nothing to loot!",
   },
 
   // Récompense : recul (knockback)

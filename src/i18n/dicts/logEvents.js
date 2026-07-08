@@ -79,6 +79,7 @@ export default {
   'log.ev.impotExempt':    { fr: "🧿 {emoji} {name} est exempté d'impôt grâce à son équipement !", en: '🧿 {emoji} {name} is exempt from tax thanks to their equipment!' },
   'log.ev.volArgent':      { fr: '🥷 {emoji} {name} vole {stolen} pièces à {vemoji} {vname} !', en: '🥷 {emoji} {name} steals {stolen} coins from {vemoji} {vname}!' },
   'log.ev.volArgentProt':  { fr: '🦹 {vemoji} {vname} protège ses pièces : rien à voler !', en: '🦹 {vemoji} {vname} protects their coins: nothing to steal!' },
+  'log.ev.volArgentEmpty': { fr: '💸 La bourse de {vemoji} {vname} était vide : rien à voler !', en: "💸 {vemoji} {vname}'s purse was empty: nothing to steal!" },
   'log.ev.taxeCommune':    { fr: '🏦 Taxe commune ! Toutes les équipes perdent 5 pièces.', en: '🏦 Common tax! All teams lose 5 coins.' },
   'log.ev.taxeReduced':    { fr: ' 🧿 Taxe réduite pour {list}.', en: ' 🧿 Reduced tax for {list}.' },
   'log.ev.taxeExempt':     { fr: ' 🧿 {list} : exempté !', en: ' 🧿 {list}: exempt!' },

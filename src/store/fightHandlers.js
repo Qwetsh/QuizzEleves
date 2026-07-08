@@ -250,12 +250,18 @@ function applyFightReward(set, get) {
   } else if (f.reward.choice === 'steal') {
     // Equipement du vainqueur (fightStealBonus) puis protection du perdant (stealProtection)
     const total = f.reward.dice[0] + f.reward.dice[1] + getEffectValue(winner, 'fightStealBonus');
-    const stolen = reducedSteal(loser, Math.min(total, loser.money ?? 0));
+    const purse = loser.money ?? 0;
+    const stolen = reducedSteal(loser, Math.min(total, purse));
     newTeams[winnerIdx] = { ...winner, money: winner.money + stolen };
     newTeams[loserIdx] = { ...loser, money: loser.money - stolen };
+    // Feedback fidèle : bourse vidée (vol partiel), bourse vide, ou vraie protection.
     message = stolen > 0
-      ? tgPlural('log.ft.steal.gold', stolen, { winner: `${winner.emoji} ${winner.name}`, loser: `${loser.emoji} ${loser.name}` })
-      : tg('log.ft.steal.protected', { loser: `${loser.emoji} ${loser.name}` });
+      ? (total > purse && stolen === purse
+          ? tgPlural('log.ft.steal.goldAll', stolen, { winner: `${winner.emoji} ${winner.name}`, loser: `${loser.emoji} ${loser.name}`, want: total })
+          : tgPlural('log.ft.steal.gold', stolen, { winner: `${winner.emoji} ${winner.name}`, loser: `${loser.emoji} ${loser.name}` }))
+      : (purse <= 0
+          ? tg('log.ft.steal.empty', { loser: `${loser.emoji} ${loser.name}` })
+          : tg('log.ft.steal.protected', { loser: `${loser.emoji} ${loser.name}` }));
   } else if ((loser.totalImmuneTurns ?? 0) > 0) {
     // Immunité totale (Bouclier L10) : le perdant ne subit aucun recul de duel.
     message = tg('log.ft.immune', { loser: `${loser.emoji} ${loser.name}` });

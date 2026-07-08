@@ -302,17 +302,37 @@ function applyMoney(set, get, action, ctx, indices) {
         announce(set, get, '🔒', tg('log.fx.goldImmune.toast', { name: victim.name }), '#c8911f');
         continue;
       }
-      const raw = Math.min(amountFor(victim), victim.money ?? 0);
+      const wanted = amountFor(victim);
+      const purse = victim.money ?? 0;
+      // Bourse vide : rien à prendre — le dire (sinon le journal écrit « vole 0 pièce »).
+      if (wanted > 0 && purse <= 0) {
+        addLog(tg('log.fx.stealEmpty', { emoji: nt[stealRecipient].emoji, vemoji: victim.emoji, vname: victim.name }));
+        announce(set, get, '💸', tg('log.fx.stealEmpty.toast', { vname: victim.name }), '#c8911f');
+        continue;
+      }
+      const raw = Math.min(wanted, purse);
       const stolen = applyStealProtection(victim, raw);
-      nt[i] = { ...victim, money: Math.max(0, (victim.money ?? 0) - stolen) };
+      if (stolen <= 0) {
+        // Protection 100 % (raw > 0) ou montant arrondi à 0 (ex. % d'une petite bourse).
+        addLog(raw > 0
+          ? tg('log.fx.stealBlocked', { vemoji: victim.emoji, vname: victim.name })
+          : tg('log.fx.stealNone', { emoji: nt[stealRecipient].emoji, vemoji: victim.emoji, vname: victim.name }));
+        continue;
+      }
+      nt[i] = { ...victim, money: Math.max(0, purse - stolen) };
       nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) + stolen };
-      // Détail : montant visé, protection éventuelle de la victime, butin réel.
+      // Détail : montant visé, bourse insuffisante, protection éventuelle, butin réel.
+      const cappedByPurse = wanted > purse;
       const detail = [];
       if (baseLabel) detail.push({ label: tg('log.fx.detail.stealPlanned'), note: baseLabel });
+      if (cappedByPurse) detail.push({ label: tg('log.fx.detail.purseOf', { name: victim.name }), note: `${purse} 🪙` });
       if (stolen < raw) detail.push({ label: tg('log.fx.detail.protectionOf', { name: victim.name }), note: `−${raw - stolen} 🪙` });
       if (detail.length) detail.push({ label: tg('log.fx.detail.coinsStolen'), amount: stolen });
       addLog({
-        text: tgPlural('log.fx.steal', stolen, { emoji: nt[stealRecipient].emoji, n: stolen, vemoji: victim.emoji, vname: victim.name }),
+        // Bourse vidée intégralement : le dire dans le texte principal (vol partiel visible).
+        text: cappedByPurse && stolen === purse
+          ? tgPlural('log.fx.stealAll', stolen, { emoji: nt[stealRecipient].emoji, n: stolen, want: wanted, vemoji: victim.emoji, vname: victim.name })
+          : tgPlural('log.fx.steal', stolen, { emoji: nt[stealRecipient].emoji, n: stolen, vemoji: victim.emoji, vname: victim.name }),
         detail: detail.length ? detail : undefined,
       });
     }
@@ -324,18 +344,30 @@ function applyMoney(set, get, action, ctx, indices) {
         addLog(tg('log.fx.goldImmune', { emoji: t.emoji, name: t.name }));
         continue;
       }
-      const raw = amountFor(t);
-      const loss = i === src ? raw : reducedSteal(t, raw);
-      nt[i] = { ...t, money: Math.max(0, (t.money ?? 0) - loss) };
+      const wanted = amountFor(t);
+      const purse = t.money ?? 0;
+      const lossRaw = i === src ? wanted : reducedSteal(t, wanted);
+      // Plafonner à la bourse : le journal doit refléter la perte RÉELLE
+      // (avant : « perd 5 pièces » alors que la bourse était à 0).
+      const loss = Math.min(lossRaw, purse);
+      nt[i] = { ...t, money: Math.max(0, purse - loss) };
       if (loss > 0) {
         const detail = [];
         if (baseLabel) detail.push({ label: tg('log.fx.detail.lossPlanned'), note: baseLabel });
-        if (loss < raw) detail.push({ label: tg('log.fx.detail.protection'), note: `−${raw - loss} 🪙` });
+        if (lossRaw > purse) detail.push({ label: tg('log.fx.detail.purseOf', { name: t.name }), note: `${purse} 🪙` });
+        if (lossRaw < wanted) detail.push({ label: tg('log.fx.detail.protection'), note: `−${wanted - lossRaw} 🪙` });
         if (detail.length) detail.push({ label: tg('log.fx.detail.coinsLost'), amount: -loss });
         addLog({
-          text: tgPlural('log.fx.lose', loss, { emoji: t.emoji, name: t.name, n: loss }),
+          text: lossRaw > purse
+            ? tgPlural('log.fx.loseAll', loss, { emoji: t.emoji, name: t.name, n: loss, want: wanted })
+            : tgPlural('log.fx.lose', loss, { emoji: t.emoji, name: t.name, n: loss }),
           detail: detail.length ? detail : undefined,
         });
+      } else if (wanted > 0) {
+        // Rien perdu : dire pourquoi (bourse déjà vide, ou protection totale).
+        addLog(purse <= 0
+          ? tg('log.fx.loseEmpty', { emoji: t.emoji, name: t.name, want: wanted })
+          : tg('log.fx.stealBlocked', { vemoji: t.emoji, vname: t.name }));
       }
     }
   } else if (action.mode === 'give') {

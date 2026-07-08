@@ -12,6 +12,35 @@ function getCtx() {
   return ctx;
 }
 
+// --- Bus maître des effets sonores ---
+// Tous les sons synthé/échantillons passent par ce gain avant la sortie, ce qui
+// permet un réglage de volume / une coupure globale (voir audioStore). La musique
+// de fond (music.js) est indépendante et a son propre volume.
+let masterGain = null;
+let sfxVolume = 0.8;
+let sfxMuted = false;
+function getMaster() {
+  const c = getCtx();
+  if (!c) return null;
+  if (!masterGain) {
+    masterGain = c.createGain();
+    masterGain.gain.value = sfxMuted ? 0 : sfxVolume;
+    masterGain.connect(c.destination);
+  }
+  return masterGain;
+}
+function applyMaster() {
+  if (masterGain) masterGain.gain.value = sfxMuted ? 0 : sfxVolume;
+}
+export function setSfxVolume(v) {
+  sfxVolume = Math.max(0, Math.min(1, v));
+  applyMaster();
+}
+export function setSfxMuted(m) {
+  sfxMuted = !!m;
+  applyMaster();
+}
+
 function playTone(freq, duration = 0.15, type = 'sine', volume = 0.3) {
   const c = getCtx();
   if (!c) return;
@@ -22,7 +51,7 @@ function playTone(freq, duration = 0.15, type = 'sine', volume = 0.3) {
   gain.gain.value = volume;
   gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
   osc.connect(gain);
-  gain.connect(c.destination);
+  gain.connect(getMaster());
   osc.start(c.currentTime);
   osc.stop(c.currentTime + duration);
 }
@@ -46,7 +75,7 @@ function playNoise(duration = 0.4, volume = 0.3, { type = 'lowpass', freq = 1000
   gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
   src.connect(filter);
   filter.connect(gain);
-  gain.connect(c.destination);
+  gain.connect(getMaster());
   src.start(c.currentTime);
   src.stop(c.currentTime + duration);
 }
@@ -84,7 +113,7 @@ function playSample(name, volume = 0.6, rate = 1) {
   const gain = c.createGain();
   gain.gain.value = volume;
   src.connect(gain);
-  gain.connect(c.destination);
+  gain.connect(getMaster());
   src.start(c.currentTime);
   return true;
 }

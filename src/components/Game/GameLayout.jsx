@@ -10,6 +10,7 @@ import BottomBar from './BottomBar';
 import InfoPopover from './InfoPopover';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
+import VolumeControl from './VolumeControl';
 import TradeConsumer from './TradeConsumer';
 import ForgeServiceOverlay from './ForgeServiceOverlay';
 import StatsArchiver from './StatsArchiver';
@@ -124,6 +125,7 @@ export default function GameLayout() {
               <span className="rg-tv-switch-track"><span className="rg-tv-switch-knob" style={{ transform: pixelChannel ? 'translateX(24px)' : 'none' }} /></span>
               <span className="rg-tv-switch-label" style={{ color: pixelChannel ? '#66ff8a' : '#565b60' }}>{T('game.tvPixel')}</span>
             </button>
+            <VolumeControl />
             <div style={{ flex: 1 }} />
             <div className="rg-tv-dial" />
             <div className="rg-tv-dial" style={{ transform: 'rotate(120deg)' }} />

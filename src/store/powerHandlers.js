@@ -506,6 +506,7 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
 
     const moves = [];
     let reflectTotal = 0, stolenTotal = 0, opportunisteAdvance = 0;
+    let stealTried = false; // un vol d'or était prévu (stealGold/pillage) → feedback même si butin nul
     const chainHits = []; // Réaction en chaîne : reculs propagés (1 passe, attaquant immunisé)
     for (const ti of targets) {
       if (offBlocked(ti)) continue; // immunité / fumigène (par cible, multi inclus)
@@ -537,11 +538,17 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
         }
       }
       // Temp\u00EAte cibl\u00E9e : vol d'or \u2014 bloqu\u00E9 par Banque fortifi\u00E9e (goldUnstealable).
-      if (effect.stealGold && !vEff.goldUnstealable) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      if (effect.stealGold) {
+        stealTried = true;
+        if (!vEff.goldUnstealable) { const s = Math.min(effect.stealGold, v.money || 0); v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      }
       // Pillage (voie) : vole de l'or = valeur du dé × mult (respecte les immunités au vol d'or).
-      if (effect.pillage && effect.pillageMult && !vEff.goldUnstealable && !isGoldStealImmune(v)) {
-        const s = Math.min(Math.round(dieValue * effect.pillageMult), v.money || 0);
-        if (s > 0) { v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+      if (effect.pillage && effect.pillageMult) {
+        stealTried = true;
+        if (!vEff.goldUnstealable && !isGoldStealImmune(v)) {
+          const s = Math.min(Math.round(dieValue * effect.pillageMult), v.money || 0);
+          if (s > 0) { v = { ...v, money: (v.money || 0) - s }; stolenTotal += s; }
+        }
       }
       const amt = reducedRecul(v, rolled);
       // Renvoi (objet/passif « miroir ») : la cible retourne le recul à l'attaquant
@@ -615,7 +622,9 @@ export function applyOffensivePower(set, get, targetTeamIndex) {
     soundThunder();
     const nT = targets.size;
     const foudreName = locName(POWERS[powerKey]);
-    const foudreSteal = stolenTotal ? tg('log.pw.foudreSteal', { n: stolenTotal }) : '';
+    const foudreSteal = stolenTotal
+      ? tg('log.pw.foudreSteal', { n: stolenTotal })
+      : stealTried ? tg('log.pw.foudreStealNone') : '';
     const foudreReflect = reflectTotal ? tg('log.pw.foudreReflect') : '';
     addLog(nT > 1
       ? tg('log.pw.foudreUseMany', { emoji: team.emoji, name: team.name, power: foudreName, level, die: dieLabel, nT, steal: foudreSteal, reflect: foudreReflect })

@@ -168,11 +168,19 @@ export function generateBoard(params) {
     nodes[prevId].next.push('arrivee');
   }
 
-  // --- Distribution reguliere des evenements : un evenement toutes les X cases ---
-  // On reconstruit chaque voie/couloir comme une chaine lineaire de cases subject,
-  // puis on marque une case sur X. Cela garantit une repartition uniforme le long
-  // du parcours (pas de longue section sans evenement), contrairement a un tirage
-  // aleatoire global qui laissait des trous.
+  distributeEvents(nodes, eventEveryX);
+
+  const viewBox = { w: nodes.arrivee.x + 100, h: 960 };
+  return { nodes, viewBox };
+}
+
+// --- Distribution reguliere des evenements : un evenement toutes les X cases ---
+// On reconstruit chaque voie/couloir comme une chaine lineaire de cases subject,
+// puis on marque une case sur X. Cela garantit une repartition uniforme le long
+// du parcours (pas de longue section sans evenement), contrairement a un tirage
+// aleatoire global qui laissait des trous.
+// Partagée entre generateBoard (plateau procédural) et composeSpaceBoard (maps v2).
+export function distributeEvents(nodes, eventEveryX) {
   if (eventEveryX >= 1) {
     const isSubj = (id) => nodes[id] && nodes[id].type === 'subject';
     const preds = {};
@@ -212,9 +220,6 @@ export function generateBoard(params) {
       }
     });
   }
-
-  const viewBox = { w: nodes.arrivee.x + 100, h: 960 };
-  return { nodes, viewBox };
 }
 
 export { SX, Y_C, Y_GAP };

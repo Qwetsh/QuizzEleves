@@ -53,6 +53,7 @@ export default {
   'log.pw.foudreUseOne':    { fr: '⚡ {emoji} {name} utilise {power} (niv.{level}, {die}) sur {vemoji} {vname} !{steal}{reflect}',
                               en: '⚡ {emoji} {name} uses {power} (lvl.{level}, {die}) on {vemoji} {vname}!{steal}{reflect}' },
   'log.pw.foudreSteal':     { fr: ' Vol de {n} or.', en: ' Stole {n} gold.' },
+  'log.pw.foudreStealNone': { fr: ' Rien à voler (bourses vides ou or protégé).', en: ' Nothing to steal (empty purses or protected gold).' },
   'log.pw.foudreReflect':   { fr: ' ↩️ Recul réfléchi !', en: ' ↩️ Setback reflected!' },
   'log.pw.foudreToastMany': { fr: '{power} {die} ×{nT}', en: '{power} {die} ×{nT}' },
   'log.pw.foudreToastOne':  { fr: '{power} {die} sur {vemoji} {vname}', en: '{power} {die} on {vemoji} {vname}' },
