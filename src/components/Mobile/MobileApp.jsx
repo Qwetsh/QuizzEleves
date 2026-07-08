@@ -532,7 +532,7 @@ function TalentBranch({ powerKey, entry, active, masteryOn, owned, money = 0, lo
 
 // Onglet « Pouvoirs » : arbre de talent par pouvoir + achats (recharge, niveau,
 // voie, déblocage) pilotés par le téléphone propriétaire de l'équipe.
-function PowersView({ session, teamIdx, owned, code, token }) {
+export function PowersView({ session, teamIdx, owned, code, token }) {
   const T = tFor(session?.englishMode);
   const t = session.teams[teamIdx];
   const pKeys = powerKeysOf(t);
@@ -668,7 +668,7 @@ function BuyPowerSheet({ powers, money, locked, onBuy, onClose, T = tFor(false) 
 }
 
 // Onglet « Boutique » : vitrine + achat direct (téléphone propriétaire).
-function ShopView({ session, teamIdx, owned, code, token }) {
+export function ShopView({ session, teamIdx, owned, code, token }) {
   const T = tFor(session?.englishMode);
   const en = !!session?.englishMode;
   const [sheet, setSheet] = useState(null);
@@ -1037,7 +1037,7 @@ function ForgeView({ session, teamIdx, owned, code, token }) {
   );
 }
 
-function TeamView({ session, teamIdx, owned, code, token }) {
+export function TeamView({ session, teamIdx, owned, code, token }) {
   const T = tFor(session?.englishMode);
   const [sheet, setSheet] = useState(null);
   const t = session.teams[teamIdx];
@@ -1529,7 +1529,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
 // flux d'offres (table quete_trades). On affiche chaque type seulement si son
 // extension est active : troc ouvert (`hasTrade`), complot/pacte (`hasDiplo`).
 // `trades` est alimenté par l'abonnement partagé de MobileApp (badge + vue).
-function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true, hasDiplo = false }) {
+export function TradeView({ session, teamIdx, code, token, trades = [], hasTrade = true, hasDiplo = false }) {
   const T = tFor(session?.englishMode);
   const [deal, setDeal] = useState(false); // compositeur de deal (troc + pacte)
   const [counter, setCounter] = useState(null); // offre reçue qu'on contre (ou null)
