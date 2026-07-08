@@ -215,6 +215,31 @@ export function buildTurnPayload(s) {
 
 // Sous-ensemble publié vers les téléphones. On n'envoie que les CLÉS d'objets/
 // pouvoirs : le mobile (même app) résout ITEMS/POWERS localement.
+// Payload « manette » construit depuis un état de store complet (mode « jeu en
+// ligne » : l'hôte le diffuse en plus du snapshot pour piloter la manette des
+// joueurs distants). Même sortie que le mode manette classe — buildTurnPayload
+// strippe déjà les secrets (bonne réponse avant révélation, cases cachées).
+export function buildControllerPayload(s) {
+  const turnState = {
+    finished: s.finished, teams: s.teams, currentTeam: s.currentTeam, board: s.board,
+    rolling: s.rolling, showDiceModal: s.showDiceModal, diceValue: s.diceValue,
+    awaitingChoice: s.awaitingChoice, pendingMove: s.pendingMove, pendingLanding: s.pendingLanding,
+    showQuestion: s.showQuestion, showEvent: s.showEvent, showFight: s.showFight, showDuelChoice: s.showDuelChoice,
+    showTargetPicker: s.showTargetPicker, showTilePicker: s.showTilePicker, showSubjectPicker: s.showSubjectPicker,
+    showChargePicker: s.showChargePicker, showActionDice: s.showActionDice, lootReveal: s.lootReveal,
+    showStarterChest: s.showStarterChest, lastStarterReward: s.lastStarterReward, showShopPrompt: s.showShopPrompt,
+    showMetierPicker: s.showMetierPicker, indiceHidden: s.indiceHidden, indiceUsed: s.indiceUsed, rerollUsed: s.rerollUsed,
+  };
+  const locked = !!(s.showQuestion || s.showEvent || s.showFight || s.showDuelChoice
+    || s.rolling || s.showDiceModal || s.awaitingChoice || s.pendingActions || s.pendingLanding);
+  return buildSessionPayload({
+    teams: s.teams, currentTeam: s.currentTeam, status: s.finished ? 'finished' : 'playing',
+    shopStock: s.shopStock, shopFaceStock: s.shopFaceStock, log: s.log, extensions: s.extensions,
+    locked, lv2Mode: s.lv2Mode, englishMode: s.englishMode, gameStats: s.gameStats,
+    forgeService: s.forgeService, phoneController: true, turnState,
+  });
+}
+
 export function buildSessionPayload({ teams, currentTeam, status, shopStock, shopFaceStock = [], log, extensions, locked = false, lv2Mode = false, englishMode = false, gameStats = null, forgeService = null, phoneController = false, turnState = null }) {
   // Historique de questions par équipe (onglet mobile « anciennes questions ») :
   // dérivé du journal analytique, compacté aux derniers ~20 par équipe et aux

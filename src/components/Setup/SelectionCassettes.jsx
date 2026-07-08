@@ -164,7 +164,7 @@ const GAME_MODES = [
   { id: 'tbi', conn: 'board', controller: false, emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
   { id: 'companion', conn: 'phone', controller: false, emblem: '📱', name: 'Téléphone + TBI', desc: 'Les joueurs rejoignent par QR ; on joue sur le TBI.', ready: true },
   { id: 'manette', conn: 'phone', controller: true, emblem: '🕹️', name: 'Téléphone-manette', desc: 'Les joueurs rejoignent par QR ; l’équipe active joue son tour (dé, réponses, choix) sur son téléphone.', ready: true },
-  { id: 'online', conn: 'online', controller: false, emblem: '🌐', name: 'Jeu en ligne', desc: 'Tu héberges la partie ; partage un lien pour que d’autres suivent le plateau en direct (bêta).', ready: true },
+  { id: 'online', conn: 'online', controller: true, emblem: '🌐', name: 'Jeu en ligne', desc: 'Tu héberges la partie ; d’autres rejoignent par un lien et jouent leur tour depuis leur écran (bêta).', ready: true },
 ];
 
 // Niveaux scolaires proposés au lancement (un par classe, choisis dans le menu

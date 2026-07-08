@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { OFFLINE } from '../../logic/offline';
-import { createSession, publishSession, subscribePresence, randomToken } from '../../logic/sessionConfig';
+import { createSession, publishSession, subscribePresence, randomToken, buildControllerPayload } from '../../logic/sessionConfig';
 import { serializeSnapshot } from '../../logic/onlineSnapshot';
 
 // Lien à partager pour rejoindre en spectateur (respecte la base GitHub Pages).
@@ -44,7 +44,9 @@ export default function OnlineHost() {
     if (!active || !code) return;
     let timer = null;
     const publish = () => {
-      publishSession(code, { ...serializeSnapshot(useGameStore.getState()), publishedAt: Date.now() }).catch(() => {});
+      const s = useGameStore.getState();
+      // snapshot = plateau (spectateur) ; ctrl = payload manette (joueurs distants).
+      publishSession(code, { ...serializeSnapshot(s), publishedAt: Date.now(), ctrl: buildControllerPayload(s) }).catch(() => {});
     };
     const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; publish(); }, 300); };
     const unsub = useGameStore.subscribe(schedule);

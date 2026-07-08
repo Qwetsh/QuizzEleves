@@ -7,12 +7,16 @@ import App from '../../App';
 import { useGameStore } from '../../store/gameStore';
 import { fetchSession, subscribeSession, subscribePresence, randomToken } from '../../logic/sessionConfig';
 import { hydrateSnapshot } from '../../logic/onlineSnapshot';
+import OnlineController from './OnlineController';
 
 export default function OnlineClient({ code }) {
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState('connecting');
   const [hostOnline, setHostOnline] = useState(false);
   const [viewers, setViewers] = useState(0);
+  // Payload « manette » diffusé par l'hôte (pour piloter son tour) + fraîcheur.
+  const [ctrl, setCtrl] = useState(null);
+  const [lastSync, setLastSync] = useState(0);
   const tokenRef = useRef(null);
   if (!tokenRef.current) tokenRef.current = randomToken();
 
@@ -20,8 +24,11 @@ export default function OnlineClient({ code }) {
     if (!code) return;
     let alive = true;
     const apply = (data) => {
+      if (!alive) return;
       const slice = hydrateSnapshot(data);
-      if (slice && alive) { useGameStore.setState(slice); setReady(true); }
+      if (slice) { useGameStore.setState(slice); setReady(true); }
+      setCtrl(data?.ctrl ?? null);
+      setLastSync(Date.now());
     };
     // Rattrapage immédiat, puis flux temps réel.
     fetchSession(code).then((d) => { if (d) apply(d); }).catch(() => {});
@@ -58,7 +65,9 @@ export default function OnlineClient({ code }) {
   return (
     <>
       <App />
-      {/* Bandeau discret : liveness + spectateurs. On regarde, on ne pilote pas (P1). */}
+      {/* Manette du joueur distant : choix d'équipe, puis pilotage de son tour. */}
+      <OnlineController code={code} ctrl={ctrl} lastSync={lastSync} />
+      {/* Bandeau discret : liveness + spectateurs. */}
       <div style={{
         position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 300,
         display: 'flex', alignItems: 'center', gap: 10,
