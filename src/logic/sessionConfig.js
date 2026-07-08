@@ -174,6 +174,15 @@ export function buildTurnPayload(s) {
       rewardChosen: !!sf.reward?.choice,
       resultMessage: sf.resultMessage || null,
       boss: !!(sf.boss || sf.bossFight),
+      wins: sf.wins || null,
+      round: sf.round || null,
+      // Duel éclair (en ligne) : question de course SANS la bonne réponse (l'hôte
+      // arbitre) + qui a déjà répondu + deadline. null hors duel éclair.
+      race: sf.race ? {
+        q: (() => { const { c, e, e_en, ...safe } = sf.race.q || {}; return safe; })(),
+        answered: { attacker: !!sf.race.answers?.attacker, defender: !!sf.race.answers?.defender },
+        deadline: sf.race.deadline || null,
+      } : null,
     };
   } else if (phase === 'targetPicker' && s.showTargetPicker) {
     const stp = s.showTargetPicker;

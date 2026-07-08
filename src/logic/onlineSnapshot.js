@@ -63,6 +63,14 @@ function stripQuestionSecret(showQuestion) {
   return { ...showQuestion, question: safeQ };
 }
 
+// Duel éclair : la question de course porte la bonne réponse (race.q.c) — jamais
+// diffusée (l'hôte arbitre). On la retire du combat avant broadcast.
+function stripFightSecret(showFight) {
+  if (!showFight || !showFight.race || !showFight.race.q) return showFight;
+  const { c, e, e_en, ...safeQ } = showFight.race.q;
+  return { ...showFight, race: { ...showFight.race, q: safeQ } };
+}
+
 /**
  * Sérialise l'état du store en un snapshot JSON-safe, prêt à être diffusé.
  * Applique l'anti-triche (secrets de question, pièges) AVANT diffusion.
@@ -73,6 +81,7 @@ export function serializeSnapshot(state) {
     if (key === 'askedQuestions') data[key] = askedToArrays(state[key]);
     else if (key === 'board') data[key] = stripBoardTraps(state[key]);
     else if (key === 'showQuestion') data[key] = stripQuestionSecret(state[key]);
+    else if (key === 'showFight') data[key] = stripFightSecret(state[key]);
     else data[key] = state[key];
   }
   return data;

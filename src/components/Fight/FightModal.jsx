@@ -6,6 +6,7 @@ import { locName } from '../../i18n/content';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
+import DuelRaceView from '../Online/DuelRaceView';
 import { useT } from '../../i18n';
 
 // Le simulateur dev peut forcer le duel generique via fight.forceDefault
@@ -50,7 +51,10 @@ export default function FightModal() {
         {showFight.phase === 'briefing' && (
           <FightBriefing fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && (
+        {showFight.phase === 'minigame' && showFight.race && (
+          <HostDuelRace fight={showFight} teams={teams} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (
@@ -344,5 +348,45 @@ function RewardScreen({ fight, attacker, defender }) {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// Duel éclair (mode en ligne) rendu côté HÔTE : réutilise DuelRaceView pour la
+// phase « course à la question ». L'hôte répond pour son équipe LOCALE (celle
+// sans jeton — les équipes distantes répondent depuis leur propre écran).
+function HostDuelRace({ fight, teams }) {
+  const fightBegin = useGameStore((s) => s.fightBegin);
+  const submitFightAnswer = useGameStore((s) => s.submitFightAnswer);
+  const fightChooseReward = useGameStore((s) => s.fightChooseReward);
+  const closeFight = useGameStore((s) => s.closeFight);
+
+  const parts = [fight.attackerIndex, fight.defenderIndex].filter((i) => i >= 0);
+  const localIdx = parts.find((i) => teams[i] && !teams[i].token);
+  const myTeamIdx = localIdx == null ? -1 : localIdx;
+
+  const norm = {
+    phase: fight.phase,
+    attackerIndex: fight.attackerIndex,
+    defenderIndex: fight.defenderIndex,
+    boss: !!(fight.boss || fight.bossFight),
+    wins: fight.wins,
+    winnerIndex: fight.winnerSide === 'attacker' ? fight.attackerIndex : fight.winnerSide === 'defender' ? fight.defenderIndex : null,
+    rewardChosen: !!fight.reward?.choice,
+    resultMessage: fight.resultMessage,
+    race: fight.race ? {
+      q: fight.race.q,
+      answered: { attacker: !!fight.race.answers?.attacker, defender: !!fight.race.answers?.defender },
+      deadline: fight.race.deadline,
+    } : null,
+  };
+
+  return (
+    <DuelRaceView
+      fight={norm} teams={teams} myTeamIdx={myTeamIdx}
+      onBegin={fightBegin}
+      onAnswer={(i) => submitFightAnswer(myTeamIdx, i)}
+      onReward={fightChooseReward}
+      onClose={closeFight}
+    />
   );
 }

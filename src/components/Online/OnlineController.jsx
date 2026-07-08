@@ -8,6 +8,7 @@ import { sendIntent, randomToken, fetchTrades, subscribeTrades } from '../../log
 import { extOn } from '../../extensions/registry';
 import ControllerView from '../Mobile/ControllerView';
 import OnlineTeamPanel from './OnlineTeamPanel';
+import DuelRaceView from './DuelRaceView';
 import { useT } from '../../i18n';
 
 const tokenKey = (code) => `quete_online_token_${code}`;
@@ -94,6 +95,21 @@ export default function OnlineController({ code, ctrl, lastSync = 0 }) {
   // Pas encore d'équipe → écran de choix (par-dessus le plateau).
   if (ownedIdx < 0) {
     return <ClaimScreen teams={teams} mine={token} onClaim={claim} T={T} />;
+  }
+
+  // Duel éclair : si je suis un duelliste (attaquant OU défenseur), la vue de duel
+  // prend le dessus — même pour le défenseur, dont ce n'est pas le tour.
+  const fight = ctrl?.turn?.fight;
+  if (fight && (ownedIdx === fight.attackerIndex || ownedIdx === fight.defenderIndex)) {
+    return (
+      <DuelRaceView
+        fight={fight} teams={ctrl.teams} myTeamIdx={ownedIdx}
+        onBegin={() => sendIntent(code, token, 'turnFightBegin', {}).catch(() => {})}
+        onAnswer={(i) => sendIntent(code, token, 'turnFightAnswer', { index: i }).catch(() => {})}
+        onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+        onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+      />
+    );
   }
 
   // C'est mon tour → manette plein écran (le reste passe au second plan).

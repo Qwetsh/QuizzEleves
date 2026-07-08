@@ -2259,6 +2259,22 @@ export const useGameStore = create((set, get) => ({
   fightMatchWin: (side) => fightH.fightMatchWin(set, get, side),
   fightChooseReward: (choice) => fightH.fightChooseReward(set, get, choice),
   closeFight: () => fightH.closeFight(set, get),
+  // Duel éclair (en ligne) : un duelliste répond à la question de course.
+  submitFightAnswer: (teamIdx, index) => fightH.submitFightAnswer(set, get, teamIdx, index),
+  // Route un intent de combat venu d'un duelliste (attaquant OU défenseur). Le
+  // défenseur n'étant pas l'équipe active, ces intents contournent le verrou
+  // « équipe active » — d'où ce dispatcher dédié (mode en ligne).
+  applyFightIntent: (idx, type, payload = {}) => {
+    const f = get().showFight;
+    if (!f || (idx !== f.attackerIndex && idx !== f.defenderIndex)) return;
+    if (type === 'turnFightBegin') { get().fightBegin(); return; }
+    if (type === 'turnFightAnswer') { get().submitFightAnswer(idx, payload.index); return; }
+    if (type === 'turnFightClose') { get().closeFight(); return; }
+    if (type === 'turnFightReward') {
+      const winnerIdx = f.winnerSide === 'attacker' ? f.attackerIndex : f.winnerSide === 'defender' ? f.defenderIndex : -1;
+      if (idx === winnerIdx) get().fightChooseReward(payload.choice);
+    }
+  },
   // Tire une question pour un mini-jeu de combat (marquee comme posee)
   fightPickQuestion: (subject) => {
     const st = get();
@@ -2459,6 +2475,14 @@ export const useGameStore = create((set, get) => ({
     if (type === 'forgeServiceRemove') { get().forgeServiceRemove(payload.slotIndex, idx); return; }
     if (type === 'forgeServiceValidate') { get().forgeServiceValidate(idx); return; }
     if (type === 'forgeServiceCancel') { get().forgeServiceCancel(idx); return; }
+    // Duel éclair (EN LIGNE) : les intents de combat peuvent venir de l'ATTAQUANT
+    // ou du DÉFENSEUR (le défenseur n'est pas l'équipe active) → routage dédié,
+    // hors du verrou « équipe active ». Réservé au mode online : le mode classe
+    // garde son comportement (seul l'attaquant pilote le duel au TBI).
+    if (st.connectionMode === 'online' && st.showFight && typeof type === 'string'
+      && (type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin')) {
+      if (idx === st.showFight.attackerIndex || idx === st.showFight.defenderIndex) { get().applyFightIntent(idx, type, payload); return; }
+    }
     // Manette téléphone : les intents « de tour » (turn*) sont réservés à
     // l'équipe ACTIVE et autorisés PENDANT sa résolution (c'est leur raison
     // d'être) — ils passent donc AVANT le verrou, avec leurs propres gardes.

@@ -9,6 +9,11 @@ import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
+import { pickQuestion } from '../logic/questionPicker.js';
+import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
+
+// « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
+export const RACE_DURATION = 20;
 
 // Transfere un objet vers une equipe (cascade unique placeItem) et formate
 // la note de butin. Retourne { team: updatedTeam, note: string }.
@@ -111,11 +116,75 @@ function resolveBossOutcome(set, get, f) {
   set({ teams: newTeams, showFight: { ...f, phase: 'result', resultMessage: message }, ...(moves ? { movePath: moves } : {}) });
 }
 
-// Fin de l'ecran versus -> ecran d'explication (briefing) du mini-jeu
+// Fin de l'ecran versus -> ecran d'explication (briefing) du mini-jeu.
+// En ligne : pas de mini-jeu TBI → on lance directement le « duel éclair »
+// (course à la question, jouée sur l'écran de chaque duelliste).
 export function fightBegin(set, get) {
   const f = get().showFight;
   if (!f || f.phase !== 'versus') return;
+  if (get().connectionMode === 'online') { serveRaceQuestion(set, get); return; }
   set({ showFight: { ...f, phase: 'briefing' } });
+}
+
+// --- Duel éclair (mode en ligne) : course à la question ---
+// Sert une question (même thème que le duel) aux deux duellistes. Le PREMIER à
+// répondre juste gagne la manche (best-of-3 via fightRoundWin). Le secret (bonne
+// réponse) reste sur l'hôte (stripé à la diffusion — cf. onlineSnapshot / payload).
+export function serveRaceQuestion(set, get) {
+  const f = get().showFight;
+  if (!f) return;
+  const subject = f.subject;
+  const { questions, askedQuestions } = get();
+  const pool = questions[subject] || [];
+  const asked = askedQuestions[subject] || new Set();
+  const result = pickQuestion(pool, asked);
+  if (!result) { // plus de question dispo → anti-blocage : l'attaquant marque la manche
+    fightRoundWin(set, get, 'attacker');
+    const nf = get().showFight;
+    if (nf && nf.phase === 'minigame' && !nf.winnerSide) serveRaceQuestion(set, get);
+    return;
+  }
+  const deadline = Date.now() + RACE_DURATION * 1000;
+  set({
+    askedQuestions: { ...askedQuestions, [subject]: result.newAsked },
+    showFight: { ...f, phase: 'minigame', race: { q: result.question, answers: {}, deadline } },
+  });
+  // Personne n'a répondu juste dans le temps imparti : boss → le Prof marque ;
+  // sinon → nouvelle question (personne ne marque).
+  setTimeout(() => {
+    const cur = get().showFight;
+    if (!cur || cur.phase !== 'minigame' || !cur.race || cur.race.deadline !== deadline) return;
+    if (cur.bossFight) {
+      fightRoundWin(set, get, 'defender');
+      const nf = get().showFight;
+      if (nf && nf.phase === 'minigame' && !nf.winnerSide) serveRaceQuestion(set, get);
+    } else {
+      serveRaceQuestion(set, get);
+    }
+  }, RACE_DURATION * 1000);
+}
+
+// Un duelliste répond (attaquant OU défenseur). Premier juste = manche gagnée ;
+// deux faux = nouvelle question.
+export function submitFightAnswer(set, get, teamIdx, index) {
+  const f = get().showFight;
+  if (!f || f.phase !== 'minigame' || !f.race) return;
+  const side = teamIdx === f.attackerIndex ? 'attacker' : teamIdx === f.defenderIndex ? 'defender' : null;
+  if (!side) return;
+  const race = f.race;
+  if (race.answers[side]) return; // déjà répondu à cette question
+  const otherAnswered = !!race.answers[otherSide(side)];
+  const answers = { ...race.answers, [side]: { index, at: Date.now() } };
+  set({ showFight: { ...f, race: { ...race, answers } } });
+  const outcome = raceOutcomeOnAnswer({ index, correctIndex: race.q.c, otherAnswered });
+  if (outcome === 'win') {
+    fightRoundWin(set, get, side);
+    const nf = get().showFight;
+    if (nf && nf.phase === 'minigame' && !nf.winnerSide) serveRaceQuestion(set, get);
+  } else if (outcome === 'replay') {
+    serveRaceQuestion(set, get);
+  }
+  // 'wait' : on attend la réponse de l'autre camp
 }
 
 // Les deux equipes ont confirme « Je suis pret » -> lancement du mini-jeu
