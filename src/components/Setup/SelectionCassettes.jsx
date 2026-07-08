@@ -28,6 +28,7 @@ import { getQuestions } from '../../data/questions';
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
 import LobbyPanel from './LobbyPanel';
+import OnlineSetup from './OnlineSetup';
 import ExtensionsChecklist from './ExtensionsChecklist';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
@@ -739,9 +740,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
       return (
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', gap: 12 }}>{GAME_MODES.map(renderModeCard)}</div>
-          {/* Participants — contextuels au mode : TBI = création d'équipes, téléphone = lobby QR. */}
+          {/* Participants — contextuels au mode : TBI = création d'équipes, téléphone = lobby QR,
+              en ligne = création locale + bandeau explicatif (le lien de partage apparaît en jeu). */}
           <div className="qm-console-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto', ...panelInset }}>
-            {phoneMode ? <LobbyPanel /> : (<><TeamCount /><TeamCustomization /></>)}
+            {phoneMode ? <LobbyPanel /> : connectionMode === 'online' ? <OnlineSetup /> : (<><TeamCount /><TeamCustomization /></>)}
           </div>
         </div>
       );

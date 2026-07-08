@@ -8,7 +8,7 @@ import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
 import { locName } from '../../i18n/content';
 import {
-  createSession, buildSessionPayload, joinUrl,
+  createSession, buildSessionPayload, joinUrl, onlineJoinUrl,
   fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
 } from '../../logic/sessionConfig';
 import { useT } from '../../i18n';
@@ -31,7 +31,7 @@ function TitleBar() {
   );
 }
 
-export default function LobbyPanel() {
+export default function LobbyPanel({ online = false }) {
   const T = useT();
   const sessionCode = useGameStore((s) => s.sessionCode);
   const setSessionCode = useGameStore((s) => s.setSessionCode);
@@ -95,7 +95,10 @@ export default function LobbyPanel() {
     );
   }
 
-  const url = joinUrl(sessionCode);
+  const url = online ? onlineJoinUrl(sessionCode) : joinUrl(sessionCode);
+  // En ligne : on ne peut lancer que si TOUTES les équipes présentes sont prêtes.
+  const allReady = teamsLive.length > 0 && teamsLive.every((r) => r.ready);
+  const canStart = teamsLive.length >= 1 && (!online || allReady);
   return (
     <div className="lobby90">
       <div className="lobby90-win">
@@ -152,10 +155,13 @@ export default function LobbyPanel() {
             })}
           </div>
 
-          {/* Gros bouton arcade lumineux */}
-          <button className="lobby90-start" onClick={start} disabled={!teamsLive.length}>
+          {/* Gros bouton arcade lumineux — en ligne : actif seulement si tout le monde est prêt */}
+          <button className="lobby90-start" onClick={start} disabled={!canStart}>
             ▶▶ {T('setup.lobbyStart', { n: teamsLive.length })}
           </button>
+          {online && teamsLive.length > 0 && !allReady && (
+            <div className="lobby90-waiting" style={{ textAlign: 'center' }}>En attente que tous les joueurs soient prêts…</div>
+          )}
 
           {devOn() && (
             <div className="lobby90-sim">
@@ -165,7 +171,7 @@ export default function LobbyPanel() {
                   <button
                     key={n}
                     className="lobby90-chip"
-                    onClick={() => window.open(`${joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
+                    onClick={() => window.open(`${online ? onlineJoinUrl(sessionCode) : joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
                   >
                     {T('setup.lobbySimStudent', { n })}
                   </button>

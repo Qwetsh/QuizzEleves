@@ -91,7 +91,7 @@ const EMOJI_CHOICES = ['🦁', '🐯', '🦅', '🐺', '🦊', '🐻', '🐉', '
 // Écran « crée ton équipe » (mode téléphone, statut lobby). L'élève saisit un
 // nom + un logo, et peut choisir ses 2 pouvoirs. À l'envoi, sa fiche est
 // poussée dans le lobby (upsert par token) ; il attend que le prof démarre.
-function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = false }) {
+export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = false }) {
   const T = tFor(englishMode);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);

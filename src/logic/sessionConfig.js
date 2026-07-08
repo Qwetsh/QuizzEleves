@@ -37,6 +37,12 @@ export function joinUrl(code) {
   return `${window.location.origin}${base}?join=${code}`;
 }
 
+// URL de jointure « jeu en ligne » (client complet : lobby → plateau + jeu).
+export function onlineJoinUrl(code) {
+  const base = import.meta.env.BASE_URL || '/';
+  return `${window.location.origin}${base}?online=${code}`;
+}
+
 // --- Manette téléphone : état du tour publié vers les mobiles ---
 // La « phase de tour » n'existe pas côté TBI (combinaison de flags) : on la
 // dérive ici pour le mobile. Premier flag actif gagne — l'ordre est calqué sur

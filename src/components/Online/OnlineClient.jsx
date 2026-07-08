@@ -1,83 +1,100 @@
-// Client « jeu en ligne » côté SPECTATEUR (miroir, lecture). Ouvert via
-// ?online=CODE : s'abonne à la session, hydrate le store depuis l'instantané
-// diffusé par l'hôte, et rend l'app complète (plateau en direct). Ne calcule
-// rien — c'est un reflet de l'autorité.
-import { useEffect, useRef, useState } from 'react';
+// Client « jeu en ligne » (ouvert via ?online=CODE). Deux temps :
+//  1) LOBBY (partie pas lancée) : le joueur crée SON équipe (nom + logo + pouvoirs)
+//     et se met « prêt » — réutilise l'écran du lobby téléphone.
+//  2) JEU : une fois l'hôte lancé, hydrate le plateau depuis l'instantané diffusé
+//     et rend l'app complète ; le joueur possède son équipe (via son jeton) et
+//     joue son tour / gère son équipe depuis son écran.
+import { useEffect, useState } from 'react';
 import App from '../../App';
 import { useGameStore } from '../../store/gameStore';
-import { fetchSession, subscribeSession, subscribePresence, randomToken } from '../../logic/sessionConfig';
+import { fetchSession, subscribeSession, subscribePresence } from '../../logic/sessionConfig';
 import { hydrateSnapshot } from '../../logic/onlineSnapshot';
 import OnlineController from './OnlineController';
+import { LobbyCreateScreen } from '../Mobile/MobileApp';
+
+// Jeton local persistant (identité du joueur → possession de son équipe), même
+// clé que OnlineController pour que l'équipe créée au lobby soit bien reconnue.
+const tokenKey = (code) => `quete_online_token_${code}`;
+function loadToken(code) {
+  try {
+    const ex = localStorage.getItem(tokenKey(code));
+    if (ex) return ex;
+    const t = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    localStorage.setItem(tokenKey(code), t);
+    return t;
+  } catch { return Math.random().toString(36).slice(2); }
+}
+
+function Splash({ code, children }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: '#0b0e12', color: '#bfeccb', fontFamily: 'var(--font-ui)', textAlign: 'center', padding: 20 }}>
+      <div>
+        <div style={{ fontSize: 26, color: '#66ff8a', marginBottom: 8 }}>🌐 Jeu en ligne</div>
+        <div>{children} <b style={{ letterSpacing: 2 }}>{code || '—'}</b></div>
+      </div>
+    </div>
+  );
+}
 
 export default function OnlineClient({ code }) {
-  const [ready, setReady] = useState(false);
-  const [status, setStatus] = useState('connecting');
-  const [hostOnline, setHostOnline] = useState(false);
-  const [viewers, setViewers] = useState(0);
-  // Payload « manette » diffusé par l'hôte (pour piloter son tour) + fraîcheur.
+  const [data, setData] = useState(undefined); // undefined = pas encore ; null = introuvable ; objet = session
+  const [started, setStarted] = useState(false);
   const [ctrl, setCtrl] = useState(null);
   const [lastSync, setLastSync] = useState(0);
-  const tokenRef = useRef(null);
-  if (!tokenRef.current) tokenRef.current = randomToken();
+  const [hostOnline, setHostOnline] = useState(false);
+  const [viewers, setViewers] = useState(0);
+  const [token] = useState(() => loadToken(code));
 
   useEffect(() => {
     if (!code) return;
     let alive = true;
-    const apply = (data) => {
+    const apply = (d) => {
       if (!alive) return;
-      const slice = hydrateSnapshot(data);
-      if (slice) { useGameStore.setState(slice); setReady(true); }
-      setCtrl(data?.ctrl ?? null);
+      setData(d ?? null);
+      const isGame = !!(d && d.v && d.phase === 'game'); // instantané de jeu (vs payload lobby)
+      if (isGame) { const slice = hydrateSnapshot(d); if (slice) useGameStore.setState(slice); setStarted(true); }
+      else setStarted(false);
+      setCtrl(d?.ctrl ?? null);
       setLastSync(Date.now());
     };
-    // Rattrapage immédiat, puis flux temps réel.
-    fetchSession(code).then((d) => { if (d) apply(d); }).catch(() => {});
-    const unsub = subscribeSession(code, apply, (st) => setStatus(st === 'SUBSCRIBED' ? 'live' : st));
+    fetchSession(code).then((d) => apply(d)).catch(() => { if (alive) setData(null); });
+    const unsub = subscribeSession(code, apply);
     return () => { alive = false; unsub(); };
   }, [code]);
 
-  // Présence : l'hôte est-il là ? combien de spectateurs ?
+  // Présence : l'hôte est-il là ? combien de joueurs/spectateurs ?
   useEffect(() => {
     if (!code) return;
-    return subscribePresence(code, { role: 'spectator', token: tokenRef.current }, (list) => {
+    return subscribePresence(code, { role: 'spectator', token }, (list) => {
       setHostOnline(list.some((p) => p.role === 'host'));
       setViewers(list.filter((p) => p.role === 'spectator').length);
     });
-  }, [code]);
+  }, [code, token]);
 
-  if (!ready) {
+  // --- Phase LOBBY (partie pas encore lancée) : créer son équipe ---
+  if (!started) {
+    if (data === undefined) return <Splash code={code}>Connexion à la partie</Splash>;
+    if (data === null) return <Splash code={code}>Partie introuvable — vérifie le code (l’hôte doit avoir ouvert le lobby) :</Splash>;
     return (
-      <div style={{
-        position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
-        background: '#0b0e12', color: '#bfeccb', fontFamily: 'var(--font-ui)', textAlign: 'center',
-      }}>
-        <div>
-          <div style={{ fontSize: 26, color: '#66ff8a', marginBottom: 8 }}>🌐 Jeu en ligne</div>
-          <div>Connexion à la partie <b style={{ letterSpacing: 2 }}>{code || '—'}</b>…</div>
-          {status !== 'connecting' && status !== 'live' && (
-            <div style={{ fontSize: 12, color: '#8b9096', marginTop: 8 }}>({String(status)})</div>
-          )}
-        </div>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'auto', background: '#f4e8cf' }}>
+        <LobbyCreateScreen code={code} token={token} lv2Mode={!!data.lv2Mode} englishMode={!!data.englishMode} />
       </div>
     );
   }
 
+  // --- Phase JEU : plateau en direct + ma manette / gestion d'équipe ---
   return (
     <>
       <App />
-      {/* Manette du joueur distant : choix d'équipe, puis pilotage de son tour. */}
       <OnlineController code={code} ctrl={ctrl} lastSync={lastSync} />
-      {/* Bandeau discret : liveness + spectateurs. */}
       <div style={{
         position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 300,
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '4px 12px', borderRadius: 999, background: 'rgba(10,14,18,0.9)',
         border: '1px solid #16351f', fontFamily: 'var(--font-ui)', fontSize: 12,
       }}>
-        <span style={{ color: hostOnline ? '#66ff8a' : '#ff8a7a' }}>
-          {hostOnline ? '🟢 EN DIRECT' : '🔴 Hôte hors ligne'}
-        </span>
-        <span style={{ color: '#8b9096' }}>👁️ SPECTATEUR · {code}</span>
+        <span style={{ color: hostOnline ? '#66ff8a' : '#ff8a7a' }}>{hostOnline ? '🟢 EN DIRECT' : '🔴 Hôte hors ligne'}</span>
+        <span style={{ color: '#8b9096' }}>{code}</span>
         {viewers > 1 && <span style={{ color: '#bfeccb' }}>· {viewers} 👁️</span>}
       </div>
     </>
