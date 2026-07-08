@@ -52,8 +52,9 @@ export default function OnlineClient({ code }) {
       if (!alive) return;
       setData(d ?? null);
       const isGame = !!(d && d.v && d.phase === 'game'); // instantané de jeu (vs payload lobby)
+      // Transition lobby → jeu IRRÉVERSIBLE : une fois lancé, un éventuel message
+      // non-jeu (heartbeat lobby résiduel) ne doit pas renvoyer au lobby.
       if (isGame) { const slice = hydrateSnapshot(d); if (slice) useGameStore.setState(slice); setStarted(true); }
-      else setStarted(false);
       setCtrl(d?.ctrl ?? null);
       setLastSync(Date.now());
     };

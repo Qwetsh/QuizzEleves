@@ -386,11 +386,23 @@ export async function fetchSession(code) {
 // `onStatus` (optionnel) reçoit l'état du canal ('SUBSCRIBED', 'CHANNEL_ERROR',
 // 'TIMED_OUT', 'CLOSED') — le mobile s'en sert pour se réabonner (manette).
 export function subscribeSession(code, onData, onStatus) {
+  // Nom de canal UNIQUE par abonnement : deux `.channel('quete-session-CODE')`
+  // renvoient le MÊME canal (dédup Supabase par topic) ; un 2e `.on().subscribe()`
+  // (re-montage StrictMode, multi-abonné) lève « cannot add postgres_changes
+  // callbacks after subscribe() » et casse l'abonnement. Un suffixe unique évite
+  // toute collision — chaque abonné reçoit quand même tous les changements DB.
   const channel = supabase
-    .channel(`quete-session-${code}`)
+    .channel(`quete-session-${code}-${Math.random().toString(36).slice(2, 9)}`)
     .on('postgres_changes',
       { event: '*', schema: 'public', table: TABLE, filter: `code=eq.${code}` },
-      (payload) => onData(payload.new?.data ?? null))
+      (payload) => {
+        // Le payload Realtime peut être VIDE/incomplet pour un gros JSON (le
+        // snapshot complet du jeu en ligne) ou selon la RLS Realtime → on relit
+        // alors la ligne complète en REST (SELECT), fiable quelle que soit la taille.
+        const inline = payload.new?.data;
+        if (inline) onData(inline);
+        else fetchSession(code).then((d) => { if (d) onData(d); }).catch(() => {});
+      })
     .subscribe((status) => onStatus?.(status));
   return () => { supabase.removeChannel(channel); };
 }
@@ -401,7 +413,12 @@ export function subscribeSession(code, onData, onStatus) {
 // présents à chaque changement. Renvoie une fonction de départ.
 export function subscribePresence(code, meta, onSync) {
   const key = meta?.token || randomToken();
-  const channel = supabase.channel(`quete-presence-${code}`, { config: { presence: { key } } });
+  const topic = `quete-presence-${code}`;
+  // La présence exige un topic PARTAGÉ (pour se voir entre clients) → on ne peut
+  // pas le rendre unique. On purge donc tout canal résiduel du même topic avant
+  // d'en recréer un (évite « callbacks after subscribe » au re-montage StrictMode).
+  try { supabase.getChannels().forEach((c) => { if (c.topic === topic || c.topic === `realtime:${topic}`) supabase.removeChannel(c); }); } catch { /* noop */ }
+  const channel = supabase.channel(topic, { config: { presence: { key } } });
   const emit = () => {
     const state = channel.presenceState();
     const list = Object.values(state).flat();
