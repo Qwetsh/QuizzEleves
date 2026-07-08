@@ -164,7 +164,7 @@ const GAME_MODES = [
   { id: 'tbi', conn: 'board', controller: false, emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
   { id: 'companion', conn: 'phone', controller: false, emblem: '📱', name: 'Téléphone + TBI', desc: 'Les joueurs rejoignent par QR ; on joue sur le TBI.', ready: true },
   { id: 'manette', conn: 'phone', controller: true, emblem: '🕹️', name: 'Téléphone-manette', desc: 'Les joueurs rejoignent par QR ; l’équipe active joue son tour (dé, réponses, choix) sur son téléphone.', ready: true },
-  { id: 'online', emblem: '🌐', name: 'Jeu en ligne', desc: 'Partie et connexion 100 % en ligne.', ready: false },
+  { id: 'online', conn: 'online', controller: false, emblem: '🌐', name: 'Jeu en ligne', desc: 'Tu héberges la partie ; partage un lien pour que d’autres suivent le plateau en direct (bêta).', ready: true },
 ];
 
 // Niveaux scolaires proposés au lancement (un par classe, choisis dans le menu
@@ -714,7 +714,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const panelInset = { border: '5px solid #150f08', borderRadius: 14, background: '#efe3c6', boxShadow: 'inset 0 0 0 3px #b79a63, inset 0 2px 8px rgba(0,0,0,.15)', padding: '18px 22px', fontFamily: 'var(--font-ui)', color: 'var(--ink-700, #241a10)' };
 
   // Carte « mode de jeu » (rétro, harmonisée avec la console).
-  const selectedModeId = phoneMode ? (phoneController ? 'manette' : 'companion') : 'tbi';
+  const selectedModeId = connectionMode === 'online' ? 'online'
+    : phoneMode ? (phoneController ? 'manette' : 'companion') : 'tbi';
   const renderModeCard = (m) => {
     const sel = m.ready && m.id === selectedModeId;
     return (

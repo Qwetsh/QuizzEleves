@@ -11,6 +11,9 @@ const CassettesPreview = lazy(() => import('./components/Setup/SelectionCassette
 // Calibrateur de continents de l'univers espace (?calibrate) : outil DEV
 // autonome (maps v2), aucune donnée Supabase requise.
 const MapCalibrator = lazy(() => import('./components/Dev/MapCalibrator'));
+// Client « jeu en ligne » spectateur (?online=CODE) : miroir lecture de la
+// partie de l'hôte. Paresseux (hors du bundle TBI/mobile par défaut).
+const OnlineClient = lazy(() => import('./components/Online/OnlineClient'));
 // Polices auto-hébergées (bundlées) au lieu du CDN Google Fonts : fonctionnent
 // hors ligne et évitent tout appel réseau. Familles : Lilita One (display),
 // Fredoka (UI), Inter (corps) — cf. --font-display/--font-ui/--font-body.
@@ -38,6 +41,8 @@ import { useGameStore } from './store/gameStore';
 // vue lecture seule, indépendante du moteur de jeu du TBI.
 const params = new URLSearchParams(window.location.search);
 const joinMode = params.has('join');
+// Spectateur « jeu en ligne » : miroir lecture d'une partie hébergée par un hôte.
+const onlineMode = params.has('online');
 // Dashboard d'analyse : vue dédiée, hors flux de jeu (nécessite Supabase).
 const analyseMode = params.has('analyse');
 // Preview de l'écran de sélection cassettes : autonome, aucune donnée requise.
@@ -58,8 +63,9 @@ if (import.meta.env.VITE_OFFLINE === '1') {
   });
 } else if (cassettesMode || calibrateMode) {
   // Preview mock / outil de calibration : rien à charger.
-} else if (joinMode || analyseMode) {
-  // Mobile / dashboard : catalogue d'objets (noms/images) + recettes + équilibrage
+} else if (joinMode || analyseMode || onlineMode) {
+  // Mobile / dashboard / spectateur online : catalogue d'objets (noms/images) +
+  // recettes + équilibrage
   // (noms de pouvoirs) pour résoudre ITEMS/POWERS dans les libellés.
   applyCachedCategories();
   refreshCategories().catch(() => {});
@@ -119,6 +125,7 @@ function Root() {
   if (calibrateMode) return <Suspense fallback={null}><MapCalibrator /></Suspense>;
   if (cassettesMode) return <Suspense fallback={null}><CassettesPreview /></Suspense>;
   if (analyseMode) return <Suspense fallback={null}><DashboardApp /></Suspense>;
+  if (onlineMode) return <Suspense fallback={null}><OnlineClient code={params.get('online')} /></Suspense>;
   if (joinMode) return <MobileApp />;
   return <App />;
 }

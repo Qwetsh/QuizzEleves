@@ -355,6 +355,28 @@ export function subscribeSession(code, onData, onStatus) {
   return () => { supabase.removeChannel(channel); };
 }
 
+// --- Présence (mode « jeu en ligne ») : qui est connecté à la session ---
+// Canal Realtime Presence dédié : chaque client s'y « track » avec son rôle
+// (host/spectator) et son token. `onSync(list)` reçoit la liste aplatie des
+// présents à chaque changement. Renvoie une fonction de départ.
+export function subscribePresence(code, meta, onSync) {
+  const key = meta?.token || randomToken();
+  const channel = supabase.channel(`quete-presence-${code}`, { config: { presence: { key } } });
+  const emit = () => {
+    const state = channel.presenceState();
+    const list = Object.values(state).flat();
+    onSync?.(list);
+  };
+  channel
+    .on('presence', { event: 'sync' }, emit)
+    .on('presence', { event: 'join' }, emit)
+    .on('presence', { event: 'leave' }, emit)
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') channel.track({ ...meta, at: Date.now() }).catch(() => {});
+    });
+  return () => { supabase.removeChannel(channel); };
+}
+
 // --- Lobby : équipes créées depuis les téléphones (avant la partie) ---
 
 // Crée ou met à jour la fiche d'équipe d'un téléphone (clé = code + token).

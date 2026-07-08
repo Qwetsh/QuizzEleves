@@ -6,6 +6,7 @@ import { playMusic } from './logic/music';
 import Setup from './components/Setup/Setup';
 import PowerSetup from './components/Setup/PowerSetup';
 import GameLayout from './components/Game/GameLayout';
+import OnlineHost from './components/Online/OnlineHost';
 
 // Console de setup « CURIOSCOPE » (écran principal) : paresseuse. Repli vers
 // l'ancien Setup via ?classic (filet de sécurité pendant la transition).
@@ -60,6 +61,9 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Diffusion « jeu en ligne » (hôte). Inactif hors mode online / sur miroir. */}
+      <OnlineHost />
     </div>
   );
 }

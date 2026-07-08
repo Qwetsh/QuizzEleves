@@ -83,6 +83,14 @@ export default function GameLayout() {
   const alchemyOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'alchemy'));
   const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
   const weatherOn = useGameStore((s) => extOn(s.extensions, 'weather'));
+  // Mode « jeu en ligne » : la diffusion est gérée par OnlineHost (instantané
+  // complet) — on n'active pas le panneau mobile (payload manette) qui publierait
+  // en concurrence sur le même code de session.
+  const onlineMode = useGameStore((s) => s.connectionMode === 'online');
+  // Client « miroir » (spectateur online) : rend le plateau mais N'EST PAS
+  // l'autorité → on ne monte aucun consumer réseau (sinon il volerait/supprimerait
+  // les intents/trades du vrai hôte).
+  const mirror = useGameStore((s) => !!s._mirror);
   const triggerWeather = useGameStore((s) => s.triggerWeather);
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
@@ -260,7 +268,7 @@ export default function GameLayout() {
 
         {/* Bottom actions */}
         <div className="rg-rail-actions" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', display: 'flex', gap: 8 }}>
-          {!OFFLINE && <MobileSessionPanel />}
+          {!OFFLINE && !onlineMode && <MobileSessionPanel />}
           <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label={T('game.fullscreen')} style={{ flex: 1 }}>
             {isFs ? `\u2716 ${T('game.exitFullscreen')}` : `\u26F6 ${T('game.fullscreen')}`}
           </button>
@@ -272,10 +280,10 @@ export default function GameLayout() {
 
       {/* Logique : applique les commandes d'équipement venues des téléphones.
           Hors ligne : pas de Realtime → composants non montés. */}
-      {!OFFLINE && <IntentConsumer />}
-      {!OFFLINE && <TradeConsumer />}
-      {!OFFLINE && <StatsArchiver />}
-      {!OFFLINE && <TestLinksPanel />}
+      {!OFFLINE && !mirror && <IntentConsumer />}
+      {!OFFLINE && !mirror && <TradeConsumer />}
+      {!OFFLINE && !mirror && <StatsArchiver />}
+      {!OFFLINE && !mirror && <TestLinksPanel />}
 
       {/* Animations */}
       <FlyingCoins />
