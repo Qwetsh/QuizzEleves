@@ -252,6 +252,71 @@ export function soundEvent() {
   setTimeout(() => playTone(440, 0.1, 'sine', 0.2), 200);
 }
 
+// Saut hyperspatial : souffle (bruit balayé) + drone grave qui monte jusqu'au
+// « saut », puis un « pop » de sortie d'hyperespace. `dur` en s cale la cinématique.
+export function soundHyperspace(dur = 2.1) {
+  const c = getCtx();
+  const master = getMaster();
+  if (!c || !master) return;
+  const t0 = c.currentTime;
+  const jump = dur * 0.86; // instant du saut (pic) avant la sortie
+
+  // 1) Souffle : bruit blanc long, passe-bande dont la fréquence + le gain montent.
+  const frames = Math.floor(c.sampleRate * dur);
+  const buffer = c.createBuffer(1, frames, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource(); src.buffer = buffer;
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
+  bp.frequency.setValueAtTime(160, t0);
+  bp.frequency.exponentialRampToValueAtTime(3400, t0 + jump);
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.0001, t0);
+  ng.gain.exponentialRampToValueAtTime(0.34, t0 + dur * 0.7);
+  ng.gain.exponentialRampToValueAtTime(0.5, t0 + jump);
+  ng.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+  src.connect(bp); bp.connect(ng); ng.connect(master);
+  src.start(t0); src.stop(t0 + dur);
+
+  // 2) Drone : sawtooth grave qui monte (accélération vers la lumière).
+  const osc = c.createOscillator(); osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(58, t0);
+  osc.frequency.exponentialRampToValueAtTime(440, t0 + jump);
+  const og = c.createGain();
+  og.gain.setValueAtTime(0.0001, t0);
+  og.gain.exponentialRampToValueAtTime(0.14, t0 + dur * 0.7);
+  og.gain.exponentialRampToValueAtTime(0.0008, t0 + dur * 0.92);
+  osc.connect(og); og.connect(master);
+  osc.start(t0); osc.stop(t0 + dur);
+
+  // 3) « Pop » de sortie : impact + descente rapide, au moment du saut.
+  setTimeout(() => {
+    playNoise(0.22, 0.3, { type: 'lowpass', freq: 2600, q: 0.6 });
+    const b = c.createOscillator(); b.type = 'triangle';
+    const bg = c.createGain(); const tt = c.currentTime;
+    b.frequency.setValueAtTime(920, tt);
+    b.frequency.exponentialRampToValueAtTime(120, tt + 0.35);
+    bg.gain.setValueAtTime(0.3, tt);
+    bg.gain.exponentialRampToValueAtTime(0.001, tt + 0.4);
+    b.connect(bg); bg.connect(master);
+    b.start(tt); b.stop(tt + 0.42);
+  }, Math.round(jump * 1000));
+}
+
+// Révélation d'une silhouette (« Qui est ce Pokémon ? ») : petit roulement
+// interrogatif qui se résout en un accord ascendant triomphal + scintillement —
+// le « C'est ... ! » de la pub TV. Joué au moment où l'image passe en couleur.
+export function soundReveal() {
+  // Montée interrogative rapide (« qui est-ce ? »)
+  playTone(392, 0.08, 'triangle', 0.14);
+  setTimeout(() => playTone(494, 0.08, 'triangle', 0.14), 80);
+  // Résolution triomphale (arpège majeur) + shimmer cristallin
+  setTimeout(() => playTone(659, 0.14, 'sine', 0.24), 200);   // mi
+  setTimeout(() => playTone(784, 0.14, 'sine', 0.24), 300);   // sol
+  setTimeout(() => playTone(1047, 0.28, 'triangle', 0.22), 400); // do aigu
+  setTimeout(() => playNoise(0.3, 0.07, { type: 'highpass', freq: 5200, q: 0.5 }), 420);
+}
+
 export function soundVictory() {
   const notes = [523, 659, 784, 1047];
   notes.forEach((f, i) => {
@@ -341,4 +406,18 @@ export function soundDouble() {
 
 export function soundTimer() {
   playTone(880, 0.08, 'square', 0.15);
+}
+
+// Téléportation (point de contrôle) : « whoosh » spatial ascendant (aspiration au
+// départ) suivi d'un scintillement cristallin descendant (matérialisation).
+export function soundWarp() {
+  // Aspiration : bruit passe-bande qui monte + glissando sinus ascendant.
+  playNoise(0.34, 0.16, { type: 'bandpass', freq: 900, q: 0.7 });
+  playTone(220, 0.3, 'sine', 0.12);
+  setTimeout(() => playTone(660, 0.22, 'sine', 0.12), 120);
+  // Matérialisation à l'arrivée : arpège cristallin + shimmer.
+  setTimeout(() => {
+    [1320, 990, 1560].forEach((f, i) => setTimeout(() => playTone(f, 0.16, 'triangle', 0.12), i * 60));
+    playNoise(0.3, 0.08, { type: 'highpass', freq: 5000, q: 0.5 });
+  }, 400);
 }

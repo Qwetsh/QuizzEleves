@@ -19,6 +19,10 @@ export function rowToTheme(r) {
   if (r.biome != null) t.biome = r.biome;
   if (r.biome_en != null) t.biomeEn = r.biome_en;
   if (r.default_on != null) t.defaultOn = r.default_on;
+  // Cassette « dure » (hymnes, silhouettes, Qui est ce Pokémon…) : jamais aspirée
+  // par la sélection d'un ancêtre (intégrale/domaine), seulement sélectionnable
+  // en la cochant explicitement. Cf. descendantLeaves(..., {includeHard}).
+  if (r.hard != null) t.hard = r.hard;
   if (r.ord != null) t.ord = r.ord;
   return t;
 }

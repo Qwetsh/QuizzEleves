@@ -34,6 +34,11 @@ export const SUBJECTS = {
   // effet « question forcée ». Pas de filtrage par niveau (transverses).
   cultureG:   { module: 'college', name: 'Culture générale', name_en: 'General Knowledge', short: 'CG', icon: '\u{1F9E0}', color: '#7a5ea8', colorSoft: '#e2d9f0', colorDeep: '#41306b', biome: 'La Grande Bibliothèque', biome_en: 'The Great Library' },
   hardcore:   { module: 'college', name: 'Hardcore',      name_en: 'Hardcore', short: 'HC',  icon: '\u{1F480}', color: '#8a1f2e', colorSoft: '#ecc9cd', colorDeep: '#4d0f17', biome: "L'Antre du Défi", biome_en: 'The Den of Challenge' },
+  // Drapeaux & symboles : entrée d'affichage héritée. Les questions à IMAGE sont
+  // désormais fusionnées dans le THÈME sélectionnable `drapeaux_symboles` (pool
+  // culture-G, cf. quete_themes) ; l'effet `askFlag` force ce thème. Conservé pour
+  // rétro-compat des références éventuelles.
+  drapeaux:   { module: 'college', name: 'Drapeaux & symboles', name_en: 'Flags & symbols', short: 'DR', icon: '\u{1F6A9}', color: '#c0392b', colorSoft: '#f0d3cf', colorDeep: '#6b1f16', biome: 'La Salle des Bannières', biome_en: 'The Hall of Banners' },
 };
 
 // Matières DISPONIBLES pour le plateau (cases). cultureG/hardcore exclues
@@ -48,7 +53,10 @@ export let DEFAULT_BOARD_SUBJECTS = ['francais', 'maths', 'histoire', 'geographi
 export let LV2_SUBJECTS = ['allemand', 'espagnol'];
 // Matières supplémentaires « forcé-only » (jamais tirées par une case, uniquement
 // via un effet). Chargées dans les pools de questions, hors filtrage par niveau.
-export let FORCED_SUBJECT_KEYS = ['cultureG', 'hardcore'];
+// NB : `drapeaux` reste ici (jamais posé sur le plateau) mais son CONTENU à image
+// a été fusionné dans le THÈME sélectionnable `drapeaux_symboles` (pool culture-G) ;
+// la clé `drapeaux` est désormais vide et l'effet `askFlag` force `drapeaux_symboles`.
+export let FORCED_SUBJECT_KEYS = ['cultureG', 'hardcore', 'drapeaux'];
 
 // Snapshot d'origine (fallback hors-ligne ultime, cf. BASE_ITEMS).
 export const BASE_SUBJECTS = JSON.parse(JSON.stringify(SUBJECTS));

@@ -11,6 +11,7 @@ import { POWERS } from '../../data/powers';
 import { ITEMS } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
 import { locName, locDesc } from '../../i18n/content';
+import TeamAvatar from '../TeamAvatar';
 import { merchantPrice } from '../../store/eventHandlers';
 
 // Infos d'affichage d'une matière/thème (le mobile résout localement, comme
@@ -121,7 +122,7 @@ function TargetPickerPanel({ tp, session, teamIdx, busy, act, T }) {
                 setBetray(null);
                 act('turnSelectTarget', { index: i });
               }}>
-              <span className="mob-ctrl-opt-icon" style={{ background: 'rgba(255,255,255,0.12)' }}>{t.emoji}</span>
+              <span className="mob-ctrl-opt-icon" style={{ background: 'rgba(255,255,255,0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={t} size={26} /></span>
               <span style={{ minWidth: 0, fontWeight: 700 }}>
                 {t.name}
                 {i === teamIdx && ` ${T('mobile.ctrlSelf')}`}
@@ -169,6 +170,13 @@ function QuestionPanel({ q, team, en, busy, act, T }) {
         {isBurst && <span className="mob-ctrl-qburst">💀 {q.multiIndex}/{q.multiTotal}</span>}
       </div>
       <div className="mob-ctrl-qtext">{text}</div>
+      {q.img && (
+        <div className="mob-ctrl-qmedia">
+          {/* Silhouette (« Qui est ce Pokémon ? ») masquée en noir jusqu'à la
+              révélation, comme sur le TBI (anti-spoiler côté téléphone). */}
+          <img src={q.img} alt="" style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 8, filter: q.render === 'silhouette' && !revealed ? 'brightness(0)' : 'brightness(1)', transition: 'filter 0.6s ease' }} />
+        </div>
+      )}
       {!revealed && (
         <div className="mob-ctrl-qtimer">
           <div className="mob-ctrl-qtimer-fill" style={{ width: `${Math.min(100, (timeLeft / 30) * 100)}%`, background: timeLeft <= 5 ? '#e14b3a' : timeLeft <= 12 ? '#e8a13a' : '#57c84d' }} />
@@ -187,7 +195,10 @@ function QuestionPanel({ q, team, en, busy, act, T }) {
           return (
             <button key={i} className={cls} disabled={hidden || revealed || busy} onClick={() => tap(i)}>
               <span className="mob-ctrl-ans-letter">{String.fromCharCode(65 + i)}</span>
-              <span>{ansText(i)}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {q.a_img?.[i] && <img src={q.a_img[i]} alt="" style={{ maxHeight: 56, maxWidth: '100%', objectFit: 'contain', borderRadius: 5 }} />}
+                {ansText(i) && <span>{ansText(i)}</span>}
+              </span>
             </button>
           );
         })}
@@ -307,7 +318,7 @@ function EventPanel({ evt, session, teamIdx, busy, act, T }) {
               <button key={i} className="mob-ctrl-opt" disabled={busy}
                 style={{ '--opt-color': t.color || '#e0a458' }}
                 onClick={() => act('turnEventTarget', { index: i })}>
-                <span className="mob-ctrl-opt-icon" style={{ background: 'rgba(255,255,255,0.12)' }}>{t.emoji}</span>
+                <span className="mob-ctrl-opt-icon" style={{ background: 'rgba(255,255,255,0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={t} size={26} /></span>
                 <span style={{ minWidth: 0, fontWeight: 700 }}>{t.name}</span>
               </button>
             ))}
@@ -333,6 +344,11 @@ function EventPanel({ evt, session, teamIdx, busy, act, T }) {
         <div className="mob-ctrl-qwrap">
           <div className="mob-ctrl-qhead" style={{ color: info.color }}>{info.icon} {info.name}</div>
           <div className="mob-ctrl-qtext">{(en && q.q_en) || q.q}</div>
+          {q.img && (
+            <div className="mob-ctrl-qmedia">
+              <img src={q.img} alt="" style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 8, filter: q.render === 'silhouette' && !q.revealed ? 'brightness(0)' : 'brightness(1)', transition: 'filter 0.6s ease' }} />
+            </div>
+          )}
           <div className="mob-ctrl-qans">
             {(q.a || []).map((_, i) => {
               let cls = 'mob-ctrl-ans';
@@ -343,7 +359,10 @@ function EventPanel({ evt, session, teamIdx, busy, act, T }) {
                 <button key={i} className={cls} disabled={q.revealed || busy}
                   onClick={() => act('turnEventAnswer', { index: i })}>
                   <span className="mob-ctrl-ans-letter">{String.fromCharCode(65 + i)}</span>
-                  <span>{(en && q.a_en?.[i]) || q.a[i]}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {q.a_img?.[i] && <img src={q.a_img[i]} alt="" style={{ maxHeight: 56, maxWidth: '100%', objectFit: 'contain', borderRadius: 5 }} />}
+                    {((en && q.a_en?.[i]) || q.a[i]) && <span>{(en && q.a_en?.[i]) || q.a[i]}</span>}
+                  </span>
                 </button>
               );
             })}
@@ -561,6 +580,13 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
           <div className="mob-ctrl-hint">{T('mobile.ctrlRollHint')}</div>
           <button className="mob-ctrl-roll" disabled={busy} onClick={() => act('turnRoll')}>🎲</button>
           <div className="mob-ctrl-hint">{busy ? T('mobile.ctrlSent') : T('mobile.ctrlRoll')}</div>
+          {turn.checkpoint && (
+            <button className="mob-ctrl-opt" disabled={busy} style={{ '--opt-color': '#3b6cb3', maxWidth: 320, margin: '0 auto' }}
+              onClick={() => act('turnCheckpoint')}>
+              <span className="mob-ctrl-opt-icon">🚩</span>
+              <span style={{ minWidth: 0, fontWeight: 700 }}>{T('mobile.ctrlCheckpointGo')}</span>
+            </button>
+          )}
           <ActionRow team={team} context="idle" busy={busy} act={act} T={T} />
         </>
       );
@@ -652,14 +678,42 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
       );
       break;
     }
-    case 'tilePicker':
+    case 'tilePicker': {
+      const tp = turn.tilePicker || {};
+      const nodes = tp.nodes || [];
       body = (
-        <>
-          <div style={{ fontSize: 44 }}>👆</div>
-          <div className="mob-ctrl-subtitle">{T('mobile.ctrlTilePicker')}</div>
-        </>
+        <div className="mob-ctrl-qwrap">
+          <div className="mob-ctrl-subtitle" style={{ textAlign: 'center' }}>{tp.icon || '🪤'} {tp.label || T('mobile.ctrlTilePicker')}</div>
+          <div className="mob-ctrl-hint">{T('mobile.ctrlTilePickHint')}</div>
+          <div className="mob-ctrl-opts" style={{ maxWidth: 'none', maxHeight: '46vh', overflowY: 'auto' }}>
+            {nodes.map((nd) => {
+              const info = tileLabel(nd, en, T);
+              return (
+                <button key={nd.id} className="mob-ctrl-opt" disabled={busy}
+                  style={{ '--opt-color': info.color }}
+                  onClick={() => act('turnSelectTile', { nodeId: nd.id })}>
+                  <span className="mob-ctrl-opt-icon">{info.icon}</span>
+                  <span style={{ minWidth: 0, fontWeight: 700, flex: 1, textAlign: 'left' }}>
+                    <span style={{ opacity: 0.55, marginRight: 4 }}>#{nd.order}</span>{info.name}{nd.trap ? ' 🪤' : ''}
+                  </span>
+                  {nd.occupants?.length > 0 && (
+                    <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0 }}>
+                      {nd.occupants.map((ti) => (
+                        <span key={ti} title={session.teams?.[ti]?.name}
+                          style={{ width: 12, height: 12, borderRadius: 3, background: session.teams?.[ti]?.color || '#888', border: '1px solid rgba(0,0,0,0.3)' }} />
+                      ))}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <button className="mob-btn mob-btn--ghost" style={{ color: '#f3e9d3' }} disabled={busy}
+            onClick={() => act('turnCancelTile')}>{T('common.cancel')}</button>
+        </div>
       );
       break;
+    }
     case 'event':
       body = turn.event
         ? <EventPanel evt={turn.event} session={session} teamIdx={teamIdx} busy={busy} act={act} T={T} />
@@ -682,7 +736,7 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
                 <button key={i} className="mob-ctrl-opt" disabled={busy || blocked}
                   style={{ '--opt-color': t.color || '#e0a458', opacity: blocked ? 0.45 : 1 }}
                   onClick={() => act('turnDuelChoose', { index: i })}>
-                  <span className="mob-ctrl-opt-icon" style={{ background: 'rgba(255,255,255,0.12)' }}>{t.emoji}</span>
+                  <span className="mob-ctrl-opt-icon" style={{ background: 'rgba(255,255,255,0.12)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={t} size={26} /></span>
                   <span style={{ minWidth: 0, fontWeight: 700 }}>
                     {t.name}
                     {blocked && <span style={{ display: 'block', fontSize: 12, opacity: 0.8 }}>{T('mobile.ctrlImmune')}</span>}

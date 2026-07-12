@@ -104,6 +104,13 @@ export function buildTurnPayload(s) {
     turn.question = {
       q: q.q, q_en: q.q_en || null,
       a: q.a || [], a_en: q.a_en || null,
+      // Médias (URL publiques, noms opaques) : font partie de l'ÉNONCÉ → publiés
+      // avant révélation. L'anti-triche repose sur les noms de fichiers opaques
+      // (l'URL ne révèle jamais la bonne réponse), pas sur le masquage.
+      img: q.img || null, a_img: q.a_img || null,
+      // Mode de rendu ('silhouette' = image masquée en noir jusqu'à la révélation).
+      // Le téléphone DOIT le respecter, sinon l'artwork en couleur trahit la réponse.
+      render: q.render || null,
       subject: sq.subject || null,
       hidden: s.indiceHidden || [],       // réponses barrées (Indice / équipement)
       deadline: sq.deadline || null,       // le téléphone affiche le temps restant
@@ -211,7 +218,17 @@ export function buildTurnPayload(s) {
   } else if (phase === 'chargePicker') {
     turn.chargePicker = { amount: s.showChargePicker?.amount ?? 1 };
   } else if (phase === 'tilePicker') {
-    turn.tilePicker = { label: s.showTilePicker?.label || null }; // v1 : se joue au TBI
+    // Pose de piège pilotable au téléphone : liste des cases éligibles (toutes
+    // sauf l'arrivée), triées par progression (x), avec les équipes présentes.
+    const nodes = Object.entries(s.board || {})
+      .filter(([, n]) => n.type !== 'arrivee')
+      .sort((a, b) => (a[1].x ?? 0) - (b[1].x ?? 0))
+      .map(([id, n], i) => ({
+        id, order: i + 1, type: n.type || null, subject: n.subject || null,
+        trap: !!n.trap,
+        occupants: (s.teams || []).map((t, ti) => (t.pos === id ? ti : -1)).filter((ti) => ti >= 0),
+      }));
+    turn.tilePicker = { label: s.showTilePicker?.label || null, icon: s.showTilePicker?.icon || null, nodes };
   } else if (phase === 'junction' && team) {
     // Options dérivées côté TBI (le mobile n'a pas le plateau) : cartes-directions.
     turn.junction = {
@@ -224,6 +241,11 @@ export function buildTurnPayload(s) {
   } else if (phase === 'landing' && team) {
     const n = s.board?.[team.pos] || {};
     turn.landing = { type: n.type || null, subject: n.subject || null };
+  } else if (phase === 'idle' && team) {
+    // Point de contrôle posé par l'équipe active : téléportable depuis la manette.
+    if (team.checkpoint && s.board?.[team.checkpoint] && team.checkpoint !== team.pos) {
+      turn.checkpoint = { consumeChance: team.checkpointConsumeChance ?? 100 };
+    }
   }
   return turn;
 }
@@ -298,7 +320,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
     log: (log || []).slice(-60).map(logText),
     teams: (teams || []).map((t, idx) => ({
       idx,
-      name: t.name, emoji: t.emoji, color: t.color,
+      name: t.name, emoji: t.emoji, character: t.character, color: t.color,
       money: t.money ?? 0,
       // « Hacking » : tant que > 0, le téléphone de CETTE équipe affiche la
       // cinématique « app piratée » en boucle (jusqu'à la résolution du tour).

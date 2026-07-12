@@ -17,19 +17,32 @@ function rowToQuestion(r) {
   // pas encore traduit, repli FR géré à l'affichage).
   const a = [];
   const a_en = [];
+  const a_img = [];
   for (const col of ['a', 'b', 'c', 'd']) {
     const fr = r[`rep_${col}`];
-    if (fr == null || fr === '') continue;
-    a.push(fr);
+    const img = r[`rep_${col}_img`] ?? null;
+    // On garde la position si elle porte un TEXTE ou une IMAGE. Réponse « image
+    // seule » possible (ex. choisir le bon drapeau parmi 4) : texte vide + image.
+    if ((fr == null || fr === '') && !img) continue;
+    a.push(fr == null ? '' : fr);
     a_en.push(r[`rep_${col}_en`] ?? null);
+    // Média par réponse (URL du bucket, nom opaque) aligné sur `a` par position.
+    a_img.push(img);
   }
   const hasEn = !!(r.q_en || a_en.some(Boolean) || r.e_en);
+  const hasAnsImg = a_img.some(Boolean);
   // `level` est conservé pour un filtrage par niveau fiable (cohérent avec
   // l'éditeur), indépendant du préfixe du thème.
   return {
     q: r.q, a, c: (r.correcte || 1) - 1, e: r.e ?? '', t: r.t ?? '', level: r.level ?? null,
     // Version anglaise (null si absente → repli FR à l'affichage). a_en aligné sur a.
     q_en: r.q_en ?? null, a_en: hasEn ? a_en : null, e_en: r.e_en ?? null,
+    // Médias (URL publique du bucket 'quete-questions', noms opaques anti-triche) :
+    // `img` = média de la question ; `a_img` = média par réponse (aligné sur `a`).
+    img: r.img ?? null, a_img: hasAnsImg ? a_img : null,
+    // Mode de rendu spécial (ex. 'silhouette' = image masquée en noir jusqu'à la
+    // révélation, façon « Qui est ce Pokémon ? »). null = rendu normal.
+    render: r.render ?? null,
   };
 }
 
@@ -73,7 +86,7 @@ export async function refreshQuestions() {
       .from('quete_questions')
       // `level` est INDISPENSABLE : sans lui, rowToQuestion met level=null et le
       // filtrage par niveau retombe sur le préfixe de `t` (qui ne couvre pas le 6e).
-      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en')
+      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en,img,rep_a_img,rep_b_img,rep_c_img,rep_d_img,render')
       .order('id', { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) throw error;
@@ -89,7 +102,7 @@ export async function refreshQuestions() {
 
 // --- CRUD pour l'éditeur in-game (lignes brutes, avec id) ---
 
-const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,difficulte,generalite,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en';
+const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,difficulte,generalite,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en,img,rep_a_img,rep_b_img,rep_c_img,rep_d_img,render';
 
 // Toutes les lignes (paginé) avec leur id, pour l'édition.
 export async function fetchQuestionRows() {
@@ -135,6 +148,15 @@ function toPayload(row) {
     rep_c_en: blank(row.rep_c_en),
     rep_d_en: blank(row.rep_d_en),
     e_en: blank(row.e_en),
+    // Médias (URL publique du bucket, nullables). Nom de fichier OPAQUE (cf.
+    // uploadQuestionMedia) pour ne pas trahir la réponse via l'URL.
+    img: blank(row.img),
+    rep_a_img: blank(row.rep_a_img),
+    rep_b_img: blank(row.rep_b_img),
+    rep_c_img: blank(row.rep_c_img),
+    rep_d_img: blank(row.rep_d_img),
+    // Mode de rendu spécial ('silhouette' pour « Qui est ce Pokémon ? »).
+    render: blank(row.render),
   };
 }
 
@@ -152,4 +174,27 @@ export async function saveQuestionRow(row) {
 export async function deleteQuestionRow(id) {
   const { error } = await supabase.from('quete_questions').delete().eq('id', id);
   if (error) throw error;
+}
+
+// --- Médias de question (bucket Storage public 'quete-questions') ---
+
+const MEDIA_BUCKET = 'quete-questions';
+
+// Identifiant OPAQUE : le nom de fichier ne doit JAMAIS encoder la réponse (ex.
+// pas `fr.png` pour un drapeau français, sinon un élève lit la réponse dans l'URL
+// via les devtools / le mobile). On génère donc un nom aléatoire.
+function opaqueName(ext) {
+  const rnd = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `q-${rnd}.${ext}`;
+}
+
+// Upload d'un média de question, renvoie l'URL publique. Nom de fichier opaque.
+export async function uploadQuestionMedia(file) {
+  const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+  const path = opaqueName(ext);
+  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, file, { upsert: true, contentType: file.type });
+  if (error) throw error;
+  return supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
 }

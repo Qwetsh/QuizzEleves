@@ -7,7 +7,7 @@
 //
 // Forme d'un nœud : { key, path, parentKey, subjectKey?, kind, name, nameEn?,
 //   short?, icon?, emblem?, color?, colorSoft?, colorDeep?, biome?, biomeEn?,
-//   defaultOn?, ord? }. Une FEUILLE porte `subjectKey` (= quete_questions.subject) ;
+//   defaultOn?, hard?, ord? }. Une FEUILLE porte `subjectKey` (= quete_questions.subject) ;
 // un nœud LARGE (INTÉGRALE/domaine) ne l'a pas.
 
 export const THEMES = {};        // key -> node
@@ -47,15 +47,23 @@ export const isPureLeaf = (key) => isLeaf(key) && !hasChildren(key);
 // dans l'ordre de l'arbre. NŒUD MIXTE : on inclut son propre subjectKey PUIS on
 // descend dans ses enfants (« insérer Jeux vidéo » = ses Q générales + Skyrim + …).
 // Une feuille pure renvoie [subjectKey].
-export function descendantLeaves(key) {
+//
+// Cassettes DURES (`hard`, ex. « Qui est ce Pokémon ? », hymnes, silhouettes) :
+// exclues par défaut. Un nœud dur DESCENDANT n'est jamais aspiré par la sélection
+// d'un ancêtre (on ne veut pas imposer le mode difficile en prenant tout le thème).
+// Il reste sélectionnable DIRECTEMENT (le nœud racine de l'appel est toujours
+// inclus, même dur → cf. buildPerimeter branche « feuille pure »). `includeHard`
+// force l'inclusion (utilisé par l'éditeur pour tout regrouper sous l'arbre).
+export function descendantLeaves(key, { includeHard = false } = {}) {
   const out = [];
   const seen = new Set();
-  const walk = (k) => {
+  const walk = (k, isRoot) => {
     const node = THEMES[k];
     if (!node) return;
+    if (!isRoot && node.hard && !includeHard) return; // cassette dure : pas aspirée
     if (node.subjectKey && !seen.has(node.subjectKey)) { seen.add(node.subjectKey); out.push(node.subjectKey); }
-    for (const child of childrenOf(k)) walk(child.key);
+    for (const child of childrenOf(k)) walk(child.key, false);
   };
-  walk(key);
+  walk(key, true);
   return out;
 }

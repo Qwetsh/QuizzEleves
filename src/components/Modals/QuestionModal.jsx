@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import TeamAvatar from '../TeamAvatar';
 import { SUBJECTS } from '../../data/subjects';
 import { locName, loc } from '../../i18n/content';
 import { questionRerollOptions } from '../../store/effectEngine';
-import { soundCorrect, soundWrong, soundTimer, soundKatana } from '../../logic/sounds';
+import { soundCorrect, soundWrong, soundTimer, soundKatana, soundReveal } from '../../logic/sounds';
 import ModalOverlay from './ModalOverlay';
 import '../../styles/temple-modal.css';
 
@@ -225,6 +226,9 @@ export default function QuestionModal() {
     if (revealed && !prevRevealedRef.current) {
       if (selected != null && selected === question?.c) soundCorrect();
       else soundWrong();
+      // Silhouette (« Qui est ce Pokémon ? ») : jingle de révélation quand l'image
+      // passe en couleur, par-dessus le verdict.
+      if (question?.render === 'silhouette') setTimeout(() => soundReveal(), 140);
       if (showQuestion?.timeLeftAtReveal != null) setTimeLeft(showQuestion.timeLeftAtReveal);
     }
     prevRevealedRef.current = revealed;
@@ -288,7 +292,7 @@ export default function QuestionModal() {
                 {subjectInfo.icon} {locName(subjectInfo)}{subjectInfo.biome ? ` · ${loc(subjectInfo, 'biome')}` : ''}
               </span>
             </div>
-            <div className="rq-teamchip"><span style={{ fontSize: 17 }}>{team?.emoji}</span>{team?.name}</div>
+            <div className="rq-teamchip"><TeamAvatar team={team} size={22} />{team?.name}</div>
           </div>
           <div className="rq-topbadges">
 
@@ -327,6 +331,30 @@ export default function QuestionModal() {
               <div className="rq-screen__trans">{otherQ}</div>
             )}
 
+            {/* Image de la question (ex. drapeau à identifier). Floutée aussi
+                pendant la Confusion pour rester cohérent avec l'énoncé.
+                Mode 'silhouette' (« Qui est ce Pokémon ? ») : l'image est masquée
+                en noir (brightness 0) jusqu'à la révélation, puis fond en couleur
+                avec un petit « pop ». L'URL du bucket est opaque → jamais de spoil. */}
+            {question.img && (() => {
+              const silhouette = question.render === 'silhouette';
+              const masked = silhouette && !revealed; // encore en ombre chinoise
+              return (
+                <div className="rq-media" style={{ marginTop: 12, textAlign: 'center', filter: blurStmt ? 'blur(8px)' : 'none', transition: 'filter 0.4s ease' }}>
+                  <img
+                    src={question.img}
+                    alt=""
+                    style={{
+                      maxWidth: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 10,
+                      boxShadow: masked ? 'none' : '0 4px 14px rgba(0,0,0,0.18)',
+                      filter: masked ? 'brightness(0)' : 'brightness(1)',
+                      transform: silhouette && revealed ? 'scale(1.05)' : 'scale(1)',
+                      transition: 'filter 0.6s ease, transform 0.45s cubic-bezier(.2,1.4,.4,1)',
+                    }}
+                  />
+                </div>
+              );
+            })()}
 
           </div>
 
@@ -373,8 +401,12 @@ export default function QuestionModal() {
                   <span className="rq-choice-letter" style={letterStyle || undefined}>
                     {letter}
                   </span>
-                  <span style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span>{shown}</span>
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                    {/* Média de la réponse (ex. drapeau à choisir), aligné sur l'index. */}
+                    {question.a_img?.[idx] && (
+                      <img src={question.a_img[idx]} alt="" style={{ maxWidth: '100%', maxHeight: 96, objectFit: 'contain', borderRadius: 6 }} />
+                    )}
+                    {shown && <span>{shown}</span>}
                     {showTrans && otherA(idx) && <span style={{ fontSize: 12.5, fontStyle: 'italic', opacity: 0.72 }}>{otherA(idx)}</span>}
                   </span>
                 </button>

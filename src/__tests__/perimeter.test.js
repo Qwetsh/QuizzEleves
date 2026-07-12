@@ -103,6 +103,47 @@ describe('nœud mixte (contenu propre + enfants)', () => {
   });
 });
 
+// Arbre avec une cassette DURE (opt-in) : « Qui est ce Pokémon ? » niché sous
+// pokemon, marqué hard → exclu par défaut de la sélection d'un ancêtre.
+const HARD = {
+  divertissement: { key: 'divertissement', path: 'divertissement', parentKey: null, kind: 'domain', name: 'Divertissement', ord: 0 },
+  pokemon: { key: 'pokemon', path: 'divertissement.pokemon', parentKey: 'divertissement', kind: 'theme', name: 'Pokémon', subjectKey: 'pokemon', ord: 0 },
+  pokemon_silhouette: { key: 'pokemon_silhouette', path: 'divertissement.pokemon.pokemon_silhouette', parentKey: 'pokemon', kind: 'theme', name: 'Qui est ce Pokémon ?', subjectKey: 'pokemon_silhouette', hard: true, ord: 0 },
+};
+
+describe('cassette dure (hard) : opt-in, exclue par défaut', () => {
+  beforeEach(() => setThemesData({ themes: HARD, roots: ['divertissement'] }));
+  afterEach(() => resetThemesData());
+
+  it('descendantLeaves saute la cassette dure descendante', () => {
+    expect(descendantLeaves('pokemon')).toEqual(['pokemon']);
+    expect(descendantLeaves('divertissement')).toEqual(['pokemon']);
+  });
+
+  it('includeHard force son inclusion (éditeur)', () => {
+    expect(descendantLeaves('pokemon', { includeHard: true })).toEqual(['pokemon', 'pokemon_silhouette']);
+  });
+
+  it('sélectionner le parent n’embarque PAS la cassette dure', () => {
+    const p = buildPerimeter([{ themeKey: 'pokemon' }], { hasContent: () => true });
+    expect(p.categoryPools.pokemon).toEqual(['pokemon']);
+  });
+
+  it('sélectionner la cassette dure directement fonctionne (feuille pure)', () => {
+    expect(isPureLeaf('pokemon_silhouette')).toBe(true);
+    const p = buildPerimeter([{ themeKey: 'pokemon_silhouette' }], { hasContent: () => true });
+    expect(p.categoryPools).toEqual({ pokemon_silhouette: ['pokemon_silhouette'] });
+  });
+
+  it('cassette : la dure est sa PROPRE carte, absente du bundle de l’intégrale', () => {
+    const items = themesToCassetteModel().GROUPS.find((g) => g.domain === 'divertissement').items;
+    const pk = items.find((i) => i.id === 'pokemon');
+    const sil = items.find((i) => i.id === 'pokemon_silhouette');
+    expect(pk.sub).toEqual([{ label: 'Pokémon', key: 'pokemon' }]); // dure absente du sub
+    expect(sil).toMatchObject({ type: 'theme', depth: 2 });           // mais bien émise en carte
+  });
+});
+
 describe('repathSubtree', () => {
   const rows = [
     { key: 'divertissement', path: 'divertissement', parent_key: null },

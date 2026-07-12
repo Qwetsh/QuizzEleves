@@ -56,17 +56,21 @@ export function buildPerimeter(selection = [], { level = 'cycle4', hasContent = 
 // --- Modèle pour l'écran cassette : THEMES → { DOMAINS, GROUPS } ---
 
 // Feuilles (NŒUDS) sous `key`, dans l'ordre de l'arbre. Nœud mixte : inclut le
-// nœud lui-même PUIS ses enfants (cohérent avec descendantLeaves).
+// nœud lui-même PUIS ses enfants (cohérent avec descendantLeaves). Les cassettes
+// DURES descendantes (`hard`) sont EXCLUES du bundle d'une intégrale (elles ne
+// figurent pas dans son `sub`), pour ne pas les inclure par défaut ; elles restent
+// émises comme leur PROPRE carte-cassette (cf. themesToCassetteModel/emit).
 function leafNodesUnder(key) {
   const out = [];
   const seen = new Set();
-  const walk = (k) => {
+  const walk = (k, isRoot) => {
     const node = THEMES[k];
     if (!node) return;
+    if (!isRoot && node.hard) return; // cassette dure : pas dans le bundle de l'ancêtre
     if (node.subjectKey && !seen.has(node.subjectKey)) { seen.add(node.subjectKey); out.push(node); }
-    for (const c of childrenOf(k)) walk(c.key);
+    for (const c of childrenOf(k)) walk(c.key, false);
   };
-  walk(key);
+  walk(key, true);
   return out;
 }
 

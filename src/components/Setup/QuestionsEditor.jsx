@@ -11,7 +11,7 @@ import {
   THEMES, THEME_ROOTS, childrenOf, isLeaf, descendantLeaves, pathOf,
 } from '../../data/themes';
 import {
-  fetchQuestionRows, saveQuestionRow, deleteQuestionRow, refreshQuestions,
+  fetchQuestionRows, saveQuestionRow, deleteQuestionRow, refreshQuestions, uploadQuestionMedia,
 } from '../../logic/questionsConfig';
 import { useGameStore } from '../../store/gameStore';
 import ThemesEditor from './ThemesEditor';
@@ -30,12 +30,50 @@ const TIERS = [
 const tierOf = (d) => (d == null ? null : TIERS.find((t) => d >= t.lo && d <= t.hi) || null);
 const GENERALITE_LABEL = { 1: 'très grand public', 2: 'grand public', 3: 'intermédiaire', 4: 'pointu', 5: 'très pointu' };
 
+const REP_IMG_KEYS = ['rep_a_img', 'rep_b_img', 'rep_c_img', 'rep_d_img'];
+
 const emptyDraft = (subject) => ({
   id: null, pool: 'cycle4', subject, level: '',
   q: '', rep_a: '', rep_b: '', rep_c: '', rep_d: '', correcte: 1,
   e: '', t: '', enabled: true, ord: null, difficulte: null, generalite: null,
   q_en: '', rep_a_en: '', rep_b_en: '', rep_c_en: '', rep_d_en: '', e_en: '',
+  // Médias (URL du bucket ou null) : image de la question + image par réponse.
+  img: null, rep_a_img: null, rep_b_img: null, rep_c_img: null, rep_d_img: null,
 });
+
+// Sélecteur de média (image) : aperçu + upload vers le bucket (nom opaque) + retrait.
+// `compact` = variante mini pour les vignettes de réponses.
+function MediaPicker({ url, onChange, label, compact }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const pick = async (file) => {
+    if (!file) return;
+    setBusy(true); setErr(null);
+    try { onChange(await uploadQuestionMedia(file)); }
+    catch (e) { setErr(e.message || 'échec'); }
+    finally { setBusy(false); }
+  };
+  const size = compact ? 40 : 88;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {url ? (
+        <img src={url} alt="" style={{ width: size, height: size, objectFit: 'contain', borderRadius: 6, border: '1px solid rgba(122,94,58,0.25)', background: '#fff' }} />
+      ) : (
+        <div style={{ width: size, height: size, borderRadius: 6, border: '1px dashed rgba(122,94,58,0.35)', display: 'grid', placeItems: 'center', color: 'var(--ink-400)', fontSize: compact ? 16 : 22 }}>🖼️</div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {label && !compact && <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>{label}</span>}
+        <label className="btn btn--ghost" style={{ fontSize: 12, padding: '3px 8px', cursor: 'pointer', margin: 0 }}>
+          {busy ? '⏳…' : (url ? 'Remplacer' : 'Ajouter une image')}
+          <input type="file" accept="image/*" style={{ display: 'none' }} disabled={busy}
+            onChange={(e) => pick(e.target.files?.[0])} />
+        </label>
+        {url && <button type="button" className="btn btn--ghost" style={{ fontSize: 12, padding: '3px 8px' }} onClick={() => onChange(null)}>Retirer</button>}
+        {err && <span style={{ fontSize: 11, color: '#b3261e' }}>{err}</span>}
+      </div>
+    </div>
+  );
+}
 
 // Validation : énoncé + 2 réponses mini, et la bonne réponse non vide.
 function validate(d) {
@@ -84,7 +122,7 @@ export default function QuestionsEditor({ onClose }) {
   const nodeSubjects = useMemo(() => {
     const m = {};
     for (const key of Object.keys(THEMES)) {
-      const s = new Set(descendantLeaves(key));
+      const s = new Set(descendantLeaves(key, { includeHard: true }));
       if (THEMES[key].subjectKey) s.add(THEMES[key].subjectKey);
       m[key] = s;
     }
@@ -307,15 +345,22 @@ export default function QuestionsEditor({ onClose }) {
                   onChange={(e) => set({ q: e.target.value })} />
               </div>
 
+              {/* Image de la question (ex. photo de drapeau à identifier). */}
               <div className="qed-field">
-                <label className="qed-label">Réponses (coche la bonne)</label>
+                <label className="qed-label">Image de la question (optionnel)</label>
+                <MediaPicker url={draft.img} onChange={(u) => set({ img: u })} />
+              </div>
+
+              <div className="qed-field">
+                <label className="qed-label">Réponses (coche la bonne — image par réponse en option)</label>
                 {REP_KEYS.map((k, i) => (
-                  <div key={k} className={`qed-answer ${draft.correcte === i + 1 ? 'is-correct' : ''}`}>
+                  <div key={k} className={`qed-answer ${draft.correcte === i + 1 ? 'is-correct' : ''}`} style={{ alignItems: 'center' }}>
                     <input type="radio" name="correcte" checked={draft.correcte === i + 1}
                       onChange={() => set({ correcte: i + 1 })} />
                     <input className="qed-input" value={draft[k]}
                       placeholder={i >= 2 ? '(optionnel — laisser vide pour Vrai/Faux)' : ''}
                       onChange={(e) => set({ [k]: e.target.value })} />
+                    <MediaPicker compact url={draft[REP_IMG_KEYS[i]]} onChange={(u) => set({ [REP_IMG_KEYS[i]]: u })} />
                   </div>
                 ))}
               </div>

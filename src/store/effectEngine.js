@@ -7,13 +7,14 @@
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
 import { moveForward } from '../logic/pathfinding.js';
-import { reducedSteal, applyStealProtection, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect } from '../logic/itemEffects.js';
+import { reducedSteal, applyStealProtection, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect, thornsPct, isAnchored, insurancePct } from '../logic/itemEffects.js';
 import { applyRecul, questionDuration } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
-import { SUBJECTS } from '../data/subjects.js';
+import { SUBJECTS, SUBJECT_KEYS } from '../data/subjects.js';
 import { BUFF_INFO } from '../logic/teamStatus.js';
 import { pickQuestion } from '../logic/questionPicker.js';
+import { allSubjectsWithContent } from '../data/questions/index.js';
 import { ITEMS } from '../data/items.js';
 import { MAX_CHARGES } from '../data/powers.js';
 import { saveGame } from './persistence.js';
@@ -321,6 +322,9 @@ function applyMoney(set, get, action, ctx, indices) {
       }
       nt[i] = { ...victim, money: Math.max(0, purse - stolen) };
       nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) + stolen };
+      // Assurance : la victime récupère un % de l'or volé.
+      const insS = insurancePct(victim);
+      if (insS > 0) { const back = Math.floor((stolen * insS) / 100); if (back > 0) { nt[i] = { ...nt[i], money: (nt[i].money ?? 0) + back }; addLog(tg('log.fx.insurance', { emoji: victim.emoji, name: victim.name, n: back })); } }
       // Détail : montant visé, bourse insuffisante, protection éventuelle, butin réel.
       const cappedByPurse = wanted > purse;
       const detail = [];
@@ -335,6 +339,17 @@ function applyMoney(set, get, action, ctx, indices) {
           : tgPlural('log.fx.steal', stolen, { emoji: nt[stealRecipient].emoji, n: stolen, vemoji: victim.emoji, vname: victim.name }),
         detail: detail.length ? detail : undefined,
       });
+      // Bouclier d'épines de la victime : l'attaquant (bénéficiaire du vol) perd en
+      // retour un % de l'or volé. Sans objet pour un vol de soi-même.
+      const th = thornsPct(victim);
+      if (th > 0 && stealRecipient !== i) {
+        const back = Math.min(nt[stealRecipient].money ?? 0, Math.floor((stolen * th) / 100));
+        if (back > 0) {
+          nt[stealRecipient] = { ...nt[stealRecipient], money: (nt[stealRecipient].money ?? 0) - back };
+          get().emitCurseVfx?.(stealRecipient, { icon: '🌵', color: '#2f9d5a', tone: 'malus' });
+          addLog(tg('log.fx.thorns', { vemoji: victim.emoji, vname: victim.name, aemoji: nt[stealRecipient].emoji, aname: nt[stealRecipient].name, n: back }));
+        }
+      }
     }
   } else if (action.mode === 'lose') {
     for (const i of indices) {
@@ -351,6 +366,8 @@ function applyMoney(set, get, action, ctx, indices) {
       // (avant : « perd 5 pièces » alors que la bourse était à 0).
       const loss = Math.min(lossRaw, purse);
       nt[i] = { ...t, money: Math.max(0, purse - loss) };
+      // Assurance : perte SUBIE (pas une dépense de soi) partiellement remboursée.
+      if (i !== src && loss > 0) { const insL = insurancePct(t); if (insL > 0) { const back = Math.floor((loss * insL) / 100); if (back > 0) { nt[i] = { ...nt[i], money: (nt[i].money ?? 0) + back }; addLog(tg('log.fx.insurance', { emoji: t.emoji, name: t.name, n: back })); } } }
       if (loss > 0) {
         const detail = [];
         if (baseLabel) detail.push({ label: tg('log.fx.detail.lossPlanned'), note: baseLabel });
@@ -492,15 +509,33 @@ function stepHead(set, get, action, ctx) {
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       if (OFFENSIVE(action) && consumeFumigene(set, get, t.indices[0], action)) return 'done';
+      const attackerIdx = ctx.sourceTeam ?? get().currentTeam;
       // Renvoi possible (recul vers une seule cible adverse → redirigé sur la source).
-      const moveIndices = action.dir === 'back' ? applyReflection(set, get, action, ctx, t.indices).indices : t.indices;
+      let moveIndices = action.dir === 'back' ? applyReflection(set, get, action, ctx, t.indices).indices : t.indices;
+      // Ancre : une équipe ancrée ne subit pas le recul FORCÉ par autrui.
+      if (action.dir === 'back') {
+        moveIndices = moveIndices.filter((idx) => {
+          if (idx !== attackerIdx && isAnchored(get().teams[idx])) {
+            const am = get().teams[idx];
+            get().addLog(tg('log.fx.anchor', { emoji: am.emoji, name: am.name }));
+            return false;
+          }
+          return true;
+        });
+      }
       // jonction seulement pour un move 'self' vers l'avant
       const allowJunction = action.target === 'self' && action.dir === 'forward';
       const n = resolveAmount(action.n, srcTeam); // un seul tir partagé par toutes les cibles
       const formula = fxFormula(action.n);
+      let thornsBack = 0; // cases de recul renvoyées à l'attaquant (bouclier d'épines)
       for (const idx of moveIndices) {
         const res = applyMoveOne(set, get, idx, action.dir, n, allowJunction);
         if (res.suspended) return 'suspend';
+        // Épines : un recul infligé à une cible qui en porte renvoie une part à l'attaquant.
+        if (action.dir === 'back' && res.moved && idx !== attackerIdx) {
+          const tp = thornsPct(get().teams[idx]);
+          if (tp > 0) thornsBack += Math.floor(((res.applied ?? n) * tp) / 100);
+        }
         // Journalise le déplacement (sinon seul un toast transitoire le montrait).
         if (res.moved) {
           const tm = get().teams[idx];
@@ -527,6 +562,17 @@ function stepHead(set, get, action, ctx) {
         if (res.finalPos && get().board[res.finalPos]?.type === 'arrivee') {
           get().addLog(tg('log.fx.reachFinish', { emoji: get().teams[idx].emoji, name: get().teams[idx].name }));
           set({ finished: true });
+        }
+      }
+      // Riposte du bouclier d'épines : l'attaquant recule des cases accumulées.
+      if (thornsBack > 0 && get().teams[attackerIdx]) {
+        const rr = applyMoveOne(set, get, attackerIdx, 'back', thornsBack, false);
+        if (rr.moved) {
+          const am = get().teams[attackerIdx];
+          const applied = rr.applied ?? thornsBack;
+          get().addLog(tgPlural('log.fx.thornsRecul', applied, { emoji: am.emoji, name: am.name, n: applied }));
+          get().emitCurseVfx?.(attackerIdx, { icon: '🌵', color: '#2f9d5a', tone: 'malus' });
+          if (rr.finalPos && get().board[rr.finalPos]?.type === 'arrivee') set({ finished: true });
         }
       }
       announce(set, get, action.dir === 'back' ? '⬅️' : '➡️',
@@ -627,16 +673,22 @@ function stepHead(set, get, action, ctx) {
       // elseSubject (ex. 50% thème choisi / 50% Hardcore). Le tirage est mémorisé
       // dans ctx (_rerollPick) pour survivre à une suspension SubjectPicker —
       // sinon le thème pourrait changer entre le clic et la reprise.
-      let act = action;
-      if (typeof action.chance === 'number') {
+      // Un thème « aléatoire » (objet {random}) est tiré directement en thème
+      // concret (le reroll propose déjà « au choix » pour piocher parmi tous).
+      const norm = (s) => (s && typeof s === 'object' && s.random) ? pickRandomSubjects(get, s.pool, 1)[0] : s;
+      const action0 = ((action.subject && typeof action.subject === 'object') || (action.elseSubject && typeof action.elseSubject === 'object'))
+        ? { ...action, subject: norm(action.subject), elseSubject: norm(action.elseSubject) }
+        : action;
+      let act = action0;
+      if (typeof action0.chance === 'number') {
         let pick = ctx._rerollPick;
         if (pick == null) {
-          pick = Math.random() < action.chance ? (action.subject || 'same') : (action.elseSubject || 'hardcore');
+          pick = Math.random() < action0.chance ? (action0.subject || 'same') : (action0.elseSubject || 'hardcore');
           ctx._rerollPick = pick;
           const pa = get().pendingActions;
           if (pa) set({ pendingActions: { ...pa, ctx: { ...pa.ctx, _rerollPick: pick } } });
         }
-        act = { ...action, subject: pick };
+        act = { ...action0, subject: pick };
       }
       const r = applyReroll(set, get, act, ctx);
       if (r.suspend === 'subjectPicker') { set({ showSubjectPicker: true }); return 'suspend'; }
@@ -649,7 +701,10 @@ function stepHead(set, get, action, ctx) {
       // Stocké par équipe (team.forcedSubject), consommé à leur prochain askQuestion.
       const t = resolveTargets(get, action.target, ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
-      const subj = action.subject;
+      // Thème : fixe, ou aléatoire (sans choix / à N choix via picker limité).
+      const rs = resolveSubjectSpec(set, get, ctx, action.subject, 'forceSubject');
+      if (rs.suspend) return 'suspend';
+      const subj = rs.subject;
       const nt = [...get().teams];
       for (const idx of t.indices) nt[idx] = { ...nt[idx], forcedSubject: subj };
       set({ teams: nt });
@@ -657,6 +712,26 @@ function stepHead(set, get, action, ctx) {
       const whoLabel = action.target === 'self' ? tg('log.fx.who.self') : tg('log.fx.who.target');
       get().addLog(tg('log.fx.forceSubject', { icon: SUBJECTS[subj]?.icon || '', who: whoLabel, subject: sname }));
       announce(set, get, SUBJECTS[subj]?.icon || '🎯', tg('log.fx.forceSubject.toast', { subject: sname }), SUBJECTS[subj]?.color || '#8745d4');
+      clearCtxResolution(set, get, 'targetTeam');
+      clearCtxResolution(set, get, 'subject');
+      clearCtxResolution(set, get, '_subjChoices');
+      return 'done';
+    }
+    case 'askFlag': {
+      // « Poser une question sur un drapeau » : force une question du thème
+      // « Drapeaux & symboles » (drapeaux à identifier + symboles) sur la ou les
+      // cibles. C'est un forceSubject préréglé (consommé au prochain askQuestion).
+      // Le thème `drapeaux_symboles` regroupe désormais les 388 questions à IMAGE
+      // ET les questions texte de culture G (fusion 2026-07-12).
+      const t = resolveTargets(get, action.target, ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const subj = 'drapeaux_symboles';
+      const nt = [...get().teams];
+      for (const idx of t.indices) nt[idx] = { ...nt[idx], forcedSubject: subj };
+      set({ teams: nt });
+      const whoLabel = action.target === 'self' ? tg('log.fx.who.self') : tg('log.fx.who.target');
+      get().addLog(tg('log.fx.askFlag', { who: whoLabel }));
+      announce(set, get, SUBJECTS[subj]?.icon || '🚩', tg('log.fx.askFlag.toast'), SUBJECTS[subj]?.color || '#c0392b');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
@@ -702,17 +777,50 @@ function stepHead(set, get, action, ctx) {
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }
+    case 'swapPositions': {
+      // Échange de place : permute la position de la SOURCE avec celle d'une cible.
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const swSrc = ctx.sourceTeam ?? get().currentTeam;
+      const other = t.indices[0];
+      const { board, teams } = get();
+      if (other == null || other === swSrc || !teams[swSrc] || !teams[other]) { clearCtxResolution(set, get, 'targetTeam'); return 'done'; }
+      const a = teams[swSrc], b = teams[other];
+      // Ancre : une cible ancrée ne peut être échangée de force.
+      if (isAnchored(b)) {
+        get().addLog(tg('log.fx.anchor', { emoji: b.emoji, name: b.name }));
+        clearCtxResolution(set, get, 'targetTeam');
+        return 'done';
+      }
+      const posA = a.pos, posB = b.pos;
+      if (posA === posB || !board[posA] || !board[posB]) { clearCtxResolution(set, get, 'targetTeam'); return 'done'; }
+      const nt = [...teams];
+      nt[swSrc] = { ...a, pos: posB };
+      nt[other] = { ...b, pos: posA };
+      const wp = (from, to) => ({ waypoints: [{ x: board[from].x, y: board[from].y }, { x: board[to].x, y: board[to].y }], type: board[to].x >= board[from].x ? 'forward' : 'back' });
+      set({ teams: nt, movePath: [{ teamIndex: swSrc, ...wp(posA, posB) }, { teamIndex: other, ...wp(posB, posA) }] });
+      get().addLog(tg('log.fx.swap', { aemoji: a.emoji, aname: a.name, bemoji: b.emoji, bname: b.name }));
+      announce(set, get, '🔀', tg('log.fx.swap.toast', { aname: a.name, bname: b.name }), '#8745d4');
+      // Un pion propulsé sur l'arrivée par l'échange déclenche la victoire.
+      if (board[posB]?.type === 'arrivee' || board[posA]?.type === 'arrivee') set({ finished: true });
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
     case 'challenge': {
       // « Défi » : force MON prochain thème + mise un pari one-shot. La
       // récompense (do) est versée si je réponds juste à cette question, le
       // malus (else) si je rate/laisse filer le temps. Consommé par answerQuestion
       // / timeoutQuestion (team.wager).
-      const subj = action.subject;
+      const rsC = resolveSubjectSpec(set, get, ctx, action.subject, 'challenge');
+      if (rsC.suspend) return 'suspend';
+      const subj = rsC.subject;
       patchSource(set, get, () => ({ forcedSubject: subj, wager: { do: action.do || [], else: action.else || [] } }));
       get().emitCurseVfx?.(ctx.sourceTeam ?? get().currentTeam, { icon: SUBJECTS[subj]?.icon || '🎲', color: SUBJECTS[subj]?.color || '#c8911f', tone: 'buff' });
       const sname = loc(SUBJECTS[subj], 'name') || subj;
       get().addLog(tg('log.fx.challenge', { subject: sname }));
       announce(set, get, SUBJECTS[subj]?.icon || '🎲', tg('log.fx.challenge.toast', { subject: sname }), SUBJECTS[subj]?.color || '#8a1f2e');
+      clearCtxResolution(set, get, 'subject');
+      clearCtxResolution(set, get, '_subjChoices');
       return 'done';
     }
     case 'buff': {
@@ -799,6 +907,101 @@ function stepHead(set, get, action, ctx) {
       const loseIdx = applyReflection(set, get, action, ctx, t.indices).indices;
       for (const idx of loseIdx) get().engineLoseItem?.(idx, action.category, action.fallbackGold, action.family);
       clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'stealItem': {
+      // Vol d'objet ciblé : la SOURCE prend un objet au hasard à la/les cible(s).
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const thief = ctx.sourceTeam ?? get().currentTeam;
+      for (const idx of t.indices) if (idx !== thief) get().engineStealItem?.(thief, idx, action.category, action.family, action.fallbackGold);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'stealCharge': {
+      // Vol de charge : prend 1 charge de pouvoir à une cible (au hasard parmi ses
+      // pouvoirs chargés) et l'ajoute à un pouvoir du voleur sous le plafond.
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const thief = ctx.sourceTeam ?? get().currentTeam;
+      const victimIdx = t.indices[0];
+      if (victimIdx == null || victimIdx === thief) { clearCtxResolution(set, get, 'targetTeam'); return 'done'; }
+      const nt = [...get().teams];
+      const victim = nt[victimIdx];
+      const vPowers = Object.entries(victim.powers || {}).filter(([, p]) => (p?.charges ?? 0) > 0);
+      if (!vPowers.length) {
+        get().addLog(tg('log.fx.stealChargeNone', { emoji: victim.emoji, name: victim.name }));
+        clearCtxResolution(set, get, 'targetTeam'); return 'done';
+      }
+      const [vKey, vPow] = vPowers[Math.floor(Math.random() * vPowers.length)];
+      nt[victimIdx] = { ...victim, powers: { ...victim.powers, [vKey]: { ...vPow, charges: vPow.charges - 1 } } };
+      const thiefT = nt[thief];
+      const cand = (thiefT.powers?.[vKey] && (thiefT.powers[vKey].charges ?? 0) < MAX_CHARGES) ? vKey
+        : Object.keys(thiefT.powers || {}).find((k) => (thiefT.powers[k].charges ?? 0) < MAX_CHARGES);
+      if (cand) {
+        nt[thief] = { ...thiefT, powers: { ...thiefT.powers, [cand]: { ...thiefT.powers[cand], charges: (thiefT.powers[cand].charges ?? 0) + 1 } } };
+        get().addLog(tg('log.fx.stealCharge', { aemoji: thiefT.emoji, aname: thiefT.name, vemoji: victim.emoji, vname: victim.name }));
+      } else {
+        get().addLog(tg('log.fx.stealChargeDrain', { aemoji: thiefT.emoji, aname: thiefT.name, vemoji: victim.emoji, vname: victim.name }));
+      }
+      set({ teams: nt });
+      get().emitCurseVfx?.(victimIdx, { icon: '⚡', color: '#8a1f2e', tone: 'malus' });
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'bounty': {
+      // Prime : pose une prime sur une cible ; sa prochaine mauvaise réponse /
+      // temps écoulé rapporte `n` or à la SOURCE (bountyBy/bountyGold sur la cible).
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const src = ctx.sourceTeam ?? get().currentTeam;
+      const gold = Math.max(1, resolveAmount(action.n, srcTeam) || 10);
+      const nt = [...get().teams];
+      for (const idx of t.indices) if (idx !== src) nt[idx] = { ...nt[idx], bountyBy: src, bountyGold: gold };
+      set({ teams: nt });
+      get().addLog(tg('log.fx.bounty', { n: gold }));
+      announce(set, get, '🎯', tg('log.fx.bounty.toast', { n: gold }), '#c8911f');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'invest': {
+      // Investissement : l'équipe CHOISIT sa mise (1 → tout son or) via une modale
+      // « bourse spatiale » ; remboursée à `rate` % à la prochaine bonne réponse
+      // (perdue si erreur/temps écoulé). Le taux est en POURCENTS (200 % = ×2,
+      // 150 % = +50 %…). Rétrocompat : ancien `mult` → rate = mult×100.
+      const src = ctx.sourceTeam ?? get().currentTeam;
+      const rate = investRate(action);
+      const tm = get().teams[src];
+      // Reprise après la modale : `_investAmount` = mise choisie (0 = refusé).
+      if (ctx._investAmount != null) {
+        const amount = ctx._investAmount;
+        clearCtxResolution(set, get, '_investAmount');
+        const pay = Math.max(0, Math.min(Math.round(amount), tm.money || 0));
+        if (pay > 0) {
+          const nt = [...get().teams];
+          nt[src] = { ...tm, money: (tm.money || 0) - pay, investment: { stake: pay, rate } };
+          set({ teams: nt });
+          get().addLog(tg('log.fx.invest', { emoji: tm.emoji, name: tm.name, stake: pay, rate }));
+          announce(set, get, '📈', tg('log.fx.invest.toast', { stake: pay, rate }), '#2f9d5a');
+        }
+        return 'done';
+      }
+      const gold = tm.money || 0;
+      if (gold <= 0) { get().addLog(tg('log.fx.investNoGold', { emoji: tm.emoji, name: tm.name })); return 'done'; }
+      set({ showInvestPicker: { teamIndex: src, gold, rate } });
+      return 'suspend';
+    }
+    case 'setCheckpoint': {
+      // Point de contrôle : mémorise la case courante ; à la prochaine chute, on
+      // n'y tombe pas EN DESSOUS (clamp dans applyRecul), puis chance de le consommer.
+      const src = ctx.sourceTeam ?? get().currentTeam;
+      const nt = [...get().teams];
+      const tm = nt[src];
+      const chance = action.consumeChance != null ? Math.max(0, Math.min(100, action.consumeChance)) : 100;
+      nt[src] = { ...tm, checkpoint: tm.pos, checkpointConsumeChance: chance };
+      set({ teams: nt });
+      get().addLog(tg('log.fx.checkpoint', { emoji: tm.emoji, name: tm.name }));
+      announce(set, get, '🚩', tg('log.fx.checkpoint.toast'), '#3b6cb3');
       return 'done';
     }
     case 'curseTimer': {
@@ -921,6 +1124,54 @@ function clearCtxResolution(set, get, field) {
   if (pa.ctx[field] == null) return;
   const ctx = { ...pa.ctx }; delete ctx[field];
   set({ pendingActions: { ...pa, ctx } });
+}
+
+// Taux d'un investissement, en POURCENTS du remboursement (200 % = ×2). Lit
+// `action.rate` en priorité, retombe sur l'ancien `mult` (×N → N×100 %), défaut 200 %.
+export function investRate(spec) {
+  if (spec?.rate != null) return Math.max(0, Math.round(spec.rate));
+  if (spec?.mult != null) return Math.max(0, Math.round(spec.mult * 100));
+  return 200;
+}
+
+// Mémorise une valeur dans le ctx de la file en cours (survit à une suspension).
+function stashCtx(set, get, patch) {
+  const pa = get().pendingActions;
+  if (pa) set({ pendingActions: { ...pa, ctx: { ...pa.ctx, ...patch } } });
+}
+
+// Tire `n` thèmes distincts au hasard, mélangés. Vivier = TOUS les thèmes ayant
+// des questions chargées (pas seulement ceux de la partie) — un thème imposé hors
+// périmètre est ensuite servi par askQuestion via le STORE global. On ne pioche
+// QUE des thèmes réellement disponibles (sinon la question « fizzle »).
+// Ordre de repli : pool fourni → tous les thèmes chargés → thèmes en jeu → base.
+function pickRandomSubjects(get, pool, n) {
+  const withContent = new Set(allSubjectsWithContent());
+  let src = (Array.isArray(pool) && pool.length) ? pool.filter((k) => withContent.has(k)) : [];
+  if (!src.length) src = [...withContent];
+  if (!src.length) src = (get().boardSubjects || []);
+  if (!src.length) src = SUBJECT_KEYS;
+  const base = src.slice();
+  for (let i = base.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [base[i], base[j]] = [base[j], base[i]]; }
+  return base.slice(0, Math.max(1, Math.min(n || 1, base.length)));
+}
+
+// Résout une SPEC de thème d'effet vers un thème concret.
+//  - chaîne : renvoyée telle quelle (thème fixe, ou 'same'/'choose' gérés à part).
+//  - objet { random:true, choices, pool } : thème aléatoire — SANS choix
+//    (choices < 2, tiré immédiatement) ou À N CHOIX (choices ≥ 2, via un
+//    SubjectPicker LIMITÉ ⇒ suspension, repris par selectSubject).
+// Renvoie { subject } (résolu) ou { suspend:true } (picker ouvert).
+function resolveSubjectSpec(set, get, ctx, spec, source) {
+  if (!spec || typeof spec !== 'object' || !spec.random) return { subject: spec };
+  if ((spec.choices || 0) >= 2) {
+    if (ctx.subject != null) return { subject: ctx.subject };
+    const choices = ctx._subjChoices || pickRandomSubjects(get, spec.pool, spec.choices);
+    if (!ctx._subjChoices) stashCtx(set, get, { _subjChoices: choices });
+    set({ showSubjectPicker: { choices, source } });
+    return { suspend: true };
+  }
+  return { subject: pickRandomSubjects(get, spec.pool, 1)[0] };
 }
 
 function patchSource(set, get, patchFn) {
