@@ -43,6 +43,9 @@ function rowToQuestion(r) {
     // Mode de rendu spécial (ex. 'silhouette' = image masquée en noir jusqu'à la
     // révélation, façon « Qui est ce Pokémon ? »). null = rendu normal.
     render: r.render ?? null,
+    // Média AUDIO de l'énoncé (URL du bucket, nom opaque) : hymnes, cris d'animaux.
+    // Fait partie de l'énoncé → publié avant révélation (anti-triche = nom opaque).
+    audio: r.audio ?? null,
   };
 }
 
@@ -86,7 +89,7 @@ export async function refreshQuestions() {
       .from('quete_questions')
       // `level` est INDISPENSABLE : sans lui, rowToQuestion met level=null et le
       // filtrage par niveau retombe sur le préfixe de `t` (qui ne couvre pas le 6e).
-      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en,img,rep_a_img,rep_b_img,rep_c_img,rep_d_img,render')
+      .select('pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en,img,rep_a_img,rep_b_img,rep_c_img,rep_d_img,render,audio')
       .order('id', { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) throw error;
@@ -102,7 +105,7 @@ export async function refreshQuestions() {
 
 // --- CRUD pour l'éditeur in-game (lignes brutes, avec id) ---
 
-const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,difficulte,generalite,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en,img,rep_a_img,rep_b_img,rep_c_img,rep_d_img,render';
+const EDIT_COLS = 'id,pool,subject,level,q,rep_a,rep_b,rep_c,rep_d,correcte,e,t,enabled,ord,difficulte,generalite,q_en,rep_a_en,rep_b_en,rep_c_en,rep_d_en,e_en,img,rep_a_img,rep_b_img,rep_c_img,rep_d_img,render,audio';
 
 // Toutes les lignes (paginé) avec leur id, pour l'édition.
 export async function fetchQuestionRows() {
@@ -157,6 +160,8 @@ function toPayload(row) {
     rep_d_img: blank(row.rep_d_img),
     // Mode de rendu spécial ('silhouette' pour « Qui est ce Pokémon ? »).
     render: blank(row.render),
+    // Média audio de l'énoncé (hymnes, cris d'animaux).
+    audio: blank(row.audio),
   };
 }
 

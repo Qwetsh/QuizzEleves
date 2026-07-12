@@ -177,6 +177,11 @@ function QuestionPanel({ q, team, en, busy, act, T }) {
           <img src={q.img} alt="" style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 8, filter: q.render === 'silhouette' && !revealed ? 'brightness(0)' : 'brightness(1)', transition: 'filter 0.6s ease' }} />
         </div>
       )}
+      {q.audio && (
+        <div className="mob-ctrl-qmedia" style={{ textAlign: 'center' }}>
+          <audio key={q.audio} src={q.audio} controls controlsList="nodownload" style={{ width: '100%' }} />
+        </div>
+      )}
       {!revealed && (
         <div className="mob-ctrl-qtimer">
           <div className="mob-ctrl-qtimer-fill" style={{ width: `${Math.min(100, (timeLeft / 30) * 100)}%`, background: timeLeft <= 5 ? '#e14b3a' : timeLeft <= 12 ? '#e8a13a' : '#57c84d' }} />
@@ -347,6 +352,11 @@ function EventPanel({ evt, session, teamIdx, busy, act, T }) {
           {q.img && (
             <div className="mob-ctrl-qmedia">
               <img src={q.img} alt="" style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain', borderRadius: 8, filter: q.render === 'silhouette' && !q.revealed ? 'brightness(0)' : 'brightness(1)', transition: 'filter 0.6s ease' }} />
+            </div>
+          )}
+          {q.audio && (
+            <div className="mob-ctrl-qmedia" style={{ textAlign: 'center' }}>
+              <audio key={q.audio} src={q.audio} controls controlsList="nodownload" style={{ width: '100%' }} />
             </div>
           )}
           <div className="mob-ctrl-qans">

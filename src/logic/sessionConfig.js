@@ -111,6 +111,8 @@ export function buildTurnPayload(s) {
       // Mode de rendu ('silhouette' = image masquée en noir jusqu'à la révélation).
       // Le téléphone DOIT le respecter, sinon l'artwork en couleur trahit la réponse.
       render: q.render || null,
+      // Média audio de l'énoncé (hymnes, cris) : publié avant révélation (nom opaque).
+      audio: q.audio || null,
       subject: sq.subject || null,
       hidden: s.indiceHidden || [],       // réponses barrées (Indice / équipement)
       deadline: sq.deadline || null,       // le téléphone affiche le temps restant

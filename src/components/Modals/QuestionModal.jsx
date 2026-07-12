@@ -356,6 +356,17 @@ export default function QuestionModal() {
               );
             })()}
 
+            {/* Média AUDIO de l'énoncé (hymnes, cris d'animaux). L'audio EST la
+                question → lecteur bien visible, relançable. `key` = URL pour que
+                l'extrait se recharge (et rejoue) quand on change de question.
+                Nom de fichier opaque → l'URL ne trahit pas la réponse. */}
+            {question.audio && (
+              <div className="rq-media rq-audio" style={{ marginTop: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 6 }}>🔊</div>
+                <audio key={question.audio} src={question.audio} autoPlay controls controlsList="nodownload noplaybackrate" style={{ width: '100%', maxWidth: 420 }} />
+              </div>
+            )}
+
           </div>
 
           {/* Choices - 2x2 grid */}
