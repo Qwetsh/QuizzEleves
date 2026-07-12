@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import Dice3D from '../Game/Dice3D';
+import TeamAvatar from '../TeamAvatar';
 import { extOn } from '../../extensions/registry';
 import { metierActive } from '../../logic/metier';
 import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
@@ -144,7 +145,7 @@ export default function DiceRollModal() {
             fontSize: 28,
             boxShadow: `inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.18), 0 0 12px ${accent}66`,
           }}>
-            {team.emoji}
+            <TeamAvatar team={team} size={40} />
           </div>
           <div className="dice-modal-team-info">
             <div className="dice-modal-team-kicker">{T('modal.dice.turnOf')}</div>

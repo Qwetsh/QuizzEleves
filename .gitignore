@@ -23,3 +23,7 @@ backups/
 # Fichiers de travail design des cartes (blockout, détourages sources, captures
 # de contrôle) — lourds (~340 Mo) et non utilisés à l'exécution. Restent en local.
 map-design/
+
+# Sprites de brouillon (essais intermédiaires _event_*, _chest_* …) — ~14 Mo,
+# non utilisés à l'exécution. Restent en local.
+tmp_sprites/

@@ -3,6 +3,7 @@
 // callbacks (qui envoient les intents ou appellent le store). Aucune logique de
 // jeu. Utilisé côté client online (participant) et côté hôte (équipe locale).
 import { useEffect, useState } from 'react';
+import TeamAvatar from '../TeamAvatar';
 
 function useCountdown(deadline) {
   const calc = () => (deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0);
@@ -44,8 +45,8 @@ export default function DuelRaceView({ fight, teams = [], myTeamIdx, onBegin, on
     </div>
   );
   const versus = (
-    <div style={{ fontSize: 20, margin: '8px 0 16px' }}>
-      {att.emoji} {att.name} <span style={{ color: '#8b9096' }}>vs</span> {def.emoji} {def.name}
+    <div style={{ fontSize: 20, margin: '8px 0 16px', display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+      <TeamAvatar team={att} size={24} /> {att.name} <span style={{ color: '#8b9096' }}>vs</span> <TeamAvatar team={def} size={24} /> {def.name}
     </div>
   );
 

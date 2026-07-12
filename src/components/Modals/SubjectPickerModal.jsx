@@ -11,17 +11,22 @@ export default function SubjectPickerModal() {
   const showSubjectPicker = useGameStore((s) => s.showSubjectPicker);
   const selectSubject = useGameStore((s) => s.selectSubject);
 
+  // Thème « aléatoire à N choix » : le picker est LIMITÉ aux N thèmes tirés au
+  // sort (showSubjectPicker.choices). Sinon (reroll « au choix ») : tous les thèmes.
+  const limited = Array.isArray(showSubjectPicker?.choices) ? showSubjectPicker.choices : null;
+  const keys = limited && limited.length ? limited : SUBJECT_KEYS;
+
   return (
     <AnimatePresence>
       {showSubjectPicker && (
         <ModalOverlay className="max-w-sm">
           <div style={{ padding: '24px 24px 6px', textAlign: 'center' }}>
-            <div style={{ fontSize: 34 }}>🔄</div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, marginTop: 4 }}>{T('modal.subject.title')}</h2>
-            <p style={{ fontSize: 13, color: 'var(--ink-600)', marginTop: 4 }}>{T('modal.subject.sub')}</p>
+            <div style={{ fontSize: 34 }}>{limited ? '🎲' : '🔄'}</div>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, marginTop: 4 }}>{limited ? T('modal.subject.randomTitle') : T('modal.subject.title')}</h2>
+            <p style={{ fontSize: 13, color: 'var(--ink-600)', marginTop: 4 }}>{limited ? T('modal.subject.randomSub') : T('modal.subject.sub')}</p>
           </div>
           <div style={{ padding: '12px 22px 22px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {SUBJECT_KEYS.map((key) => {
+            {keys.map((key) => {
               const s = SUBJECTS[key] || {};
               return (
                 <button

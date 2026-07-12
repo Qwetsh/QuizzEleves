@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { SUBJECTS } from '../../data/subjects';
+import TeamAvatar from '../TeamAvatar';
 import { locName } from '../../i18n/content';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
@@ -57,7 +58,7 @@ export default function DuelChoiceModal() {
                       width: 40, height: 40, flexShrink: 0, borderRadius: 12, fontSize: 22,
                       display: 'grid', placeItems: 'center',
                       background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)`,
-                    }}>{t.emoji}</span>
+                    }}><TeamAvatar team={t} size={36} /></span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 17, color: t.color }}>{t.name}</span>
                       <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>
@@ -90,7 +91,7 @@ export default function DuelChoiceModal() {
                       width: 40, height: 40, flexShrink: 0, borderRadius: 12, fontSize: 22,
                       display: 'grid', placeItems: 'center',
                       background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)`,
-                    }}>{t.emoji}</span>
+                    }}><TeamAvatar team={t} size={36} /></span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--ink-700)' }}>{t.name}</span>
                       <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)' }}>{T('modal.duel.immuneLine')}</span>

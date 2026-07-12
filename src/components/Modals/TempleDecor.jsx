@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { soundClick } from '../../logic/sounds';
+import TeamAvatar from '../TeamAvatar';
 
 /* ---------- Brin de feuillage (SVG procédural, porté du design) ---------- */
 export function Sprig({ x, y, rot = 0, size = 110, leaves = 6, spread = 150, flower = null, flip = false, className = '' }) {
@@ -162,7 +163,7 @@ export function TemplePanel({ title, team, onClose, medallion, className = '', o
               <span className="dia">◆</span>
             </div>
             <div className="inv-teamtag" style={{ '--team': team.color }}>
-              {team.emoji} {team.name}
+              <TeamAvatar team={team} size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} /> {team.name}
             </div>
             <div className="inv-medallion">{medallion}</div>
             <button className="inv-close" onClick={() => { soundClick(); onClose?.(); }} aria-label="Fermer">✕</button>

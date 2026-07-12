@@ -32,3 +32,23 @@ describe('shuffleAnswers — alignement FR/EN', () => {
     expect(s.a[s.c]).toBe('B');
   });
 });
+
+describe('shuffleAnswers — médias par réponse (a_img)', () => {
+  it('a_img suit la même permutation que a ; l’image de la bonne réponse reste alignée', () => {
+    for (let i = 0; i < 200; i++) {
+      const q = { q: 'Q', a: ['A', 'B', 'C', 'D'], a_img: ['A.png', 'B.png', 'C.png', 'D.png'], c: 1, img: 'flag.png' };
+      const s = shuffleAnswers(q);
+      // L'image de chaque réponse suit sa lettre.
+      for (let k = 0; k < s.a.length; k++) expect(s.a_img[k]).toBe(s.a[k] + '.png');
+      // L'image de la bonne réponse (B) reste sur l'index c.
+      expect(s.a_img[s.c]).toBe('B.png');
+      // L'image de la question n'est pas altérée par le mélange.
+      expect(s.img).toBe('flag.png');
+    }
+  });
+
+  it('sans a_img, renvoie a_img = null (pas de crash)', () => {
+    const s = shuffleAnswers({ q: 'Q', a: ['A', 'B'], c: 0 });
+    expect(s.a_img).toBeNull();
+  });
+});

@@ -4,6 +4,7 @@ import { useGameStore } from '../../../store/gameStore';
 import { useT } from '../../../i18n';
 import { locName } from '../../../i18n/content';
 import { getEffectValue } from '../../../logic/itemEffects';
+import TeamAvatar from '../../TeamAvatar';
 
 export default function TeamCard({ team, index }) {
   const T = useT();
@@ -32,7 +33,7 @@ export default function TeamCard({ team, index }) {
         transition: 'all 160ms ease',
       }}
     >
-      <span className="text-2xl">{team.emoji}</span>
+      <TeamAvatar team={team} size={34} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--ink-900)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {team.name}

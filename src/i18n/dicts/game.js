@@ -93,6 +93,7 @@ export default {
   'game.placeTrapPrompt': { fr: 'Choisis une case pour poser ton piège', en: 'Pick a tile to set your trap' },
   'game.placeTrapPromptNamed': { fr: 'Choisis une case pour poser ton piège « {label} »', en: 'Pick a tile to set your trap "{label}"' },
   'game.seeTrapEffect': { fr: 'Voir l\'effet du piège', en: 'See the trap\'s effect' },
+  'game.checkpointTeleport': { fr: '↩︎ Me téléporter', en: '↩︎ Teleport here' },
 
   // --- TeamCard (sidebar) ---
   'game.turnMarker': { fr: 'tour', en: 'turn' },

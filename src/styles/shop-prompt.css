@@ -1,0 +1,40 @@
+/* Prompt « Visiter la boutique ? » — thème spatial HUD (cohérent avec la modale
+   d'événement / le coffre). Police « journal de bord » VT323, panneau navy teal. */
+.spm { font-family: 'VT323', 'Courier New', monospace; text-align: center; padding: 26px 26px 24px; color: #cfe8f5; }
+
+.spm-icon {
+  width: 112px; height: 112px; margin: 0 auto 10px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 58px;
+  background: radial-gradient(circle, rgba(80, 200, 245, 0.35), rgba(18, 40, 60, 0.15) 70%);
+  border: 2px solid rgba(140, 214, 240, 0.8);
+  box-shadow: 0 0 24px rgba(90, 200, 240, 0.6), inset 0 0 18px rgba(60, 160, 210, 0.4);
+}
+.spm-title {
+  font-family: inherit; font-size: clamp(24px, 6vw, 32px); letter-spacing: 1px; line-height: 1.05;
+  color: #eaf6ff; margin: 4px 0 6px; text-shadow: 0 0 10px rgba(90, 200, 240, 0.5);
+}
+.spm-sub { font-family: inherit; font-size: clamp(16px, 4.4vw, 20px); letter-spacing: 0.5px; color: #a9d6e6; margin: 0 0 10px; }
+.spm-money {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px;
+  padding: 5px 16px; border-radius: 999px;
+  background: rgba(20, 40, 60, 0.7); border: 1px solid rgba(120, 200, 235, 0.5);
+  font-family: inherit; font-size: clamp(19px, 5vw, 23px); color: #ffcf5a;
+}
+.spm-actions { display: flex; gap: 12px; justify-content: center; }
+.spm-btn {
+  font-family: inherit; letter-spacing: 0.5px; cursor: pointer; border-radius: 12px;
+  transition: transform 90ms ease, filter 90ms ease;
+}
+.spm-btn--go {
+  font-size: clamp(18px, 5vw, 23px); color: #eafaff; padding: 10px 26px;
+  border: 1px solid rgba(160, 230, 255, 0.6);
+  background: linear-gradient(180deg, #1f8fc0, #1567a0);
+  box-shadow: 0 4px 0 rgba(8, 40, 66, 0.9), 0 0 16px rgba(60, 180, 230, 0.45);
+}
+.spm-btn--go:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.spm-btn--go:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(8, 40, 66, 0.9); }
+.spm-btn--later {
+  font-size: clamp(16px, 4.4vw, 20px); color: #9fc4d4; padding: 10px 18px;
+  border: 1px solid rgba(120, 200, 235, 0.35); background: rgba(18, 34, 48, 0.6);
+}
+.spm-btn--later:hover { color: #cfeeff; border-color: #63c8e8; }

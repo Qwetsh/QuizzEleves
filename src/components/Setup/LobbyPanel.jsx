@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
+import TeamAvatar from '../TeamAvatar';
 import { locName } from '../../i18n/content';
 import {
   createSession, buildSessionPayload, joinUrl, onlineJoinUrl,
@@ -139,7 +140,7 @@ export default function LobbyPanel({ online = false }) {
               const dup = nameCounts[(r.name || '').trim().toLowerCase()] > 1;
               return (
                 <div key={r.id} className="lobby90-row">
-                  <span className="lobby90-emoji">{r.emoji || '🦁'}</span>
+                  <TeamAvatar team={{ ...r, emoji: r.emoji || '🦁' }} size={22} className="lobby90-emoji" />
                   <span className="lobby90-name" style={{ color: r.color || '#d9ffe6' }}>
                     {r.name || T('setup.lobbyNoName')} {dup && <span title={T('setup.lobbyDupName')} style={{ color: '#ffb64a' }}>⚠</span>}
                   </span>

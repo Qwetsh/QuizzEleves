@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
+import TeamAvatar from '../TeamAvatar';
 import { soundClick, soundEvent } from '../../logic/sounds';
 import { useT } from '../../i18n';
 
@@ -307,7 +308,7 @@ function ReadyButton({ team, ready, onReady, side, T }) {
         boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.35), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 14px rgba(0,0,0,0.4)',
       }}
     >
-      <span style={{ fontSize: 30 }}>{team.emoji}</span>
+      <TeamAvatar team={team} size={40} />
       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.1 }}>
         <span style={{ fontSize: 13, opacity: 0.85, fontFamily: 'var(--font-ui)' }}>{team.name}</span>
         <span>{ready ? T('fight.briefing.readyDone') : T('fight.briefing.ready')}</span>

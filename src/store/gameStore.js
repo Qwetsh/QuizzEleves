@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
+import { defaultCharacterFor } from '../data/characters.js';
 import { EVENTS } from '../data/events.js';
 import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES } from '../data/subjects.js';
 import { POWERS, addCharge, MAX_CHARGES } from '../data/powers.js';
@@ -14,12 +15,12 @@ import { defaultExtensions, extOn, applyExtensionToggle } from '../extensions/re
 import { craftEnabledFor, metierActive, metierPending, METIER_IDS, METIER_BY_ID, metierName } from '../logic/metier.js';
 import { defaultDieFaces, getDieFaces, clampFaceValue, faceEffects, DIE_SLOTS, isForgeServiceTrade } from '../logic/forge.js';
 import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock, pickReplacementFace, faceShortLabel, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
-import { getQuestions } from '../data/questions/index.js';
+import { getQuestions, getSubjectPool } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
 import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul, questionDuration } from '../logic/turnHelpers.js';
 import { resolvePowerEffect } from '../logic/powerEffects.js';
-import { soundShield, soundTrap } from '../logic/sounds.js';
+import { soundShield, soundTrap, soundWarp } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
 import * as powerH from './powerHandlers.js';
 import * as fightH from './fightHandlers.js';
@@ -28,7 +29,7 @@ import * as effectH from './effectEngine.js';
 import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
-import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, isItemStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf } from '../logic/itemEffects.js';
+import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, isItemStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf, hasStreakGuard, minRollFloor, interestPct, tithePct } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural, getLang } from '../i18n';
@@ -43,6 +44,7 @@ function createDefaultTeams(n) {
     name: TEAM_DEFAULTS[i] || `\u00c9quipe ${i + 1}`,
     color: TEAM_COLORS[i],
     emoji: TEAM_DEFAULT_EMOJIS[i] || '\u{1F3B2}',
+    character: defaultCharacterFor(i),
     blazonGlyph: TEAM_BLAZON_GLYPHS[i] || 'lion',
     pos: 'depart',
     correct: 0,
@@ -95,6 +97,7 @@ export function buildLobbySetupTeams(rows) {
       name,
       color: r.color || TEAM_COLORS[i % TEAM_COLORS.length],
       emoji: r.emoji || TEAM_DEFAULT_EMOJIS[i] || '\u{1F3B2}',
+      character: r.character || defaultCharacterFor(i),
       blazonGlyph: TEAM_BLAZON_GLYPHS[i] || 'lion',
       pos: 'depart', correct: 0, wrong: 0, streak: 0, money: 0,
       powerDef: r.power_def || null, powerOff: r.power_off || null,
@@ -372,6 +375,13 @@ export const useGameStore = create((set, get) => ({
     set({ enabledEvents: enabledEvents.includes(key) ? enabledEvents.filter((k) => k !== key) : [...enabledEvents, key] });
   },
   setAllEvents: (enabled) => set({ enabledEvents: enabled ? Object.keys(EVENTS) : [] }),
+  // Coche/décoche un SOUS-ENSEMBLE d'événements (ex : un groupe positif/négatif…).
+  setEventsFor: (keys, enabled) => set((s) => {
+    const ks = Array.isArray(keys) ? keys : [keys];
+    const cur = new Set(s.enabledEvents || []);
+    ks.forEach((k) => { if (enabled) cur.add(k); else cur.delete(k); });
+    return { enabledEvents: [...cur].filter((k) => EVENTS[k]) };
+  }),
   // Réconcilie enabledEvents avec le catalogue après chargement des événements
   // custom : les NOUVELLES clés (jamais vues, suivies par knownEventKeys) sont
   // activées par défaut ; un événement décoché n'est pas re-coché. Setup only.
@@ -460,6 +470,12 @@ export const useGameStore = create((set, get) => ({
   showDuelChoice: null,
   eventApplied: false,
   showTargetPicker: null,
+  // Investissement : modale de mise à l'activation { teamIndex, gold, rate } | null
+  showInvestPicker: null,
+  // Bilan d'investissement à afficher après une bonne réponse (post-loot)
+  // { teamIndex, stake, rate, payout } | null, + résultat en attente pendant le loot.
+  investResult: null,
+  pendingInvestResult: null,
   indiceUsed: false,
   indiceHidden: [],
   showDiceModal: false,
@@ -517,6 +533,14 @@ export const useGameStore = create((set, get) => ({
     if (!Array.isArray(cats) || !cats.length) return true; // défaut : scolaire (rétro-compat)
     const themeOf = (k) => (MODULES[k] ? k : (SUBJECTS[k]?.module || 'college'));
     return [...new Set(cats.map(themeOf))].every((t) => (MODULES[t]?.kind ?? 'school') === 'school');
+  },
+  // Vrai s'il y a AU MOINS une matière scolaire sur le plateau (≠ isSchoolSession
+  // qui exige que TOUTES le soient). Sert au gating de bossProf (`requiresSchool`).
+  hasSchoolSubject: () => {
+    const cats = get().boardSubjects;
+    if (!Array.isArray(cats) || !cats.length) return true; // défaut : scolaire (rétro-compat)
+    const themeOf = (k) => (MODULES[k] ? k : (SUBJECTS[k]?.module || 'college'));
+    return [...new Set(cats.map(themeOf))].some((t) => (MODULES[t]?.kind ?? 'school') === 'school');
   },
   recordStat: (category, payload) => set((s) => {
     // Analyse réservée aux sessions scolaires (sinon no-op).
@@ -664,10 +688,41 @@ export const useGameStore = create((set, get) => ({
       set({ showEvent: null, eventApplied: false });
       get().finishEventTurn();
     } else if (lr?.thenNextTurn) {
-      // Loot de bonne réponse : la main passe seulement une fois le butin fermé,
-      // pour que le coffre de départ de l'équipe suivante ne le recouvre pas.
-      get().nextTurn();
+      // Loot de bonne réponse : une fois le butin fermé, on affiche l'éventuel
+      // bilan d'investissement AVANT de passer la main (afterCorrectResolve), pour
+      // que le coffre de départ de l'équipe suivante ne recouvre rien.
+      get().afterCorrectResolve();
     }
+  },
+
+  // --- Investissement (bourse spatiale) ---
+  // Modale de mise : l'équipe choisit combien investir (1 → tout son or) ou refuse.
+  // Résout la file d'effets suspendue par l'action `invest` (cf. effectEngine).
+  confirmInvest: (amount) => {
+    const p = get().showInvestPicker;
+    if (!p) return;
+    const gold = p.gold ?? (get().teams[p.teamIndex]?.money || 0);
+    const amt = Math.max(1, Math.min(Math.round(amount) || 0, gold));
+    set({ showInvestPicker: null });
+    effectH.resumeQueue(set, get, { _investAmount: amt });
+  },
+  cancelInvest: () => {
+    if (!get().showInvestPicker) return;
+    set({ showInvestPicker: null });
+    effectH.resumeQueue(set, get, { _investAmount: 0 }); // 0 = refusé, aucune mise
+  },
+  // Après une bonne réponse (post-loot) : affiche le bilan d'investissement s'il y
+  // en a un, sinon passe directement la main. Le bilan diffère nextTurn jusqu'à sa
+  // fermeture (dismissInvestResult).
+  afterCorrectResolve: () => {
+    const pending = get().pendingInvestResult;
+    if (pending) { set({ investResult: pending, pendingInvestResult: null }); return; }
+    get().nextTurn();
+  },
+  dismissInvestResult: () => {
+    if (!get().investResult) return;
+    set({ investResult: null });
+    get().nextTurn();
   },
 
   // --- Start game ---
@@ -930,12 +985,15 @@ export const useGameStore = create((set, get) => ({
     // compte) : ici `face` n'est donc plus une face-Relance, sauf la dernière d'une
     // relance simple — auquel cas sa VALEUR s'applique normalement (§6.2).
     const face = getDieFaces(team)[((value - 1) % 6 + 6) % 6];
-    const moveValue = clampFaceValue(face.value);
+    const rawMove = clampFaceValue(face.value);
+    // Dé chanceux (minRoll) : plancher garanti de la valeur de déplacement.
+    const lucky = minRollFloor(team);
+    const moveValue = Math.max(rawMove, lucky);
     const bonus = buffValue(team, 'diceBonus');
     // Malus de dé (passif d'équipement diceMalus) : réduit l'avancée de N cases à
     // CHAQUE lancer, sans recul ni aller-retour (≠ reculReduction qui n'amortit que
     // les reculs subis). Plancher à 0 : un malus ≥ valeur fait rester sur place.
-    const malus = getEffectValue(team, 'diceMalus');
+    const malus = getEffectValue(team, 'diceMalus') + buffValue(team, 'diceMalus');
     // Météo « vent » (ambiante) : ×/÷ sur la valeur FINALE de déplacement (après
     // dé, Relance, bonus/malus). Facteur 1 si pas de vent / extension coupée.
     const windFactor = extOn(get().extensions, 'weather') ? weatherH.weatherMoveFactor(get) : 1;
@@ -1223,7 +1281,7 @@ export const useGameStore = create((set, get) => ({
     if (!node) { get().nextTurn(); return; }
 
     if (node.type === 'event') {
-      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled(), extensions: get().extensions, connectionMode: get().connectionMode });
+      const picked = pickRandomEvent(enabledEvents, { itemsEnabled: get().itemsEnabled(), extensions: get().extensions, connectionMode: get().connectionMode, schoolSubject: get().hasSchoolSubject() });
       if (picked) {
         addLog(tg('log.store.landEvent', { emoji: team.emoji, name: team.name, eicon: picked.event.icon, ename: loc(picked.event, 'name') }));
         set({ pendingEventQuestion: { subject: node.subject || get().randomBoardSubject() } });
@@ -1319,7 +1377,10 @@ export const useGameStore = create((set, get) => ({
     }
     const { questions, askedQuestions, teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
-    const pool = questions[subject] || [];
+    // Thème de la partie, sinon (thème « surprise » forcé hors périmètre par un
+    // effet) pool complet depuis le STORE global — sans précharge (tout est déjà
+    // chargé au boot).
+    const pool = (questions[subject]?.length ? questions[subject] : getSubjectPool(subject));
     const asked = askedQuestions[subject] || new Set();
     let result = pickQuestion(pool, asked);
 
@@ -1474,6 +1535,25 @@ export const useGameStore = create((set, get) => ({
     if (!sq || sq.answerRevealed || !sq.question) return;
     if (!Number.isInteger(index) || index < 0 || index >= (sq.question.a?.length || 0)) return;
     if ((get().indiceHidden || []).includes(index)) return; // réponse barrée
+    // Seconde chance (buff) : la 1re mauvaise SÉLECTION est barrée et l'équipe
+    // rejoue — SANS révéler la bonne réponse (sinon la « seconde chance » serait
+    // une réponse gratuite). Le buff est consommé, aucune pénalité.
+    const curTeam = get().teams[get().currentTeam];
+    if (index !== sq.question.c && !sq.secondChanceUsed && findBuff(curTeam, 'secondChance')) {
+      const buffs = [...(curTeam.buffs || [])];
+      const bi = buffs.findIndex((b) => b.type === 'secondChance');
+      if (bi >= 0) buffs.splice(bi, 1);
+      const nt = [...get().teams];
+      nt[get().currentTeam] = { ...curTeam, buffs };
+      set({
+        teams: nt,
+        showQuestion: { ...sq, secondChanceUsed: true, selected: null, answerRevealed: false },
+        indiceHidden: [...(get().indiceHidden || []), index], // la mauvaise réponse est barrée
+      });
+      get().addLog(tg('log.store.secondChance', { emoji: curTeam.emoji, name: curTeam.name }));
+      get().emitCurseVfx?.(get().currentTeam, { icon: '🔁', color: '#2f9d5a', tone: 'buff' });
+      return;
+    }
     const timeLeft = Math.max(0, Math.round(((sq.deadline || Date.now()) - Date.now()) / 1000));
     set({ showQuestion: { ...sq, selected: index, answerRevealed: true, timeLeftAtReveal: timeLeft } });
   },
@@ -1482,6 +1562,24 @@ export const useGameStore = create((set, get) => ({
   revealQuestionTimeout: () => {
     const sq = get().showQuestion;
     if (!sq || sq.answerRevealed) return;
+    // Seconde chance : un temps écoulé est aussi rejoué une fois (chrono plein),
+    // sans révéler la réponse.
+    const curTeam = get().teams[get().currentTeam];
+    if (!sq.secondChanceUsed && findBuff(curTeam, 'secondChance')) {
+      const buffs = [...(curTeam.buffs || [])];
+      const bi = buffs.findIndex((b) => b.type === 'secondChance');
+      if (bi >= 0) buffs.splice(bi, 1);
+      const nt = [...get().teams];
+      nt[get().currentTeam] = { ...curTeam, buffs };
+      const sq2 = { ...sq, secondChanceUsed: true };
+      set({
+        teams: nt,
+        showQuestion: { ...sq2, deadline: Date.now() + questionDuration(sq2) * 1000, selected: null, answerRevealed: false, timeLeftAtReveal: null },
+      });
+      get().addLog(tg('log.store.secondChance', { emoji: curTeam.emoji, name: curTeam.name }));
+      get().emitCurseVfx?.(get().currentTeam, { icon: '🔁', color: '#2f9d5a', tone: 'buff' });
+      return;
+    }
     set({ showQuestion: { ...sq, selected: null, answerRevealed: true, timeLeftAtReveal: 0 } });
   },
 
@@ -1509,6 +1607,9 @@ export const useGameStore = create((set, get) => ({
     const { question, timerHalved, timerDivisor, itemBonusTime, indiceBonusMoney } = showQuestion;
     const correct = chosenIndex === question.c;
     const team = teams[currentTeam];
+    // NB : la « seconde chance » est gérée en amont (selectAnswer/revealQuestionTimeout),
+    // AVANT toute révélation de la bonne réponse — rien à faire ici.
+
     const newTeams = [...teams];
     const effectiveDivisor = timerDivisor || (timerHalved ? 2 : 1);
     // Meme echelle que le timer reellement affiche (QuestionModal) : le bonus
@@ -1551,6 +1652,9 @@ export const useGameStore = create((set, get) => ({
       hardcore: showQuestion.subject === 'hardcore', revealed: !!showQuestion.revealed,
     });
 
+    // Bilan d'investissement de ce tour (mise/taux/gain), affiché en modale « bourse
+    // spatiale » après le loot. Renseigné dans la branche « bonne réponse ».
+    let investResultThisTurn = null;
     if (correct) {
       // Double/triple: money only on last question (or never if doubleNoBonus)
       const noBonus = team.doubleActive && (team.doubleNoBonus || (team.doubleExtra || 0) > 0);
@@ -1581,6 +1685,31 @@ export const useGameStore = create((set, get) => ({
       newTeams[currentTeam] = { ...team, answerTimeRatio, correct: team.correct + 1, streak: (team.streak || 0) + (turnComplete ? 1 : 0), money: team.money + payNow, wager: undefined, ...aonPatch, ...stPatch };
       if (team.larcinBy != null) newTeams[currentTeam] = { ...newTeams[currentTeam], larcinBy: undefined, larcinChance: undefined };
       applyGlaneur(newTeams, payNow); // Glaneur : or non gagné par cette équipe (vitesse < pleine)
+      // Investissement : mise remboursée à `rate` % sur cette bonne réponse. Le
+      // bilan (mise/taux/gain) est mis de côté pour la modale « bourse spatiale »
+      // affichée APRÈS le loot (cf. afterCorrectResolve).
+      if (team.investment) {
+        const rate = effectH.investRate(team.investment);
+        const stake = team.investment.stake || 0;
+        const payout = Math.max(0, Math.round((stake * rate) / 100));
+        newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) + payout, investment: undefined };
+        addLog(tg('log.store.investWin', { emoji: team.emoji, name: team.name, n: payout }));
+        investResultThisTurn = { teamIndex: currentTeam, stake, rate, payout };
+      }
+      // Dîme : chaque adversaire porteur prélève un % de l'or GAGNÉ par l'équipe.
+      if (payNow > 0) {
+        for (let gi = 0; gi < newTeams.length; gi++) {
+          if (gi === currentTeam) continue;
+          const pctT = tithePct(newTeams[gi]);
+          if (pctT <= 0) continue;
+          const take = Math.min(newTeams[currentTeam].money || 0, Math.floor((payNow * pctT) / 100));
+          if (take > 0) {
+            newTeams[currentTeam] = { ...newTeams[currentTeam], money: (newTeams[currentTeam].money || 0) - take };
+            newTeams[gi] = { ...newTeams[gi], money: (newTeams[gi].money || 0) + take };
+            addLog(tg('log.store.tithe', { aemoji: newTeams[gi].emoji, aname: newTeams[gi].name, vemoji: team.emoji, vname: team.name, n: take }));
+          }
+        }
+      }
       // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
       let gainDetail;
       if (bonusBreak.parts.length > 0) {
@@ -1599,8 +1728,22 @@ export const useGameStore = create((set, get) => ({
       const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonWrong'), get().preRollValue ?? 2, masteryOnW);
       // erreur : la s\u00e9rie de bonnes r\u00e9ponses repart de 0 ; un pari \u00ab D\u00e9fi \u00bb est perdu ;
       // les bonus de loot arm\u00e9s par la Relance chanceuse sont consomm\u00e9s (pas de loot ici).
-      // Garde de série (face Forge) : la série ne casse pas sur cette erreur.
-      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: team.forgeStreakGuard ? (team.streak || 0) : 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined, indiceLegendaryArmed: undefined };
+      // Garde de série (face Forge, ou passif/buff « streakGuard ») : la série ne
+      // casse pas sur cette erreur.
+      const streakKept = team.forgeStreakGuard || hasStreakGuard(team);
+      newTeams[currentTeam] = { ...updatedTeam, answerTimeRatio, streak: streakKept ? (team.streak || 0) : 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined, indiceLegendaryArmed: undefined };
+      if (streakKept && !team.forgeStreakGuard && (team.streak || 0) > 0) addLog(tg('log.store.streakGuard', { emoji: team.emoji, name: team.name }));
+      // Prime réclamée + investissement perdu sur cette erreur.
+      {
+        const failed = newTeams[currentTeam];
+        if (failed.bountyBy != null && newTeams[failed.bountyBy]) {
+          const g = failed.bountyGold || 0;
+          newTeams[failed.bountyBy] = { ...newTeams[failed.bountyBy], money: (newTeams[failed.bountyBy].money || 0) + g };
+          addLog(tg('log.store.bountyClaim', { aemoji: newTeams[failed.bountyBy].emoji, aname: newTeams[failed.bountyBy].name, vemoji: failed.emoji, vname: failed.name, n: g }));
+        }
+        if (failed.investment) addLog(tg('log.store.investLost', { emoji: failed.emoji, name: failed.name, n: failed.investment.stake }));
+        newTeams[currentTeam] = { ...failed, bountyBy: undefined, bountyGold: undefined, investment: undefined };
+      }
       // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes les \u00e9quipes \u00bb du surplus (auto).
       // Une \u00e9quipe immunis\u00e9e est \u00e9pargn\u00e9e ; une Bombe fumig\u00e8ne esquive (et se consomme).
       const surgeMoves = [];
@@ -1697,7 +1840,9 @@ export const useGameStore = create((set, get) => ({
       return;
     }
 
-    set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [] });
+    // Bilan d'investissement : préservé si aucun nouveau (ex. rafale Double dont
+    // seule la 1re question portait l'investissement) — consommé par afterCorrectResolve.
+    set({ teams: newTeams, showQuestion: null, indiceUsed: false, indiceHidden: [], pendingInvestResult: investResultThisTurn || get().pendingInvestResult });
     get().checkMoneyMilestone(currentTeam); // palier d'or franchi par le gain ?
 
     // Suite du tour (rafale Double / loot / nextTurn) encapsulée : peut être
@@ -1734,7 +1879,7 @@ export const useGameStore = create((set, get) => ({
       // revient une seule fois). Taux par canal = BASE × temps restant + BONUS
       // d'objet FLAT (un « +100% » garantit le loot). Canaux INDÉPENDANTS.
       // Extension objets désactivée : aucun butin (couture d'octroi coupée).
-      if (!get().itemsEnabled()) { get().nextTurn(); return; }
+      if (!get().itemsEnabled()) { get().afterCorrectResolve(); return; }
       const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
       const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
       const lootTeam = get().teams[currentTeam];
@@ -1828,7 +1973,7 @@ export const useGameStore = create((set, get) => ({
           thenNextTurn: true,
         });
       } else {
-        get().nextTurn();
+        get().afterCorrectResolve();
       }
     };
 
@@ -1852,6 +1997,8 @@ export const useGameStore = create((set, get) => ({
     const { teams, currentTeam, addLog } = get();
     const team = teams[currentTeam];
     const sq = get().showQuestion;
+    // NB : la « seconde chance » sur temps écoulé est gérée dans
+    // revealQuestionTimeout (avant la révélation) — ici la question est déjà soldée.
     const timedSubject = sq?.subject; // thème (pour les déclencheurs conditionnés)
     const newTeams = [...teams];
 
@@ -1872,8 +2019,21 @@ export const useGameStore = create((set, get) => ({
     const { updatedTeam, logMessage, detail, path, forward, surplusPush, pushAmount } = resolveWrongAnswer(team, get().board, tg('log.turn.reasonTimeout'), get().preRollValue ?? 2, masteryOnT);
     // temps \u00e9coul\u00e9 = erreur : s\u00e9rie remise \u00e0 0, 0% de temps restant ; pari \u00ab D\u00e9fi \u00bb perdu ;
     // bonus de loot de la Relance chanceuse consomm\u00e9s (pas de loot au timeout).
-    // Garde de série (face Forge) : la série tient même au temps écoulé.
-    newTeams[currentTeam] = { ...updatedTeam, streak: team.forgeStreakGuard ? (team.streak || 0) : 0, answerTimeRatio: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+    // Garde de série (face Forge, ou passif/buff « streakGuard ») : la série tient même au temps écoulé.
+    const streakKeptT = team.forgeStreakGuard || hasStreakGuard(team);
+    newTeams[currentTeam] = { ...updatedTeam, streak: streakKeptT ? (team.streak || 0) : 0, answerTimeRatio: 0, wager: undefined, relanceLootBonus: undefined, relanceDoubleLoot: undefined };
+    if (streakKeptT && !team.forgeStreakGuard && (team.streak || 0) > 0) addLog(tg('log.store.streakGuard', { emoji: team.emoji, name: team.name }));
+    // Prime réclamée + investissement perdu sur ce temps écoulé.
+    {
+      const failed = newTeams[currentTeam];
+      if (failed.bountyBy != null && newTeams[failed.bountyBy]) {
+        const g = failed.bountyGold || 0;
+        newTeams[failed.bountyBy] = { ...newTeams[failed.bountyBy], money: (newTeams[failed.bountyBy].money || 0) + g };
+        addLog(tg('log.store.bountyClaim', { aemoji: newTeams[failed.bountyBy].emoji, aname: newTeams[failed.bountyBy].name, vemoji: failed.emoji, vname: failed.name, n: g }));
+      }
+      if (failed.investment) addLog(tg('log.store.investLost', { emoji: failed.emoji, name: failed.name, n: failed.investment.stake }));
+      newTeams[currentTeam] = { ...failed, bountyBy: undefined, bountyGold: undefined, investment: undefined };
+    }
     // Sur-r\u00e9duction (Bouclier L9) : push \u00ab toutes \u00bb du surplus (auto, immunit\u00e9/fumig\u00e8ne g\u00e9r\u00e9s).
     if (surplusPush === 'all' && pushAmount > 0) {
       const board = get().board;
@@ -2115,6 +2275,65 @@ export const useGameStore = create((set, get) => ({
     }
     set({ teams: nt });
     get().addLog(tg('log.store.loseItem', { emoji: team.emoji, name: team.name, icon: it.icon, iname: loc(it, 'name') }));
+  },
+
+  // Vol d'objet CIBLÉ : le voleur (thiefIdx) prend un objet AU HASARD à la victime
+  // (victimIdx) et le récupère dans son propre inventaire. Respecte l'immunité au
+  // vol d'objet ; repli sur l'or (fallbackGold) si la victime n'a aucun objet.
+  engineStealItem: (thiefIdx, victimIdx, category, family, fallbackGold = 0) => {
+    const thief = get().teams[thiefIdx];
+    const victim = get().teams[victimIdx];
+    if (!thief || !victim || thiefIdx === victimIdx) return;
+    if (isItemStealImmune(victim)) {
+      get().addLog(tg('log.store.stealItemImmune', { emoji: victim.emoji, name: victim.name }));
+      return;
+    }
+    const pool = [];
+    if (!family && category !== 'consumable') {
+      for (const [slot, v] of Object.entries(victim.equipment || {})) { const k = itemH.cellKey(v); if (k && ITEMS[k]) pool.push({ kind: 'equip', slot, key: k }); }
+    }
+    if (category !== 'equipment') {
+      itemH.normalizeBag(victim.bag).forEach((c, i) => { const k = itemH.cellKey(c); if (k && ITEMS[k] && (!family || ITEMS[k].family === family)) pool.push({ kind: 'bag', index: i, key: k }); });
+    }
+    const nt = [...get().teams];
+    if (pool.length === 0) {
+      const g = Math.max(0, Math.trunc(fallbackGold) || 0);
+      const take = Math.min(g, victim.money || 0);
+      if (take > 0) {
+        nt[victimIdx] = { ...victim, money: (victim.money || 0) - take };
+        nt[thiefIdx] = { ...nt[thiefIdx], money: (nt[thiefIdx].money || 0) + take };
+        set({ teams: nt });
+        get().addLog(tg('log.store.stealItemGold', { aemoji: thief.emoji, aname: thief.name, vemoji: victim.emoji, vname: victim.name, n: take }));
+        get().checkMoneyMilestone(thiefIdx);
+      } else {
+        get().addLog(tg('log.store.stealItemNone', { aemoji: thief.emoji, aname: thief.name, vemoji: victim.emoji, vname: victim.name }));
+      }
+      return;
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const it = ITEMS[pick.key];
+    // Retire l'objet à la victime et CONSERVE l'instance (enchantements inclus)
+    // pour la transférer telle quelle au voleur.
+    let stolenInstance;
+    if (pick.kind === 'equip') {
+      stolenInstance = victim.equipment?.[pick.slot] ?? pick.key;
+      nt[victimIdx] = { ...victim, equipment: { ...victim.equipment, [pick.slot]: null } };
+    } else {
+      const bag = itemH.normalizeBag(victim.bag);
+      const c = bag[pick.index];
+      // Une pile (>1) : on ne prend qu'une unité (la clé, sans enchant sur les piles).
+      stolenInstance = itemH.cellN(c) > 1 ? pick.key : c;
+      bag[pick.index] = itemH.cellN(c) > 1 ? itemH.mkCell(pick.key, itemH.cellN(c) - 1) : null;
+      nt[victimIdx] = { ...victim, bag };
+    }
+    // Donne l'objet au voleur (placeItem gère l'équipement libre / le sac / le
+    // repli en or si l'inventaire est plein).
+    const r = itemH.placeItem(nt[thiefIdx], stolenInstance);
+    nt[thiefIdx] = r.team;
+    set({ teams: nt });
+    get().addLog(r.outcome === 'refunded'
+      ? tg('log.store.stealItemFull', { aemoji: thief.emoji, aname: thief.name, icon: it.icon, iname: loc(it, 'name'), vemoji: victim.emoji, vname: victim.name, n: r.refund })
+      : tg('log.store.stealItem', { aemoji: thief.emoji, aname: thief.name, icon: it.icon, iname: loc(it, 'name'), vemoji: victim.emoji, vname: victim.name }));
   },
 
   // === Actions d'événements liées aux extensions Alchimie & Enchantement =======
@@ -2664,6 +2883,17 @@ export const useGameStore = create((set, get) => ({
       case 'turnChargeSkip':
         if (st.showChargePicker) get().chargePickerSkip();
         return;
+      // --- Pose de piège (choix de case au téléphone) ---
+      case 'turnSelectTile':
+        if (st.showTilePicker && st.board?.[payload.nodeId] && st.board[payload.nodeId].type !== 'arrivee') get().selectTile(payload.nodeId);
+        return;
+      case 'turnCancelTile':
+        if (st.showTilePicker) get().cancelTilePicker();
+        return;
+      // --- Point de contrôle (téléportation manuelle du propriétaire) ---
+      case 'turnCheckpoint':
+        get().teleportToCheckpoint(); // gardes internes (bon tour, hors résolution, %)
+        return;
       // --- Duel (choix de l'arrivant) ---
       case 'turnDuelChoose':
         // chooseDuel garde déjà defenders.includes (les immunisés n'y sont pas).
@@ -3144,6 +3374,39 @@ export const useGameStore = create((set, get) => ({
     set({ inspectTrap: { nodeId, ...node.trap } });
   },
   closeInspectTrap: () => set({ inspectTrap: null }),
+
+  // Point de contrôle : l'équipe ACTIVE (qui l'a posé) clique dessus pour s'y
+  // téléporter quand elle le décide. Consommé selon `checkpointConsumeChance`
+  // (0 % = borne réutilisable, 100 % = à usage unique). Refusé en pleine
+  // résolution (question/événement/duel/déplacement/file d'effets).
+  teleportToCheckpoint: () => {
+    const { teams, currentTeam, board } = get();
+    const team = teams[currentTeam];
+    if (!team?.checkpoint || !board[team.checkpoint]) return;
+    if (get().showQuestion || get().showEvent || get().showFight || get().showDuelChoice
+      || get().rolling || get().pendingActions || get().awaitingChoice || get().movePath) return;
+    const from = team.pos, dest = team.checkpoint;
+    if (from === dest) return;
+    const chance = team.checkpointConsumeChance ?? 100;
+    const consume = chance >= 100 || Math.random() * 100 < chance;
+    // Effet visuel de téléportation : portail de DÉPART (le pion est encore sur
+    // `from`), puis saut instantané et portail d'ARRIVÉE une fois le pion rendu sur
+    // `dest` — la téléportation ne « glisse » pas le long du plateau (pas de movePath).
+    soundWarp();
+    get().emitVfx('warp', currentTeam);
+    get().addLog(tg('log.store.checkpointTeleport', { emoji: team.emoji, name: team.name }));
+    setTimeout(() => {
+      const cur = get().teams;
+      const t2 = cur[currentTeam];
+      if (!t2) return;
+      const nt = [...cur];
+      nt[currentTeam] = { ...t2, pos: dest, ...(consume ? { checkpoint: undefined, checkpointConsumeChance: undefined } : {}) };
+      set({ teams: nt, movePath: null });
+      // Laisse React repositionner le pion sur la destination avant le 2ᵉ portail.
+      setTimeout(() => get().emitVfx('warp', currentTeam), 70);
+      if (get().phase === 'game') saveGame(get());
+    }, 430);
+  },
   // Bouton « changer la question » : exécute le reroll fourni par un objet
   useQuestionReroll: (opt) => {
     const { showQuestion, pendingActions, rerollUsed, teams, currentTeam } = get();
@@ -3213,6 +3476,18 @@ export const useGameStore = create((set, get) => ({
       const left = ci.totalImmuneTurns - 1;
       if (nt === get().teams) nt = [...nt];
       nt[newCurrent] = left > 0 ? { ...ci, totalImmuneTurns: left } : { ...ci, totalImmuneTurns: undefined };
+    }
+
+    // Intérêts (passif/buff) : l'équipe qui reprend la main gagne un % de son or.
+    const cInt = nt[newCurrent];
+    if (cInt) {
+      const rate = interestPct(cInt);
+      const gain = rate > 0 ? Math.floor(((cInt.money || 0) * rate) / 100) : 0;
+      if (gain > 0) {
+        if (nt === get().teams) nt = [...nt];
+        nt[newCurrent] = { ...nt[newCurrent], money: (nt[newCurrent].money || 0) + gain };
+        addLog(tg('log.store.interest', { emoji: cInt.emoji, name: cInt.name, n: gain }));
+      }
     }
 
     // DoT « saignement d'or » (bleedGold) : à chaque fois que la victime REGAGNE

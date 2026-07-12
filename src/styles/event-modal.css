@@ -1,0 +1,158 @@
+/* ─────────────────────────────────────────────────────────────
+   Modale d'événement — habillage « HUD sci-fi » (cadre peint).
+   Le cadre (event-frame.png, 741×426) sert de fond ; le contenu est
+   posé en absolu dans ses régions (mesurées en % → mise à l'échelle
+   automatique). Les régions sont ajustables via les variables ci-dessous.
+   ───────────────────────────────────────────────────────────── */
+.evm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 10, 20, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.evm-frame {
+  /* Police « journal de bord » (terminal spatial) */
+  --evm-font: 'VT323', 'Courier New', monospace;
+  /* Régions (left/top/width/height en % du cadre) — à ajuster si besoin */
+  --evm-header-x: 5.5%; --evm-header-y: 3.5%; --evm-header-w: 34%; --evm-header-h: 12%;
+  --evm-left-x: 4.5%;   --evm-left-y: 19%;    --evm-left-w: 48%;   --evm-left-h: 68%;
+  --evm-btns-x: 52%;    --evm-btns-y: 6%;     --evm-btns-w: 46.5%; --evm-btns-h: 22%;
+  --evm-panel-x: 55%;   --evm-panel-y: 31.5%; --evm-panel-w: 42%;  --evm-panel-h: 56%;
+
+  position: relative;
+  width: min(860px, 96vw);
+  aspect-ratio: 1000 / 536;
+  background: url('../assets/space/event-frame.png') no-repeat center / 100% 100%;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
+  color: #cfe8f5;
+  font-family: var(--evm-font);
+}
+
+/* En-tête « ÉVÉNEMENT » (l'onglet du cadre est vide → rendu ici) */
+.evm-header {
+  position: absolute;
+  left: var(--evm-header-x); top: var(--evm-header-y);
+  width: var(--evm-header-w); height: var(--evm-header-h);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--evm-font); letter-spacing: 3px;
+  font-size: clamp(15px, 2.6vw, 26px); color: #a6e2f6;
+  text-shadow: 0 0 9px rgba(90, 200, 240, 0.75);
+  pointer-events: none; white-space: nowrap;
+}
+
+/* Panneau gauche = visuel de l'événement (image fournie ou emoji) */
+.evm-left {
+  position: absolute;
+  left: var(--evm-left-x); top: var(--evm-left-y);
+  width: var(--evm-left-w); height: var(--evm-left-h);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; overflow: hidden; text-align: center;
+}
+.evm-left img {
+  max-width: 97%; max-height: 90%; object-fit: contain;
+  border-radius: 12px;
+  border: 2px solid rgba(140, 214, 240, 0.8);
+  box-shadow: 0 0 18px rgba(90, 200, 240, 0.6), 0 0 6px rgba(160, 232, 255, 0.85),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.evm-left-emoji { font-size: clamp(40px, 9vw, 92px); line-height: 1; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5)); }
+.evm-left-team {
+  position: absolute; bottom: 1.5%; left: 0; right: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: clamp(10px, 1.5vw, 13px); color: #cfeeff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9); max-width: 100%;
+}
+.evm-left-team span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Rangée de boutons (au-dessus de l'encadré droit) */
+.evm-btns {
+  position: absolute;
+  left: var(--evm-btns-x); top: var(--evm-btns-y);
+  width: var(--evm-btns-w); height: var(--evm-btns-h);
+  display: flex; align-items: center; justify-content: center; gap: 2.5%;
+}
+.evm-btn {
+  flex: 0 0 auto; height: 100%; width: auto; max-width: 49%;
+  aspect-ratio: 226 / 120; /* un peu plus large que la case (203/120) */
+  border: 0; background: transparent no-repeat center / 100% 100%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 15% 9% 7%; box-sizing: border-box;
+  font-family: var(--font-display); color: #fff;
+  transition: transform 90ms ease, filter 90ms ease;
+}
+.evm-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.12); }
+.evm-btn:active:not(:disabled) { transform: translateY(0); filter: brightness(0.95); }
+.evm-btn:disabled { cursor: not-allowed; filter: grayscale(0.5) brightness(0.7); opacity: 0.7; }
+.evm-btn--green { background-image: url('../assets/space/event-btn-green.png'); }
+.evm-btn--yellow { background-image: url('../assets/space/event-btn-yellow.png'); }
+.evm-btn--red { background-image: url('../assets/space/event-btn-red.png'); }
+.evm-btn-label {
+  font-family: var(--evm-font); letter-spacing: 0.5px;
+  font-size: clamp(15px, 2.3vw, 23px); line-height: 1.05; text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.5);
+  max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.evm-btn-sub { font-size: clamp(9px, 1.2vw, 12px); opacity: 0.9; }
+
+/* Encadré droit = texte / contenu de la phase (défile si trop long) */
+.evm-panel {
+  position: absolute;
+  left: var(--evm-panel-x); top: var(--evm-panel-y);
+  width: var(--evm-panel-w); height: var(--evm-panel-h);
+  overflow-y: auto; overflow-x: hidden;
+  padding: 2% 4% 2% 3%;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin; scrollbar-color: #2f6f8a transparent;
+}
+.evm-panel::-webkit-scrollbar { width: 6px; }
+.evm-panel::-webkit-scrollbar-thumb { background: #2f6f8a; border-radius: 3px; }
+.evm-title {
+  font-family: var(--evm-font); font-size: clamp(19px, 3vw, 30px); letter-spacing: 1px;
+  color: #eaf6ff; text-shadow: 0 0 8px rgba(90, 200, 240, 0.55); line-height: 1.05;
+}
+.evm-desc { font-family: var(--evm-font); font-size: clamp(15px, 2.2vw, 21px); line-height: 1.25; color: #c6e2ef; letter-spacing: 0.4px; }
+.evm-msg { font-family: var(--evm-font); font-size: clamp(17px, 2.4vw, 24px); color: #eaf6ff; line-height: 1.2; letter-spacing: 0.5px; }
+.evm-hint { font-family: var(--evm-font); font-size: clamp(13px, 1.7vw, 16px); color: #86bdd0; }
+
+/* Cartes/boutons de liste (question, boutiques, cibles…) dans l'encadré */
+.evm-panel .evm-opt {
+  width: 100%; text-align: left; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid rgba(120, 190, 220, 0.35);
+  background: rgba(18, 34, 48, 0.75); color: #dbeef7;
+  font-family: var(--evm-font); font-size: clamp(14px, 1.9vw, 18px); letter-spacing: 0.4px;
+  transition: all 100ms ease;
+}
+.evm-panel .evm-opt:hover:not(:disabled) { border-color: #63c8e8; background: rgba(28, 52, 70, 0.9); }
+.evm-panel .evm-opt:disabled { opacity: 0.45; cursor: not-allowed; }
+.evm-panel .evm-opt.is-correct { border-color: #4fd06a; background: rgba(30, 70, 40, 0.9); }
+.evm-panel .evm-opt.is-wrong { border-color: #e05a44; background: rgba(80, 32, 28, 0.9); }
+.evm-optkey { font-family: var(--font-display); font-size: 12px; color: #7fb3c6; flex-shrink: 0; }
+
+/* Dé (phase dice) */
+.evm-dice { font-size: clamp(48px, 10vw, 86px); line-height: 1; text-align: center; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6)); }
+
+/* Cinématique « saut hyperspatial » (révélation d'événement) */
+.evm-hyper { position: fixed; inset: 0; z-index: 210; background: #03060f; overflow: hidden; }
+.evm-hyper-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.evm-hyper-label {
+  position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; z-index: 2;
+  font-family: var(--evm-font, 'VT323', monospace); letter-spacing: 8px;
+  font-size: clamp(18px, 4.5vw, 40px); color: #a6e2f6;
+  text-shadow: 0 0 14px rgba(90, 200, 240, 0.9);
+  animation: evm-hyper-blink 0.7s steps(2, jump-none) infinite;
+}
+@keyframes evm-hyper-blink { 50% { opacity: 0.3; } }
+
+/* Skin bouton texte simple (annuler / passer) sous une liste */
+.evm-linkbtn {
+  margin-top: 4px; width: 100%; padding: 6px; border: 0; background: none;
+  color: #7fb3c6; font-family: var(--font-ui); font-size: 13px; cursor: pointer;
+}
+.evm-linkbtn:hover { color: #a9d6e6; text-decoration: underline; }

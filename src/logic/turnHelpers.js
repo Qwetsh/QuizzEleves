@@ -152,8 +152,12 @@ export function applyRecul(team, board, base, masteryOn = false) {
   }
   if (recul <= 0) return { ...out, applied: 0, advance: 0, path: null, absorbedBy: shield || 'equip' };
   const { finalPos, path } = moveBack(board, team.pos, recul);
+  const applied = recul;
+  // Le point de contrôle n'agit PAS comme une barrière au recul : on recule
+  // normalement (il reste posé pour un TP manuel au tour suivant, cf.
+  // teleportToCheckpoint dans gameStore).
   patch.pos = finalPos;
-  return { ...out, applied: recul, advance: 0, path, absorbedBy: shield };
+  return { ...out, applied, advance: 0, path, absorbedBy: shield };
 }
 
 /**

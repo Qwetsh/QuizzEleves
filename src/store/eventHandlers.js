@@ -7,6 +7,7 @@ import { ITEMS, SLOTS, RARITIES } from '../data/items.js';
 import { SETS } from '../data/sets.js';
 import { pickLootItem, grantItem, canReceiveItem, placeItem, pickWeightedItems, normalizeBag, bagCount, generateBlackMarketStock, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { LOOT } from '../logic/balanceConfig.js';
+import { EVENTS } from '../data/events.js';
 import { extOn } from '../extensions/registry.js';
 import { runEffects } from './effectEngine.js';
 import { tg, tgPlural } from '../i18n';
@@ -24,7 +25,9 @@ function generateMerchantStock(count = 3, enabledKeys = Object.keys(ITEMS)) {
 }
 
 export function merchantPrice(item) {
-  return Math.ceil(item.price * 0.7);
+  // Remise du marchand ambulant, éditable (params.discountPct, défaut 30%).
+  const pct = EVENTS.marchandAmbulant?.params?.discountPct ?? 30;
+  return Math.ceil(item.price * (1 - pct / 100));
 }
 
 // --- Animation helpers ---
@@ -102,7 +105,8 @@ export function acceptEvent(set, get) {
   }
 
   if (key === 'marchandAmbulant') {
-    const merchandise = generateMerchantStock(3, get().enabledItems || Object.keys(ITEMS));
+    const count = showEvent.event?.params?.count ?? 3;
+    const merchandise = generateMerchantStock(count, get().enabledItems || Object.keys(ITEMS));
     if (merchandise.length === 0) {
       // Aucun objet active : le marchand n'a rien a vendre
       set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.merchantEmpty') } }, eventApplied: true });
@@ -113,7 +117,8 @@ export function acceptEvent(set, get) {
   }
 
   if (key === 'troisCoffres') {
-    const gifts = generateMerchantStock(3, get().enabledItems || Object.keys(ITEMS));
+    const count = showEvent.event?.params?.count ?? 3;
+    const gifts = generateMerchantStock(count, get().enabledItems || Object.keys(ITEMS));
     if (gifts.length === 0) {
       set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.chestsEmpty') } }, eventApplied: true });
       return;
@@ -159,11 +164,13 @@ export function acceptEvent(set, get) {
     // Ouvre la BOUTIQUE en mode « marché noir » : stock louche (objets rares/
     // légendaires normalement introuvables) + remise. Fermer la boutique
     // termine le tour (cf. closeShop). On clôt l'event tout de suite.
-    const stock = generateBlackMarketStock(5, get().enabledItems || Object.keys(ITEMS));
+    const P = showEvent.event?.params || {};
+    const stock = generateBlackMarketStock(P.count ?? 5, get().enabledItems || Object.keys(ITEMS));
+    const discount = 1 - (P.discountPct ?? 30) / 100;
     // Voir le Marché Noir compte comme une visite de boutique → reset du prompt.
     const nt = get().teams.slice();
     if (nt[get().currentTeam]) nt[get().currentTeam] = { ...nt[get().currentTeam], turnsSinceShop: 0 };
-    set({ showEvent: null, eventApplied: true, showShopPrompt: false, teams: nt, showShop: { marcheNoir: true, stock, discount: 0.7 } });
+    set({ showEvent: null, eventApplied: true, showShopPrompt: false, teams: nt, showShop: { marcheNoir: true, stock, discount } });
     return;
   }
 
@@ -262,22 +269,39 @@ export function eventAskQuestion(set, get) {
   // en fin de tour (on efface le flag posé à l'atterrissage).
   if (get().pendingEventQuestion) set({ pendingEventQuestion: null });
 
-  // Thème forcé par l'événement (ex. Sphinx → 'hardcore'), sinon aléatoire parmi
-  // les matières du plateau. 'lv2' → la langue de l'équipe active.
-  let subject = showEvent.event?.subject || get().randomBoardSubject();
-  if (subject === 'lv2') subject = get().resolveSubjectFor('lv2', get().currentTeam);
-  const pool = questions[subject] || [];
-  const asked = askedQuestions[subject] || new Set();
-  const result = pickQuestion(pool, asked);
+  // Thème forcé par l'événement (ex. Sphinx → 'hardcore'). Sinon, on essaie TOUTES
+  // les matières du plateau (mélangées) — une « catégorie » multi-thèmes est résolue
+  // en sous-thème concret via resolveSubjectFor (comme le flux de question normal),
+  // sinon `questions[catégorie]` serait vide → faux « pas de question disponible ».
+  const forced = showEvent.event?.subject;
+  const board = Array.isArray(get().boardSubjects) && get().boardSubjects.length
+    ? get().boardSubjects : Object.keys(questions);
+  const candidates = forced ? [forced] : board.slice();
+  for (let i = candidates.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
 
-  if (!result) {
+  const cur = get().currentTeam;
+  // 1re passe : questions non encore posées ; 2e passe : on recycle (asked vidé).
+  const pick = (recycle) => {
+    for (const raw of candidates) {
+      const subject = get().resolveSubjectFor(raw, cur);
+      const pool = questions[subject] || [];
+      if (!pool.length) continue;
+      const asked = recycle ? new Set() : (askedQuestions[subject] || new Set());
+      const r = pickQuestion(pool, asked);
+      if (r) return { subject, ...r };
+    }
+    return null;
+  };
+  const picked = pick(false) || pick(true);
+
+  if (!picked) {
     addLog(tg('log.ev.noQuestion'));
     set({ showEvent: null });
     get().finishEventTurn();
     return;
   }
 
-  const { question: q, newAsked } = result;
+  const { subject, question: q, newAsked } = picked;
   set({
     showEvent: { ...showEvent, phase: 'question', data: { ...showEvent.data, eventQuestion: q, eventSubject: subject } },
     askedQuestions: { ...askedQuestions, [subject]: newAsked },
@@ -503,6 +527,8 @@ export function applyEventEffect(set, get) {
   const { showEvent, teams, currentTeam, board, addLog } = get();
   if (!showEvent) return;
   const { key, data } = showEvent;
+  // Valeurs chiffrées éditables (EVENT_PARAMS_SCHEMA) — fallback = défaut codé.
+  const P = showEvent.event?.params || {};
   const team = teams[currentTeam];
   const newTeams = [...teams];
   let message = '';
@@ -542,7 +568,7 @@ export function applyEventEffect(set, get) {
       const pot = data?.vaToutPot || 0;
       if (correct) {
         const newStreak = streak + 1;
-        const gain = newStreak * 5; // croissant : +5, +10, +15, +20…
+        const gain = newStreak * (P.step ?? 5); // croissant : +5, +10, +15, +20…
         set({
           teams: newTeams,
           showEvent: { ...showEvent, phase: 'vaToutChoice', data: {
@@ -552,8 +578,8 @@ export function applyEventEffect(set, get) {
         });
         return; // boucle : on n'enchaîne PAS vers le résultat
       }
-      // Raté : mise perdue (jamais ajoutée à l'or) + recul 1D10.
-      const dv = Math.floor(Math.random() * 10) + 1;
+      // Raté : mise perdue (jamais ajoutée à l'or) + recul 1DN (failDie).
+      const dv = Math.floor(Math.random() * (P.failDie ?? 10)) + 1;
       const { applied } = reculInto(currentTeam, dv);
       const rt = reculTxt(applied);
       message = pot > 0
@@ -562,12 +588,12 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'recul': {
-      const { applied } = reculInto(currentTeam, 2);
+      const { applied } = reculInto(currentTeam, P.back ?? 2);
       message = tg('log.ev.recul.msg', { emoji: team.emoji, name: team.name, recul: reculTxt(applied) });
       break;
     }
     case 'coupDePouce': {
-      const result = moveForward(board, team.pos, 3, { throughJunctions: true });
+      const result = moveForward(board, team.pos, P.forward ?? 3, { throughJunctions: true });
       newTeams[currentTeam] = { ...team, pos: result.finalPos };
       pushMove(currentTeam, result.path, 'forward');
       message = tg('log.ev.coupDePouce', { emoji: team.emoji, name: team.name });
@@ -587,7 +613,7 @@ export function applyEventEffect(set, get) {
     case 'oubli': {
       // Equipement (oubliProtect) : simple recul de 3 au lieu du retour au depart
       if (hasEffect(team, 'oubliProtect')) {
-        const { applied } = reculInto(currentTeam, 3);
+        const { applied } = reculInto(currentTeam, P.grappleBack ?? 3);
         message = tg('log.ev.oubliGrapple', { emoji: team.emoji, name: team.name, recul: reculTxt(applied) });
         break;
       }
@@ -636,8 +662,8 @@ export function applyEventEffect(set, get) {
       // d'ARRIVEE sur la case evenement (preRollValue), pas le de de l'evenement.
       const dv = data?.diceValue || 1;
       const moveRoll = get().preRollValue || dv;
-      if (dv >= 4) {
-        const gain = moveRoll * 2;
+      if (dv >= (P.winThreshold ?? 4)) {
+        const gain = moveRoll * (P.winMult ?? 2);
         const result = moveForward(board, team.pos, gain, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
@@ -663,8 +689,8 @@ export function applyEventEffect(set, get) {
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        const me = reculInto(currentTeam, 2);
-        const tgt = reculInto(ti, 4);
+        const me = reculInto(currentTeam, P.selfBack ?? 2);
+        const tgt = reculInto(ti, P.targetBack ?? 4);
         message = tg('log.ev.sacrifice', { emoji: team.emoji, recul1: reculTxt(me.applied), vemoji: target.emoji, recul2: reculTxt(tgt.applied) });
       }
       break;
@@ -673,7 +699,7 @@ export function applyEventEffect(set, get) {
       const ti = data?.targetIndex;
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
-        const result = moveForward(board, target.pos, 3, { throughJunctions: true });
+        const result = moveForward(board, target.pos, P.forward ?? 3, { throughJunctions: true });
         newTeams[ti] = { ...target, pos: result.finalPos };
         pushMove(ti, result.path, 'forward');
         message = tg('log.ev.don', { emoji: target.emoji, name: target.name });
@@ -707,10 +733,10 @@ export function applyEventEffect(set, get) {
       if (ti != null && ti >= 0 && ti < teams.length) {
         const target = newTeams[ti];
         if (correct) {
-          const { applied } = reculInto(currentTeam, 2);
+          const { applied } = reculInto(currentTeam, P.winSelfBack ?? 2);
           message = tg('log.ev.duelWin', { vemoji: target.emoji, emoji: team.emoji, recul: reculTxt(applied) });
         } else {
-          const { applied } = reculInto(ti, 2);
+          const { applied } = reculInto(ti, P.loseTargetBack ?? 2);
           message = tg('log.ev.duelLose', { vemoji: target.emoji, vemoji2: target.emoji, recul: reculTxt(applied) });
         }
       }
@@ -719,12 +745,12 @@ export function applyEventEffect(set, get) {
     case 'pari': {
       const correct = data?.questionResult;
       if (correct) {
-        const result = moveForward(board, team.pos, 3, { throughJunctions: true });
+        const result = moveForward(board, team.pos, P.winForward ?? 3, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
         message = tg('log.ev.pariWin', { emoji: team.emoji });
       } else {
-        const { applied } = reculInto(currentTeam, 3);
+        const { applied } = reculInto(currentTeam, P.loseBack ?? 3);
         message = tg('log.ev.pariLose', { emoji: team.emoji, recul: reculTxt(applied) });
       }
       break;
@@ -732,7 +758,7 @@ export function applyEventEffect(set, get) {
     case 'bonus': {
       const correct = data?.questionResult;
       if (correct) {
-        const result = moveForward(board, team.pos, 3, { throughJunctions: true });
+        const result = moveForward(board, team.pos, P.winForward ?? 3, { throughJunctions: true });
         newTeams[currentTeam] = { ...team, pos: result.finalPos };
         pushMove(currentTeam, result.path, 'forward');
         message = tg('log.ev.bonusWin', { emoji: team.emoji });
@@ -742,14 +768,15 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'tresor': {
-      const gain = 15 + Math.floor(Math.random() * 11);
+      const lo = P.min ?? 15, hi = Math.max(lo, P.max ?? 25);
+      const gain = lo + Math.floor(Math.random() * (hi - lo + 1));
       newTeams[currentTeam] = { ...team, money: team.money + gain };
       message = tg('log.ev.tresor', { emoji: team.emoji, name: team.name, gain });
       break;
     }
     case 'impot': {
       // Equipement (taxReduction) : impot attenue voire annule
-      const loss = reducedTax(team, Math.floor(team.money * 0.3));
+      const loss = reducedTax(team, Math.floor(team.money * ((P.percent ?? 30) / 100)));
       newTeams[currentTeam] = { ...team, money: team.money - loss };
       message = loss > 0
         ? tg('log.ev.impotPay', { emoji: team.emoji, name: team.name, loss })
@@ -764,7 +791,7 @@ export function applyEventEffect(set, get) {
         const vaulted = target.powers?.bouclier?.spec10 === 'goldVault';
         // Equipement de la cible (stealProtection) : vol attenue voire annule
         const purse = target.money ?? 0;
-        const stolen = vaulted ? 0 : reducedSteal(target, Math.min(10, purse));
+        const stolen = vaulted ? 0 : reducedSteal(target, Math.min(P.amount ?? 10, purse));
         newTeams[targetIndex] = { ...target, money: target.money - stolen };
         newTeams[currentTeam] = { ...team, money: team.money + stolen };
         // Bourse vide ≠ protection : deux messages distincts.
@@ -779,11 +806,12 @@ export function applyEventEffect(set, get) {
     case 'taxeCommune': {
       const exempt = [];
       const reduced = [];
+      const base = P.amount ?? 5;
       for (let i = 0; i < newTeams.length; i++) {
         // Equipement (taxReduction) : taxe attenuee par equipe
-        const tax = reducedTax(newTeams[i], 5);
+        const tax = reducedTax(newTeams[i], base);
         if (tax <= 0) exempt.push(`${newTeams[i].emoji} ${newTeams[i].name}`);
-        else if (tax < 5) reduced.push(`${newTeams[i].emoji} ${newTeams[i].name} (-${tax})`);
+        else if (tax < base) reduced.push(`${newTeams[i].emoji} ${newTeams[i].name} (-${tax})`);
         newTeams[i] = { ...newTeams[i], money: Math.max(0, newTeams[i].money - tax) };
       }
       message = tg('log.ev.taxeCommune');
@@ -794,21 +822,21 @@ export function applyEventEffect(set, get) {
     case 'jackpot': {
       const qResult = data?.questionResult;
       if (qResult === true) {
-        newTeams[currentTeam] = { ...team, money: team.money + 30 };
+        newTeams[currentTeam] = { ...team, money: team.money + (P.win ?? 30) };
         message = tg('log.ev.jackpotWin', { emoji: team.emoji, name: team.name });
       } else {
-        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 10) };
+        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - (P.lose ?? 10)) };
         message = tg('log.ev.jackpotLose', { emoji: team.emoji, name: team.name });
       }
       break;
     }
     case 'loterie': {
-      // Pile ou face : 50% gros gain, sinon perte d'une mise.
-      if (Math.random() < 0.5) {
-        newTeams[currentTeam] = { ...team, money: team.money + 40 };
+      // Pile ou face : chance% gros gain, sinon perte d'une mise.
+      if (Math.random() < (P.chancePct ?? 50) / 100) {
+        newTeams[currentTeam] = { ...team, money: team.money + (P.win ?? 40) };
         message = tg('log.ev.loterieWin', { emoji: team.emoji, name: team.name });
       } else {
-        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 15) };
+        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - (P.lose ?? 15)) };
         message = tg('log.ev.loterieLose', { emoji: team.emoji, name: team.name });
       }
       break;
@@ -816,10 +844,10 @@ export function applyEventEffect(set, get) {
     case 'sphinx': {
       // Question HARDCORE forcée (cf. eventAskQuestion) : gros enjeu.
       if (data?.questionResult === true) {
-        newTeams[currentTeam] = { ...team, money: team.money + 50 };
+        newTeams[currentTeam] = { ...team, money: team.money + (P.win ?? 50) };
         message = tg('log.ev.sphinxWin', { emoji: team.emoji, name: team.name });
       } else {
-        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - 20) };
+        newTeams[currentTeam] = { ...team, money: Math.max(0, team.money - (P.lose ?? 20)) };
         message = tg('log.ev.sphinxLose', { emoji: team.emoji, name: team.name });
       }
       break;
@@ -830,9 +858,10 @@ export function applyEventEffect(set, get) {
       const consumSlots = [];
       bag.forEach((c, i) => { if (cellKey(c) && ITEMS[cellKey(c)]?.slot === 'consumable') consumSlots.push(i); });
       const totalUnits = consumSlots.reduce((s, i) => s + cellN(bag[i]), 0);
-      if (totalUnits < 2) { message = tg('log.ev.forgeNeed'); break; }
+      const burnCount = P.burnCount ?? 2;
+      if (totalUnits < burnCount) { message = tg('log.ev.forgeNeed'); break; }
       const burnedIcons = [];
-      let toBurn = 2;
+      let toBurn = burnCount;
       for (const i of consumSlots) {
         while (toBurn > 0 && cellN(bag[i]) > 0) {
           burnedIcons.push(ITEMS[cellKey(bag[i])].icon);
@@ -903,7 +932,7 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'banquier': {
-      const bonusAmount = team.correct * 3;
+      const bonusAmount = team.correct * (P.perCorrect ?? 3);
       newTeams[currentTeam] = { ...team, money: team.money + bonusAmount };
       message = tg('log.ev.banquier', { emoji: team.emoji, name: team.name, amount: bonusAmount, correct: team.correct });
       break;

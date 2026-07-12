@@ -2,11 +2,21 @@
 // active n'a pas vu la boutique depuis LOOT.shopPromptDelay tours et peut
 // s'offrir au moins un objet de l'arrivage (cf. nextTurn dans gameStore).
 // Oui → ouvre la boutique ; Plus tard → snooze (reset du compteur).
+// Habillage spatial HUD (cohérent avec la modale d'événement / le coffre).
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
+import '../../styles/shop-prompt.css';
+
+const PANEL = {
+  background: 'linear-gradient(180deg,#0f1c2e,#0a1220)',
+  border: '1.5px solid rgba(120,200,235,0.55)',
+  borderRadius: 18,
+  boxShadow: '0 24px 60px rgba(0,0,0,0.6), inset 0 0 40px rgba(40,120,170,0.15)',
+  color: '#cfe8f5',
+};
 
 export default function ShopPromptModal() {
   const T = useT();
@@ -18,56 +28,25 @@ export default function ShopPromptModal() {
   return (
     <AnimatePresence>
       {show && team && (
-        <ModalOverlay className="max-w-md" onClose={() => { soundClick(); dismiss(); }}>
-          <div style={{ padding: '26px 26px 22px', textAlign: 'center' }}>
+        <ModalOverlay className="max-w-md" panelStyle={PANEL} onClose={() => { soundClick(); dismiss(); }}>
+          <div className="spm">
             <motion.div
-              initial={{ scale: 0.4, rotate: -12 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', damping: 12, stiffness: 240, delay: 0.05 }}
-              style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 13, stiffness: 240, delay: 0.05 }}
             >
-              {/* Tuile rétro (plaque crème) — remplace l'ancien PNG peint. */}
-              <span aria-hidden style={{
-                width: 116, height: 116, borderRadius: 18,
-                display: 'grid', placeItems: 'center', fontSize: 64,
-                background: 'linear-gradient(#efe3c6, #d3bd8f)',
-                border: '3px solid #14100a',
-                boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.5), inset 0 -6px 0 rgba(0,0,0,0.18), 0 8px 14px rgba(46,31,16,0.4)',
-              }}>🛒</span>
+              <div className="spm-icon" aria-hidden>🛒</div>
             </motion.div>
 
-            <h2 style={{
-              fontFamily: 'var(--font-display)', fontSize: 26, lineHeight: 1.05,
-              color: 'var(--ink-900)', margin: '4px 0 6px',
-            }}>
-              {T('modal.shopPrompt.title', { emoji: team.emoji, name: team.name })}
-            </h2>
-            <p style={{ fontSize: 15, color: 'var(--ink-600)', margin: '0 0 4px' }}>
-              {T('modal.shopPrompt.sub')}
-            </p>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '5px 14px', borderRadius: 999, marginBottom: 18,
-              background: 'linear-gradient(180deg, #fff5d0, #f3d997)',
-              border: '1px solid rgba(184, 134, 44, 0.45)',
-              fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--ink-900)',
-            }}>
-              {team.money ?? 0} <span className="coin" />
-            </div>
+            <h2 className="spm-title">{T('modal.shopPrompt.title', { emoji: team.emoji, name: team.name })}</h2>
+            <p className="spm-sub">{T('modal.shopPrompt.sub')}</p>
+            <div className="spm-money">{team.money ?? 0} <span className="coin" /></div>
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button
-                className="btn btn--green"
-                style={{ fontSize: 17, padding: '12px 22px' }}
-                onClick={() => { soundClick(); accept(); }}
-              >
+            <div className="spm-actions">
+              <button className="spm-btn spm-btn--go" onClick={() => { soundClick(); accept(); }}>
                 {T('modal.shopPrompt.go')}
               </button>
-              <button
-                className="btn btn--ghost"
-                style={{ fontSize: 16, padding: '12px 18px' }}
-                onClick={() => { soundClick(); dismiss(); }}
-              >
+              <button className="spm-btn spm-btn--later" onClick={() => { soundClick(); dismiss(); }}>
                 {T('common.later')}
               </button>
             </div>

@@ -20,6 +20,8 @@ function rowToEvent(r) {
     weight: typeof r.weight === 'number' ? r.weight : 1,
     category: r.category || undefined,
     needsItems: !!r.needs_items,
+    tone: r.tone || undefined,
+    params: (r.params && typeof r.params === 'object') ? r.params : undefined,
     actions: Array.isArray(r.actions) ? r.actions : [],
     custom: true, // marqueur : événement personnalisé (vs intégré)
   };
@@ -38,6 +40,8 @@ export function eventToPayload(ev) {
     weight: typeof ev.weight === 'number' ? ev.weight : 1,
     category: ev.category || null,
     needs_items: !!ev.needsItems,
+    tone: ev.tone || null,
+    params: (ev.params && typeof ev.params === 'object') ? ev.params : null,
     actions: ev.actions || [],
     enabled: ev.enabled !== false,
     ord: ev.ord ?? null,

@@ -65,7 +65,8 @@ const equip = (i, slot, key) => {
 describe('catalogue items.js', () => {
   const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction',
     'stealProtection', 'reculReduction', 'tempeteImmune', 'oubliProtect', 'fightStealBonus',
-    'itemStealImmune', 'goldStealImmune', 'reflectChance'];
+    'itemStealImmune', 'goldStealImmune', 'reflectChance', 'thorns', 'streakGuard',
+    'minRoll', 'insurance', 'interest', 'tithe', 'anchor', 'diceMalus'];
   const CONSUMABLE_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime',
     'shieldNext', 'gainCharge', 'fumigene'];
 

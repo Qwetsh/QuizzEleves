@@ -4,14 +4,17 @@
 // déclencheurs kind:'trigger' (use / chance / d6 / roll / correct / wrong / question)
 // + listes d'ACTIONS atomiques.
 import { SUBJECTS, SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../../data/subjects';
+import { ITEMS } from '../../data/items';
 
 const ACTIONS = [
   { key: 'money', label: '💰 Or' },
   { key: 'move', label: '🏃 Déplacer' },
   { key: 'rerollQuestion', label: '🔄 Changer la question' },
   { key: 'forceSubject', label: '🎯 Imposer un thème' },
+  { key: 'askFlag', label: '🚩 Poser une question sur un drapeau' },
   { key: 'randomPathNext', label: '🎲 Voie aléatoire (carrefour)' },
   { key: 'teleportFurthest', label: '✨ Téléport. case la + avancée' },
+  { key: 'swapPositions', label: '🔀 Échanger de place' },
   { key: 'challenge', label: '🎲 Défi (mon thème + pari)' },
   { key: 'placeTrap', label: '🪤 Poser un piège' },
   { key: 'gainCharge', label: '⚡ Recharger un pouvoir' },
@@ -22,11 +25,22 @@ const ACTIONS = [
   { key: 'buff', label: '🕒 Effet de durée (X tours)' },
   { key: 'loot', label: '🎁 Loot un objet' },
   { key: 'loseItem', label: '💔 Perdre un objet' },
+  { key: 'stealItem', label: '🕵️ Voler un objet (vers moi)' },
+  { key: 'stealCharge', label: '⚡ Voler une charge de pouvoir' },
+  { key: 'bounty', label: '🎯 Prime (prochaine erreur = or)' },
+  { key: 'invest', label: '📈 Investir (mise au choix, N% si juste)' },
+  { key: 'setCheckpoint', label: '🚩 Point de contrôle' },
   { key: 'curseTimer', label: '⏱️ Malédiction : timer réduit' },
   { key: 'curseExtraQuestion', label: '❓ Malédiction : question(s) en +' },
   { key: 'blockPowers', label: '🚫 Bloquer les pouvoirs (X tours)' },
   { key: 'blockConsumables', label: '🚫 Bloquer les consommables (X tours)' },
   { key: 'hackApp', label: '💀 Hacking : tour(s) perdu(s) + cinématique' },
+  // Alchimie & Enchantement (extensions) :
+  { key: 'grantIngredient', label: '🌿 Donner des ingrédients (alchimie)' },
+  { key: 'discoverRecipe', label: '📖 Révéler une recette (alchimie)' },
+  { key: 'grantItem', label: '🎒 Donner un objet précis' },
+  { key: 'enchantEquipped', label: '🔮 Enchanter une pièce équipée' },
+  { key: 'unenchant', label: '🧽 Effacer un enchantement' },
 ];
 
 // Types d'effet de durée (buff) — voir gameStore (application) et teamStatus (affichage).
@@ -43,6 +57,15 @@ const BUFF_TYPES = [
   { k: 'itemStealImmune', label: 'immunisé au vol d’objet' },
   { k: 'goldStealImmune', label: 'immunisé au vol d’or' },
   { k: 'reflectChance', label: 'renvoie les effets négatifs (% de chance)' },
+  { k: 'thorns', label: 'épines : renvoie une part du recul/vol subi (% )' },
+  { k: 'streakGuard', label: 'garde-série : la série ne casse pas en cas d’erreur' },
+  { k: 'secondChance', label: 'seconde chance : rejoue une mauvaise réponse une fois' },
+  { k: 'diceMalus', label: 'sabotage : le dé fait −N à chaque lancer' },
+  { k: 'minRoll', label: 'dé chanceux : minimum garanti de N au dé' },
+  { k: 'anchor', label: 'ancre : immunisé au déplacement forcé' },
+  { k: 'insurance', label: 'assurance : récupère N% de l’or qu’on te prend' },
+  { k: 'interest', label: 'intérêts : +N% de ton or par tour' },
+  { k: 'tithe', label: 'dîme : prélève N% de l’or gagné par les adversaires' },
 ];
 const TARGETS = [
   { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
@@ -91,6 +114,11 @@ const amountLabel = (n) => {
   return n;
 };
 
+// Libellé d'une spec de thème (chaîne fixe / 'same' / 'choose' / objet aléatoire).
+const subjLabel = (s) => (s && typeof s === 'object' && s.random)
+  ? (s.choices >= 2 ? `au hasard (${s.choices} choix)` : 'au hasard')
+  : (s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s);
+
 export function describeAction(a) {
   const who = TARGETS.find((t) => t.key === a.target)?.label || a.target;
   switch (a.action) {
@@ -102,15 +130,27 @@ export function describeAction(a) {
     case 'blockPowers': return `bloquer les pouvoirs de ${who} pendant ${amountLabel(a.turns)} tour(s)`;
     case 'blockConsumables': return `bloquer les consommables de ${who} pendant ${amountLabel(a.turns)} tour(s)`;
     case 'hackApp': return `pirater l'app : ${who} perd ${amountLabel(a.turns)} tour(s) (cinématique)`;
+    case 'grantIngredient': return `donner ${amountLabel(a.n ?? 1)} ingrédient(s) à ${who}`;
+    case 'discoverRecipe': return `révéler une recette à ${who}`;
+    case 'grantItem': return `donner ${a.key && ITEMS[a.key] ? `${ITEMS[a.key].icon} ${ITEMS[a.key].name}` : 'un objet'} à ${who}`;
+    case 'enchantEquipped': return `enchanter une pièce équipée de ${who}`;
+    case 'unenchant': return `effacer un enchantement de ${who}`;
     case 'rerollQuestion': {
-      const sl = (s) => s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s;
       return typeof a.chance === 'number'
-        ? `changer la question (${Math.round(a.chance * 100)}% ${sl(a.subject)}, sinon ${sl(a.elseSubject || 'hardcore')})`
-        : `changer la question (${sl(a.subject)})`;
+        ? `changer la question (${Math.round(a.chance * 100)}% ${subjLabel(a.subject)}, sinon ${subjLabel(a.elseSubject || 'hardcore')})`
+        : `changer la question (${subjLabel(a.subject)})`;
     }
-    case 'challenge': return `défi (${SUBJECTS[a.subject]?.name || a.subject}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
+    case 'forceSubject': return `imposer ${subjLabel(a.subject)} à ${who}`;
+    case 'askFlag': return `poser une question drapeau (image) à ${who}`;
+    case 'challenge': return `défi (${subjLabel(a.subject)}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
     case 'randomPathNext': return `voie aléatoire au prochain carrefour pour ${who}`;
     case 'teleportFurthest': return `téléporter ${who} sur la case la plus avancée atteinte`;
+    case 'swapPositions': return `échanger ma place avec ${who}`;
+    case 'stealItem': return `voler un ${a.category === 'equipment' ? 'équipement' : a.category === 'consumable' ? 'consommable' : 'objet'} à ${who} (vers moi)${a.fallbackGold ? ` (sinon ${a.fallbackGold} or)` : ''}`;
+    case 'stealCharge': return `voler une charge de pouvoir à ${who}`;
+    case 'bounty': return `prime de ${amountLabel(a.n)} or sur la prochaine erreur de ${who}`;
+    case 'invest': return `investir (mise au choix) — ${a.rate != null ? a.rate : (a.mult != null ? a.mult * 100 : 200)} % remboursé si bonne réponse`;
+    case 'setCheckpoint': return `poser un point de contrôle (${a.consumeChance ?? 100}% de le consommer)`;
     case 'placeTrap': return `poser un piège (${a.trap?.do?.length || 0} effet·s)`;
     case 'gainCharge': return 'recharger un pouvoir';
     case 'loot': return `loot un objet${a.category ? ` (${a.category})` : ''}`;
@@ -201,11 +241,29 @@ export function AmountInput({ value, onChange, min = 0, max = 999, dice = DEFAUL
   );
 }
 
-// Sélecteur de thème réutilisable (matières + thèmes spéciaux), avec options en tête.
-function SubjectSelect({ value, onChange, extra }) {
+// Sélecteur de thème réutilisable (matières + thèmes spéciaux + modes aléatoires).
+// `value` peut être une chaîne (thème fixe / 'same' / 'choose') OU un objet
+// { random:true, choices } (aléatoire sans choix / à N choix). `allowRandomChoices`
+// masque les variantes « à N choix » (ex. pour le reroll qui a déjà « au choix »).
+function SubjectSelect({ value, onChange, extra, allowRandom = true, allowRandomChoices = true }) {
+  const cur = (value && typeof value === 'object' && value.random) ? `__rand${value.choices || 0}` : value;
+  const handle = (v) => {
+    if (typeof v === 'string' && v.startsWith('__rand')) {
+      const nn = Number(v.slice(6)) || 0;
+      onChange(nn >= 2 ? { random: true, choices: nn } : { random: true });
+    } else onChange(v);
+  };
   return (
-    <select className="qed-select fx-blank" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select className="qed-select fx-blank" value={cur} onChange={(e) => handle(e.target.value)}>
       {extra}
+      {allowRandom && (
+        <optgroup label="Aléatoire">
+          <option value="__rand0">🎲 au hasard (sans choix)</option>
+          {allowRandomChoices && <option value="__rand2">🎲 au hasard, 2 choix</option>}
+          {allowRandomChoices && <option value="__rand3">🎲 au hasard, 3 choix</option>}
+          {allowRandomChoices && <option value="__rand4">🎲 au hasard, 4 choix</option>}
+        </optgroup>
+      )}
       {SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
       <optgroup label="Thèmes spéciaux">
         {FORCED_SUBJECT_KEYS.map((k) => <option key={k} value={k}>{SUBJECTS[k]?.name || k}</option>)}
@@ -225,7 +283,7 @@ function RerollChance({ a, onChange }) {
         {numInput(Math.round(a.chance * 100), (v) => onChange({ ...a, chance: v / 100 }), { max: 100 })}
         <W>% de chance, sinon</W>
         <SubjectSelect value={a.elseSubject || 'hardcore'} onChange={(v) => onChange({ ...a, elseSubject: v })}
-          extra={<option value="same">le même thème</option>} />
+          allowRandomChoices={false} extra={<option value="same">le même thème</option>} />
         <button type="button" className="bal-fx-x" title="Retirer la probabilité"
           onClick={() => onChange({ action: 'rerollQuestion', subject: a.subject || 'same' })}>{'\u{1F5D1}'}</button>
       </>
@@ -264,8 +322,15 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'extraTime') base.n = 5;
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
+        if (k === 'askFlag') base.target = 'self';
         if (k === 'randomPathNext') base.target = 'self';
         if (k === 'teleportFurthest') base.target = 'self';
+        if (k === 'swapPositions') base.target = 'target';
+        if (k === 'stealItem') Object.assign(base, { target: 'target', category: '', fallbackGold: 0 });
+        if (k === 'stealCharge') base.target = 'target';
+        if (k === 'bounty') Object.assign(base, { target: 'target', n: 15 });
+        if (k === 'invest') Object.assign(base, { rate: 200 });
+        if (k === 'setCheckpoint') base.consumeChance = 100;
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
         if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
         if (k === 'loot') base.category = '';
@@ -274,6 +339,11 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'curseExtraQuestion') Object.assign(base, { target: 'all', n: 1 });
         if (k === 'blockPowers' || k === 'blockConsumables') Object.assign(base, { target: 'target', turns: 2 });
         if (k === 'hackApp') Object.assign(base, { target: 'self', turns: 1 });
+        if (k === 'grantIngredient') Object.assign(base, { target: 'self', n: 2 });
+        if (k === 'discoverRecipe') base.target = 'self';
+        if (k === 'grantItem') Object.assign(base, { target: 'self', key: '' });
+        if (k === 'enchantEquipped') base.target = 'self';
+        if (k === 'unenchant') base.target = 'self';
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -312,6 +382,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         <>
           <W>pour</W>
           <SubjectSelect value={a.subject || 'same'} onChange={(v) => upd({ subject: v })}
+            allowRandomChoices={false}
             extra={<><option value="same">le même thème</option><option value="choose">un thème au choix</option></>} />
           <RerollChance a={a} onChange={onChange} />
         </>
@@ -323,6 +394,13 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <TargetSelect value={a.target} onChange={(v) => upd({ target: v })} opts={targetOpts} />
           <W>une question</W>
           <SubjectSelect value={a.subject || 'hardcore'} onChange={(v) => upd({ subject: v })} />
+        </>
+      )}
+
+      {a.action === 'askFlag' && (
+        <>
+          <W>poser une question DRAPEAU (image à identifier) à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
         </>
       )}
 
@@ -339,6 +417,51 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <W>pour</W>
           <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
           <W>(case la plus avancée déjà atteinte)</W>
+        </>
+      )}
+
+      {a.action === 'swapPositions' && (
+        <>
+          <W>j'échange ma place avec</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
+      {a.action === 'grantIngredient' && (
+        <>
+          <W>donner</W>
+          <AmountInput value={a.n ?? 2} onChange={(v) => upd({ n: v })} min={1} unit=" ingr." scale={false} />
+          <W>ingrédient(s) à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'discoverRecipe' && (
+        <>
+          <W>révéler une recette (au hasard) à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'grantItem' && (
+        <>
+          <W>donner</W>
+          <select className="qed-select fx-blank" value={a.key || ''} onChange={(e) => upd({ key: e.target.value })}>
+            <option value="">— objet —</option>
+            {Object.keys(ITEMS).map((k) => <option key={k} value={k}>{ITEMS[k].icon} {ITEMS[k].name}</option>)}
+          </select>
+          <W>à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'enchantEquipped' && (
+        <>
+          <W>enchanter (au hasard) une pièce équipée de</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'unenchant' && (
+        <>
+          <W>effacer un enchantement de</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
         </>
       )}
 
@@ -379,6 +502,54 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <W>(sinon</W>
           <AmountInput value={a.fallbackGold ?? 0} onChange={(v) => upd({ fallbackGold: v })} min={0} />
           <W>or)</W>
+        </>
+      )}
+
+      {a.action === 'stealItem' && (
+        <>
+          <W>je vole un</W>
+          <select className="qed-select fx-blank" value={a.category || ''} onChange={(e) => upd({ category: e.target.value || undefined })}>
+            <option value="">objet (au hasard)</option>
+            <option value="consumable">consommable</option>
+            <option value="equipment">équipement</option>
+          </select>
+          <W>à</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>(sinon</W>
+          <AmountInput value={a.fallbackGold ?? 0} onChange={(v) => upd({ fallbackGold: v })} min={0} />
+          <W>or)</W>
+        </>
+      )}
+
+      {a.action === 'stealCharge' && (
+        <>
+          <W>je vole une charge de pouvoir à</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
+      {a.action === 'bounty' && (
+        <>
+          <W>prime de</W>
+          <AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" or" />
+          <W>or sur la prochaine erreur de</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
+      {a.action === 'invest' && (
+        <>
+          <W>investir (mise choisie en jeu), rembourser</W>
+          {numInput(a.rate != null ? a.rate : (a.mult != null ? a.mult * 100 : 200), (v) => upd({ rate: Math.max(0, v), mult: undefined }), { min: 0, max: 1000 })}
+          <W>% si bonne réponse</W>
+        </>
+      )}
+
+      {a.action === 'setCheckpoint' && (
+        <>
+          <W>poser un point de contrôle (</W>
+          <AmountInput value={a.consumeChance ?? 100} onChange={(v) => upd({ consumeChance: Math.max(0, Math.min(100, v)) })} min={0} max={100} scale={false} />
+          <W>% de chance de le consommer)</W>
         </>
       )}
 
@@ -437,7 +608,11 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
                 const t = e.target.value;
                 // Seed une valeur par défaut valide selon le type choisi.
                 if (t === 'bleedGold') setB({ type: t, n: b.n ?? 'd10', mode: b.mode ?? 'steal' });
-                else if (t === 'reflectChance') setB({ type: t, n: typeof b.n === 'number' ? b.n : 50 });
+                else if (t === 'reflectChance' || t === 'thorns' || t === 'insurance') setB({ type: t, n: typeof b.n === 'number' ? b.n : 50 });
+                else if (t === 'interest') setB({ type: t, n: typeof b.n === 'number' ? b.n : 10 });
+                else if (t === 'tithe') setB({ type: t, n: typeof b.n === 'number' ? b.n : 25 });
+                else if (t === 'diceMalus') setB({ type: t, n: typeof b.n === 'number' ? b.n : 1 });
+                else if (t === 'minRoll') setB({ type: t, n: typeof b.n === 'number' ? b.n : 3 });
                 else setB({ type: t });
               }}>
                 {BUFF_TYPES.map((t) => <option key={t.k} value={t.k}>{t.label}</option>)}
@@ -458,6 +633,18 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
                 <W>de</W><AmountInput value={b.n ?? 'd10'} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>or / tour</W></>)}
               {b.type === 'reflectChance' && (<><W>avec</W>
                 <AmountInput value={typeof b.n === 'number' ? b.n : 50} onChange={(v) => setB({ n: v })} min={1} max={100} scale={false} /><W>% de chance</W></>)}
+              {b.type === 'thorns' && (<><W>renvoie</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 50} onChange={(v) => setB({ n: v })} min={1} max={100} scale={false} /><W>% du recul/vol subi</W></>)}
+              {b.type === 'insurance' && (<><W>récupère</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 50} onChange={(v) => setB({ n: v })} min={1} max={100} scale={false} /><W>% de l'or pris</W></>)}
+              {b.type === 'interest' && (<><W>de</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 10} onChange={(v) => setB({ n: v })} min={1} max={100} scale={false} /><W>% d'or / tour</W></>)}
+              {b.type === 'tithe' && (<><W>prélève</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 25} onChange={(v) => setB({ n: v })} min={1} max={100} scale={false} /><W>% du gain adverse</W></>)}
+              {b.type === 'diceMalus' && (<><W>de −</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 1} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au dé</W></>)}
+              {b.type === 'minRoll' && (<><W>minimum</W>
+                <AmountInput value={typeof b.n === 'number' ? b.n : 3} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au dé</W></>)}
             </div>
           </div>
         );
@@ -673,6 +860,7 @@ export function TriggerCard({ fx, onChange, onRemove, slot }) {
             <div className="fx-nest-label">Pendant une question, l'objet ajoute un bouton « 🔄 Changer » qui relance la question sur :</div>
             <div className="fx-sentence">
               <SubjectSelect value={a.subject || 'same'} onChange={(v) => setA({ ...a, subject: v })}
+                allowRandomChoices={false}
                 extra={<><option value="same">le même thème (autre question)</option><option value="choose">un thème au choix</option></>} />
               <RerollChance a={a} onChange={setA} />
             </div>

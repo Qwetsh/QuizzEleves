@@ -84,6 +84,13 @@ export const GLOSSARY_TERMS = {
     desc: "Une chance de retourner un effet négatif vers l'équipe qui l'a lancé, au lieu de le subir.",
     desc_en: "A chance to bounce a negative effect back onto the team that cast it, instead of suffering it.",
   },
+  epines: {
+    name: "Bouclier d'épines", name_en: 'Thorns', icon: '🌵', color: '#2f9d5a',
+    aliases: ['épines', 'epines', 'épine'],
+    aliases_en: ['thorns', 'thorn'],
+    desc: "Quand une équipe te fait reculer ou te vole de l'or, elle en subit une partie en retour (un pourcentage du recul ou de l'or volé).",
+    desc_en: 'When a team pushes you back or steals your gold, it suffers part of it in return (a percentage of the setback or stolen gold).',
+  },
   butin: {
     name: 'Butin', name_en: 'Loot', icon: '🎁', color: '#c8911f',
     aliases: ['butin', 'loot', 'looter', 'looté'],

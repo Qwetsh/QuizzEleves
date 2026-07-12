@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { joinUrl } from '../../logic/sessionConfig';
+import TeamAvatar from '../TeamAvatar';
 
 const TOOLS_UNLOCK_KEY = 'quete_tools_unlock';
 function devOn() {
@@ -41,7 +42,7 @@ export default function TestLinksPanel() {
               <button key={i}
                 onClick={() => window.open(testLink(code, i), `qm-test-${i}`, 'width=430,height=880')}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 9, border: '1px solid rgba(122,94,58,0.25)', background: '#fffefb', cursor: 'pointer', font: 'inherit', textAlign: 'left' }}>
-                <span style={{ fontSize: 16 }}>{t.emoji}</span>
+                <TeamAvatar team={t} size={22} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
                 <span style={{ fontSize: 13 }}>↗</span>
               </button>

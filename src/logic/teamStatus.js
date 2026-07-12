@@ -58,6 +58,33 @@ export const BUFF_INFO = {
   reflectChance: { tone: 'buff', icon: '↩️', color: '#8745d4', link: { type: 'term', key: 'renvoi' },
     name: (b, lang) => L(lang, 'Renvoi', 'Reflect'),
     desc: (b, lang) => L(lang, `Renvoi d'effet : ${b.n ?? 0}%`, `Effect reflect: ${b.n ?? 0}%`) },
+  thorns: { tone: 'buff', icon: '🌵', color: '#2f9d5a', link: { type: 'term', key: 'epines' },
+    name: (b, lang) => L(lang, 'Épines', 'Thorns'),
+    desc: (b, lang) => L(lang, `Épines : renvoie ${b.n ?? 0}% du recul/vol subi à l'attaquant`, `Thorns: returns ${b.n ?? 0}% of the setback/theft you suffer to the attacker`) },
+  streakGuard: { tone: 'buff', icon: '🔥', color: '#e8801f',
+    name: (b, lang) => L(lang, 'Garde-série', 'Streak guard'),
+    desc: (b, lang) => L(lang, 'La série ne casse pas en cas d’erreur', 'Your streak does not break on a wrong answer') },
+  secondChance: { tone: 'buff', icon: '🔁', color: '#2f9d5a',
+    name: (b, lang) => L(lang, 'Seconde chance', 'Second chance'),
+    desc: (b, lang) => L(lang, 'Une mauvaise réponse peut être rejouée une fois', 'One wrong answer can be replayed once') },
+  diceMalus: { tone: 'malus', icon: '🎲', color: '#8a1f2e',
+    name: (b, lang) => L(lang, 'Dé saboté', 'Sabotaged die'),
+    desc: (b, lang) => L(lang, `Le dé fait −${b.n ?? 1} à chaque lancer`, `The die rolls −${b.n ?? 1} each time`) },
+  minRoll: { tone: 'buff', icon: '🍀', color: '#2f9d5a',
+    name: (b, lang) => L(lang, 'Dé chanceux', 'Lucky die'),
+    desc: (b, lang) => L(lang, `Le dé fait au moins ${b.n ?? 1}`, `The die rolls at least ${b.n ?? 1}`) },
+  anchor: { tone: 'buff', icon: '⚓', color: '#3b6cb3',
+    name: (b, lang) => L(lang, 'Ancre', 'Anchor'),
+    desc: (b, lang) => L(lang, 'Immunisé au déplacement forcé (recul/téléport/échange)', 'Immune to forced movement (setback/teleport/swap)') },
+  insurance: { tone: 'buff', icon: '🛟', color: '#2f9d5a',
+    name: (b, lang) => L(lang, 'Assurance', 'Insurance'),
+    desc: (b, lang) => L(lang, `Récupère ${b.n ?? 0}% de l'or qu'on te prend`, `Recover ${b.n ?? 0}% of stolen/lost gold`) },
+  interest: { tone: 'buff', icon: '💹', color: '#c8911f',
+    name: (b, lang) => L(lang, 'Intérêts', 'Interest'),
+    desc: (b, lang) => L(lang, `+${b.n ?? 0}% de ton or par tour`, `+${b.n ?? 0}% of your gold each turn`) },
+  tithe: { tone: 'buff', icon: '⛪', color: '#c8911f',
+    name: (b, lang) => L(lang, 'Dîme', 'Tithe'),
+    desc: (b, lang) => L(lang, `Prélève ${b.n ?? 0}% de l'or gagné par les adversaires`, `Take ${b.n ?? 0}% of opponents' earned gold`) },
 };
 
 export function getTeamEffects(team, lang = getLang()) {
@@ -117,6 +144,35 @@ export function getTeamEffects(team, lang = getLang()) {
       name: L(lang, 'Renvoi', 'Reflect'),
       desc: L(lang, `Renvoi d'effet : ${Math.min(100, reflectPct)}%`, `Effect reflect: ${Math.min(100, reflectPct)}%`) });
   }
+  // Épines PASSIVES (équipement/set) — le buff temporisé passe par la boucle des buffs.
+  const thornsP = getEffectValue(team, 'thorns');
+  if (thornsP > 0) {
+    push({ key: 'thorns', tone: 'buff', icon: '🌵', color: '#2f9d5a', link: { type: 'term', key: 'epines' },
+      name: L(lang, 'Épines', 'Thorns'),
+      desc: L(lang, `Épines : renvoie ${Math.min(100, thornsP)}% du recul/vol subi`, `Thorns: returns ${Math.min(100, thornsP)}% of setback/theft suffered`) });
+  }
+  // Garde-série PASSIVE (équipement/set).
+  if (getEffectValue(team, 'streakGuard') > 0) {
+    push({ key: 'streakGuard', tone: 'buff', icon: '🔥', color: '#e8801f',
+      name: L(lang, 'Garde-série', 'Streak guard'),
+      desc: L(lang, 'La série ne casse pas en cas d’erreur', 'Your streak does not break on a wrong answer') });
+  }
+  // Passifs économiques / défensifs (équipement/set).
+  const insP = getEffectValue(team, 'insurance');
+  if (insP > 0) push({ key: 'insurance', tone: 'buff', icon: '🛟', color: '#2f9d5a', name: L(lang, 'Assurance', 'Insurance'), desc: L(lang, `Récupère ${Math.min(100, insP)}% de l'or qu'on te prend`, `Recover ${Math.min(100, insP)}% of stolen/lost gold`) });
+  const intP = getEffectValue(team, 'interest');
+  if (intP > 0) push({ key: 'interest', tone: 'buff', icon: '💹', color: '#c8911f', name: L(lang, 'Intérêts', 'Interest'), desc: L(lang, `+${intP}% de ton or par tour`, `+${intP}% of your gold each turn`) });
+  const titheP = getEffectValue(team, 'tithe');
+  if (titheP > 0) push({ key: 'tithe', tone: 'buff', icon: '⛪', color: '#c8911f', name: L(lang, 'Dîme', 'Tithe'), desc: L(lang, `Prélève ${titheP}% de l'or gagné par les adversaires`, `Take ${titheP}% of opponents' earned gold`) });
+  const mrP = getEffectValue(team, 'minRoll');
+  if (mrP > 0) push({ key: 'minRoll', tone: 'buff', icon: '🍀', color: '#2f9d5a', name: L(lang, 'Dé chanceux', 'Lucky die'), desc: L(lang, `Le dé fait au moins ${mrP}`, `The die rolls at least ${mrP}`) });
+  // États transitoires (flags posés par des effets).
+  if (team.checkpoint) push({ key: 'checkpoint', tone: 'buff', icon: '🚩', color: '#3b6cb3', name: L(lang, 'Point de contrôle', 'Checkpoint'), desc: L(lang, 'À ton tour, clique dessus pour t’y téléporter', 'On your turn, click it to teleport there') });
+  if (team.investment) {
+    const invRate = team.investment.rate != null ? team.investment.rate : (team.investment.mult != null ? team.investment.mult * 100 : 200);
+    push({ key: 'investment', tone: 'buff', icon: '📈', color: '#2f9d5a', name: L(lang, 'Investissement', 'Investment'), desc: L(lang, `Mise ${team.investment.stake} → ${invRate} % à la prochaine bonne réponse`, `Stake ${team.investment.stake} → ${invRate}% on your next correct answer`) });
+  }
+  if (team.bountyBy != null) push({ key: 'bounty', tone: 'malus', icon: '🎯', color: '#8a1f2e', name: L(lang, 'Prime', 'Bounty'), desc: L(lang, `Prime de ${team.bountyGold} or sur ta prochaine erreur`, `${team.bountyGold} gold bounty on your next mistake`) });
   // Immunité aux pièges PASSIVE (équipement/set). Le buff temporisé est affiché
   // séparément (avec compteur de tours) par la boucle des buffs ci-dessous.
   if (getEffectValue(team, 'trapImmune') > 0) {

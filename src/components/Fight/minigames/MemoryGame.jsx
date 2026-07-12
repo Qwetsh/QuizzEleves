@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong, soundClick } from '../../../logic/sounds';
+import TeamAvatar from '../../TeamAvatar';
 import { useT } from '../../../i18n';
 
 /**
@@ -98,7 +99,7 @@ export default function MemoryGame({ attacker, defender, onRoundWin, content }) 
 
   const sideScore = (side, tm) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: activeSide === side || done ? 1 : 0.55 }}>
-      <span style={{ fontSize: 20 }}>{tm.emoji}</span>
+      <TeamAvatar team={tm} size={30} />
       <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: tm.color }}>{tm.name}</span>
       <span style={{ minWidth: 30, textAlign: 'center', padding: '2px 10px', borderRadius: 999, background: '#fffefb', border: `1px solid ${tm.color}66`, fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--ink-900)' }}>
         {scores[side]}
@@ -155,7 +156,7 @@ export default function MemoryGame({ attacker, defender, onRoundWin, content }) 
                 <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.85)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}>{'❓'}</span>
               )}
               {owner != null && (
-                <span style={{ position: 'absolute', top: 3, right: 5, fontSize: 13 }}>{ownerTeam.emoji}</span>
+                <span style={{ position: 'absolute', top: 3, right: 5 }}><TeamAvatar team={ownerTeam} size={18} /></span>
               )}
             </motion.button>
           );

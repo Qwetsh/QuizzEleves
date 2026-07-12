@@ -1,5 +1,6 @@
 import { useGameStore } from '../../store/gameStore';
 import { POWERS } from '../../data/powers';
+import TeamAvatar from '../TeamAvatar';
 import { lighten } from '../../utils/colors';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
@@ -52,7 +53,7 @@ export default function PowerSetup() {
 
           {/* Bannière de l'équipe qui choisit */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, margin: '4px 0 22px' }}>
-            <span style={{ fontSize: 38 }}>{team.emoji}</span>
+            <TeamAvatar team={team} size={48} />
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, letterSpacing: 0.5, color: team.color, textShadow: '0 2px 0 #000' }}>{team.name}</span>
           </div>
 

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import TeamAvatar from '../TeamAvatar';
 import { useT } from '../../i18n';
 import { getDieFaces, faceEffects, clampFaceValue } from '../../logic/forge';
 import { FORGE_EFFECTS, FORGE_FAMILY_COLOR, faceColor } from '../../logic/forgeEffects';
@@ -63,8 +64,8 @@ export default function ForgeServiceOverlay() {
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 12, fontSize: 13 }}>
-          <span>{provider.emoji} {fs.providerOk ? '✅' : '⏳'}</span>
-          <span>{customer.emoji} {fs.customerOk ? '✅' : '⏳'}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><TeamAvatar team={provider} size={22} /> {fs.providerOk ? '✅' : '⏳'}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><TeamAvatar team={customer} size={22} /> {fs.customerOk ? '✅' : '⏳'}</span>
         </div>
         <button onClick={() => cancel(null)}
           style={{ marginTop: 12, width: '100%', padding: '8px 0', borderRadius: 10, cursor: 'pointer',

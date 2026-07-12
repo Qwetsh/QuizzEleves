@@ -46,6 +46,7 @@ export default {
   'log.turn.detail.effetDuree': { fr: 'Effet de durée', en: 'Lasting effect' },
   'log.turn.detail.pasDeRecul': { fr: 'pas de recul', en: 'no setback' },
   'log.turn.detail.reculSubi': { fr: 'Recul subi', en: 'Setback taken' },
+  'log.turn.detail.checkpoint': { fr: 'Point de contrôle', en: 'Checkpoint' },
   'log.turn.detail.bouclierBois': { fr: 'Bouclier de bois', en: 'Wooden shield' },
   'log.turn.detail.bouclierNiv': { fr: 'Bouclier niv.{level}', en: 'Shield lv.{level}' },
   'log.turn.detail.bonusBouclier': { fr: 'Bonus du bouclier', en: 'Shield bonus' },

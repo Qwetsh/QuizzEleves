@@ -9,6 +9,7 @@ import { createPortal, flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
+import TeamAvatar from '../TeamAvatar';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, RARITIES, SLOTS } from '../../data/items';
 import { isValidMove, normalizeBag, cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
@@ -255,7 +256,7 @@ export default function InventoryModal() {
                   <span className="rgi-title__text">{T('modal.inv.title')}</span>
                 </div>
                 <div className="rgi-teamchip">
-                  <span className="rgi-teamchip__emoji">{team.emoji}</span>
+                  <TeamAvatar team={team} size={20} className="rgi-teamchip__emoji" />
                   <span className="rgi-teamchip__name">{team.name}</span>
                   <span className="rgi-teamchip__sep" />
                   <span className="rgi-teamchip__coin">🪙</span>

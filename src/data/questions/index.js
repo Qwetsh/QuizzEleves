@@ -82,4 +82,20 @@ export function getQuestionStore() {
   return STORE;
 }
 
+// TOUS les thèmes AYANT des questions réellement chargées (base + culture-G +
+// forcé), quel que soit le périmètre de la partie. Reflète le STORE (tout est
+// chargé au boot via cache + Supabase) — ne déclenche AUCUN chargement. Sert de
+// vivier au « thème aléatoire parmi TOUS les thèmes possibles ».
+export function allSubjectsWithContent() {
+  const keys = new Set([...Object.keys(STORE.cycle4), ...Object.keys(STORE.brevet)]);
+  return [...keys].filter((k) => (STORE.cycle4[k]?.length || 0) + (STORE.brevet[k]?.length || 0) > 0);
+}
+
+// Pool complet d'UN thème (cycle4 + brevet), TRANSVERSE (aucun filtre de niveau)
+// — pour poser une question « surprise » d'un thème hors partie forcé par un
+// effet. Retourne [] si le thème n'a pas (encore) de questions chargées.
+export function getSubjectPool(key) {
+  return (STORE.cycle4[key] || []).concat(STORE.brevet[key] || []);
+}
+
 export { CYCLE4_QUESTIONS, BREVET_QUESTIONS };

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import TeamAvatar from '../../TeamAvatar';
 import { useT } from '../../../i18n';
 
 /**
@@ -79,7 +80,7 @@ export default function QuickDuel({ attacker, defender, subject, round, onRoundW
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-          <span style={{ fontSize: 22 }}>{team.emoji}</span>
+          <TeamAvatar team={team} size={32} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: team.color }}>{team.name}</span>
         </div>
         {isLocked && (

@@ -185,6 +185,23 @@ export default {
   'setup.eventsTitle': { fr: 'Événements ({n}/{total})', en: 'Events ({n}/{total})' },
   'setup.eventsCheckAll': { fr: 'Tout cocher', en: 'Check all' },
   'setup.eventsUncheckAll': { fr: 'Tout décocher', en: 'Uncheck all' },
+  // Groupes (triage par « ton »)
+  'setup.eventsGroupPositive': { fr: '😊 Positifs', en: '😊 Positive' },
+  'setup.eventsGroupNegative': { fr: '💀 Négatifs', en: '💀 Negative' },
+  'setup.eventsGroupGamble': { fr: '🎲 Paris & hasard', en: '🎲 Wagers & chance' },
+  'setup.eventsGroupBoss': { fr: '👨‍🏫 Boss', en: '👨‍🏫 Boss' },
+  'setup.eventsGroupOther': { fr: '✨ Autres', en: '✨ Other' },
+  'setup.eventsGroupCount': { fr: '{n}/{total}', en: '{n}/{total}' },
+  'setup.eventsBossNote': {
+    fr: 'Ne se déclenche que si au moins une matière scolaire est présente sur le plateau.',
+    en: 'Only triggers when at least one school subject is present on the board.',
+  },
+  // Badges d'extension requise
+  'setup.eventsBadgeItems': { fr: 'Objets', en: 'Items' },
+  'setup.eventsBadgeAlchemy': { fr: 'Alchimie', en: 'Alchemy' },
+  'setup.eventsBadgeEnchant': { fr: 'Enchantement', en: 'Enchantment' },
+  'setup.eventsBadgePhone': { fr: 'Téléphone', en: 'Phone' },
+  'setup.eventsBadgeSchool': { fr: 'Scolaire', en: 'School' },
 
   // --- PowerSetup.jsx (chrome only) ---
   'setup.powerDef': { fr: '🛡 Pouvoir défensif', en: '🛡 Defensive power' },

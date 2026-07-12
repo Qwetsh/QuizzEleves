@@ -1,6 +1,7 @@
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
 import { locName, loc } from '../../i18n/content';
+import TeamAvatar from '../TeamAvatar';
 
 const TILE_TYPES = {
   depart:   { icon: '\u{1F3F0}', label: 'Départ' },
@@ -47,7 +48,7 @@ export default function TeamTargetButton({ team, onClick, hoverColor = '#e85d6b'
       onMouseEnter={disabled ? undefined : (e) => { e.currentTarget.style.borderColor = hoverColor; e.currentTarget.style.background = hoverBg; }}
       onMouseLeave={disabled ? undefined : (e) => { e.currentTarget.style.borderColor = 'rgba(122,94,58,0.22)'; e.currentTarget.style.background = '#fffefb'; }}
     >
-      <span className="text-2xl" style={{ flexShrink: 0 }}>{team.emoji}</span>
+      <TeamAvatar team={team} size={34} style={{ flexShrink: 0 }} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--font-display)', color: team.color, display: 'block' }}>
           {team.name}{disabled && disabledNote ? ` ${disabledNote}` : ''}

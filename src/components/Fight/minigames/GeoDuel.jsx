@@ -3,6 +3,7 @@ import { useGameStore } from '../../../store/gameStore';
 import PlacementDuel from './PlacementDuel.jsx';
 import { GEO_PLACES, GEO_CAPITALS, lonLatToXY, haversineKm } from './placementData.jsx';
 import { shuffle } from '../../../data/fightData';
+import TeamAvatar from '../../TeamAvatar';
 import worldMap from '../../../assets/world-equirect.jpg';
 import { useT } from '../../../i18n';
 
@@ -61,7 +62,7 @@ function ScoreBar({ team, score, align }) {
         display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)',
         flexDirection: align === 'right' ? 'row-reverse' : 'row',
       }}>
-        <span style={{ fontSize: 18 }}>{team.emoji}</span>
+        <TeamAvatar team={team} size={28} />
         <span style={{ fontSize: 13, color: '#fff' }}>{team.name}</span>
         <span style={{ fontSize: 16, color: '#f3c969' }}>{T('fight.geo.points', { n: score.toLocaleString(numLocale) })}</span>
       </div>

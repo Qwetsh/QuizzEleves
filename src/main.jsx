@@ -26,6 +26,7 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
+import '@fontsource/vt323/400.css'; // « journal de bord » (modale d'événement)
 import './styles/index.css';
 import './styles/animations.css';
 import { applyCachedBalance, refreshBalance } from './logic/balanceConfig';

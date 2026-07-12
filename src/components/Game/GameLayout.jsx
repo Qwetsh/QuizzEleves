@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import TeamAvatar from '../TeamAvatar';
 import { useT } from '../../i18n';
 import BoardSVG from './BoardSVG';
 import Dice from './Dice';
@@ -38,6 +39,8 @@ import WeatherOverlay from './WeatherOverlay';
 import WeatherBanner from './WeatherBanner';
 import ChargePickerModal from '../Modals/ChargePickerModal';
 import SpecPickerModal from '../Modals/SpecPickerModal';
+import InvestPickerModal from '../Modals/InvestPickerModal';
+import InvestResultModal from '../Modals/InvestResultModal';
 import EnchantPickerModal from '../Modals/EnchantPickerModal';
 import LootReveal from '../Modals/LootReveal';
 import StarterChest from '../Modals/StarterChest';
@@ -151,7 +154,7 @@ export default function GameLayout() {
         {/* Top bar overlay — current team */}
         {team && (
           <div className="absolute top-4 left-5 z-50 rg-team-badge">
-            <div className="rg-team-badge__tile" style={{ background: team.color }}>{team.emoji}</div>
+            <div className="rg-team-badge__tile" style={{ background: team.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={team} size={40} /></div>
             <div>
               <div className="rg-team-badge__name">{team.name}</div>
               <div className="rg-team-badge__sub">{T('game.yourTurn')}</div>
@@ -308,6 +311,8 @@ export default function GameLayout() {
       <SpecPickerModal />
       <EnchantPickerModal />
       <TargetPickerModal />
+      <InvestPickerModal />
+      <InvestResultModal />
       <VictoryModal />
       <ShopModal />
       <ShopPromptModal />

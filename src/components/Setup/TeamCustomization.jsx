@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { EMOJI_OPTIONS } from '../../data/teamPresets';
+import { CHARACTERS, characterById } from '../../data/characters';
 import { useT } from '../../i18n';
 
 const FONT_MONO = "'VT323', monospace";
@@ -63,10 +63,12 @@ export default function TeamCustomization() {
                   cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all 120ms ease',
-                  flexShrink: 0,
+                  flexShrink: 0, overflow: 'hidden', padding: 2,
                 }}
               >
-                {team.emoji}
+                {characterById(team.character)?.body
+                  ? <img src={characterById(team.character).body} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                  : team.emoji}
               </button>
               <input
                 id={inputId}
@@ -122,7 +124,7 @@ export default function TeamCustomization() {
               <div
                 className="grid gap-1"
                 style={{
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))',
                   marginTop: 10,
                   padding: 8,
                   borderRadius: 8,
@@ -131,28 +133,28 @@ export default function TeamCustomization() {
                   boxShadow: 'inset 0 2px 8px rgba(0,0,0,.5)',
                 }}
               >
-                {EMOJI_OPTIONS.map((emoji, ei) => {
-                  const selected = team.emoji === emoji;
+                {CHARACTERS.map((c) => {
+                  const selected = team.character === c.id;
                   return (
                     <button
-                      key={`emoji-${ei}`}
+                      key={c.id}
                       type="button"
-                      onClick={() => { updateSetupTeam(i, { emoji }); setPickerOpen(null); }}
-                      aria-label={T('setup.avatarAria', { emoji })}
-                      className="text-xl"
+                      onClick={() => { updateSetupTeam(i, { character: c.id, emoji: c.badge }); setPickerOpen(null); }}
+                      aria-label={c.name}
+                      title={c.name}
                       style={{
-                        height: 40, borderRadius: 6,
+                        height: 64, borderRadius: 6,
                         border: selected ? '2px solid #57c84d' : '2px solid transparent',
-                        background: selected ? '#16331a' : 'transparent',
+                        background: selected ? '#16331a' : 'rgba(255,255,255,0.04)',
                         boxShadow: selected ? '0 0 8px rgba(87,200,77,.35)' : 'none',
                         cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 100ms ease',
+                        transition: 'all 100ms ease', padding: 3,
                       }}
                       onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = 'rgba(232,161,58,0.22)'; }}
-                      onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
+                      onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                     >
-                      {emoji}
+                      <img src={c.body} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
                     </button>
                   );
                 })}

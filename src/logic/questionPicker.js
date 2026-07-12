@@ -46,6 +46,8 @@ export function shuffleAnswers(question) {
     a: order.map((i) => question.a[i]),
     // Version anglaise mélangée avec la MÊME permutation → reste alignée sur `c`.
     a_en: Array.isArray(question.a_en) ? order.map((i) => question.a_en[i]) : null,
+    // Médias par réponse mélangés avec la MÊME permutation → restent alignés sur `a`.
+    a_img: Array.isArray(question.a_img) ? order.map((i) => question.a_img[i]) : null,
     c: order.indexOf(question.c),
   };
 }

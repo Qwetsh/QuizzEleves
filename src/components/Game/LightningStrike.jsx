@@ -6,8 +6,9 @@ import { useGameStore } from '../../store/gameStore';
 //  - vfx.type 'shield'    : flash bleu/cyan + onde (Bouclier qui absorbe un recul)
 //  - vfx.type 'trap'      : mâchoire 🪤 qui claque + onde rouge (Piège déclenché)
 //  - vfx.type 'reflect'   : disque violet + ↩️ tournoyant (effet RENVOYÉ à l'attaquant)
+//  - vfx.type 'warp'      : portail cosmique cyan/violet (téléportation point de contrôle)
 // Déclenché par le champ store `vfx = { type, teamIndex, id }`, puis nettoyé.
-const VFX_TYPES = ['lightning', 'shield', 'trap', 'reflect'];
+const VFX_TYPES = ['lightning', 'shield', 'trap', 'reflect', 'warp'];
 export default function LightningStrike() {
   const vfx = useGameStore((s) => s.vfx);
   const clearVfx = useGameStore((s) => s.clearVfx);
@@ -20,6 +21,7 @@ export default function LightningStrike() {
     const isShield = vfx.type === 'shield';
     const isTrap = vfx.type === 'trap';
     const isReflect = vfx.type === 'reflect';
+    const isWarp = vfx.type === 'warp';
 
     // Localise la cible : pion du plateau en priorité, sinon carte de la bande du bas.
     const el =
@@ -42,11 +44,11 @@ export default function LightningStrike() {
       pts.push(`${tx + jitter},${t * ty}`);
     }
 
-    setStrike({ id: vfx.id ?? 0, tx, ty, points: pts.join(' '), reduce, isShield, isTrap, isReflect });
+    setStrike({ id: vfx.id ?? 0, tx, ty, points: pts.join(' '), reduce, isShield, isTrap, isReflect, isWarp });
     const timer = setTimeout(() => {
       setStrike(null);
       clearVfx();
-    }, reduce ? 380 : (isShield ? 600 : (isTrap ? 920 : (isReflect ? 780 : 750))));
+    }, reduce ? 380 : (isShield ? 600 : (isTrap ? 920 : (isReflect ? 780 : (isWarp ? 640 : 750)))));
     return () => clearTimeout(timer);
   }, [vfx?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -109,6 +111,64 @@ export default function LightningStrike() {
           filter: 'drop-shadow(0 5px 12px rgba(120,8,0,0.8))',
           animation: `tp-snap ${strike.reduce ? 350 : 860}ms cubic-bezier(.2,.9,.2,1) forwards`,
         }}>🪤</div>
+      </div>
+    );
+  }
+
+  // Téléportation (point de contrôle) : portail cosmique cyan/violet — anneau qui
+  // s'ouvre en tournoyant, éclats d'étoiles, flash. Émis au DÉPART (pion sur la case
+  // d'origine) puis à l'ARRIVÉE (pion rendu sur la destination).
+  if (strike.isWarp) {
+    const D = strike.reduce ? 340 : 620;
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 250, pointerEvents: 'none', overflow: 'hidden' }}>
+        <style>{`
+          @keyframes wp-flash { 0% { opacity: 0; } 14% { opacity: 0.8; } 100% { opacity: 0; } }
+          @keyframes wp-ring { 0% { transform: translate(-50%,-50%) scale(0.15) rotate(0deg); opacity: 0; }
+                               22% { opacity: 1; }
+                               100% { transform: translate(-50%,-50%) scale(2.6) rotate(220deg); opacity: 0; } }
+          @keyframes wp-core { 0% { transform: translate(-50%,-50%) scale(0.2); opacity: 0; }
+                               30% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; }
+                               100% { transform: translate(-50%,-50%) scale(0.4); opacity: 0; } }
+          @keyframes wp-spark { 0% { transform: translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(0.3); opacity: 0; }
+                                30% { opacity: 1; }
+                                100% { transform: translate(-50%,-50%) rotate(var(--a)) translateY(-64px) scale(1); opacity: 0; } }
+        `}</style>
+
+        {/* Flash cosmique localisé */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(circle at ${strike.tx}px ${strike.ty}px, rgba(180,240,255,0.85), rgba(140,110,255,0.4) 26%, rgba(80,60,180,0.12) 54%, transparent 70%)`,
+          animation: `wp-flash ${D}ms ease-out forwards`,
+        }} />
+
+        {/* Anneau extérieur qui tournoie */}
+        <div style={{
+          position: 'absolute', left: strike.tx, top: strike.ty,
+          width: 96, height: 96, borderRadius: '50%',
+          border: '4px solid rgba(150,235,255,0.95)',
+          borderTopColor: 'rgba(190,150,255,0.95)', borderRightColor: 'rgba(190,150,255,0.6)',
+          boxShadow: '0 0 34px rgba(120,180,255,0.9), inset 0 0 20px rgba(160,120,255,0.55)',
+          animation: `wp-ring ${strike.reduce ? 360 : 640}ms cubic-bezier(.2,.7,.3,1) forwards`,
+        }} />
+
+        {/* Cœur lumineux du portail */}
+        <div style={{
+          position: 'absolute', left: strike.tx, top: strike.ty,
+          width: 60, height: 60, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(230,250,255,0.95), rgba(150,120,255,0.5) 55%, transparent 75%)',
+          animation: `wp-core ${strike.reduce ? 340 : 600}ms ease-out forwards`,
+        }} />
+
+        {/* Éclats d'étoiles éjectés en étoile */}
+        {!strike.reduce && [0, 60, 120, 180, 240, 300].map((a) => (
+          <div key={a} style={{
+            position: 'absolute', left: strike.tx, top: strike.ty,
+            fontSize: 18, lineHeight: 1, ['--a']: `${a}deg`,
+            filter: 'drop-shadow(0 0 6px rgba(150,200,255,0.9))',
+            animation: `wp-spark 620ms ease-out forwards`,
+          }}>✦</div>
+        ))}
       </div>
     );
   }

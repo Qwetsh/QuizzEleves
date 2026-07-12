@@ -22,6 +22,8 @@ import FaceTile from '../Game/FaceTile';
 import HackCinematic from '../Game/HackCinematic';
 import { isDiploTrade, PACT_DEFAULT_TURNS, PACT_MIN_TURNS, PACT_MAX_TURNS } from '../../logic/pacts';
 import { tFor, setLang } from '../../i18n';
+import { CHARACTERS, characterById } from '../../data/characters';
+import TeamAvatar from '../TeamAvatar';
 import { locName, locDesc, loc } from '../../i18n/content';
 import SetBonusInfo from '../Modals/SetBonusInfo';
 import ScribeView from './ScribeView';
@@ -94,7 +96,8 @@ const EMOJI_CHOICES = ['🦁', '🐯', '🦅', '🐺', '🦊', '🐻', '🐉', '
 export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = false }) {
   const T = tFor(englishMode);
   const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState(EMOJI_CHOICES[0]);
+  const [character, setCharacter] = useState(CHARACTERS[0].id);
+  const emoji = characterById(character)?.badge || EMOJI_CHOICES[0];
   const [powerDef, setPowerDef] = useState(null);
   const [powerOff, setPowerOff] = useState(null);
   const [lv2, setLv2] = useState('espagnol'); // langue LV2 (si le mode est actif)
@@ -110,7 +113,7 @@ export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMo
     if (busy || incomplete) return;
     setBusy(true); setErr(null);
     try {
-      await upsertLobbyTeam(code, token, { name: name.trim(), emoji, power_def: powerDef, power_off: powerOff, lv2: lv2Mode ? lv2 : null, ready: true });
+      await upsertLobbyTeam(code, token, { name: name.trim(), emoji, character, power_def: powerDef, power_off: powerOff, lv2: lv2Mode ? lv2 : null, ready: true });
       setSubmitted(true);
       onSubmitted?.();
     } catch (e) { setErr(e.message || T('mobile.sendFailed')); }
@@ -120,7 +123,11 @@ export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMo
   if (submitted) {
     return (
       <div className="mob-root mob-center">
-        <div className="mob-pick-emoji" style={{ width: 84, height: 84, fontSize: 44, background: 'linear-gradient(135deg,#e8a958,#b8862c)' }}>{emoji}</div>
+        <div className="mob-pick-emoji" style={{ width: 84, height: 84, fontSize: 44, background: 'linear-gradient(135deg,#e8a958,#b8862c)', overflow: 'hidden' }}>
+          {characterById(character)?.body
+            ? <img src={characterById(character).body} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
+            : emoji}
+        </div>
         <h1 className="mob-title" style={{ marginTop: 12 }}>{name}</h1>
         <p className="mob-sub">{T('mobile.waitingForTeacher')}</p>
         <div className="mob-spinner" style={{ margin: '8px 0 16px' }} />
@@ -158,14 +165,17 @@ export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMo
         onChange={(e) => setName(e.target.value)} placeholder={T('mobile.teamNamePlaceholder')} />
 
       <label className="mob-field-label" style={{ marginTop: 14 }}>{T('mobile.logo')}</label>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
-        {EMOJI_CHOICES.map((e) => (
-          <button key={e} type="button" onClick={() => setEmoji(e)}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+        {CHARACTERS.map((c) => (
+          <button key={c.id} type="button" onClick={() => setCharacter(c.id)} title={englishMode ? c.nameEn : c.name}
             style={{
-              fontSize: 24, padding: '6px 0', borderRadius: 10, cursor: 'pointer',
-              border: `2px solid ${emoji === e ? 'var(--gold-600)' : 'rgba(122,94,58,0.2)'}`,
-              background: emoji === e ? 'rgba(232,169,88,0.15)' : '#fffefb',
-            }}>{e}</button>
+              padding: 3, borderRadius: 10, cursor: 'pointer', aspectRatio: '3 / 4',
+              border: `2px solid ${character === c.id ? 'var(--gold-600)' : 'rgba(122,94,58,0.2)'}`,
+              background: character === c.id ? 'rgba(232,169,88,0.15)' : '#fffefb',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+            <img src={c.body} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
+          </button>
         ))}
       </div>
 
@@ -214,7 +224,7 @@ function TeamPicker({ session, onPick }) {
       <div className="mob-pick-list">
         {session.teams.map((t) => (
           <button key={t.idx} className="mob-pick-card" style={{ '--accent': t.color }} onClick={() => onPick(t.idx)}>
-            <span className="mob-pick-emoji" style={{ background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)` }}>{t.emoji}</span>
+            <span className="mob-pick-emoji" style={{ background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={t} size={44} /></span>
             <span className="mob-pick-name" style={{ color: t.color }}>{t.name}</span>
             <span className="mob-pick-coin">{'\u{1FA99}'} {t.money}</span>
           </button>
@@ -1060,7 +1070,7 @@ export function TeamView({ session, teamIdx, owned, code, token }) {
   return (
     <div className="mob-root mob-team" style={{ '--accent': t.color, paddingBottom: 76 }}>
       <header className="mob-header" style={{ background: `linear-gradient(135deg, ${t.color}, ${t.color}cc)` }}>
-        <span className="mob-header-emoji">{t.emoji}</span>
+        <span className="mob-header-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={t} size={40} /></span>
         <div className="mob-header-info">
           <div className="mob-header-name">{t.name}</div>
           <div className={'mob-turn ' + (myTurn ? 'is-mine' : '')}>
@@ -1427,7 +1437,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
                 style={forbid ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
                 title={forbid ? T('mobile.forgeNeedsSmith') : undefined}
                 onClick={() => { setToIdx(i); setWant({ gold: 0, bag: [], equip: [] }); }}>
-                {t.emoji} {t.name}{forbid ? ' 🚫' : ''}
+                <TeamAvatar team={t} size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 5 }} />{t.name}{forbid ? ' 🚫' : ''}
               </button>
             );
           })}
@@ -1460,7 +1470,7 @@ function DealComposer({ session, teamIdx, hasDiplo = false, initial = null, onCl
             <div className="mob-trade-targets">
               {victims.map(({ t, i }) => (
                 <button key={i} className={'mob-trade-target' + (against === i ? ' on' : '')} onClick={() => setAgainstIdx(i)}>
-                  {t.emoji} {t.name}
+                  <TeamAvatar team={t} size={18} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 5 }} />{t.name}
                 </button>
               ))}
             </div>
@@ -1926,7 +1936,7 @@ function AdminPanel({ code, session, onClose }) {
         return (
           <div key={t.idx} style={{ border: `2px solid ${t.color}`, borderRadius: 14, padding: 12, marginBottom: 12, background: '#fffefb' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 22 }}>{t.emoji}</span>
+              <TeamAvatar team={t} size={24} />
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: t.color, flex: 1 }}>{t.name}</span>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{'\u{1FA99}'} {t.money}</span>
             </div>
@@ -2186,8 +2196,8 @@ function ForgeServiceView({ session, teamIdx, code, token, owned, T }) {
 
         {/* Validation */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 18, margin: '14px 0 10px', fontSize: 13 }}>
-          <span>{provider.emoji} {fs.providerOk ? '✅' : '⏳'}</span>
-          <span>{customer.emoji} {fs.customerOk ? '✅' : '⏳'}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><TeamAvatar team={provider} size={22} /> {fs.providerOk ? '✅' : '⏳'}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><TeamAvatar team={customer} size={22} /> {fs.customerOk ? '✅' : '⏳'}</span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="mob-btn mob-btn--gold" style={{ flex: 2 }} disabled={!canAct || myOk || (isProvider && placedCount === 0)}

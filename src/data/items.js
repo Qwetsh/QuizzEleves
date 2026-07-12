@@ -352,6 +352,92 @@ export const ITEMS = {
     desc: 'Tu renonces à tes CONSOMMABLES pendant 3 tours, mais gagnes 35 pièces tout de suite.',
     effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockConsumables', target: 'self', turns: 3 }, { action: 'money', mode: 'gain', target: 'self', n: 35, unit: 'flat' }] }],
   },
+
+  // === Objets d'exemple des effets 2026-07-10 (épines, garde-série, seconde
+  // chance, échange de place, vol d'objet, thème aléatoire) ===
+  carapaceEpines: {
+    name: "Carapace d'épines", name_en: 'Thornmail', icon: '🌵', slot: 'body', rarity: 'rare', price: 24,
+    desc: "Quand on te fait reculer ou qu'on te vole de l'or, l'attaquant en subit 40 % en retour.",
+    effects: [{ type: 'thorns', value: 40 }],
+  },
+  braseroConstance: {
+    name: 'Brasero de constance', name_en: 'Ember of Constancy', icon: '🔥', slot: 'feet', rarity: 'rare', price: 22,
+    desc: 'Ta série de bonnes réponses ne casse plus en cas d’erreur.',
+    effects: [{ type: 'streakGuard', value: 1 }],
+  },
+  secondSouffle: {
+    name: 'Second souffle', name_en: 'Second Wind', icon: '🔁', slot: 'consumable', rarity: 'rare', price: 15,
+    desc: 'Pendant 2 tours, ta première mauvaise réponse peut être rejouée une fois.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'self', buff: { type: 'secondChance', turns: 2 } }] }],
+  },
+  permutateur: {
+    name: 'Permutateur', name_en: 'Swapper', icon: '🔀', slot: 'consumable', rarity: 'rare', price: 18,
+    desc: 'Échange ta place avec une équipe de ton choix.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'swapPositions', target: 'target' }] }],
+  },
+  mainLeste: {
+    name: 'Main leste', name_en: 'Nimble Hand', icon: '🕵️', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: 'Vole un objet au hasard à une équipe (sinon 10 or).',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'stealItem', target: 'target', category: '', fallbackGold: 10 }] }],
+  },
+  deDuDestin: {
+    name: 'Dé du destin', name_en: 'Die of Fate', icon: '🎲', slot: 'consumable', rarity: 'commun', price: 10,
+    desc: 'Deux thèmes tirés au sort : choisis celui de ta prochaine question.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'forceSubject', target: 'self', subject: { random: true, choices: 2 } }] }],
+  },
+
+  // === Objets d'exemple des effets 2026-07-11 (sabotage, ancre, assurance,
+  // dé chanceux, intérêts, dîme, vol de charge, prime, investissement, checkpoint) ===
+  gantDuVoleur: {
+    name: 'Gant du voleur', name_en: "Thief's Glove", icon: '⚡', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: 'Vole une charge de pouvoir à une équipe.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'stealCharge', target: 'target' }] }],
+  },
+  avisDeRecherche: {
+    name: 'Avis de recherche', name_en: 'Wanted Poster', icon: '🎯', slot: 'consumable', rarity: 'commun', price: 10,
+    desc: 'Pose une prime : la prochaine erreur de la cible te rapporte 15 or.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'bounty', target: 'target', n: 15 }] }],
+  },
+  ticketDeBourse: {
+    name: 'Ticket de bourse', name_en: 'Stock Ticket', icon: '📈', slot: 'consumable', rarity: 'commun', price: 8,
+    desc: 'Investis l’or de ton choix : remboursé à 200 % à ta prochaine bonne réponse (perdu sinon).',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'invest', rate: 200 }] }],
+  },
+  baliseRetour: {
+    name: 'Balise de retour', name_en: 'Return Beacon', icon: '🚩', slot: 'consumable', rarity: 'rare', price: 14,
+    desc: 'Point de contrôle : à ton tour, clique dessus pour t’y téléporter (50 % de le consommer).',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'setCheckpoint', consumeChance: 50 }] }],
+  },
+  deTruque: {
+    name: 'Dé truqué', name_en: 'Loaded Die', icon: '🎲', slot: 'consumable', rarity: 'commun', price: 9,
+    desc: 'Sabote le dé d’une équipe : −2 pendant 2 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'target', buff: { type: 'diceMalus', turns: 2, n: 2 } }] }],
+  },
+  grappinDAncrage: {
+    name: "Grappin d'ancrage", name_en: 'Anchor Hook', icon: '⚓', slot: 'consumable', rarity: 'rare', price: 15,
+    desc: 'Ancre : immunisé au déplacement forcé pendant 2 tours.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'buff', target: 'self', buff: { type: 'anchor', turns: 2 } }] }],
+  },
+  treflefetiche: {
+    name: 'Trèfle fétiche', name_en: 'Lucky Clover', icon: '🍀', slot: 'feet', rarity: 'rare', price: 22,
+    desc: 'Dé chanceux : ton dé fait toujours au moins 2.',
+    effects: [{ type: 'minRoll', value: 2 }],
+  },
+  policeAssurance: {
+    name: "Police d'assurance", name_en: 'Insurance Policy', icon: '🛟', slot: 'body', rarity: 'rare', price: 24,
+    desc: "Assurance : récupère 40 % de l'or qu'on te vole ou te fait perdre.",
+    effects: [{ type: 'insurance', value: 40 }],
+  },
+  livretEpargne: {
+    name: "Livret d'épargne", name_en: 'Savings Book', icon: '💹', slot: 'head', rarity: 'rare', price: 26,
+    desc: '+8 % de ton or à chaque début de tour (intérêts).',
+    effects: [{ type: 'interest', value: 8 }],
+  },
+  sceauDeLaDime: {
+    name: 'Sceau de la dîme', name_en: 'Tithe Seal', icon: '⛪', slot: 'body', rarity: 'rare', price: 24,
+    desc: "Dîme : prélève 15 % de l'or gagné par les adversaires à chaque bonne réponse.",
+    effects: [{ type: 'tithe', value: 15 }],
+  },
 };
 
 // Remplace le contenu de ITEMS en gardant la MÊME référence (mutée en place),

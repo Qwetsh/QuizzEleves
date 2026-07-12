@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FRENCH_WORDS } from '../../../data/frenchWords';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import TeamAvatar from '../../TeamAvatar';
 import { useT } from '../../../i18n';
 
 const ROUND_SECONDS = 45;
@@ -269,7 +270,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>{team.emoji}</span>
+          <TeamAvatar team={team} size={30} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: team.color }}>{team.name}</span>
           <span
             style={{
@@ -406,7 +407,7 @@ export default function MotLePlusLong({ attacker, defender, subject, round, onRo
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 22 }}>{team.emoji}</span>
+          <TeamAvatar team={team} size={32} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: team.color }}>{team.name}</span>
         </div>
 

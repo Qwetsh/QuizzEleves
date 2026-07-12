@@ -11,7 +11,15 @@ import { getLang } from '../i18n/lang.js';
 
 const EN = (lang) => lang === 'en';
 // Nom de matière (name_en si dispo, sinon FR — cf. data/subjects.js).
-const subjName = (s, lang) => SUBJECTS[s]?.[EN(lang) ? 'name_en' : 'name'] || SUBJECTS[s]?.name || s;
+const subjName = (s, lang) => {
+  // Spec de thème aléatoire (objet { random, choices }) : libellé dédié.
+  if (s && typeof s === 'object' && s.random) {
+    return (s.choices >= 2)
+      ? (EN(lang) ? `random (${s.choices} choices)` : `au hasard (${s.choices} choix)`)
+      : (EN(lang) ? 'a random theme' : 'un thème au hasard');
+  }
+  return SUBJECTS[s]?.[EN(lang) ? 'name_en' : 'name'] || SUBJECTS[s]?.name || s;
+};
 // Pluriel : vrai si n est un nombre « singulier » (EN: 1 ; FR: 0/1). Les valeurs
 // dé/échelle (string/objet) sont traitées comme pluriel.
 const isOne = (n, lang) => typeof n === 'number' && (EN(lang) ? n === 1 : Math.abs(n) <= 1);
@@ -71,12 +79,22 @@ export function describeAction(a, lang = getLang()) {
         : `change la question (${Math.round(a.chance * 100)}% ${subjectLabel(a.subject, lang)}, sinon ${subjectLabel(a.elseSubject || 'hardcore', lang)})`)
       : (en ? `change the question (${subjectLabel(a.subject, lang)})` : `change la question (${subjectLabel(a.subject, lang)})`);
     case 'forceSubject': return en ? `force ${who} into a ${subjName(a.subject, lang)} question` : `force ${who} à une question ${subjName(a.subject, lang)}`;
+    case 'askFlag': return en ? `force ${who} into a flag-identification question` : `force ${who} à une question de drapeau à identifier`;
     case 'randomPathNext': return self
       ? (en ? 'makes your next path random' : 'rend ta prochaine voie aléatoire')
       : (en ? `makes ${who}'s next path random` : `rend la prochaine voie de ${who} aléatoire`);
     case 'teleportFurthest': return self
       ? (en ? 'teleports you to the furthest space reached' : 'te téléporte sur la case la plus avancée atteinte')
       : (en ? `teleports ${who} to their furthest space reached` : `téléporte ${who} sur sa case la plus avancée atteinte`);
+    case 'swapPositions': return en ? `swap places with ${who}` : `échange ta place avec ${who}`;
+    case 'stealCharge': return en ? `steal a power charge from ${who}` : `vole une charge de pouvoir à ${who}`;
+    case 'bounty': return en ? `place a ${amountLabel(a.n, lang)}-gold bounty on ${who}'s next mistake` : `pose une prime de ${amountLabel(a.n, lang)} or sur la prochaine erreur de ${who}`;
+    case 'invest': { const ir = a.rate != null ? a.rate : (a.mult != null ? a.mult * 100 : 200); return en ? `invest gold of your choice (${ir}% payout if correct)` : `investis l’or de ton choix (${ir}% remboursé si bonne réponse)`; }
+    case 'setCheckpoint': return en ? `set a checkpoint (${a.consumeChance ?? 100}% to consume it)` : `pose un point de contrôle (${a.consumeChance ?? 100}% de le consommer)`;
+    case 'stealItem': {
+      const cat = a.category === 'consumable' ? (en ? ' consumable' : ' consommable') : a.category === 'equipment' ? (en ? ' equipment' : ' équipement') : (en ? ' item' : ' objet');
+      return en ? `steal a${cat} from ${who}${a.fallbackGold ? ` (else ${amountLabel(a.fallbackGold, lang)} gold)` : ''}` : `vole un${cat} à ${who}${a.fallbackGold ? ` (sinon ${amountLabel(a.fallbackGold, lang)} or)` : ''}`;
+    }
     case 'challenge': {
       const win = (a.do || []).map((x) => describeAction(x, lang)).filter(Boolean).join(', ') || (en ? 'nothing' : 'rien');
       const lose = (a.else || []).map((x) => describeAction(x, lang)).filter(Boolean).join(', ');
@@ -113,6 +131,15 @@ export function describeAction(a, lang = getLang()) {
         itemStealImmune: 'immune to item theft',
         goldStealImmune: 'immune to gold theft',
         reflectChance: `${amountLabel(b.n ?? 0, lang)}% chance to reflect a negative effect`,
+        thorns: `thorns: returns ${amountLabel(b.n ?? 0, lang)}% of the setback/theft suffered to the attacker`,
+        streakGuard: 'streak does not break on a wrong answer',
+        secondChance: 'one wrong answer can be replayed once',
+        diceMalus: `the die rolls −${amountLabel(b.n ?? 1, lang)} each time`,
+        minRoll: `lucky die: rolls at least ${amountLabel(b.n ?? 1, lang)}`,
+        anchor: 'immune to forced movement (setback/teleport/swap)',
+        insurance: `recover ${amountLabel(b.n ?? 0, lang)}% of stolen/lost gold`,
+        interest: `+${amountLabel(b.n ?? 0, lang)}% of your gold each turn`,
+        tithe: `take ${amountLabel(b.n ?? 0, lang)}% of opponents' earned gold`,
       } : {
         themeBonus: `+${amountLabel(b.n ?? 5, lang)} or par bonne réponse${b.subject ? ` en ${subjName(b.subject, lang)}` : ''}`,
         advanceOnCorrect: `avance de ${amountLabel(b.n ?? 'd4', lang)} à chaque bonne réponse`,
@@ -126,6 +153,15 @@ export function describeAction(a, lang = getLang()) {
         itemStealImmune: "immunisé au vol d'objet",
         goldStealImmune: "immunisé au vol d'or",
         reflectChance: `${amountLabel(b.n ?? 0, lang)}% de chance de renvoyer un effet négatif`,
+        thorns: `épines : renvoie ${amountLabel(b.n ?? 0, lang)}% du recul/vol subi à l'attaquant`,
+        streakGuard: 'la série ne casse pas en cas d’erreur',
+        secondChance: 'une mauvaise réponse peut être rejouée une fois',
+        diceMalus: `le dé fait −${amountLabel(b.n ?? 1, lang)} à chaque lancer`,
+        minRoll: `dé chanceux : fait au moins ${amountLabel(b.n ?? 1, lang)}`,
+        anchor: 'immunisé au déplacement forcé (recul/téléport/échange)',
+        insurance: `récupère ${amountLabel(b.n ?? 0, lang)}% de l'or qu'on te prend`,
+        interest: `+${amountLabel(b.n ?? 0, lang)}% de ton or par tour`,
+        tithe: `prélève ${amountLabel(b.n ?? 0, lang)}% de l'or gagné par les adversaires`,
       };
       return `${dur}, ${tgt} : ${D[b.type] || b.type}`;
     }
@@ -160,6 +196,12 @@ function describeLegacy(fx, lang) {
     case 'itemStealImmune': txt = en ? 'immune to item theft' : "immunisé au vol d'objet"; break;
     case 'goldStealImmune': txt = en ? 'immune to gold theft' : "immunisé au vol d'or"; break;
     case 'reflectChance': txt = en ? `${v}% chance to reflect a negative effect onto the attacker` : `${v}% de chance de renvoyer un effet négatif sur l'attaquant`; break;
+    case 'thorns': txt = en ? `thorns: returns ${v}% of the setback/theft suffered to the attacker` : `épines : renvoie ${v}% du recul/vol subi à l'attaquant`; break;
+    case 'streakGuard': txt = en ? 'your streak does not break on a wrong answer' : 'la série ne casse pas en cas d’erreur'; break;
+    case 'insurance': txt = en ? `recover ${v}% of the gold stolen/lost` : `récupère ${v}% de l'or qu'on te prend`; break;
+    case 'interest': txt = en ? `+${v}% of your gold each turn` : `+${v}% de ton or par tour`; break;
+    case 'tithe': txt = en ? `take ${v}% of opponents' earned gold` : `prélève ${v}% de l'or gagné par les adversaires`; break;
+    case 'minRoll': txt = en ? `lucky die: rolls at least ${v}` : `dé chanceux : le dé fait au moins ${v}`; break;
     case 'reculReduction': txt = en ? `setback reduced by ${v} ${spaceW(fx.value, lang)}` : `recul subi réduit de ${v} ${spaceW(fx.value, lang)}`; break;
     case 'reculReductionPct': txt = en ? `setback reduced by ${v}%` : `recul subi réduit de ${v}%`; break;
     case 'diceMalus': txt = en ? `advances ${v} ${spaceW(fx.value, lang)} less on each roll` : `avance de ${v} ${spaceW(fx.value, lang)} de moins à chaque lancer`; break;

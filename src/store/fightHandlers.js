@@ -3,6 +3,7 @@ import { moveBack } from '../logic/pathfinding.js';
 import { applyRecul } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { ITEMS } from '../data/items.js';
+import { EVENTS } from '../data/events.js';
 import { pickLootItem, placeItem, normalizeBag, cellKey, cellN, mkCell } from './itemHandlers.js';
 import { equipTriggerActions, runEffects } from './effectEngine.js';
 import { LOOT } from '../logic/balanceConfig.js';
@@ -91,9 +92,11 @@ function resolveBossOutcome(set, get, f) {
   const team = teams[idx];
   const newTeams = [...teams];
   let message; let moves = null;
+  // Valeurs éditables du Boss (EVENT_PARAMS_SCHEMA.bossProf) — fallback = défaut codé.
+  const P = EVENTS.bossProf?.params || {};
 
   if (f.winnerSide === 'attacker') {
-    const gold = 50;
+    const gold = P.rewardGold ?? 50;
     let placed = { ...team, money: (team.money || 0) + gold };
     const lootKey = pickLootItem(LOOT.fightLegendaryChance, get().enabledItems || Object.keys(ITEMS));
     let note = '';
@@ -102,7 +105,7 @@ function resolveBossOutcome(set, get, f) {
     const loot = lootKey ? tg('log.ft.bossWin.loot', { icon: ITEMS[lootKey].icon, item: locName(ITEMS[lootKey]), note }) : '';
     message = tg('log.ft.bossWin', { team: `${team.emoji} ${team.name}`, gold, loot });
   } else {
-    const dv = Math.floor(Math.random() * 10) + 1;
+    const dv = Math.floor(Math.random() * (P.defeatDie ?? 10)) + 1;
     const rec = applyRecul(team, board, dv, extOn(get().extensions, 'mastery')); // bouclier + équipement protègent du recul
     newTeams[idx] = { ...team, ...rec.patch };
     if (rec.path) moves = [{ teamIndex: idx, waypoints: rec.path.map((id) => ({ x: board[id].x, y: board[id].y })), type: rec.forward ? 'forward' : 'back' }];

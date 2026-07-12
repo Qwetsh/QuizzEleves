@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
+import TeamAvatar from '../../TeamAvatar';
 import { useT } from '../../../i18n';
 import { makeSchedules, ROUND_MS, LIFE_MS } from './bubbleSchedule';
 
@@ -113,7 +114,7 @@ export default function BubbleHunt({ attacker, defender, round, onRoundWin, cont
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <span style={{ fontSize: 20 }}>{team.emoji}</span>
+          <TeamAvatar team={team} size={30} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: team.color }}>{team.name}</span>
           <span
             style={{

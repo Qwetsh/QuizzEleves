@@ -6,6 +6,7 @@ import { locName } from '../../i18n/content';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
+import TeamAvatar from '../TeamAvatar';
 import DuelRaceView from '../Online/DuelRaceView';
 import { useT } from '../../i18n';
 
@@ -101,7 +102,7 @@ function VersusScreen({ fight, attacker, defender }) {
         transition={{ type: 'spring', damping: 12, stiffness: 160, delay: 0.5 }}
         style={{ fontSize: 110, filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.45))' }}
       >
-        {team.emoji}
+        <TeamAvatar team={team} size={110} />
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -208,7 +209,7 @@ function MinigameStage({ fight, attacker, defender }) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>{attacker.emoji}</span>
+            <TeamAvatar team={attacker} size={34} />
             <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16 }}>{attacker.name}</span>
             <WinStars count={fight.wins.attacker} />
           </div>
@@ -223,7 +224,7 @@ function MinigameStage({ fight, attacker, defender }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <WinStars count={fight.wins.defender} />
             <span style={{ fontFamily: 'var(--font-display)', color: '#fff', fontSize: 16 }}>{defender.name}</span>
-            <span style={{ fontSize: 24 }}>{defender.emoji}</span>
+            <TeamAvatar team={defender} size={34} />
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 // Tests : manette téléphone — intents « de tour » (turn*) appliqués par le TBI.
 // Gardes : toggle phoneController, équipe active uniquement, anti-doublon uid,
 // garde de phase (l'intent n'agit que si l'état de tour correspondant est ouvert).
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 
 const S = () => useGameStore.getState();
@@ -9,8 +9,8 @@ const S = () => useGameStore.getState();
 const RESET = {
   showQuestion: null, showEvent: null, showFight: null, showDuelChoice: null,
   rolling: false, showDiceModal: false, awaitingChoice: false, pendingActions: null,
-  pendingLanding: false, pendingMove: null, diceValue: null,
-  showStarterChest: false, showMetierPicker: false,
+  pendingLanding: false, pendingMove: null, diceValue: null, movePath: null,
+  showStarterChest: false, showMetierPicker: false, showTilePicker: null,
 };
 
 // Plateau minimal : une jonction « a » à deux branches, chaînées vers l'avant.
@@ -139,5 +139,43 @@ describe('applyTurnIntent — n’interfère pas avec les intents historiques', 
     useGameStore.setState({ teams: [{ ...S().teams[0], bag: ['chapeauPaille'] }, S().teams[1]] });
     S().applyTeamIntent('tA', 'equip', { key: 'chapeauPaille' });
     expect(S().teams[0].equipment.head).toBeNull(); // toujours bloqué
+  });
+});
+
+describe('applyTurnIntent — point de contrôle & pose de piège', () => {
+  it('turnCheckpoint : l’équipe active se téléporte sur son checkpoint', () => {
+    vi.useFakeTimers();
+    setup();
+    useGameStore.setState({ teams: [{ ...S().teams[0], pos: 'd', checkpoint: 'b', checkpointConsumeChance: 100 }, S().teams[1]] });
+    S().applyTeamIntent('tA', 'turnCheckpoint', { uid: uid() });
+    vi.advanceTimersByTime(600); // le saut est différé (effet visuel de warp)
+    expect(S().teams[0].pos).toBe('b');
+    expect(S().teams[0].checkpoint).toBeUndefined();
+    vi.useRealTimers();
+  });
+
+  it('turnCheckpoint : refusé pour une équipe NON active', () => {
+    setup();
+    useGameStore.setState({ teams: [S().teams[0], { ...S().teams[1], pos: 'd', checkpoint: 'b', checkpointConsumeChance: 100 }] });
+    S().applyTeamIntent('tB', 'turnCheckpoint', { uid: uid() });
+    expect(S().teams[1].pos).toBe('d'); // pas de téléportation
+  });
+
+  it('turnSelectTile : consomme le sélecteur de case si ouvert', () => {
+    setup({ showTilePicker: { label: null } });
+    S().applyTeamIntent('tA', 'turnSelectTile', { nodeId: 'b', uid: uid() });
+    expect(S().showTilePicker).toBeNull();
+  });
+
+  it('turnSelectTile : case invalide (arrivée) → no-op', () => {
+    setup({ showTilePicker: { label: null }, board: { ...BOARD, arr: { type: 'arrivee', x: 4, y: 0, next: [] } } });
+    S().applyTeamIntent('tA', 'turnSelectTile', { nodeId: 'arr', uid: uid() });
+    expect(S().showTilePicker).not.toBeNull(); // toujours ouvert
+  });
+
+  it('turnCancelTile : ferme le sélecteur', () => {
+    setup({ showTilePicker: { label: null } });
+    S().applyTeamIntent('tA', 'turnCancelTile', { uid: uid() });
+    expect(S().showTilePicker).toBeNull();
   });
 });

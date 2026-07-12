@@ -7,6 +7,7 @@ import { cellKey, cellN, cellEnchants } from '../../store/itemHandlers';
 import { itemImg } from '../../logic/itemAssets';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
+import TeamAvatar from '../TeamAvatar';
 import { useInfoTrigger } from './useInfoTrigger';
 import { useT } from '../../i18n';
 import HackCinematic from './HackCinematic';
@@ -221,7 +222,8 @@ function Blazon({ team, size }) {
       <div className="ts-blazon-disc" style={{
         width: size, height: size, borderRadius: size * 0.28, fontSize: size * 0.5,
         background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)`,
-      }}>{team.emoji}</div>
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}><TeamAvatar team={team} size={Math.round(size * 0.92)} /></div>
     </div>
   );
 }
@@ -236,7 +238,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
     <div className="ts-pop" onClick={(e) => e.stopPropagation()}>
       <button className="ts-pop-close" onClick={onClose} aria-label={T('common.close')}>{'✕'}</button>
       <div className="ts-pop-head">
-        <span className="ts-pop-emoji" style={{ background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)` }}>{team.emoji}</span>
+        <span className="ts-pop-emoji" style={{ background: `linear-gradient(135deg, ${team.color}, ${team.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={team} size={38} /></span>
         <div className="ts-pop-name" style={{ color: team.color }}>{team.name}</div>
         <div className="ts-pop-rank">{rank}/{total}</div>
       </div>

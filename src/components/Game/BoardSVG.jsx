@@ -5,6 +5,7 @@ import { SUBJECTS } from '../../data/subjects';
 import { NODE_RADIUS, TILE_SCALE, islandCircles as buildIslandCircles, bezierPoint } from '../../logic/boardGeometry';
 import { SPACE_ASSET_DIMS, SOCLE_W, ILOT_W, SOCLE_TOP_DY, ILOT_TOP_DY, SPECIAL_CASE_ASSET, CASE_W_CONTINENT, CASE_W_SPACE, CASE_TOP_DY, PIEGE_W } from '../../data/maps/espace.js';
 import { getPendingMalus } from '../../logic/teamStatus';
+import { characterById } from '../../data/characters';
 import { useT } from '../../i18n';
 
 // Assets du plateau (refonte pierre & jungle) — voir scripts/name-assets.mjs
@@ -53,7 +54,36 @@ function SteppingStones({ x0, y0, x1, y1 }) {
 // Step-by-step pawn animation
 const STEP_DURATION = 220; // ms per step
 
-const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMoveComplete }) {
+// Pion « personnage » : boîte d'affichage (unités viewBox), ancrée par les pieds
+// (préserve le ratio, aligné en bas → le perso se tient sur le socle).
+const SPRITE_H = 76;
+const SPRITE_W = 68;
+const FEET_DY = 20;          // les pieds sont FEET_DY sous le centre de la case
+const TORSO_Y = -SPRITE_H * 0.4; // centre approx. du torse (halos/anneaux)
+
+// Slug sûr pour un id de filtre à partir d'une couleur (#d63a3a -> d63a3a)
+const colorSlug = (c) => (c || '').replace(/[^a-zA-Z0-9]/g, '');
+
+// Filtres partagés des pions : lueur du tour actif + teinte d'écharpe par couleur
+// d'équipe (multiply de la couleur pleine par le gris ombré de l'écharpe).
+function PawnDefs({ colors }) {
+  return (
+    <defs>
+      <filter id="pawn-glow" x="-70%" y="-70%" width="240%" height="240%">
+        <feGaussianBlur stdDeviation="7" />
+      </filter>
+      {colors.map((c) => (
+        <filter key={c} id={`scarf-tint-${colorSlug(c)}`} colorInterpolationFilters="sRGB">
+          <feFlood floodColor={c} result="flood" />
+          <feComposite in="flood" in2="SourceGraphic" operator="in" result="tint" />
+          <feBlend in="tint" in2="SourceGraphic" mode="multiply" />
+        </filter>
+      ))}
+    </defs>
+  );
+}
+
+const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMoveComplete, float }) {
   const [animPos, setAnimPos] = useState({ x: px, y: py });
   const animating = useRef(false);
 
@@ -94,56 +124,105 @@ const Pawn = React.memo(function Pawn({ team, idx, px, py, isActive, move, onMov
   // Malus en attente (ex. question imposée) : UNE seule aune, quel que soit le
   // nombre de malus (pas de cumul d'animation).
   const hasMalus = getPendingMalus(team).length > 0;
+  const char = characterById(team.character);
+  const spriteX = -SPRITE_W / 2;
+  const spriteY = FEET_DY - SPRITE_H;
 
   return (
-    <motion.g
-      data-pawn-idx={idx}
-      animate={{ x: animPos.x, y: animPos.y }}
-      transition={{ type: 'spring', damping: 22, stiffness: 180, mass: 0.6 }}
-    >
-      {hasMalus && (
-        <motion.circle
-          cx={0} cy={0} r={34}
-          fill="none" stroke="#b5341f" strokeWidth={3} strokeDasharray="6 7"
-          initial={{ opacity: 0.45 }}
-          animate={{ opacity: [0.45, 0.95, 0.45], rotate: 360 }}
-          transition={{ opacity: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }, rotate: { duration: 9, repeat: Infinity, ease: 'linear' } }}
-          style={{ filter: 'drop-shadow(0 0 6px rgba(181,52,31,0.7))' }}
-        />
-      )}
-      {isActive && !isBack && (
-        <motion.circle
-          cx={0} cy={0} r={30}
-          fill="none" stroke={team.color} strokeWidth={3.5}
-          initial={{ opacity: 0.3, scale: 0.8 }}
-          animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.8, 1.1, 0.8] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
-      {isBack && (
-        <motion.circle
-          cx={0} cy={0} r={30}
-          fill="none" stroke="#c9472f" strokeWidth={3.5}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.7, 0], scale: [0.8, 1.2, 0.8] }}
-          transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
-      <motion.circle
-        cx={0} cy={0} r={24}
-        fill="white" stroke={isBack ? '#c9472f' : team.color}
-        strokeWidth={isActive ? 5 : 3.5}
-        filter={isActive ? 'url(#glow-active)' : undefined}
-        whileHover={{ scale: 1.15 }}
-      />
-      <text
-        x={0} y={1}
-        textAnchor="middle" dominantBaseline="central"
-        fontSize={28} style={{ pointerEvents: 'none' }}
+    // Enveloppe extérieure : lévitation (le perso bobbe AVEC son continent/îlot,
+    // via la même animation CSS que la case). La position (x,y) est portée par le
+    // <motion.g> intérieur — les deux transforms se composent.
+    <g style={floatStyle(float)}>
+      <motion.g
+        data-pawn-idx={idx}
+        animate={{ x: animPos.x, y: animPos.y }}
+        transition={{ type: 'spring', damping: 22, stiffness: 180, mass: 0.6 }}
       >
-        {team.emoji}
-      </text>
-    </motion.g>
+        {/* Ombre portée au sol */}
+        <ellipse cx={0} cy={FEET_DY - 3} rx={19} ry={5.5} fill="rgba(0,0,0,0.28)" style={{ pointerEvents: 'none' }} />
+
+        {/* Halo lumineux du tour actif : lueur diffuse derrière + anneau au sol */}
+        {isActive && !isBack && (
+          <>
+            <motion.circle
+              cx={0} cy={TORSO_Y} r={27}
+              fill={team.color} filter="url(#pawn-glow)"
+              initial={{ opacity: 0.22 }}
+              animate={{ opacity: [0.2, 0.5, 0.2] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ pointerEvents: 'none' }}
+            />
+            <motion.ellipse
+              cx={0} cy={FEET_DY - 3} rx={21} ry={7}
+              fill="none" stroke={team.color} strokeWidth={3}
+              initial={{ opacity: 0.4, scale: 0.85 }}
+              animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.85, 1.1, 0.85] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ pointerEvents: 'none' }}
+            />
+          </>
+        )}
+
+        {hasMalus && (
+          <motion.circle
+            cx={0} cy={TORSO_Y} r={32}
+            fill="none" stroke="#b5341f" strokeWidth={3} strokeDasharray="6 7"
+            initial={{ opacity: 0.45 }}
+            animate={{ opacity: [0.45, 0.95, 0.45], rotate: 360 }}
+            transition={{ opacity: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }, rotate: { duration: 9, repeat: Infinity, ease: 'linear' } }}
+            style={{ filter: 'drop-shadow(0 0 6px rgba(181,52,31,0.7))', pointerEvents: 'none' }}
+          />
+        )}
+        {isBack && (
+          <motion.ellipse
+            cx={0} cy={FEET_DY - 3} rx={21} ry={7}
+            fill="none" stroke="#c9472f" strokeWidth={3.5}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.8, 0], scale: [0.8, 1.2, 0.8] }}
+            transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+
+        {char && char.body ? (
+          <motion.g whileHover={{ scale: 1.08 }} style={{ transformOrigin: `0px ${FEET_DY}px` }}>
+            {/* Les sprites sont dessinés tournés vers la gauche ; on les miroite
+                pour qu'ils regardent vers l'arrivée (le plateau progresse → droite). */}
+            <g transform="scale(-1 1)">
+              <image
+                href={char.body}
+                x={spriteX} y={spriteY} width={SPRITE_W} height={SPRITE_H}
+                preserveAspectRatio="xMidYMax meet"
+                style={{ pointerEvents: 'none', filter: isActive ? 'drop-shadow(0 0 3px rgba(255,255,255,0.5))' : undefined }}
+              />
+              {char.scarf && (
+                <image
+                  href={char.scarf}
+                  x={spriteX} y={spriteY} width={SPRITE_W} height={SPRITE_H}
+                  preserveAspectRatio="xMidYMax meet"
+                  filter={`url(#scarf-tint-${colorSlug(team.color)})`}
+                  style={{ pointerEvents: 'none' }}
+                />
+              )}
+            </g>
+          </motion.g>
+        ) : (
+          // Repli (personnage manquant) : ancien pion cercle + emoji
+          <>
+            <motion.circle
+              cx={0} cy={0} r={24}
+              fill="white" stroke={isBack ? '#c9472f' : team.color}
+              strokeWidth={isActive ? 5 : 3.5}
+              filter={isActive ? 'url(#glow-active)' : undefined}
+              whileHover={{ scale: 1.15 }}
+            />
+            <text x={0} y={1} textAnchor="middle" dominantBaseline="central" fontSize={28} style={{ pointerEvents: 'none' }}>
+              {team.emoji}
+            </text>
+          </>
+        )}
+      </motion.g>
+    </g>
   );
 });
 
@@ -569,6 +648,68 @@ const BoardItems = React.memo(function BoardItems({ board, boardDecor, space, ch
 // Camera spring config
 const CAMERA_SPRING = { damping: 25, stiffness: 80, mass: 1 };
 
+// --- Point de contrôle : socle gravé + cristal animé (4 frames en boucle) ---
+const CP_W = 122;                       // largeur du socle (unités viewBox)
+const CP_H = CP_W * (622 / 795);        // ratio de l'asset
+const CP_HOLE_DY = 0.46;                // le trou est à ~46 % de la hauteur (depuis le haut)
+const CRY_W = 34, CRY_H = 66;           // boîte du cristal (ancré par la base)
+const CP_CRY_FRAMES = ['checkpoint-cristal-1', 'checkpoint-cristal-2', 'checkpoint-cristal-3', 'checkpoint-cristal-4'].map(simg);
+const CRYSTAL_HUE = 205;                // teinte dominante du cristal bleu d'origine
+
+// Teinte (degrés HSV) d'une couleur #rrggbb — pour recolorer le cristal par
+// rotation de teinte (garde l'éclat et les étincelles blanches).
+function hexHue(hex) {
+  const h = (hex || '').replace('#', '');
+  if (h.length < 6) return CRYSTAL_HUE;
+  const r = parseInt(h.slice(0, 2), 16) / 255, g = parseInt(h.slice(2, 4), 16) / 255, b = parseInt(h.slice(4, 6), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (d < 0.02) return CRYSTAL_HUE;
+  let hue; if (mx === r) hue = ((g - b) / d) % 6; else if (mx === g) hue = (b - r) / d + 2; else hue = (r - g) / d + 4;
+  hue *= 60; if (hue < 0) hue += 360; return hue;
+}
+
+const Checkpoints = React.memo(function Checkpoints({ board, teams, space, currentTeam, onTeleport, teleportLabel }) {
+  const socle = simg('checkpoint-socle');
+  if (!socle) return null;
+  // Un marqueur par NŒUD checkpoint (couleur = équipe qui l'a posé ; la 1re si partagé).
+  const byNode = new Map();
+  for (const t of (teams || [])) if (t.checkpoint && board[t.checkpoint] && !byNode.has(t.checkpoint)) byNode.set(t.checkpoint, t.color);
+  if (!byNode.size) return null;
+  const myNode = teams?.[currentTeam]?.checkpoint; // le checkpoint de l'équipe ACTIVE est cliquable
+  return [...byNode.entries()].map(([id, color]) => {
+    const node = board[id];
+    const rot = Math.round((hexHue(color) - CRYSTAL_HUE + 360) % 360);
+    const mine = id === myNode && id !== teams[currentTeam]?.pos; // pas déjà dessus
+    const topY = node.y - CP_HOLE_DY * CP_H;
+    return (
+      <g key={`cp-${id}`} style={space ? floatStyle(space.nodeFloat?.[id]) : undefined}
+        pointerEvents={mine ? 'auto' : 'none'}
+        onClick={mine ? onTeleport : undefined}
+        {...(mine ? { className: 'cp-clickable' } : {})}>
+        {/* Socle : le trou central tombe sur (node.x, node.y) */}
+        <image href={socle} x={node.x - CP_W / 2} y={topY} width={CP_W} height={CP_H}
+          preserveAspectRatio="xMidYMid meet" style={{ filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.45))' }} />
+        {/* Cristal : 4 frames superposées (boucle), teinté à la couleur d'équipe */}
+        {CP_CRY_FRAMES.map((f, i) => f && (
+          <image key={i} href={f} x={node.x - CRY_W / 2} y={node.y + 3 - CRY_H} width={CRY_W} height={CRY_H}
+            preserveAspectRatio="xMidYMax meet"
+            style={{ animation: `cp-f${i} 0.8s infinite`, filter: `hue-rotate(${rot}deg) drop-shadow(0 0 5px ${color})` }} />
+        ))}
+        {/* Étiquette « Me téléporter » — visible pour le propriétaire à son tour */}
+        {mine && (
+          <motion.g initial={{ opacity: 0.75, y: 0 }} animate={{ opacity: [0.75, 1, 0.75], y: [0, -2, 0] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ cursor: 'pointer' }}>
+            <rect x={node.x - 52} y={topY - 26} width={104} height={22} rx={11}
+              fill="rgba(12,18,28,0.92)" stroke={color} strokeWidth={2} />
+            <text x={node.x} y={topY - 15} textAnchor="middle" dominantBaseline="middle"
+              fontSize={12} fill="#e8f3ff" fontFamily="var(--font-ui)" fontWeight={700}>{teleportLabel}</text>
+          </motion.g>
+        )}
+      </g>
+    );
+  });
+});
+
 export default function BoardSVG() {
   const T = useT();
   const board = useGameStore((s) => s.board);
@@ -584,6 +725,7 @@ export default function BoardSVG() {
   const movePath = useGameStore((s) => s.movePath);
   const clearTeamMove = useGameStore((s) => s.clearTeamMove);
   const inspectTrapAt = useGameStore((s) => s.inspectTrapAt);
+  const teleportToCheckpoint = useGameStore((s) => s.teleportToCheckpoint);
 
   const containerRef = useRef(null);
   const svgRef = useRef(null);
@@ -682,6 +824,13 @@ export default function BoardSVG() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(calc(var(--sp-amp, 5px) * -1)); }
         }
+        .cp-clickable { cursor: pointer; }
+        .cp-clickable:hover { filter: drop-shadow(0 0 10px rgba(120,190,255,0.85)); }
+        /* Cristal du point de contrôle : 4 frames jouées en boucle (une visible à la fois) */
+        @keyframes cp-f0 { 0%,24.9%{opacity:1} 25%,100%{opacity:0} }
+        @keyframes cp-f1 { 0%,24.9%{opacity:0} 25%,49.9%{opacity:1} 50%,100%{opacity:0} }
+        @keyframes cp-f2 { 0%,49.9%{opacity:0} 50%,74.9%{opacity:1} 75%,100%{opacity:0} }
+        @keyframes cp-f3 { 0%,74.9%{opacity:0} 75%,100%{opacity:1} }
       `}</style>
       {showTilePicker && (
         <div style={{
@@ -715,7 +864,12 @@ export default function BoardSVG() {
 
         <BoardItems board={board} boardDecor={boardSpace ? null : boardDecor} space={boardSpace} choiceNodes={choiceNodes} chooseJunction={chooseJunction} tilePicking={!!showTilePicker} selectTile={selectTile} tilePickIcon={showTilePicker?.icon} inspectTrapAt={inspectTrapAt} trapTitle={T('game.seeTrapEffect')} />
 
+        {/* Points de contrôle posés (socle + cristal animé) — cliquable par le propriétaire */}
+        <Checkpoints board={board} teams={teams} space={boardSpace} currentTeam={currentTeam}
+          onTeleport={teleportToCheckpoint} teleportLabel={T('game.checkpointTeleport')} />
+
         {/* Animated Pawns */}
+        <PawnDefs colors={[...new Set(teams.map((t) => t.color))]} />
         {teams.map((team, idx) => {
           const pos = pawnPositions[idx];
           if (!pos) return null;
@@ -730,6 +884,7 @@ export default function BoardSVG() {
               isActive={idx === currentTeam}
               move={move}
               onMoveComplete={onMoveComplete}
+              float={boardSpace?.nodeFloat?.[team.pos]}
             />
           );
         })}

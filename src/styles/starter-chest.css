@@ -1,0 +1,116 @@
+/* ─────────────────────────────────────────────────────────────
+   Coffre de départ — cérémonie « gatcha » futuriste (thème spatial).
+   Coffre fermé qui gigote → clic → charge lumineuse → éclat → coffre
+   ouvert + révélation du butin (or + objets au choix).
+   ───────────────────────────────────────────────────────────── */
+.sc-overlay {
+  position: fixed; inset: 0; z-index: 210;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: radial-gradient(ellipse at center, rgba(10, 16, 30, 0.72), rgba(4, 7, 16, 0.9));
+  backdrop-filter: blur(5px);
+}
+.sc-panel {
+  position: relative; overflow: hidden;
+  width: min(520px, 94vw);
+  padding: 18px 18px 22px;
+  text-align: center;
+  color: #cfe8f5; font-family: var(--font-ui);
+  background: linear-gradient(180deg, #0f1c2e, #0a1220);
+  border: 1.5px solid rgba(120, 200, 235, 0.55);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(40, 120, 170, 0.15),
+              0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.sc-title {
+  font-family: var(--font-display); font-size: clamp(17px, 4vw, 24px);
+  color: #eaf6ff; letter-spacing: 0.02em; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  margin-bottom: 4px;
+}
+
+/* Scène du coffre */
+.sc-stage {
+  position: relative; width: 100%; height: 280px;
+  display: grid; place-items: center; user-select: none;
+}
+.sc-aura {
+  position: absolute; width: 300px; height: 300px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(80, 200, 245, 0.5) 0%, rgba(60, 150, 220, 0.22) 42%, transparent 68%);
+  filter: blur(2px); pointer-events: none;
+}
+.sc-rays {
+  position: absolute; width: 340px; height: 340px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    rgba(130, 220, 250, 0.28) 0deg 8deg, transparent 8deg 30deg,
+    rgba(130, 220, 250, 0.28) 30deg 38deg, transparent 38deg 60deg,
+    rgba(130, 220, 250, 0.28) 60deg 68deg, transparent 68deg 90deg,
+    rgba(130, 220, 250, 0.28) 90deg 98deg, transparent 98deg 120deg,
+    rgba(130, 220, 250, 0.28) 120deg 128deg, transparent 128deg 150deg,
+    rgba(130, 220, 250, 0.28) 150deg 158deg, transparent 158deg 180deg,
+    rgba(130, 220, 250, 0.28) 180deg 188deg, transparent 188deg 210deg,
+    rgba(130, 220, 250, 0.28) 210deg 218deg, transparent 218deg 240deg,
+    rgba(130, 220, 250, 0.28) 240deg 248deg, transparent 248deg 270deg,
+    rgba(130, 220, 250, 0.28) 270deg 278deg, transparent 278deg 300deg,
+    rgba(130, 220, 250, 0.28) 300deg 308deg, transparent 308deg 330deg,
+    rgba(130, 220, 250, 0.28) 330deg 338deg, transparent 338deg 360deg);
+  mask: radial-gradient(circle, transparent 30%, #000 45%, #000 100%);
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 45%, #000 100%);
+}
+.sc-chest { position: relative; z-index: 3; height: 200px; width: auto; }
+.sc-chest.is-clickable { cursor: pointer; }
+.sc-burst {
+  position: absolute; z-index: 2; width: 240px; height: 240px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(235, 250, 255, 0.95) 0%, rgba(120, 220, 250, 0.7) 30%, transparent 62%);
+  pointer-events: none;
+}
+.sc-flash { position: absolute; inset: 0; background: #eaf9ff; pointer-events: none; z-index: 4; }
+.sc-spark {
+  position: absolute; z-index: 3; width: 8px; height: 8px; border-radius: 50%;
+  background: #dff6ff; box-shadow: 0 0 8px 2px rgba(150, 230, 255, 0.9); pointer-events: none;
+}
+
+.sc-prompt { font-size: clamp(13px, 3vw, 15px); color: #a9d6e6; margin: 6px 0 2px; }
+.sc-prompt b { color: #eaf6ff; }
+.sc-gold {
+  font-family: 'Archivo Black', var(--font-display), sans-serif;
+  font-size: clamp(24px, 6vw, 34px); color: #ffcf5a;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 190, 70, 0.6);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.sc-reveal-desc { font-size: clamp(12px, 3vw, 14px); color: #bcd8e6; margin: 2px 0 4px; }
+.sc-final { font-size: 11px; color: #6f96a8; margin-top: 4px; }
+
+/* Bouton futuriste */
+.sc-btn {
+  margin-top: 4px; padding: 10px 22px; border: 0; cursor: pointer;
+  font-family: var(--font-display); font-size: clamp(14px, 3.4vw, 17px); color: #eafaff;
+  background: linear-gradient(180deg, #1f8fc0, #1567a0);
+  border-radius: 12px; border: 1px solid rgba(160, 230, 255, 0.6);
+  box-shadow: 0 4px 0 rgba(8, 40, 66, 0.9), 0 0 16px rgba(60, 180, 230, 0.45);
+  transition: transform 90ms ease, filter 90ms ease;
+}
+.sc-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.sc-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(8, 40, 66, 0.9); }
+.sc-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Cartes de choix d'objet */
+.sc-choices { display: grid; gap: 10px; width: 100%; padding: 0 6px; align-items: stretch; }
+.sc-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 8px; cursor: pointer; text-align: center;
+  background: rgba(16, 32, 48, 0.85);
+  border: 1.5px solid var(--rar, #63c8e8); border-radius: 12px; color: #dbeef7;
+  box-shadow: inset 0 0 18px rgba(40, 120, 170, 0.12);
+  transition: transform 100ms ease, box-shadow 100ms ease, background 100ms ease;
+}
+.sc-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 14px var(--rar, #63c8e8); }
+.sc-card.is-selected { background: rgba(28, 60, 44, 0.9); border-color: #4fd06a; box-shadow: 0 0 16px rgba(79, 208, 106, 0.6); }
+.sc-card__check {
+  position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%;
+  background: #4fd06a; color: #06210f; font-weight: 900; display: grid; place-items: center; font-size: 14px;
+}
+.sc-card__img { width: 54px; height: 54px; object-fit: contain; }
+.sc-card__emoji { font-size: 44px; line-height: 1; }
+.sc-card__name { font-family: var(--font-display); font-size: 14px; color: #eaf6ff; }
+.sc-card__rar { font-size: 11px; color: var(--rar, #63c8e8); font-weight: 700; }
+.sc-card__desc { font-size: 11px; color: #9fc4d4; line-height: 1.3; }

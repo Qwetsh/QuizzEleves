@@ -47,6 +47,27 @@ export default {
   'modal.event.vatout.continue': { fr: '🎲 Continuer (+{n})', en: '🎲 Continue (+{n})' },
   'modal.event.vatout.cashOut': { fr: '💰 Encaisser {n}', en: '💰 Cash out {n}' },
 
+  // ---- InvestPickerModal (bourse galactique) ----
+  'modal.invest.title': { fr: 'Bourse galactique', en: 'Galactic Exchange' },
+  'modal.invest.sub': { fr: 'Combien veux-tu investir, {emoji} {name} ?', en: 'How much do you want to invest, {emoji} {name}?' },
+  'modal.invest.available': { fr: 'Capital disponible', en: 'Available capital' },
+  'modal.invest.rate': { fr: 'Taux de retour', en: 'Return rate' },
+  'modal.invest.stakeLabel': { fr: 'Ta mise', en: 'Your stake' },
+  'modal.invest.payout': { fr: 'Remboursement si bonne réponse', en: 'Payout on a correct answer' },
+  'modal.invest.net': { fr: 'Bénéfice net', en: 'Net profit' },
+  'modal.invest.warn': { fr: '⚠️ Mise perdue en cas de mauvaise réponse.', en: '⚠️ Stake lost on a wrong answer.' },
+  'modal.invest.confirm': { fr: '🚀 Investir {n} 🪙', en: '🚀 Invest {n} 🪙' },
+  'modal.invest.decline': { fr: 'Ne pas investir', en: 'Don\'t invest' },
+
+  // ---- InvestResultModal (retour sur investissement) ----
+  'modal.investResult.title': { fr: 'Retour sur investissement', en: 'Return on investment' },
+  'modal.investResult.flavor': { fr: 'Les marchés stellaires te sourient ! 🌌', en: 'The stellar markets smile on you! 🌌' },
+  'modal.investResult.stake': { fr: 'Mise', en: 'Stake' },
+  'modal.investResult.rate': { fr: 'Taux', en: 'Rate' },
+  'modal.investResult.payout': { fr: 'Remboursement', en: 'Payout' },
+  'modal.investResult.profit': { fr: 'Bénéfice', en: 'Profit' },
+  'modal.investResult.close': { fr: '💰 Encaisser', en: '💰 Cash in' },
+
   // ---- ShopPromptModal ----
   'modal.shopPrompt.title': { fr: 'La boutique t\'attend, {emoji} {name} !', en: 'The shop awaits, {emoji} {name}!' },
   'modal.shopPrompt.sub': { fr: 'Tu as de quoi t\'équiper avant de continuer.', en: 'You can gear up before moving on.' },
@@ -149,6 +170,8 @@ export default {
   // ---- SubjectPickerModal ----
   'modal.subject.title': { fr: 'Choisis le thème', en: 'Choose the theme' },
   'modal.subject.sub': { fr: 'La nouvelle question portera sur cette matière.', en: 'The new question will be about this subject.' },
+  'modal.subject.randomTitle': { fr: 'Thème au sort', en: 'Random theme' },
+  'modal.subject.randomSub': { fr: 'Choisis parmi ces thèmes tirés au hasard.', en: 'Pick from these randomly drawn themes.' },
 
   // ---- TrapInspectModal ----
   'modal.trap.title': { fr: 'Piège', en: 'Trap' },
@@ -166,6 +189,10 @@ export default {
   'modal.chest.aChest': { fr: '🧰 Un coffre de départ !', en: '🧰 A starting chest!' },
   'modal.chest.openPrompt': { fr: 'Ouvre-le pour bien démarrer l\'aventure !', en: 'Open it to get a good start on the adventure!' },
   'modal.chest.openBtn': { fr: '🗝️ Ouvrir le coffre', en: '🗝️ Open the chest' },
+  'modal.event.tag': { fr: 'ÉVÉNEMENT', en: 'LOG ENTRY' },
+  'modal.event.hyperspace': { fr: 'SAUT HYPERSPATIAL…', en: 'HYPERSPACE JUMP…' },
+  'modal.chest.tapPrompt': { fr: '👆 Touche le coffre pour l\'ouvrir !', en: '👆 Tap the chest to open it!' },
+  'modal.chest.opening': { fr: '✨ Ouverture…', en: '✨ Opening…' },
   'modal.chest.chooseOne': { fr: 'Choisis UN objet pour démarrer :', en: 'Choose ONE item to start:' },
   'modal.chest.chooseN': { fr: 'Choisis {n} objets ({picked}/{n}) :', en: 'Choose {n} items ({picked}/{n}):' },
   'modal.chest.validate': { fr: 'Valider mon choix', en: 'Confirm my choice' },

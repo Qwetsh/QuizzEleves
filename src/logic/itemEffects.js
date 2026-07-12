@@ -300,3 +300,49 @@ export function rollsReflect(team) {
   const c = reflectChanceOf(team);
   return c > 0 && Math.random() * 100 < c;
 }
+
+/**
+ * Bouclier d'épines : pourcentage (0..100) du recul/vol subi renvoyé en dégât à
+ * l'attaquant. Cumule le passif d'équipement/set (`thorns`) et les buffs
+ * temporisés du même nom (leur `n` = points de %). Plafonné à 100.
+ */
+export function thornsPct(team) {
+  return Math.min(100, getEffectValue(team, 'thorns') + buffValue(team, 'thorns'));
+}
+
+/**
+ * Garde-série : la série de bonnes réponses ne casse pas sur une erreur. Passif
+ * d'équipement/set (`streakGuard`) ou buff temporisé du même nom.
+ */
+export function hasStreakGuard(team) {
+  return hasEffect(team, 'streakGuard') || hasBuff(team, 'streakGuard');
+}
+
+// Ancre : immunité au déplacement FORCÉ par autrui (recul infligé, téléportation,
+// échange de place). N'empêche jamais ses propres avancées. Buff temporisé.
+export function isAnchored(team) {
+  return hasEffect(team, 'anchor') || hasBuff(team, 'anchor');
+}
+
+// Assurance : pourcentage (0..100) de l'or volé/perdu immédiatement remboursé à
+// la victime. Passif d'équipement/set (`insurance`) + buff du même nom.
+export function insurancePct(team) {
+  return Math.min(100, getEffectValue(team, 'insurance') + buffValue(team, 'insurance'));
+}
+
+// Intérêts : pourcentage de l'or ajouté à chaque début de tour (passif).
+export function interestPct(team) {
+  return getEffectValue(team, 'interest') + buffValue(team, 'interest');
+}
+
+// Dîme : pourcentage de l'or GAGNÉ par un adversaire (bonne réponse) prélevé par
+// le porteur (passif).
+export function tithePct(team) {
+  return getEffectValue(team, 'tithe') + buffValue(team, 'tithe');
+}
+
+// Minimum garanti du dé (dé chanceux) : la valeur de déplacement ne descend pas
+// sous ce plancher. Passif + buff (on prend le plus fort).
+export function minRollFloor(team) {
+  return Math.max(getEffectValue(team, 'minRoll'), buffValue(team, 'minRoll'));
+}

@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { useT } from '../../i18n';
 import { soundVictory } from '../../logic/sounds';
+import TeamAvatar from '../TeamAvatar';
 import ModalOverlay from './ModalOverlay';
 import { OFFLINE } from '../../logic/offline';
 
@@ -71,7 +72,7 @@ export default function VictoryModal() {
               background: 'radial-gradient(ellipse at center, rgba(243,201,105,0.3), transparent 60%)',
             }}
           >
-            <div className="text-6xl mb-4">{winner.emoji}</div>
+            <div className="mb-4" style={{ display: 'flex', justifyContent: 'center' }}><TeamAvatar team={winner} size={96} /></div>
             <div
               className="text-4xl sm:text-6xl"
               style={{
@@ -124,7 +125,7 @@ export default function VictoryModal() {
                     }}>
                       {i + 1}
                     </div>
-                    <span className="text-xl">{t.emoji}</span>
+                    <TeamAvatar team={t} size={26} />
                     <div style={{ flex: 1, fontFamily: 'var(--font-display)', fontSize: 16 }}>{t.name}</div>
                     <div style={{ display: 'flex', gap: 12, fontSize: 14, color: 'var(--ink-600)' }}>
                       <span>{"\u2713"} {t.correct}</span>
