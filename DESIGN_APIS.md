@@ -115,9 +115,19 @@ Livré (en base + code) :
 - 🟡 **Hymnes nationaux** : `seed-anthems.mjs` (Wikidata P85→P51). Cassette dure
   `hymnes_nationaux`. ⚠️ **Wikimedia rate-limite fort les gros audio** → ~10 Q
   seulement ; insert incrémental + `--keep` pour rattraper plus tard (IP à refroidir).
+- ✅ **Gastronomie** : `seed-mealdb.mjs` (TheMealDB), « De quel pays vient ce plat ? »
+  → `gastronomie_cuisine` (t='Plat'). **60 Q.**
+- ✅ **Monuments** : `seed-monuments.mjs` (Wikidata P18, miniature Commons 800px) →
+  `villes_monuments` (t='Monument'). **42 Q.** Retry 429 sur l'API d'action.
+- ✅ **Éphéméride** : `seed-onthisday.mjs` (Wikimedia « On this day » fr). Nouveau
+  thème `ephemeride` sous Histoire. **40 Q** texte.
+- ✅ **Silhouettes de pays** : `seed-country-shapes.mjs` — SVG NOIR généré depuis
+  GeoJSON (johan/world.geo.json) : projection équirect. corrigée, cadrage par pays,
+  antiméridien, décimation. Cassette dure `silhouettes_pays`, `render='silhouette'`
+  (forme noire visible + jingle au reveal). **166 Q.**
 
-Reste : **monuments** (Wikidata), **silhouettes de pays** (réutilise silhouette-reveal),
-**gastronomie** (TheMealDB), **photos d'animaux** (GBIF), **éphéméride** (Wikimedia).
+Reste : **photos d'animaux** (Wikidata P18 / GBIF ; mêmes 429 Commons) ; rattraper
+en volume **hymnes / monuments / éphéméride** quand l'IP Wikimedia refroidit.
 
 Rappels : traduire les sources EN via l'API Claude (comme le pool culture-G) ;
 créditer les licences CC-BY ; mettre en cache, ne jamais re-fetch en partie ;
