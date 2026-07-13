@@ -96,19 +96,48 @@ function detourage(png) {
   }
 }
 
-// Crop d'une cellule sur la bbox alpha + marge.
-function cropCell(png, cx0, cy0, cx1, cy1, PAD = 6, ALPHA_MIN = 24) {
-  const { width: w, data } = png;
-  let bx0 = cx1, by0 = cy1, bx1 = cx0 - 1, by1 = cy0 - 1;
-  for (let y = cy0; y < cy1; y++) for (let x = cx0; x < cx1; x++) {
+const ALPHA_MIN = 24, PAD = 6;
+
+// Crop de la bbox alpha DANS un rectangle donné, marge PAD étendue jusqu'aux
+// bords de l'image (le pourtour est transparent → aucune fuite).
+function cropRect(png, rx0, ry0, rx1, ry1) {
+  const { width: w, height: h, data } = png;
+  let bx0 = rx1, by0 = ry1, bx1 = rx0 - 1, by1 = ry0 - 1;
+  for (let y = ry0; y <= ry1; y++) for (let x = rx0; x <= rx1; x++) {
     if (data[(y * w + x) * 4 + 3] >= ALPHA_MIN) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
   }
   if (bx1 < bx0) return null;
-  bx0 = Math.max(cx0, bx0 - PAD); by0 = Math.max(cy0, by0 - PAD);
-  bx1 = Math.min(cx1 - 1, bx1 + PAD); by1 = Math.min(cy1 - 1, by1 + PAD);
+  bx0 = Math.max(0, bx0 - PAD); by0 = Math.max(0, by0 - PAD);
+  bx1 = Math.min(w - 1, bx1 + PAD); by1 = Math.min(h - 1, by1 + PAD);
   const ow = bx1 - bx0 + 1, oh = by1 - by0 + 1;
   const out = new PNG({ width: ow, height: oh });
   PNG.bitblt(png, out, bx0, by0, ow, oh, 0, 0);
+  return out;
+}
+
+// Bandes de CONTENU dans un profil de projection : runs où sum > minContent,
+// fusionnés si séparés par un vide < gapMerge, gardés si longueur >= minLen.
+function bands(sum, minContent, gapMerge, minLen) {
+  const runs = []; let s = -1;
+  for (let i = 0; i < sum.length; i++) {
+    const c = sum[i] > minContent;
+    if (c && s < 0) s = i;
+    if (!c && s >= 0) { runs.push([s, i - 1]); s = -1; }
+  }
+  if (s >= 0) runs.push([s, sum.length - 1]);
+  const merged = [];
+  for (const r of runs) {
+    const last = merged[merged.length - 1];
+    if (last && r[0] - last[1] - 1 <= gapMerge) last[1] = r[1];
+    else merged.push([...r]);
+  }
+  return merged.filter((r) => r[1] - r[0] + 1 >= minLen);
+}
+
+// Divise [lo,hi] en n segments égaux (repli quand la détection ne rend pas n bandes).
+function equalBands(lo, hi, n) {
+  const out = []; const span = hi - lo + 1;
+  for (let i = 0; i < n; i++) out.push([Math.round(lo + span * i / n), Math.round(lo + span * (i + 1) / n) - 1]);
   return out;
 }
 
@@ -118,13 +147,39 @@ for (const s of SHEETS) {
   if (!fs.existsSync(p)) { console.error('MANQUANT:', p); continue; }
   const png = PNG.sync.read(fs.readFileSync(p));
   detourage(png);
-  const { width: w, height: h } = png;
-  const cw = w / s.cols, ch = h / s.rows; let cnt = 0;
-  for (let r = 0; r < s.rows; r++) for (let c = 0; c < s.cols; c++) {
-    const out = cropCell(png, Math.round(c * cw), Math.round(r * ch), Math.round((c + 1) * cw), Math.round((r + 1) * ch));
-    if (out) { crops.push(out); cnt++; }
+  const { width: w, height: h, data } = png;
+  const cellH = h / s.rows, cellW = w / s.cols;
+
+  // Profil vertical global → bandes de rangées. Repli : étendue de contenu / rows.
+  const rowSum = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) { let a = 0; for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] >= ALPHA_MIN) a++; rowSum[y] = a; }
+  let ybands = bands(rowSum, 3, Math.round(cellH * 0.30), Math.round(cellH * 0.35));
+  let yFallback = false;
+  if (ybands.length !== s.rows) {
+    yFallback = true;
+    let ymin = h, ymax = -1; for (let y = 0; y < h; y++) if (rowSum[y] > 3) { if (y < ymin) ymin = y; if (y > ymax) ymax = y; }
+    if (ymax < ymin) { ymin = 0; ymax = h - 1; }
+    ybands = equalBands(ymin, ymax, s.rows);
   }
-  console.log(`${s.tag.padEnd(22)} ${s.f}  →  ${cnt}/${s.cols * s.rows}`);
+
+  let cnt = 0, colFallbacks = 0;
+  for (const [y0, y1] of ybands) {
+    const colSum = new Array(w).fill(0);
+    for (let x = 0; x < w; x++) { let a = 0; for (let y = y0; y <= y1; y++) if (data[(y * w + x) * 4 + 3] >= ALPHA_MIN) a++; colSum[x] = a; }
+    let xbands = bands(colSum, 2, Math.round(cellW * 0.30), Math.round(cellW * 0.18));
+    if (xbands.length !== s.cols) {
+      colFallbacks++;
+      let xmin = w, xmax = -1; for (let x = 0; x < w; x++) if (colSum[x] > 2) { if (x < xmin) xmin = x; if (x > xmax) xmax = x; }
+      if (xmax < xmin) { xmin = 0; xmax = w - 1; }
+      xbands = equalBands(xmin, xmax, s.cols);
+    }
+    for (const [x0, x1] of xbands) {
+      const out = cropRect(png, x0, y0, x1, y1);
+      if (out) { crops.push(out); cnt++; }
+    }
+  }
+  const flags = `${yFallback ? ' [Y=repli]' : ''}${colFallbacks ? ` [X=repli×${colFallbacks}]` : ''}`;
+  console.log(`${s.tag.padEnd(22)} ${s.f}  →  ${cnt}/${s.cols * s.rows}${flags}`);
 }
 
 crops.forEach((c, i) => fs.writeFileSync(path.join(OUT, `space${String(i + 1).padStart(3, '0')}.png`), PNG.sync.write(c)));
