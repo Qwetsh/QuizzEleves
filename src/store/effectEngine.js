@@ -617,6 +617,41 @@ function stepHead(set, get, action, ctx) {
       }
       return 'done';
     }
+    case 'stealTime': {
+      // Vol de temps : chaque cible perd N s sur sa PROCHAINE question (via
+      // itemTimerBonus négatif, borné par le plancher côté questionDuration) ; la
+      // SOURCE gagne le TOTAL volé sur sa prochaine question. Cumulable : cible
+      // 'allOthers' ⇒ N × (nb d'adversaires) pour la source. Montant configurable
+      // (fixe/dé/échelle) — le dé est retiré INDÉPENDAMMENT pour chaque cible.
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const thief = ctx.sourceTeam ?? get().currentTeam;
+      const nt = [...get().teams];
+      let total = 0;
+      const victimNames = [];
+      for (const idx of t.indices) {
+        if (idx === thief) continue; // on ne se vole pas soi-même
+        const each = Math.max(0, resolveAmount(action.n, srcTeam) || 0);
+        if (each <= 0) continue;
+        const v = nt[idx];
+        nt[idx] = { ...v, itemTimerBonus: (v.itemTimerBonus || 0) - each };
+        total += each;
+        victimNames.push(`${v.emoji} ${v.name}`);
+        get().emitCurseVfx?.(idx, { icon: '⏳', color: '#8a1f2e', tone: 'malus' });
+      }
+      if (total > 0) {
+        nt[thief] = { ...nt[thief], itemTimerBonus: (nt[thief].itemTimerBonus || 0) + total };
+        set({ teams: nt });
+        get().emitCurseVfx?.(thief, { icon: '⏳', color: '#2f9d5a', tone: 'buff' });
+        get().addLog(tg('log.fx.stealTime', { emoji: nt[thief].emoji, name: nt[thief].name, n: total, victims: victimNames.join(', ') }));
+        announce(set, get, '⏳', tg('log.fx.stealTime.toast', { n: total, tag: dieTag(action.n) }), '#3b6cb3');
+      } else {
+        set({ teams: nt });
+        get().addLog(tg('log.fx.stealTimeNone'));
+      }
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
     case 'hideWrong': {
       // Élimine N mauvaise(s) réponse(s) de la question COURANTE (façon Indice).
       // Sans effet s'il n'y a pas de question ouverte (ex. joué hors contexte).

@@ -175,6 +175,7 @@ export function describeAction(a, lang = getLang()) {
       ? `smoke bomb${a.turns ? ` for ${amountLabel(a.turns, lang)} ${turnW(a.turns, lang)}` : ''}`
       : `fumigène${a.turns ? ` pendant ${amountLabel(a.turns, lang)} ${turnW(a.turns, lang)}` : ''}`;
     case 'extraTime': return en ? `+${amountLabel(a.n, lang)}s on the next question` : `+${amountLabel(a.n, lang)}s à la prochaine question`;
+    case 'stealTime': return en ? `steal ${amountLabel(a.n, lang)}s from ${who} (added to your next question)` : `vole ${amountLabel(a.n, lang)}s à ${who} (ajoutées à ta prochaine question)`;
     default: return a.action || '';
   }
 }

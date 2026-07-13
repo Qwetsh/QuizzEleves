@@ -18,7 +18,7 @@ import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock,
 import { getQuestions, getSubjectPool } from '../data/questions/index.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
-import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul, questionDuration } from '../logic/turnHelpers.js';
+import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul, questionDuration, QUESTION_TIME_FLOOR } from '../logic/turnHelpers.js';
 import { resolvePowerEffect } from '../logic/powerEffects.js';
 import { soundShield, soundTrap, soundWarp } from '../logic/sounds.js';
 import * as eventH from './eventHandlers.js';
@@ -1614,7 +1614,7 @@ export const useGameStore = create((set, get) => ({
     const effectiveDivisor = timerDivisor || (timerHalved ? 2 : 1);
     // Meme echelle que le timer reellement affiche (QuestionModal) : le bonus
     // de temps d'equipement compte, sinon le ratio depasse 1 et gonfle le gain
-    const maxTime = Math.min(showQuestion.timerCap || Infinity, Math.floor(30 / effectiveDivisor) + (itemBonusTime || 0));
+    const maxTime = Math.min(showQuestion.timerCap || Infinity, Math.max(QUESTION_TIME_FLOOR, Math.floor(30 / effectiveDivisor) + (itemBonusTime || 0)));
     // Ratio de temps restant (0..100) fig\u00e9 pour cette r\u00e9ponse : alimente la
     // m\u00e9trique d'\u00e9chelle 'timeleft' (ex. gain = 1\u00d7% temps restant). On l'attache
     // \u00e0 l'\u00e9quipe pour que getEffectValue / les d\u00e9clencheurs puissent la lire.

@@ -22,6 +22,7 @@ const ACTIONS = [
   { key: 'shieldNext', label: '🛡️ Bouclier' },
   { key: 'fumigene', label: '💨 Fumigène' },
   { key: 'extraTime', label: '⏳ Temps en +' },
+  { key: 'stealTime', label: '⏳ Voler du temps (vers moi)' },
   { key: 'buff', label: '🕒 Effet de durée (X tours)' },
   { key: 'loot', label: '🎁 Loot un objet' },
   { key: 'loseItem', label: '💔 Perdre un objet' },
@@ -159,6 +160,7 @@ export function describeAction(a) {
     case 'shieldNext': return 'bouclier (annule 1 recul)';
     case 'fumigene': return `fumigène${a.turns ? ` (${amountLabel(a.turns)} tours)` : ''}`;
     case 'extraTime': return `+${amountLabel(a.n)}s à la prochaine question`;
+    case 'stealTime': return `voler ${amountLabel(a.n)}s à ${who} (cumulé vers moi)`;
     default: return a.action;
   }
 }
@@ -320,6 +322,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'shieldNext') base.n = 1;
         if (k === 'hideWrong') base.n = 1;
         if (k === 'extraTime') base.n = 5;
+        if (k === 'stealTime') Object.assign(base, { target: 'target', n: 5 });
         if (k === 'rerollQuestion') base.subject = 'same';
         if (k === 'forceSubject') Object.assign(base, { target: 'target', subject: 'hardcore' });
         if (k === 'askFlag') base.target = 'self';
@@ -468,6 +471,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
       {(a.action === 'hideWrong') && (<><W>élimine</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" rép." /><W>mauvaise(s) réponse(s)</W></>)}
       {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" recul(s)" /><W>recul(s)</W></>)}
       {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" s" /><W>s à la prochaine question</W></>)}
+      {(a.action === 'stealTime') && (<><W>je vole</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" s" /><W>s à</W><TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} /><W>(cumulé pour ma prochaine question)</W></>)}
       {a.action === 'gainCharge' && <W>au choix du joueur</W>}
 
       {a.action === 'fumigene' && (

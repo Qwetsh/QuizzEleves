@@ -10,6 +10,7 @@ import {
   equipOnRollActions, equipTriggerActions, questionRerollOptions, d6Branch, expandUseTriggers,
   resolveAmount, diceLabel,
 } from '../store/effectEngine.js';
+import { questionDuration, QUESTION_TIME_FLOOR } from '../logic/turnHelpers.js';
 
 // Plateau linéaire : depart -> n1..n8 -> arrivee (cases maths)
 const LINEAR = (() => {
@@ -889,6 +890,46 @@ describe('quantités aléatoires (1D4 / 1D6 / 1D10)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0); // d10 → 1
     exec([{ action: 'extraTime', n: 'd10' }], { source: 'item' });
     expect(team(0).itemTimerBonus).toBe(1);
+  });
+});
+
+// --- Vol de temps -------------------------------------------------------
+
+describe('vol de temps (stealTime)', () => {
+  it('vole N s à une cible : la cible perd, la source gagne', () => {
+    exec([{ action: 'stealTime', target: 'target', n: 5 }], { source: 'item', targetTeam: 1 });
+    expect(team(1).itemTimerBonus).toBe(-5);
+    expect(team(0).itemTimerBonus).toBe(5);
+  });
+
+  it("cible 'allOthers' : chaque adversaire perd N, la source cumule N × adversaires", () => {
+    freshGame([{}, {}, {}]); // 3 équipes, source = 0
+    exec([{ action: 'stealTime', target: 'allOthers', n: 4 }], { source: 'item' });
+    expect(team(1).itemTimerBonus).toBe(-4);
+    expect(team(2).itemTimerBonus).toBe(-4);
+    expect(team(0).itemTimerBonus).toBe(8); // 4 + 4 cumulés pour la source
+  });
+
+  it('la source ne se vole jamais elle-même (cible all)', () => {
+    freshGame([{}, {}]);
+    exec([{ action: 'stealTime', target: 'all', n: 6 }], { source: 'item' });
+    // Équipe 0 = source : ne perd rien, gagne le vol sur l'équipe 1.
+    expect(team(1).itemTimerBonus).toBe(-6);
+    expect(team(0).itemTimerBonus).toBe(6);
+  });
+
+  it('le temps volé réduit le timer de la prochaine question de la cible', () => {
+    exec([{ action: 'stealTime', target: 'target', n: 5 }], { source: 'item', targetTeam: 1 });
+    useGameStore.setState({ currentTeam: 1 });
+    S().askQuestion('maths');
+    expect(S().showQuestion.itemBonusTime).toBe(-5);
+    expect(team(1).itemTimerBonus).toBe(0); // one-shot consommé
+    expect(questionDuration(S().showQuestion)).toBe(25); // 30 − 5
+  });
+
+  it('un vol massif est borné par le plancher de durée', () => {
+    // itemBonusTime très négatif → questionDuration ne descend pas sous le plancher.
+    expect(questionDuration({ itemBonusTime: -40 })).toBe(QUESTION_TIME_FLOOR);
   });
 });
 

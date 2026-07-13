@@ -262,6 +262,16 @@ export const ITEMS = {
     desc: "Bloque les POUVOIRS d'une équipe pendant 2 tours.",
     effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'blockPowers', target: 'target', turns: 2 }] }],
   },
+  sablierVoleur: {
+    name: 'Sablier voleur', icon: '⏳', slot: 'consumable', rarity: 'rare', price: 16,
+    desc: 'Vole 5 s de temps à une équipe : elle en perd 5 sur sa prochaine question, tu les gagnes sur la tienne.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'stealTime', target: 'target', n: 5 }] }],
+  },
+  clepsydreVampire: {
+    name: 'Clepsydre vampire', icon: '🕰️', slot: 'consumable', rarity: 'legendaire', price: 30, lootOnly: true,
+    desc: 'Vole 4 s à CHAQUE autre équipe ; tout le temps volé est cumulé pour ta prochaine question.',
+    effects: [{ kind: 'trigger', on: 'use', do: [{ action: 'stealTime', target: 'allOthers', n: 4 }] }],
+  },
   baillonOsier: {
     name: "Bâillon d'osier", icon: '🧺', slot: 'consumable', rarity: 'rare', price: 14,
     desc: "Bloque les CONSOMMABLES d'une équipe pendant 2 tours.",

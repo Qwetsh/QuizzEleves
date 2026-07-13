@@ -68,6 +68,9 @@ export default {
   'log.fx.extraTimeThis.toast': { fr: '+{n}s sur cette question{tag}', en: '+{n}s on this question{tag}' },
   'log.fx.extraTimeNext':       { fr: '⌛ +{n}s à la prochaine question.', en: '⌛ +{n}s on the next question.' },
   'log.fx.extraTimeNext.toast': { fr: '+{n}s à la prochaine question{tag}', en: '+{n}s on the next question{tag}' },
+  'log.fx.stealTime':           { fr: '⏳ {emoji} {name} vole {n}s à {victims} (pour sa prochaine question).', en: '⏳ {emoji} {name} steals {n}s from {victims} (for their next question).' },
+  'log.fx.stealTime.toast':     { fr: '+{n}s volées{tag}', en: '+{n}s stolen{tag}' },
+  'log.fx.stealTimeNone':       { fr: '⏳ Aucun temps à voler.', en: '⏳ No time to steal.' },
 
   // --- hideWrong ---
   'log.fx.hideWrong':       { fr: ['💡 {n} mauvaise réponse éliminée !', '💡 {n} mauvaises réponses éliminées !'],

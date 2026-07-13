@@ -109,6 +109,12 @@ export function getTeamEffects(team, lang = getLang()) {
     push({ key: 'time', tone: 'buff', icon: '⏳', n: team.itemTimerBonus, color: '#2f9d5a',
       name: L(lang, '+Temps', '+Time'),
       desc: L(lang, `+${team.itemTimerBonus}s à ta prochaine question`, `+${team.itemTimerBonus}s on your next question`) });
+  } else if (team.itemTimerBonus < 0) {
+    // Temps volé (vol de temps) : malus appliqué à la prochaine question.
+    const lost = -team.itemTimerBonus;
+    push({ key: 'time', tone: 'malus', icon: '⏳', n: lost, color: '#8a1f2e',
+      name: L(lang, '−Temps', '−Time'),
+      desc: L(lang, `−${lost}s à ta prochaine question (temps volé)`, `−${lost}s on your next question (time stolen)`) });
   }
   if (team.doubleActive) {
     const n = 1 + (team.doubleExtra || 0);

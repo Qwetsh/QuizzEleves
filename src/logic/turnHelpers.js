@@ -26,12 +26,17 @@ export function randomSubject() {
  * ou chrono partagé de rafale (Double L5), plafonnée par Sablier brisé.
  * Source unique pour poser `showQuestion.deadline` (askQuestion, reroll).
  */
+// Plancher de durée d'une question : le « vol de temps » (itemTimerBonus négatif)
+// ne peut pas faire tomber le timer sous ce seuil. En jeu normal itemBonusTime ≥ 0,
+// donc ce plancher ne change rien à l'existant.
+export const QUESTION_TIME_FLOOR = 6;
+
 export function questionDuration(sq) {
   if (!sq) return 30;
   const divisor = sq.timerDivisor || (sq.timerHalved ? 2 : 1);
   const base = sq.sharedStart != null
     ? Math.max(1, sq.sharedStart)
-    : Math.floor(30 / divisor) + (sq.itemBonusTime || 0);
+    : Math.max(QUESTION_TIME_FLOOR, Math.floor(30 / divisor) + (sq.itemBonusTime || 0));
   return Math.min(sq.timerCap || Infinity, base);
 }
 

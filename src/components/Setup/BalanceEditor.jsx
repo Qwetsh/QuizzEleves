@@ -1210,11 +1210,19 @@ export default function BalanceEditor({ onClose }) {
                   {rows == null && <div style={{ padding: 12, color: 'var(--ink-500)' }}>Chargement…</div>}
                   {rows != null && GROUPS.map((g) => {
                     if (slotFilter !== 'all' && slotFilter !== g.slot) return null;
-                    const list = (rows || []).filter((r) => r.slot === g.slot && matches(r));
+                    // Potions & ingrédients (alchimie) ont slot:'consumable' mais vivent dans
+                    // l'onglet « Alchimie » — on les exclut ici pour ne pas noyer la liste des
+                    // consommables « normaux » sous ~1140 potions craftables.
+                    const list = (rows || []).filter((r) => r.slot === g.slot
+                      && !(g.slot === 'consumable' && (r.family === 'potion' || r.family === 'ingredient'))
+                      && matches(r));
                     if (!list.length) return null;
                     return (
                       <div key={g.slot}>
-                        <div className="qed-label" style={{ margin: '8px 6px 4px' }}>{g.label} <span className="bal-default">({list.length})</span></div>
+                        <div className="qed-label" style={{ margin: '8px 6px 4px' }}>
+                          {g.label} <span className="bal-default">({list.length})</span>
+                          {g.slot === 'consumable' && <span className="bal-default"> — potions & ingrédients dans l’onglet ⚗️ Alchimie</span>}
+                        </div>
                         {list.map((r) => {
                           const active = draft && draft.key === r.key && !draft._isNew;
                           return (
