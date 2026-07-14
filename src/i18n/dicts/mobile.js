@@ -305,6 +305,8 @@ export default {
   'mobile.magic.chooseFace': { fr: 'Choisis une face du dé (1-6)', en: 'Choose a die face (1-6)' },
   'mobile.magic.undo': { fr: 'Retirer la dernière rune', en: 'Remove last rune' },
   'mobile.magic.clear': { fr: 'Vider la séquence', en: 'Clear the sequence' },
+  'mobile.magic.runesTab': { fr: 'Runes', en: 'Runes' },
+  'mobile.magic.spellsTab': { fr: 'Sorts', en: 'Spells' },
   'mobile.magic.runesCaps': { fr: 'RUNES CONNUES', en: 'KNOWN RUNES' },
   'mobile.magic.spellsCaps': { fr: 'SORTS CONNUS', en: 'KNOWN SPELLS' },
   'mobile.magic.dieCaps': { fr: 'MARQUES DU DÉ', en: 'DIE MARKS' },

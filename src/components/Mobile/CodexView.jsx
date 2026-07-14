@@ -5,6 +5,7 @@
 // dé (faces bénies/maudites). ⚠️ SECRET : les entrées inconnues restent des
 // silhouettes « ? » — le codex ne révèle JAMAIS ce qui n'a pas été appris
 // (ni le nombre exact près : seuls les TOTAUX du catalogue sont visibles).
+import { useState } from 'react';
 import { RUNES, RUNE_KEYS, runeName } from '../../data/runes';
 import { SPELLS, spellName } from '../../data/spells';
 import { tFor } from '../../i18n';
@@ -47,6 +48,8 @@ const countStyle = {
 export default function CodexView({ knownRunes = [], knownSpells = [], faceMods = {}, en = false }) {
   const T = tFor(en);
   const lang = en ? 'en' : 'fr';
+  // Deux pages du grimoire : Runes / Sorts (compteurs sur les onglets).
+  const [page, setPage] = useState('runes');
 
   // Runes : connues d'abord (dans l'ordre du catalogue), puis N silhouettes « ? »
   // — ne pas suivre l'ordre du catalogue pour les inconnues (leur position
@@ -77,6 +80,17 @@ export default function CodexView({ knownRunes = [], knownSpells = [], faceMods 
 
   return (
     <div style={{ padding: '4px 16px 22px' }}>
+      {/* Bascule Runes / Sorts (compteurs connus/total sur chaque page) */}
+      <div className="mgc-seg" style={{ margin: '6px 0 2px' }}>
+        <button className={page === 'runes' ? 'is-on' : ''} onClick={() => setPage('runes')}>
+          {'\u{1F58B}\u{FE0F}'} {T('mobile.magic.runesTab')} <span style={{ opacity: 0.75, fontWeight: 700 }}>({runes.length}/{RUNE_KEYS.length})</span>
+        </button>
+        <button className={page === 'spells' ? 'is-on' : ''} onClick={() => setPage('spells')}>
+          {'\u{1FA84}'} {T('mobile.magic.spellsTab')} <span style={{ opacity: 0.75, fontWeight: 700 }}>({spells.length}/{activeSpells.length})</span>
+        </button>
+      </div>
+
+      {page === 'runes' && (<>
       {/* ===== RUNES ===== */}
       {section(T('mobile.magic.runesCaps'), runes.length, RUNE_KEYS.length)}
       <div style={{ fontSize: 11.5, fontStyle: 'italic', color: 'rgba(190,175,230,.6)', margin: '-4px 2px 10px' }}>
@@ -100,7 +114,9 @@ export default function CodexView({ knownRunes = [], knownSpells = [], faceMods 
           </div>
         ))}
       </div>
+      </>)}
 
+      {page === 'spells' && (<>
       {/* ===== SORTS ===== */}
       {section(T('mobile.magic.spellsCaps'), spells.length, activeSpells.length)}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -134,7 +150,7 @@ export default function CodexView({ knownRunes = [], knownSpells = [], faceMods 
         ))}
       </div>
 
-      {/* ===== DÉ : marques actives (faces bénies/maudites) ===== */}
+      {/* ===== DÉ : marques actives (faces bénies/maudites) — page Sorts ===== */}
       {marks.length > 0 && (
         <>
           {section(T('mobile.magic.dieCaps'), marks.length, 6)}
@@ -158,6 +174,7 @@ export default function CodexView({ knownRunes = [], knownSpells = [], faceMods 
           </div>
         </>
       )}
+      </>)}
     </div>
   );
 }
