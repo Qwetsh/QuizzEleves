@@ -43,6 +43,11 @@ function freshGame(overrides = [{}, {}, {}]) {
     indiceUsed: false, indiceHidden: [], freeActivation: false,
     shopStock: [], shopStockTurns: 10, movePath: null,
     preRollPos: null, preRollValue: null,
+    // Loot de bonne réponse NEUTRALISÉ : les canaux consommable/équipement
+    // tirent Math.random() à chaque bonne réponse et un drop ouvre LootReveal,
+    // ce qui diffère nextTurn/le nettoyage de la rafale Double → tests FLAKY
+    // (échec CI intermittent). Catalogue vide → aucun tirage ne peut aboutir.
+    enabledItems: [],
   });
 }
 

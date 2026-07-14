@@ -37,6 +37,9 @@ function freshGame() {
     preRollPos: null, preRollValue: 2,
     gameStats: { startedAt: null, classLabel: '6eB', subjects: ['maths'], level: [], answers: [], itemUses: [], powerUses: [] },
     statsArchived: false,
+    // Loot de bonne réponse neutralisé (tirages Math.random → LootReveal qui
+    // diffère nextTurn = tests flaky). Catalogue vide : aucun drop possible.
+    enabledItems: [],
   });
 }
 

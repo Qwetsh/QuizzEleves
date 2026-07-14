@@ -65,6 +65,9 @@ function freshGame(overrides = [{}, {}], board = LINEAR) {
     movePath: null, preRollPos: null, preRollValue: null,
     pendingActions: null, showTilePicker: null, showActionDice: null,
     showSubjectPicker: false, rerollUsed: false, trapDepth: 0,
+    // Loot de bonne réponse neutralisé (tirages Math.random → LootReveal qui
+    // diffère nextTurn = tests flaky). Catalogue vide : aucun drop possible.
+    enabledItems: [],
   });
 }
 

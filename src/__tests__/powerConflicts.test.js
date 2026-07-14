@@ -29,6 +29,9 @@ const base = (teams, extra = {}) => useGameStore.setState({
   showDiceModal: false, indiceUsed: false, indiceUses: 0, indiceHidden: [], freeActivation: false,
   movePath: null, preRollPos: 'n7', preRollValue: 2, pendingActions: null, showTilePicker: null,
   showSubjectPicker: false, rerollUsed: false, trapDepth: 0, emitVfx: () => {},
+  // Loot de bonne réponse neutralisé (tirages Math.random → LootReveal qui
+  // diffère nextTurn = tests flaky). Catalogue vide : aucun drop possible.
+  enabledItems: [],
   teams, ...extra,
 });
 
