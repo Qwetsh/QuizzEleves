@@ -36,6 +36,19 @@ const spirale = Array.from({ length: 72 }, (_, i) => {
   const r = 38 * (1 - 0.82 * t);
   return { x: 50 + r * Math.cos(a), y: 52 + r * Math.sin(a) };
 });
+// Infini (∞) : lemniscate de Gerono. Départ à la POINTE GAUCHE (pas au centre :
+// le centre ≈ centroïde rendrait l'angle indicatif du $1 instable → score
+// effondré à la moindre rotation).
+const infini = Array.from({ length: 64 }, (_, i) => {
+  const a = -Math.PI / 2 + (i / 63) * Math.PI * 2;
+  return { x: 50 + 38 * Math.sin(a), y: 50 + 22 * Math.sin(2 * a) };
+});
+// Boucle (« lasso » / α) : entrée en diagonale, tour complet, sortie croisée.
+const boucle = [
+  ...line({ x: 16, y: 82 }, { x: 44, y: 42 }, 14),
+  ...arc(56, 34, 17, 147, -213, 44).slice(1),
+  ...line({ x: 44, y: 44 }, { x: 88, y: 80 }, 14),
+];
 
 export const RUNES = {
   cercle: {
@@ -69,6 +82,28 @@ export const RUNES = {
   etoile: {
     key: 'etoile', name: 'Étoile', name_en: 'Star', icon: '⭐',
     variants: [poly([22, 88], [50, 10], [78, 88], [16, 38], [84, 38], [22, 88])],
+  },
+  // — Extension du catalogue (2026-07-15) : formes choisies pour rester bien
+  // séparées des 8 premières sous normalisation $1 (rotation/échelle/position).
+  carre: {
+    key: 'carre', name: 'Carré', name_en: 'Square', icon: '🟦',
+    variants: [poly([20, 20], [80, 20], [80, 80], [20, 80], [20, 20]), reverse(poly([20, 20], [80, 20], [80, 80], [20, 80], [20, 20]))],
+  },
+  coche: {
+    key: 'coche', name: 'Coche', name_en: 'Check', icon: '✔️',
+    variants: [poly([22, 52], [42, 78], [82, 18])],
+  },
+  montagne: {
+    key: 'montagne', name: 'Montagnes', name_en: 'Peaks', icon: '⛰️',
+    variants: [poly([12, 80], [35, 24], [50, 60], [65, 24], [88, 80])],
+  },
+  infini: {
+    key: 'infini', name: 'Infini', name_en: 'Infinity', icon: '♾️',
+    variants: [infini, reverse(infini)],
+  },
+  boucle: {
+    key: 'boucle', name: 'Boucle', name_en: 'Loop', icon: '➰',
+    variants: [boucle],
   },
 };
 
