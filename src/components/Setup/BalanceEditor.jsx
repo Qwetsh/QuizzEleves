@@ -1099,6 +1099,7 @@ export default function BalanceEditor({ onClose }) {
               : tab === 'sets' ? `${Object.keys(SETS).length} sets`
               : tab === 'forge' ? `${Object.keys(ov.forge || {}).length} réglage(s) Forge`
               : tab === 'weather' ? `${Object.keys(ov.weather || {}).length} réglage(s) Météo`
+              : tab === 'spells' ? `${Object.keys(ov.magic || {}).length} réglage(s) Magie`
               : `${Object.keys(ov.loot || {}).length} réglage(s) modifié(s)`}
             {status && <span style={{ marginLeft: 6, color: status.startsWith('Erreur') || status.includes('échec') ? '#ffd9d0' : '#d6ffe0' }}>· {status}</span>}
           </span>
@@ -1425,6 +1426,23 @@ export default function BalanceEditor({ onClose }) {
               <div className="bal-detail-foot">
                 <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
                 <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, weather: {} }))}>{'↺'} Valeurs d'origine</button>
+                {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
+                {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
+              </div>
+            </div>
+          </div>
+        ) : tab === 'spells' ? (
+          /* Magie : réglages MAGIC (overrides `magic` du blob balance, pied
+             Enregistrer/reset ci-dessous) + CRUD quete_spells (le SpellsTab
+             sauvegarde ses sorts lui-même via saveSpellRow). */
+          <div className="qed-body">
+            <div className="bal-detail">
+              <div className="bal-detail-scroll">
+                <SpellsTab ov={ov} setOv={setOv} setStatus={setStatus} />
+              </div>
+              <div className="bal-detail-foot">
+                <button className="btn btn--green" onClick={handleSaveBalance} disabled={busy || !ovDirty}>{busy ? 'Enregistrement…' : (ovDirty ? 'Enregistrer' : 'Enregistré ✓')}</button>
+                <button className="btn btn--ghost" onClick={() => setOv((prev) => ({ ...prev, magic: {} }))}>{'↺'} Valeurs d'origine</button>
                 {ovDirty && <span className="bal-default" style={{ color: '#b5341f' }}>● non enregistré</span>}
                 {status && <span className="qed-err" style={{ color: statusColor }}>{status}</span>}
               </div>
