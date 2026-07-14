@@ -2007,12 +2007,15 @@ function MagicView({ session, teamIdx, code, token }) {
   // Anti-spam local : le cooldown lit lastCastAt (publié à côté de magic).
   const magic = { ...(team.magic || {}), lastCastAt: team.lastCastAt || 0 };
   return (
-    <div className="mgc-root" style={{ position: 'fixed', inset: 0, bottom: 64, display: 'flex', flexDirection: 'column' }}>
-      <div className="mgc-seg">
+    // bottom = TabBar (≈60px) + encoche iOS. Le conteneur SCROLLE si le contenu
+    // dépasse (petits écrans) — le bouton « Incanter » reste visible car il est
+    // sticky en bas de SpellTableView.
+    <div className="mgc-root" style={{ position: 'fixed', inset: 0, bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
+      <div className="mgc-seg" style={{ flex: 'none' }}>
         <button className={sub === 'table' ? 'is-on' : ''} onClick={() => setSub('table')}>{'\u{1FA84}'} {T('mobile.magic.table')}</button>
         <button className={sub === 'codex' ? 'is-on' : ''} onClick={() => setSub('codex')}>{'\u{1F4D6}'} {T('mobile.magic.codex')}</button>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflowY: sub === 'codex' ? 'auto' : 'hidden' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {sub === 'table' ? (
           <SpellTableView
             magic={magic}
@@ -2023,6 +2026,7 @@ function MagicView({ session, teamIdx, code, token }) {
             locked={!!session.locked || session.status === 'finished'}
             en={en}
             onCast={(payload) => sendIntent(code, token, 'castSpell', payload).catch(() => {})}
+            bottomInset={10}
           />
         ) : (
           <CodexView knownRunes={team.knownRunes || []} knownSpells={team.knownSpells || []} faceMods={team.faceMods || {}} en={en} />

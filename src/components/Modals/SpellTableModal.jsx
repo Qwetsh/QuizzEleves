@@ -53,7 +53,7 @@ export default function SpellTableModal() {
           <button className={sub === 'table' ? 'is-on' : ''} onClick={() => setSub('table')}>{'\u{1FA84}'} {T('mobile.magic.table')}</button>
           <button className={sub === 'codex' ? 'is-on' : ''} onClick={() => setSub('codex')}>{'\u{1F4D6}'} {T('mobile.magic.codex')}</button>
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflowY: sub === 'codex' ? 'auto' : 'hidden' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {sub === 'table' ? (
             <SpellTableView
               magic={magic}

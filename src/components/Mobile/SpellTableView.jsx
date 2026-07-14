@@ -217,11 +217,14 @@ export default function SpellTableView({ magic, knownRunes = [], knownSpells = [
     : `\u{2728} ${T('mobile.magic.cast')}${known ? ` · −${cost} \u{2728}` : ''}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%', paddingBottom: bottomInset }}>
+    // minHeight (et non height) : si le contenu dépasse l'écran, la racine
+    // GRANDIT et le parent scrolle — le bouton « Incanter » reste visible
+    // (sticky en bas). height:100% couperait tout sous le pli (bug TabBar).
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       <MagicBar magic={magic} T={T} />
 
       {/* Table des sorts (zone de tracé) */}
-      <div ref={zoneRef} className={'mgc-zone' + (shake ? ' is-shake' : '')} style={{ margin: '10px 14px 0', flex: 1, minHeight: 240 }}>
+      <div ref={zoneRef} className={'mgc-zone' + (shake ? ' is-shake' : '')} style={{ margin: '10px 14px 0', flex: 1, minHeight: 220 }}>
         <span className="mgc-corner tl" /><span className="mgc-corner tr" /><span className="mgc-corner bl" /><span className="mgc-corner br" />
         <TableCircle />
         <canvas ref={canvasRef} className="mgc-canvas" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
@@ -281,8 +284,14 @@ export default function SpellTableView({ magic, knownRunes = [], knownSpells = [
         )}
       </div>
 
-      {/* Incanter */}
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 16px 16px' }}>
+      {/* Incanter — STICKY : reste visible au-dessus de la TabBar même quand le
+          contenu dépasse (petits écrans), avec un voile dégradé pour la lisibilité. */}
+      <div style={{
+        position: 'sticky', bottom: 0, zIndex: 5,
+        display: 'flex', justifyContent: 'center',
+        margin: '12px 0 0', padding: `10px 16px ${12 + bottomInset}px`,
+        background: 'linear-gradient(180deg, transparent, rgba(12,8,28,0.92) 38%)',
+      }}>
         <button className={'mgc-cast' + (ready ? ' is-ready' : '')} onClick={cast} disabled={!ready}>{castLabel}</button>
       </div>
     </div>
