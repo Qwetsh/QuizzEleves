@@ -8,6 +8,7 @@ import { itemImg } from '../../logic/itemAssets';
 import { getTeamEffects } from '../../logic/teamStatus';
 import { useGameStore } from '../../store/gameStore';
 import TeamAvatar from '../TeamAvatar';
+import MagicGauge from './MagicGauge';
 import { useInfoTrigger } from './useInfoTrigger';
 import { useT } from '../../i18n';
 import HackCinematic from './HackCinematic';
@@ -243,6 +244,7 @@ function TeamDetailPopover({ team, rank, total, onClose }) {
         <div className="ts-pop-rank">{rank}/{total}</div>
       </div>
       <StatChips team={team} />
+      <MagicGauge team={team} />
       <TeamEffects team={team} variant="active" />
       <div className="ts-pop-section">
         <div className="ts-pop-label">{T('game.section.equipment')}</div>
@@ -311,6 +313,8 @@ function ActiveCard({ team, rank, total }) {
             kindLabel={POWERS[key]?.category === 'off' ? T('game.kind.attack') : T('game.kind.defense')} />
         ))}
       </div>
+      {/* Magie : liseré LCD sur le bord bas de la carte (enfant direct → absolu) */}
+      <MagicGauge team={team} />
     </div>
   );
 }
@@ -347,6 +351,8 @@ function CompactCard({ team, rank, total, open, onToggle }) {
           <PowerDisc key={key} powerKey={key} charges={team.powers[key]?.charges ?? 0} level={team.powers[key]?.level ?? 1} />
         ))}
       </div>
+      {/* Magie : liseré LCD ultra-fin sur le bord bas (texte masqué en carte mini) */}
+      <MagicGauge team={team} compact />
       {open && <TeamDetailPopover team={team} rank={rank} total={total} onClose={onToggle} />}
     </div>
   );

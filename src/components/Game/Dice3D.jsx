@@ -1,5 +1,5 @@
 import { useT } from '../../i18n';
-import FaceTile from './FaceTile';
+import FaceTile, { FaceModBadge } from './FaceTile';
 
 const DICE_FACE_ROT = {
   1: { x: 0,    y: 0 },
@@ -45,7 +45,7 @@ const SIDE_TRANSFORM = (half) => ({
   bottom: `rotateX(-90deg) translateZ(${half}px)`,
 });
 
-function DiceFace({ pips, side, size, number, face }) {
+function DiceFace({ pips, side, size, number, face, mod }) {
   const transforms = SIDE_TRANSFORM(size / 2);
   return (
     <div
@@ -53,7 +53,7 @@ function DiceFace({ pips, side, size, number, face }) {
       style={{ width: size, height: size, transform: transforms[side] }}
     >
       {face
-        ? <FaceTile face={face} size={size} flat />
+        ? <FaceTile face={face} size={size} flat mod={mod} />
         : number != null
         ? <span style={{
             display: 'grid', placeItems: 'center', width: '100%', height: '100%',
@@ -61,15 +61,21 @@ function DiceFace({ pips, side, size, number, face }) {
             fontSize: size * 0.5, lineHeight: 1, color: 'inherit',
           }}>{number}</span>
         : <PipPattern n={pips} />}
+      {/* Marque de Magie sur un dé NON forgé (pips/nombre) : badge posé
+          directement sur la face — FaceTile s'en charge pour un dé forgé. */}
+      {!face && <FaceModBadge mod={mod} style={{ fontSize: size * 0.2 }} />}
     </div>
   );
 }
 
-export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false, faces = null, idleSpin = false }) {
+export default function Dice3D({ value = 1, rolling = false, size = 96, onClick, disabled = false, faces = null, faceMods = null, idleSpin = false }) {
   const T = useT();
   // Dé personnalisé (Forge) : chaque face du cube porte sa face forgée. Sinon,
   // au-delà d'un D6 (legacy), on écrit le nombre sur la face avant.
   const f = Array.isArray(faces) && faces.length === 6 ? faces : null;
+  // Faces bénies/maudites (Magie) : marques par SLOT 1..6 (team.faceMods),
+  // passées par les appelants qui affichent le dé D'UNE ÉQUIPE.
+  const m = faceMods || {};
   const numeric = !f && value > 6;
   const target = numeric ? { x: 0, y: 0 } : (DICE_FACE_ROT[value] || DICE_FACE_ROT[1]);
   const spins = rolling ? 4 : 0;
@@ -102,12 +108,12 @@ export default function Dice3D({ value = 1, rolling = false, size = 96, onClick,
           }),
         }}
       >
-        <DiceFace pips={1} side="front"  size={size} number={numeric ? value : null} face={f ? f[0] : null} />
-        <DiceFace pips={6} side="back"   size={size} face={f ? f[5] : null} />
-        <DiceFace pips={3} side="top"    size={size} face={f ? f[2] : null} />
-        <DiceFace pips={4} side="bottom" size={size} face={f ? f[3] : null} />
-        <DiceFace pips={2} side="right"  size={size} face={f ? f[1] : null} />
-        <DiceFace pips={5} side="left"   size={size} face={f ? f[4] : null} />
+        <DiceFace pips={1} side="front"  size={size} number={numeric ? value : null} face={f ? f[0] : null} mod={m[1]} />
+        <DiceFace pips={6} side="back"   size={size} face={f ? f[5] : null} mod={m[6]} />
+        <DiceFace pips={3} side="top"    size={size} face={f ? f[2] : null} mod={m[3]} />
+        <DiceFace pips={4} side="bottom" size={size} face={f ? f[3] : null} mod={m[4]} />
+        <DiceFace pips={2} side="right"  size={size} face={f ? f[1] : null} mod={m[2]} />
+        <DiceFace pips={5} side="left"   size={size} face={f ? f[4] : null} mod={m[5]} />
       </div>
     </div>
   );

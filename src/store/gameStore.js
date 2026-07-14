@@ -31,6 +31,10 @@ import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
 import { getEffectValue, getSubjectLootBonus, explainEffectValue, findBuff, hasBuff, buffValue, isDuelImmune, isTrapImmune, resolveAmount, isGoldStealImmune, isItemStealImmune, reducedRecul, itemKeyOf, itemEnchantsOf, hasStreakGuard, minRollFloor, interestPct, tithePct } from '../logic/itemEffects.js';
 import { RECIPES } from '../data/recipes.js';
+import { SPELLS, matchSpell } from '../data/spells.js';
+import { RUNES, RUNE_KEYS, runeName } from '../data/runes.js';
+import { MAGIC } from '../logic/balanceConfig.js';
+import { magicNow, spendMagic, gainMagicBlock, materializeMagic, initTeamMagic, starterKnowledge } from '../logic/magic.js';
 import { ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette.js';
 import { tg, tgPlural, getLang } from '../i18n';
 import { locName } from '../i18n/content.js';
@@ -383,6 +387,7 @@ export const useGameStore = create((set, get) => ({
   shopFamilies: () => [
     ...(extOn(get().extensions, 'alchemy') ? ['ingredient'] : []),
     ...(extOn(get().extensions, 'enchant') ? ['parchment'] : []),
+    ...(extOn(get().extensions, 'magic') ? ['magic'] : []),
   ],
 
   enabledEvents: Object.keys(EVENTS),
@@ -829,6 +834,7 @@ export const useGameStore = create((set, get) => ({
       ? composeSpaceBoard({ ...boardParams, subjects: boardSubjects })
       : generateBoard({ ...boardParams, subjects: boardSubjects });
     const forgeOn = extOn(get().extensions, 'forge');
+    const magicOn = extOn(get().extensions, 'magic');
     const teams = setupTeams.map((t) => ({
       ...t, pos: 'depart', powers: {},
       // Langue LV2 de l'équipe (choisie à la création) ; repli espagnol si le mode
@@ -845,6 +851,9 @@ export const useGameStore = create((set, get) => ({
       metier: null,
       // Forge de dés : dé standard 1→6 + stock de faces achetées (vide au départ).
       ...(forgeOn ? { dieFaces: defaultDieFaces(), faceStock: [] } : {}),
+      // Magie : barre {stored, lastTs} (accrual temps réel), codex de départ
+      // (sorts les moins chers + leurs runes) et faces bénies/maudites (aucune).
+      ...(magicOn ? { magic: initTeamMagic(), ...starterKnowledge(), faceMods: {} } : {}),
     }));
     set({
       devSandbox: false,
@@ -859,7 +868,7 @@ export const useGameStore = create((set, get) => ({
         startedAt: new Date().toISOString(),
         classLabel: get().classLabel || '',
         subjects: statsSubjects, level: get().level || [],
-        answers: [], itemUses: [], powerUses: [],
+        answers: [], itemUses: [], powerUses: [], spellCasts: [],
       },
       statsArchived: false,
       shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies(), get().activeSubjects()) : [],
@@ -1030,6 +1039,23 @@ export const useGameStore = create((set, get) => ({
     const forgeRoll = resolveFaceAtRoll(team, face);
     forgeRoll.logs.forEach(addLog);
 
+    // Faces bénies/maudites (extension Magie) : ±or quand la face (slot 1→6)
+    // tombe. Indépendant de la forge (team.faceMods, pas dieFaces) et HORS du
+    // pipeline de déplacement (minRoll/bonus/malus/vent inchangés). Cumule avec
+    // un éventuel patch d'or de la face forgée (Prime).
+    const slotNum = ((value - 1) % 6 + 6) % 6 + 1;
+    const faceMod = extOn(get().extensions, 'magic') ? (team.faceMods || {})[slotNum] : null;
+    let faceModPatch = {};
+    if (faceMod?.gold > 0) {
+      const before = forgeRoll.patch.money != null ? forgeRoll.patch.money : (team.money || 0);
+      const delta = faceMod.kind === 'curse' ? -faceMod.gold : faceMod.gold;
+      faceModPatch = { money: Math.max(0, before + delta) };
+      const hitKey = faceMod.kind === 'curse' ? 'log.magic.faceCurseHit' : 'log.magic.faceBlessHit';
+      addLog(tg(hitKey, { emoji: team.emoji, name: team.name, face: slotNum, n: faceMod.gold }));
+      effectH.announce(set, get, faceMod.kind === 'curse' ? '☠️' : '✨',
+        tg(`${hitKey}.toast`, { n: faceMod.gold }), faceMod.kind === 'curse' ? '#8a1f2e' : '#e8c34a');
+    }
+
     const result = moveForward(board, team.pos, eff);
 
     // Pi\u00E8ges TRAVERS\u00C9S : 50% par case foul\u00E9e. On EXCLUT la case d'arr\u00EAt final
@@ -1058,7 +1084,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     const newTeams = [...teams];
-    newTeams[currentTeam] = { ...team, pos: finalPos, ...forgeRoll.patch };
+    newTeams[currentTeam] = { ...team, pos: finalPos, ...forgeRoll.patch, ...faceModPatch };
     // Build animation waypoints from path
     const waypoints = path.map((id) => ({ x: board[id].x, y: board[id].y }));
     set({ teams: newTeams, movePath: [{ teamIndex: currentTeam, waypoints, type: 'forward' }] });
@@ -1947,6 +1973,18 @@ export const useGameStore = create((set, get) => ({
           }
         }
       }
+      // Canal RUNES (extension Magie) : sur bonne réponse, chance de DÉCHIFFRER
+      // une rune inconnue (× temps restant, comme les autres canaux). Les runes
+      // ne sont pas des objets (pas de placeItem/LootReveal) : apprentissage
+      // direct au codex via engineLearnRune (log + toast).
+      if (extOn(get().extensions, 'magic')) {
+        const kt = get().teams[currentTeam];
+        const unknown = RUNE_KEYS.filter((k) => !(kt.knownRunes || []).includes(k));
+        if (unknown.length && Math.random() < (MAGIC.answerRuneRate || 0) * timeRatio) {
+          const rk = unknown[Math.floor(Math.random() * unknown.length)];
+          get().engineLearnRune(currentTeam, rk);
+        }
+      }
       // Butin « garanti » (face Forge) : si rien n'est tombé, force un consommable.
       if (lootTeam.forgeButin === 'guaranteed' && !drops.length) {
         const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable', activeSubjects: lootSubjects });
@@ -2398,6 +2436,94 @@ export const useGameStore = create((set, get) => ({
     get().addLog(tg('log.fx.discoverRecipe', { emoji: team.emoji, name: team.name, potion: pName }));
   },
 
+  // --- Magie (extension « magic ») : handlers du moteur d'effets ---
+  // Ajoute de la magie à la barre (matérialise l'accrual puis crédite, plafonné).
+  engineGainMagic: (teamIdx, n = 10) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team?.magic) return;
+    const nt = [...get().teams];
+    nt[idx] = { ...team, magic: gainMagicBlock(team, n) };
+    set({ teams: nt });
+    get().addLog(tg('log.fx.gainMagic', { emoji: team.emoji, name: team.name, n }));
+    effectH.announce(set, get, '✨', tg('log.fx.gainMagic.toast', { n }), '#8745d4');
+  },
+
+  // Révèle une rune au codex (précise ou inconnue au hasard). No-op si tout est connu.
+  engineLearnRune: (teamIdx, runeKey) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const known = team.knownRunes || [];
+    let rk = runeKey && RUNES[runeKey] ? runeKey : null;
+    if (!rk) {
+      const undisc = RUNE_KEYS.filter((k) => !known.includes(k));
+      if (!undisc.length) return;
+      rk = undisc[Math.floor(Math.random() * undisc.length)];
+    }
+    if (known.includes(rk)) return;
+    const nt = [...get().teams];
+    nt[idx] = { ...team, knownRunes: [...known, rk] };
+    set({ teams: nt });
+    get().addLog(tg('log.fx.learnRune', { emoji: team.emoji, name: team.name, icon: RUNES[rk].icon, rune: runeName(rk, getLang()) }));
+    effectH.announce(set, get, RUNES[rk].icon, tg('log.fx.learnRune.toast'), '#8745d4');
+  },
+
+  // Révèle un sort au codex (précis ou inconnu au hasard) + les runes de sa
+  // séquence (un sort « connu » doit toujours être traçable).
+  engineLearnSpell: (teamIdx, spellKey) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const known = team.knownSpells || [];
+    let spell = spellKey ? SPELLS.find((s) => s.key === spellKey && s.enabled !== false) : null;
+    if (!spell) {
+      const undisc = SPELLS.filter((s) => s.enabled !== false && !known.includes(s.key));
+      if (!undisc.length) return;
+      spell = undisc[Math.floor(Math.random() * undisc.length)];
+    }
+    if (known.includes(spell.key)) return;
+    const knownRunes = [...new Set([...(team.knownRunes || []), ...(spell.runes || [])])];
+    const nt = [...get().teams];
+    nt[idx] = { ...team, knownSpells: [...known, spell.key], knownRunes };
+    set({ teams: nt });
+    get().addLog(tg('log.fx.learnSpell', { emoji: team.emoji, name: team.name, icon: spell.icon || '✨', spell: loc(spell, 'name') }));
+    effectH.announce(set, get, spell.icon || '✨', tg('log.fx.learnSpell.toast'), '#8745d4');
+  },
+
+  // Bénit/maudit une face (slot 1→6) du dé de l'équipe : ±or quand elle tombe.
+  // Une nouvelle marque ÉCRASE celle du même slot (résolution : handleDiceResult).
+  engineMarkFace: (teamIdx, face, kind, gold, byIdx) => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const slot = Math.min(6, Math.max(1, Math.round(face) || 1));
+    const nt = [...get().teams];
+    nt[idx] = { ...team, faceMods: { ...(team.faceMods || {}), [slot]: { kind, gold: Math.max(1, gold || 10), by: byIdx ?? get().currentTeam } } };
+    set({ teams: nt });
+    const key = kind === 'curse' ? 'log.fx.curseFace' : 'log.fx.blessFace';
+    get().addLog(tg(key, { emoji: team.emoji, name: team.name, face: slot, n: Math.max(1, gold || 10) }));
+    effectH.announce(set, get, kind === 'curse' ? '☠️' : '✨', tg(`${key}.toast`, { face: slot }), kind === 'curse' ? '#8a1f2e' : '#e8c34a');
+    if (kind === 'curse') get().emitCurseVfx?.(idx, { icon: '☠️', color: '#8a1f2e', tone: 'malus' });
+  },
+
+  // Dissipe les marques du dé (scope 'bless' | 'curse' | 'all').
+  engineCleanseFaces: (teamIdx, scope = 'all') => {
+    const idx = teamIdx ?? get().currentTeam;
+    const team = get().teams[idx];
+    if (!team) return;
+    const mods = team.faceMods || {};
+    const kept = Object.fromEntries(Object.entries(mods).filter(([, m]) =>
+      (scope === 'bless' ? m.kind !== 'bless' : scope === 'curse' ? m.kind !== 'curse' : false)));
+    const removed = Object.keys(mods).length - Object.keys(kept).length;
+    if (!removed) return;
+    const nt = [...get().teams];
+    nt[idx] = { ...team, faceMods: kept };
+    set({ teams: nt });
+    get().addLog(tg('log.fx.cleanseFaces', { emoji: team.emoji, name: team.name, n: removed }));
+    effectH.announce(set, get, '💧', tg('log.fx.cleanseFaces.toast'), '#2f9d5a');
+  },
+
   // Enchante GRATUITEMENT une pièce équipée (specs données, sinon une rune aléatoire
   // légère). Choisit une pièce sous le plafond d'enchants. Sans effet si rien à enchanter.
   engineEnchantEquipped: (teamIdx, specs, slot) => {
@@ -2624,6 +2750,108 @@ export const useGameStore = create((set, get) => ({
     return itemH.craftPotion(set, get, teamIdx, (keys || []).map(resolve));
   },
 
+  // --- Magie : table des sorts (TBI, fallback sans téléphone) + incantation ---
+  showSpellTable: false,
+  openSpellTable: () => {
+    const st = get();
+    const resolving = !!(st.showQuestion || st.showEvent || st.showFight || st.showDuelChoice
+      || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
+    if (extOn(st.extensions, 'magic') && !st.finished && !resolving) set({ showSpellTable: true });
+  },
+  closeSpellTable: () => set({ showSpellTable: false }),
+  // Cérémonie de cast (overlay TBI, pattern forgeCeremony) — jouée MÊME pour un
+  // cast venu du téléphone (le spectacle est au tableau, cf. SpellCeremony).
+  spellCeremony: null,
+  spellCeremonySeq: 0,
+  clearSpellCeremony: () => set({ spellCeremony: null }),
+
+  // Incante une séquence de runes pour une équipe (TBI direct ou intent mobile).
+  // payload = { runes: ['cercle', ...], target?: idx, face?: 1..6 }. Autorité TBI :
+  // match du sort, coût, découverte expérimentale, fizzle payant, effets.
+  // JAMAIS de picker suspendu ici (cible/face pré-résolues ou « magie sauvage ») :
+  // la file d'effets est unique et un cast peut venir de n'importe quelle équipe.
+  castSpellFor: (teamIdx, payload = {}) => {
+    const st = get();
+    const idx = teamIdx ?? st.currentTeam;
+    const team = st.teams[idx];
+    if (!team || st.finished || !extOn(st.extensions, 'magic')) return { ok: false, reason: 'off' };
+    // Double filet (l'intent et la modale TBI gardent déjà) : ne jamais écraser
+    // une résolution en cours — la file pendingActions est UNIQUE.
+    const resolving = !!(st.showQuestion || st.showEvent || st.showFight || st.showDuelChoice
+      || st.rolling || st.showDiceModal || st.awaitingChoice || st.pendingActions || st.pendingLanding);
+    if (resolving) return { ok: false, reason: 'busy' };
+    const runes = (Array.isArray(payload.runes) ? payload.runes : []).filter((k) => RUNES[k]).slice(0, 4);
+    if (!runes.length) return { ok: false, reason: 'empty' };
+    const now = Date.now();
+    // Anti-spam : cooldown léger entre deux incantations d'une même équipe.
+    if ((MAGIC.castCooldownMs || 0) > 0 && team.lastCastAt && now - team.lastCastAt < MAGIC.castCooldownMs) {
+      return { ok: false, reason: 'cooldown' };
+    }
+    const cerId = (st.spellCeremonySeq || 0) + 1;
+    const cerBase = { id: cerId, teamIdx: idx, teamName: team.name, teamEmoji: team.emoji, runes };
+    const spell = matchSpell(runes);
+    if (!spell) {
+      // Fizzle : séquence reconnue mais invalide → le coût de tentative est
+      // PERDU (dissuade le brute-force de combinaisons). Jamais sous 0.
+      const cost = Math.max(0, MAGIC.fizzleCost || 0);
+      const nt = [...st.teams];
+      nt[idx] = { ...team, magic: { stored: Math.max(0, magicNow(team, now) - cost), lastTs: now }, lastCastAt: now };
+      set({ teams: nt, spellCeremony: { ...cerBase, outcome: 'fizzle' }, spellCeremonySeq: cerId });
+      get().addLog(tg('log.magic.fizzle', { emoji: team.emoji, name: team.name, cost }));
+      get().recordStat('spellCasts', { teamIdx: idx, outcome: 'fizzle', runes });
+      saveGame(get());
+      return { ok: false, reason: 'fizzle' };
+    }
+    const cost = Math.max(0, spell.cost || 0);
+    const block = spendMagic(team, cost, now);
+    if (!block) {
+      get().addLog(tg('log.magic.noMana', { emoji: team.emoji, name: team.name, need: cost }));
+      effectH.announce(set, get, '✨', tg('log.magic.noMana.toast'), '#8a1f2e');
+      return { ok: false, reason: 'noMana' };
+    }
+    // Découverte expérimentale : combo valide encore inconnue → apprise (codex),
+    // avec ses runes (un sort connu doit toujours être traçable).
+    const known = team.knownSpells || [];
+    const discovered = !known.includes(spell.key);
+    const nt = [...st.teams];
+    nt[idx] = {
+      ...team, magic: block, lastCastAt: now,
+      ...(discovered ? {
+        knownSpells: [...known, spell.key],
+        knownRunes: [...new Set([...(team.knownRunes || []), ...(spell.runes || [])])],
+      } : {}),
+    };
+    set({
+      teams: nt,
+      spellCeremony: {
+        ...cerBase, outcome: discovered ? 'discover' : 'cast', spellKey: spell.key,
+        name: spell.name, name_en: spell.name_en, icon: spell.icon, color: spell.color, cost,
+      },
+      spellCeremonySeq: cerId,
+    });
+    get().addLog(tg(discovered ? 'log.magic.discover' : 'log.magic.cast',
+      { emoji: team.emoji, name: team.name, icon: spell.icon || '✨', spell: loc(spell, 'name'), cost }));
+    get().recordStat('spellCasts', { teamIdx: idx, outcome: discovered ? 'discover' : 'cast', spell: spell.key });
+    // Cible/face pré-résolues : choisies au téléphone pour un sort connu, tirées
+    // au hasard sinon (« magie sauvage » des découvertes).
+    let targetTeam = (Number.isInteger(payload.target) && payload.target >= 0
+      && payload.target < nt.length && payload.target !== idx) ? payload.target : undefined;
+    if (targetTeam === undefined && spell.targeted && nt.length > 1) {
+      const others = nt.map((_, i) => i).filter((i) => i !== idx);
+      targetTeam = others[Math.floor(Math.random() * others.length)];
+    }
+    const face = (Number.isInteger(payload.face) && payload.face >= 1 && payload.face <= 6) ? payload.face : undefined;
+    if (Array.isArray(spell.actions) && spell.actions.length) {
+      effectH.runEffects(set, get, spell.actions, {
+        sourceTeam: idx, source: 'spell',
+        ...(targetTeam !== undefined ? { targetTeam } : {}),
+        ...(face !== undefined ? { face } : {}),
+      });
+    }
+    saveGame(get());
+    return { ok: true, spell: spell.key, discovered };
+  },
+
   // --- Forge de dés : atelier ouvert depuis le dé 3D du HUD (extension forge) ---
   showForge: false,
   openForge: () => { if (craftEnabledFor(get().extensions, get().teams[get().currentTeam], 'forge')) set({ showForge: true }); },
@@ -2808,6 +3036,13 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'chooseMetier') {
       // Métiers : le propriétaire choisit son métier depuis le téléphone.
       get().chooseMetier(payload.craft, idx);
+    } else if (type === 'castSpell') {
+      // Magie : incantation depuis le téléphone. Garde GLOBALE (pas seulement
+      // l'équipe active) : la file d'effets (pendingActions) est UNIQUE — un
+      // cast pendant la résolution de N'IMPORTE QUELLE équipe l'écraserait.
+      // Le mobile grise « Incanter » via session.locked (même expression).
+      if (resolving) return;
+      get().castSpellFor(idx, payload);
     }
   },
 
@@ -3628,6 +3863,15 @@ export const useGameStore = create((set, get) => ({
     if (nt === get().teams) nt = [...nt];
     nt[newCurrent] = { ...reTeam, turnsSinceShop: sinceShop };
 
+    // Magie : matérialise l'accrual de TOUTES les équipes (stored ← valeur
+    // courante, lastTs ← now). Borne l'erreur d'accrual quand le taux de régen
+    // change entre-temps (équipement ±magicRegen, expiration de buff) — c'est le
+    // SEUL point de tick périodique, les barres s'animent localement sans store.
+    if (extOn(get().extensions, 'magic')) {
+      const nowMs = Date.now();
+      nt = nt.map((t) => (t.magic ? { ...t, magic: materializeMagic(t, nowMs) } : t));
+    }
+
     // Élan du retardataire (Relance L10) : en début de tour, si l'équipe est la
     // MOINS avancée (ou ex æquo au dernier rang), elle gagne 1 charge de relance.
     if (extOn(get().extensions, 'mastery')) {
@@ -3746,6 +3990,23 @@ export const useGameStore = create((set, get) => ({
     // Extensions : une save porte son propre jeu d'extensions. Sauvegardes
     // antérieures (champ absent) → tout activé (comportement historique).
     if (saved.extensions == null) set({ extensions: defaultExtensions() });
+    // Magie : `extOn` traite une clé ABSENTE comme active (compat historique) —
+    // une save antérieure à l'extension ne doit PAS se réveiller avec la magie :
+    // on fige explicitement à false si la clé manque.
+    else if (saved.extensions.magic === undefined) set({ extensions: { ...get().extensions, magic: false } });
+    // Magie ON : backfill des champs d'équipe (vieille save d'une partie magique
+    // interrompue) + JAMAIS de régen hors session → lastTs remis à maintenant.
+    if (extOn(get().extensions, 'magic')) {
+      const nowMs = Date.now();
+      set({
+        teams: get().teams.map((t) => ({
+          ...t,
+          magic: (t.magic && typeof t.magic.stored === 'number') ? { ...t.magic, lastTs: nowMs } : initTeamMagic(nowMs),
+          ...(Array.isArray(t.knownRunes) && Array.isArray(t.knownSpells) ? {} : starterKnowledge()),
+          faceMods: t.faceMods || {},
+        })),
+      });
+    }
     // `level` est désormais un tableau : normalise les sauvegardes au format chaîne.
     if (!Array.isArray(saved.level)) set({ level: [saved.level || 'cycle4'] });
     // Migration : ancien stock (rotatif, 4 objets) → nouvelle vitrine 8+8. On

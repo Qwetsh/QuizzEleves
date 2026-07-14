@@ -119,4 +119,26 @@ export const GLOSSARY_TERMS = {
     desc: "Un consommable/effet qui amortit le prochain recul subi (1 case par charge), en plus du pouvoir Bouclier. N'agit pas contre la Foudre.",
     desc_en: "A consumable/effect that cushions the next setback (1 square per charge), on top of the Shield power. Does not work against Lightning.",
   },
+  // --- Extension « Magie » ---
+  magie: {
+    name: 'Magie', name_en: 'Magic', icon: '✨', color: '#8745d4',
+    aliases: ['magie', 'magique', 'mana'],
+    aliases_en: ['magic', 'magical', 'mana'],
+    desc: "La ressource des sorts : chaque équipe a une barre de magie qui se recharge EN TEMPS RÉEL (magie par minute), même pendant les tours des autres. On la dépense en incantant sur la table des sorts ; certains équipements accélèrent la régénération ou agrandissent la barre.",
+    desc_en: "The spell resource: each team has a magic bar that refills IN REAL TIME (magic per minute), even during other teams' turns. Spend it by casting at the spell table; some gear speeds up regeneration or enlarges the bar.",
+  },
+  rune: {
+    name: 'Rune', name_en: 'Rune', icon: '🖋️', color: '#8745d4',
+    aliases: ['rune', 'runes'],
+    aliases_en: ['runes'],
+    desc: "Un signe magique qu'on TRACE AU DOIGT sur la table des sorts (le sens du tracé compte !). Les runes connues sont archivées au codex ; on en apprend en jouant (bonnes réponses, événements) — et un sort = une séquence précise de runes.",
+    desc_en: "A magic sign you TRACE WITH YOUR FINGER on the spell table (stroke direction matters!). Known runes are archived in the codex; you learn new ones by playing (correct answers, events) — and a spell = a precise sequence of runes.",
+  },
+  sortilege: {
+    name: 'Sortilège', name_en: 'Spell', icon: '🪄', color: '#8745d4',
+    aliases: ['sortilège', 'sortilèges', 'incantation', 'incanter'],
+    aliases_en: ['spells', 'incantation', 'casting'],
+    desc: "Une séquence ordonnée de runes tracées à la suite, qui coûte de la magie. Combo connue → le sort part ; combo valide inconnue → DÉCOUVERTE (inscrite au codex) ; combo invalide → le sort échoue et la magie d'essai est perdue. Effets possibles : or, déplacement, vol, bénir/maudire une face de dé, réponses instables…",
+    desc_en: "An ordered sequence of runes traced one after another, costing magic. Known combo → the spell fires; valid unknown combo → DISCOVERY (added to the codex); invalid combo → the spell fizzles and the attempt cost is lost. Possible effects: gold, movement, theft, blessing/cursing a die face, unstable answers…",
+  },
 };

@@ -1,0 +1,329 @@
+/* Cérémonie de lancement de sort (extension « Magie ») — 100 % procédural.
+   Overlay plein écran joué sur le TBI quand une équipe incante une séquence de
+   runes : cercle magique qui se dessine, glyphes en orbite, convergence + flash,
+   révélation du sort (ou éclatement penaud si le sort échoue).
+   --mc = couleur du sort, --out-delay = début du fondu de sortie. */
+
+.magic-cer {
+  position: fixed;
+  inset: 0;
+  z-index: 80; /* sous les VFX (250), au-dessus du plateau */
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--mc, #8745d4) 36%, transparent), transparent 62%),
+    radial-gradient(circle at 50% 52%, rgba(16, 9, 30, 0.72), rgba(6, 3, 14, 0.9));
+  animation: magic-cer-in 0.2s ease both, magic-cer-out 0.4s ease var(--out-delay, 2.2s) both;
+}
+.magic-cer.is-fizzle {
+  /* Raté : le voile vire au gris cendre, plus de teinte du sort. */
+  background: radial-gradient(circle at 50% 52%, rgba(74, 74, 88, 0.5), rgba(10, 10, 16, 0.88));
+}
+@keyframes magic-cer-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes magic-cer-out { to { opacity: 0; } }
+
+/* En-tête discret : équipe lanceuse. */
+.magic-cer-team {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 700;
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 5px 16px;
+  border-radius: 999px;
+  animation: magic-fade-in 0.3s ease 0.12s backwards;
+}
+
+/* Scène centrale (le cercle SVG est centré dedans, les glyphes orbitent autour). */
+.magic-cer-stage {
+  position: relative;
+  width: 560px;
+  height: 560px;
+  display: grid;
+  place-items: center;
+}
+.is-fizzle .magic-cer-stage { animation: magic-shake 0.4s linear 0.95s both; }
+@keyframes magic-shake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-7px, 3px) rotate(-0.6deg); }
+  35% { transform: translate(6px, -4px) rotate(0.5deg); }
+  55% { transform: translate(-5px, -3px); }
+  75% { transform: translate(4px, 3px) rotate(-0.4deg); }
+}
+
+/* ---- Cercle magique : double anneau + graduations + hexagramme ---- */
+.magic-circle { overflow: visible; }
+/* Rotation lente ; en fizzle le groupe s'efface au moment de la brisure. */
+.magic-rings { transform-box: fill-box; transform-origin: center; animation: magic-rot 11s linear infinite; }
+.magic-rings-rev { transform-box: fill-box; transform-origin: center; animation: magic-rot-rev 15s linear infinite; }
+.is-fizzle .magic-rings { animation: magic-rot 11s linear infinite, magic-fade-out 0.22s ease 1.22s forwards; }
+.is-fizzle .magic-rings-rev { animation: magic-rot-rev 15s linear infinite, magic-fade-out 0.22s ease 1.22s forwards; }
+@keyframes magic-rot { to { transform: rotate(360deg); } }
+@keyframes magic-rot-rev { to { transform: rotate(-360deg); } }
+@keyframes magic-fade-out { to { opacity: 0; } }
+
+/* Les anneaux se DESSINENT (pathLength=100 → dasharray/dashoffset normalisés). */
+.magic-ring {
+  fill: none;
+  stroke: var(--mc, #8745d4);
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 0; /* état final = tracé complet (repli reduced-motion) */
+  filter: drop-shadow(0 0 6px var(--mc, #8745d4));
+}
+.magic-ring-a { stroke-width: 3.5; animation: magic-ring-draw 0.55s ease-out 0.05s both; }
+.magic-ring-b { stroke-width: 1.6; opacity: 0.85; animation: magic-ring-draw 0.5s ease-out 0.22s both; }
+@keyframes magic-ring-draw { from { stroke-dashoffset: 100; } }
+
+/* Graduations : cercle en pointillés épais = tics radiaux. */
+.magic-grads {
+  fill: none;
+  stroke: color-mix(in srgb, var(--mc, #8745d4) 70%, #fff);
+  stroke-width: 11;
+  stroke-dasharray: 0.5 4.5;
+  opacity: 0.8;
+  animation: magic-fade-in 0.45s ease 0.35s backwards;
+}
+/* Hexagramme inscrit (2 triangles), très discret, contre-rotation via le groupe. */
+.magic-tri {
+  fill: none;
+  stroke: color-mix(in srgb, var(--mc, #8745d4) 55%, #fff);
+  stroke-width: 1.2;
+  opacity: 0.3;
+  animation: magic-fade-in 0.5s ease 0.45s backwards;
+}
+/* Points cardinaux sur l'anneau externe. */
+.magic-dot {
+  fill: color-mix(in srgb, var(--mc, #8745d4) 45%, #fff);
+  filter: drop-shadow(0 0 5px var(--mc, #8745d4));
+  animation: magic-fade-in 0.3s ease 0.55s backwards;
+}
+@keyframes magic-fade-in { from { opacity: 0; } }
+
+/* ---- Glyphes des runes, en orbite autour du cercle ----
+   Chaque glyphe apparaît à son tour (--d), se trace (dashoffset), puis CONVERGE
+   vers le centre juste avant le flash. En fizzle : il DÉCROCHE et tombe. */
+.magic-glyph {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 74px;
+  height: 74px;
+  margin: -37px 0 0 -37px;
+  transform: translate(var(--gx, 0px), var(--gy, 0px));
+  filter: drop-shadow(0 0 9px var(--mc, #8745d4)) drop-shadow(0 0 22px color-mix(in srgb, var(--mc, #8745d4) 55%, transparent));
+  animation:
+    magic-glyph-in 0.32s cubic-bezier(0.2, 0.8, 0.3, 1.3) var(--d, 0.5s) both,
+    magic-glyph-converge 0.26s cubic-bezier(0.6, 0, 0.9, 0.4) 1.42s forwards;
+}
+.is-fizzle .magic-glyph {
+  animation:
+    magic-glyph-in 0.32s cubic-bezier(0.2, 0.8, 0.3, 1.3) var(--d, 0.5s) both,
+    magic-glyph-drop 0.55s ease-in 1.25s forwards;
+}
+@keyframes magic-glyph-in {
+  from { opacity: 0; transform: translate(var(--gx, 0px), var(--gy, 0px)) scale(0.35) rotate(-24deg); }
+  to { opacity: 1; transform: translate(var(--gx, 0px), var(--gy, 0px)) scale(1); }
+}
+@keyframes magic-glyph-converge {
+  to { opacity: 0; transform: translate(0, 0) scale(0.12); }
+}
+@keyframes magic-glyph-drop {
+  to { opacity: 0; transform: translate(var(--gx, 0px), calc(var(--gy, 0px) + 74px)) scale(0.8) rotate(18deg); }
+}
+/* Le tracé du glyphe se dessine (même délai --d que son apparition). */
+.magic-glyph-line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--mc, #8745d4) 28%, #fff);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 0;
+  animation: magic-ring-draw 0.38s ease-out var(--d, 0.5s) both;
+}
+
+/* ---- FLASH blanc au moment où les glyphes fusionnent (cast/discover) ---- */
+.magic-flash {
+  position: absolute;
+  inset: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, rgba(255, 255, 255, 0.55) 42%, transparent 70%);
+  opacity: 0;
+  animation: magic-flash 0.26s ease-out 1.58s both;
+}
+@keyframes magic-flash {
+  0% { opacity: 0; transform: scale(0.5); }
+  35% { opacity: 0.95; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+/* ---- Révélation : icône + nom du sort + coût, gerbe d'étincelles ---- */
+.magic-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.magic-result-icon {
+  font-size: 86px;
+  line-height: 1;
+  filter: drop-shadow(0 0 26px var(--mc, #8745d4)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  animation: magic-pop 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.4) 1.68s backwards;
+}
+.magic-result-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 36px;
+  color: #fff;
+  text-align: center;
+  max-width: 520px;
+  text-shadow:
+    0 0 14px var(--mc, #8745d4),
+    0 0 36px var(--mc, #8745d4),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+  animation: magic-pop 0.3s ease 1.78s backwards;
+}
+.magic-result-cost {
+  font-weight: 800;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.38);
+  padding: 3px 13px;
+  border-radius: 999px;
+  animation: magic-fade-in 0.25s ease 1.95s backwards;
+}
+@keyframes magic-pop { from { opacity: 0; transform: scale(0.3); } }
+
+/* Étincelles radiales (même patron que forge-spark : --x/--y + délai). */
+.magic-sparks { position: absolute; inset: 0; pointer-events: none; }
+.magic-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff, var(--mc, #8745d4) 65%);
+  box-shadow: 0 0 8px var(--mc, #8745d4);
+  opacity: 0;
+  animation: magic-spark 0.85s ease-out both;
+  animation-delay: calc(1.66s + var(--sd, 0ms));
+}
+@keyframes magic-spark {
+  0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(0.12); opacity: 0; }
+}
+
+/* ---- Variante DISCOVER : anneau doré qui s'expanse + bandeau ---- */
+.magic-gold-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 214, 90, 0.9);
+  box-shadow: 0 0 30px rgba(255, 200, 60, 0.7), inset 0 0 22px rgba(255, 200, 60, 0.4);
+  opacity: 0;
+  animation: magic-gold-ring 0.9s ease-out 1.76s both;
+}
+@keyframes magic-gold-ring {
+  from { transform: scale(0.3); opacity: 1; }
+  to { transform: scale(2.3); opacity: 0; }
+}
+.magic-banner {
+  position: absolute;
+  left: 50%;
+  bottom: -62px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 24px;
+  color: #3a2a06;
+  background: linear-gradient(180deg, #ffe9a8, #f2c14e);
+  border: 2px solid #b8860b;
+  border-radius: 999px;
+  padding: 10px 28px;
+  box-shadow: 0 6px 24px rgba(242, 193, 78, 0.5);
+  animation: magic-banner 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.35) 1.86s backwards;
+}
+@keyframes magic-banner {
+  from { opacity: 0; transform: translateX(-50%) translateY(18px) scale(0.7); }
+}
+
+/* ---- Variante FIZZLE : le cercle se brise, fumée, texte penaud ---- */
+/* Éclats de l'anneau qui se dispersent (--sx/--sy = direction, --sr = rotation). */
+.magic-shard {
+  fill: none;
+  stroke: var(--mc, #8745d4);
+  stroke-width: 3.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: magic-shard 0.65s ease-out 1.25s both;
+}
+@keyframes magic-shard {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  10% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--sr, 0deg)); }
+}
+/* Bouffées de fumée grise (cercles flous qui montent). */
+.magic-smoke {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: var(--sz, 60px);
+  height: var(--sz, 60px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(185, 185, 196, 0.55), rgba(120, 120, 132, 0.28) 58%, transparent 76%);
+  filter: blur(6px);
+  opacity: 0;
+  animation: magic-smoke 1s ease-out var(--d, 1.3s) both;
+}
+@keyframes magic-smoke {
+  0% { transform: translate(calc(-50% + var(--x, 0px)), -30%) scale(0.4); opacity: 0; }
+  25% { opacity: 0.8; }
+  100% { transform: translate(calc(-50% + var(--x, 0px)), -170%) scale(1.55); opacity: 0; }
+}
+.magic-fizzle-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.magic-pfff {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 32px;
+  color: #d4d4dc;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: magic-pop 0.3s ease 1.45s backwards;
+}
+.magic-fizzle-label {
+  font-weight: 800;
+  font-size: 21px;
+  color: #b8b8c4;
+  background: rgba(0, 0, 0, 0.38);
+  padding: 4px 16px;
+  border-radius: 999px;
+  animation: magic-fade-in 0.3s ease 1.62s backwards;
+}
+
+/* Accessibilité : pas d'animations → composition statique simple (les états de
+   base sont les états FINAUX : cercle tracé, glyphes en orbite, texte visible). */
+@media (prefers-reduced-motion: reduce) {
+  .magic-cer, .magic-cer * { animation: none !important; }
+}

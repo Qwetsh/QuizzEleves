@@ -159,7 +159,24 @@ const DEFAULT_WEATHER = {
 };
 export const WEATHER = clone(DEFAULT_WEATHER);
 
-export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS, forge: DEFAULT_FORGE, weather: DEFAULT_WEATHER };
+// --- Magie (extension « magic ») : tout est calibrable, rien en dur ---
+// La barre se recharge en TEMPS RÉEL (magie/minute), modèle « accrual lazy » :
+// la valeur courante est CALCULÉE à la lecture (logic/magic.js), le store n'est
+// muté qu'aux transactions (cast/gain) + à nextTurn. La logique lit MAGIC.*.
+const DEFAULT_MAGIC = {
+  max: 100,              // plafond de la barre (hors passifs magicMax)
+  regenPerMin: 4,        // régénération de base (magie/minute, hors passifs/buffs magicRegen)
+  start: 30,             // magie au départ de la partie
+  fizzleCost: 8,         // coût perdu quand une séquence RECONNUE ne correspond à aucun sort
+  answerRuneRate: 0.1,   // proba max d'apprendre une rune sur bonne réponse (× temps restant)
+  recogThreshold: 0.8,   // score $1 minimal pour reconnaître une rune (en dessous : rejet gratuit)
+  castCooldownMs: 3000,  // délai minimal entre deux casts d'une même équipe (anti-spam)
+  starterRunes: 4,       // nombre de runes connues au départ (tirées du catalogue)
+  starterSpells: 2,      // nombre de sorts connus au départ (les moins chers)
+};
+export const MAGIC = clone(DEFAULT_MAGIC);
+
+export const DEFAULTS = { powers: DEFAULT_POWERS, loot: DEFAULT_LOOT, sets: DEFAULT_SETS, forge: DEFAULT_FORGE, weather: DEFAULT_WEATHER, magic: DEFAULT_MAGIC };
 
 const LS_KEY = 'quete_balance_overrides_v1';
 
@@ -198,6 +215,8 @@ function resetToDefaults() {
   Object.assign(FORGE, clone(DEFAULT_FORGE));
   // Météo : reset profond (sous-objets cadence/weights/pool…).
   Object.assign(WEATHER, clone(DEFAULT_WEATHER));
+  // Magie : plat (scalaires uniquement).
+  Object.assign(MAGIC, clone(DEFAULT_MAGIC));
   // Sets : supprime les sets CUSTOM créés par overrides (absents des défauts),
   // puis restaure name/icon/color/bonus d'origine des sets de base (clone profond).
   for (const k of Object.keys(SETS)) { if (!DEFAULT_SETS[k]) delete SETS[k]; }
@@ -252,6 +271,9 @@ export function applyBalance(overrides) {
 
   // Météo : fusion récursive (cadence, poids, durées, facteurs, pool…).
   if (ov.weather) deepAssign(WEATHER, ov.weather);
+
+  // Magie : fusion plate (tout est scalaire).
+  if (ov.magic) Object.assign(MAGIC, ov.magic);
 
   // Sets : modifications des sets de base ET CRÉATION de sets personnalisés
   // (override portant `custom:true` → la clé est ajoutée à SETS).

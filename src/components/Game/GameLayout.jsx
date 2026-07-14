@@ -6,6 +6,7 @@ import BoardSVG from './BoardSVG';
 import Dice from './Dice';
 import PowerButtons from './Sidebar/PowerButtons';
 import ConsumableBar from './Sidebar/ConsumableBar';
+import MagicGauge from './MagicGauge';
 import GameLog from './Sidebar/GameLog';
 import BottomBar from './BottomBar';
 import InfoPopover from './InfoPopover';
@@ -32,9 +33,11 @@ import DuelChoiceModal from '../Modals/DuelChoiceModal';
 import InventoryModal from '../Modals/InventoryModal';
 import ScribeModal from '../Modals/ScribeModal';
 import AlchemyModal from '../Modals/AlchemyModal';
+import SpellTableModal from '../Modals/SpellTableModal';
 import ForgeModal from '../Modals/ForgeWorkshop';
 import DiceRollModal from '../Modals/DiceRollModal';
 import ForgeCeremony from './ForgeCeremony';
+import SpellCeremony from './SpellCeremony';
 import WeatherOverlay from './WeatherOverlay';
 import WeatherBanner from './WeatherBanner';
 import ChargePickerModal from '../Modals/ChargePickerModal';
@@ -86,6 +89,10 @@ export default function GameLayout() {
   const alchemyOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'alchemy'));
   const forgeOn = useGameStore((s) => craftEnabledFor(s.extensions, s.teams[s.currentTeam], 'forge'));
   const weatherOn = useGameStore((s) => extOn(s.extensions, 'weather'));
+  // Magie : table des sorts TBI (repli sans téléphone + test DEV) — pas de
+  // gating métier (la magie n'est pas un artisanat).
+  const magicOn = useGameStore((s) => extOn(s.extensions, 'magic'));
+  const openSpellTable = useGameStore((s) => s.openSpellTable);
   // Mode « jeu en ligne » : la diffusion est gérée par OnlineHost (instantané
   // complet) — on n'active pas le panneau mobile (payload manette) qui publierait
   // en concurrence sur le même code de session.
@@ -205,6 +212,13 @@ export default function GameLayout() {
               </button>
             )}
 
+            {/* Table des sorts (extension Magie) : tracer/incanter sur le TBI */}
+            {magicOn && (
+              <button onClick={openSpellTable} aria-label={T('game.openMagic')} title={T('game.openMagic')} className="rg-btn" style={{ borderColor: '#6a2fd4' }}>
+                <span className="rg-btn__emoji">{'\u{2728}'}</span>{T('game.magicBtn')}
+              </button>
+            )}
+
             {/* Boutons dev : pieces gratuites pour tester les achats (localhost uniquement) */}
             {import.meta.env.DEV && [10, 100, 1000].map((n) => (
               <button
@@ -253,6 +267,7 @@ export default function GameLayout() {
         {/* Dice area — plateau de dé en bois sombre */}
         <div className="rg-tray" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <Dice />
+          <MagicGauge team={team} detailed />
           <PowerButtons />
           <ConsumableBar />
         </div>
@@ -303,6 +318,7 @@ export default function GameLayout() {
 
       {/* Modals */}
       <ForgeCeremony />
+      <SpellCeremony />
       <WeatherOverlay />
       <DiceRollModal />
       <QuestionModal />
@@ -319,6 +335,7 @@ export default function GameLayout() {
       <InventoryModal />
       <ScribeModal />
       <AlchemyModal />
+      <SpellTableModal />
       {forgeOn && <ForgeModal />}
       <FightModal />
       <DuelChoiceModal />

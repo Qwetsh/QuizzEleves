@@ -85,6 +85,9 @@ export const BUFF_INFO = {
   tithe: { tone: 'buff', icon: '⛪', color: '#c8911f',
     name: (b, lang) => L(lang, 'Dîme', 'Tithe'),
     desc: (b, lang) => L(lang, `Prélève ${b.n ?? 0}% de l'or gagné par les adversaires`, `Take ${b.n ?? 0}% of opponents' earned gold`) },
+  magicRegen: { tone: 'buff', icon: '✨', color: '#8745d4',
+    name: (b, lang) => L(lang, '+Magie/min', '+Magic/min'),
+    desc: (b, lang) => L(lang, `+${b.n ?? 1} magie par minute`, `+${b.n ?? 1} magic per minute`) },
 };
 
 export function getTeamEffects(team, lang = getLang()) {
@@ -211,6 +214,22 @@ export function getTeamEffects(team, lang = getLang()) {
     push({ key: 'forced', tone: 'malus', icon: s.icon || '\u{1F3AF}', color: s.color || '#8a1f2e', link: { type: 'subject', key: team.forcedSubject },
       name: L(lang, 'Thème imposé', 'Forced subject'),
       desc: L(lang, `Question imposée : ${sn}`, `Forced question: ${sn}`) });
+  }
+  // Réponses instables (sort de magie / Modeleur) : consommé à la prochaine question.
+  if (team.modeleurInterval) {
+    push({ key: 'unstable', tone: 'malus', icon: '🌫️', color: '#8745d4', link: { type: 'term', key: 'malediction' },
+      name: L(lang, 'Réponses instables', 'Unstable answers'),
+      desc: L(lang, `À ta prochaine question, les réponses changent de place toutes les ${team.modeleurInterval}s`, `On your next question, answers shuffle every ${team.modeleurInterval}s`) });
+  }
+  // Faces bénies/maudites (Magie) : marques persistantes sur le dé (slot 1→6).
+  for (const [slot, m] of Object.entries(team.faceMods || {})) {
+    if (!m) continue;
+    const cursed = m.kind === 'curse';
+    push({ key: `faceMod-${slot}`, tone: cursed ? 'malus' : 'buff', icon: cursed ? '☠️' : '✨', n: Number(slot), color: cursed ? '#8a1f2e' : '#e8c34a',
+      name: cursed ? L(lang, `Face ${slot} maudite`, `Face ${slot} cursed`) : L(lang, `Face ${slot} bénie`, `Face ${slot} blessed`),
+      desc: cursed
+        ? L(lang, `Face ${slot} du dé maudite : −${m.gold} or quand elle tombe`, `Die face ${slot} cursed: −${m.gold} gold when it lands`)
+        : L(lang, `Face ${slot} du dé bénie : +${m.gold} or quand elle tombe`, `Die face ${slot} blessed: +${m.gold} gold when it lands`) });
   }
 
   // --- Effets de durée (buffs des consommables), avec compteur de tours ---

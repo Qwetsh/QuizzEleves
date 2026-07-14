@@ -143,6 +143,19 @@ export const ITEMS = {
     desc: 'Reculs subis réduits de 2 cases, immunisé contre la Tempête.',
     effects: [{ type: 'reculReduction', value: 2 }, { type: 'tempeteImmune', value: 1 }],
   },
+  // — Magie (family 'magic' : en boutique seulement si l'extension est active).
+  // Passifs à valeur FIXE uniquement (le taux de régen doit rester stable entre
+  // deux lectures, cf. logic/magic.js).
+  focusArcanique: {
+    name: 'Focus arcanique', name_en: 'Arcane focus', icon: '🔮', slot: 'feet', rarity: 'rare', price: 26, family: 'magic',
+    desc: '+2 magie par minute.', desc_en: '+2 magic per minute.',
+    effects: [{ type: 'magicRegen', value: 2 }],
+  },
+  amuletteDeMana: {
+    name: 'Amulette de mana', name_en: 'Mana amulet', icon: '💠', slot: 'feet', rarity: 'rare', price: 24, family: 'magic',
+    desc: '+30 de magie maximum.', desc_en: '+30 maximum magic.',
+    effects: [{ type: 'magicMax', value: 30 }],
+  },
 
   // --- Consommables ---
   potionHate: {

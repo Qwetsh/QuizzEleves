@@ -86,6 +86,14 @@ export const EXTENSIONS = [
     default: false,
   },
   {
+    id: 'magic',
+    name: 'Magie',
+    short: 'Magie',
+    icon: '✨',
+    desc: 'Chaque équipe a une barre de magie qui se recharge en temps réel (magie par minute). On lance un sort en traçant une séquence de runes au doigt sur la table des sorts (téléphone ou tableau) ; les runes et sorts connus s’archivent dans un codex, les autres se gagnent en jouant… ou se découvrent en expérimentant. Désactivée : pas de magie.',
+    default: false,
+  },
+  {
     id: 'metier',
     name: 'Métiers',
     short: 'Métiers',

@@ -92,6 +92,7 @@ export default function DiceRollModal() {
   // Visuel forgeable pour TOUT le monde dès que Forge OU Métiers est active (un
   // non-forgeron peut avoir un dé forgé par un autre via la prestation de forgeage).
   const dieVisualOn = useGameStore((s) => extOn(s.extensions, 'forge') || metierActive(s.extensions));
+  const magicOn = useGameStore((s) => extOn(s.extensions, 'magic'));
   const completeDiceRoll = useGameStore((s) => s.completeDiceRoll);
 
   const [phase, setPhase] = useState('intro');
@@ -101,6 +102,8 @@ export default function DiceRollModal() {
   // Forge : le dé montre les faces forgées ; la face tirée (slot = diceValue)
   // donne la VALEUR de déplacement et l'effet à révéler (≠ adresse du slot).
   const faces = dieVisualOn && team ? getDieFaces(team) : null;
+  // Faces bénies/maudites (Magie) : badges ✨/☠️ visibles pendant la cérémonie.
+  const faceMods = magicOn && team ? team.faceMods : null;
   const landed = faces && diceValue ? faces[((diceValue - 1) % 6 + 6) % 6] : null;
   // Cases réellement parcourues = valeur de face (bornée) + bonus de dé − malus de
   // dé, plancher 0 — IDENTIQUE à handleDiceResult, pour ne pas annoncer un nombre
@@ -168,7 +171,7 @@ export default function DiceRollModal() {
           )}
 
           <div className={'dice-modal-dice ' + (phase === 'reveal' || phase === 'outro' ? 'is-revealed' : '')}>
-            <Dice3D value={diceValue} rolling={phase !== 'intro'} size={220} faces={faces} />
+            <Dice3D value={diceValue} rolling={phase !== 'intro'} size={220} faces={faces} faceMods={faceMods} />
           </div>
 
           {(phase === 'reveal' || phase === 'outro') && (

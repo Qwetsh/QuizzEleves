@@ -10,6 +10,8 @@ export default {
   'game.scribeBtn': { fr: 'Autel', en: 'Altar' },
   'game.openAlchemy': { fr: 'Ouvrir l\'atelier d\'alchimie', en: 'Open the alchemy workshop' },
   'game.alchBtn': { fr: 'Alchimie', en: 'Alchemy' },
+  'game.openMagic': { fr: 'Ouvrir la table des sorts', en: 'Open the spell table' },
+  'game.magicBtn': { fr: 'Sorts', en: 'Spells' },
   // Overlay TBI d'une prestation de forgeage en cours
   'game.forgeSvcTitle': { fr: '{p} forge le dé de {c}', en: '{p} is forging {c}\'s die' },
   'game.forgeSvcCancel': { fr: 'Annuler la forge', en: 'Cancel forging' },

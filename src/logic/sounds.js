@@ -421,3 +421,74 @@ export function soundWarp() {
     playNoise(0.3, 0.08, { type: 'highpass', freq: 5000, q: 0.5 });
   }, 400);
 }
+
+// Incantation d'un sort (extension Magie) : whoosh grave qui MONTE (l'énergie
+// s'accumule dans le cercle) puis arpège scintillant quand les runes s'allument.
+// ~0,8 s — joué au début de la cérémonie <SpellCeremony>.
+export function soundSpell() {
+  const c = getCtx();
+  const master = getMaster();
+  if (!c || !master) return;
+  const t0 = c.currentTime;
+  // 1) Souffle : bruit passe-bande balayé 200 Hz → 2,4 kHz, gain en cloche.
+  const frames = Math.floor(c.sampleRate * 0.6);
+  const buffer = c.createBuffer(1, frames, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const bp = c.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.Q.value = 1.1;
+  bp.frequency.setValueAtTime(200, t0);
+  bp.frequency.exponentialRampToValueAtTime(2400, t0 + 0.55);
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.0001, t0);
+  ng.gain.exponentialRampToValueAtTime(0.24, t0 + 0.38);
+  ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.6);
+  src.connect(bp); bp.connect(ng); ng.connect(master);
+  src.start(t0); src.stop(t0 + 0.6);
+  // 2) Drone grave ascendant sous le souffle (la « gravité » de l'incantation).
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(110, t0);
+  osc.frequency.exponentialRampToValueAtTime(440, t0 + 0.55);
+  const og = c.createGain();
+  og.gain.setValueAtTime(0.0001, t0);
+  og.gain.exponentialRampToValueAtTime(0.13, t0 + 0.35);
+  og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.6);
+  osc.connect(og); og.connect(master);
+  osc.start(t0); osc.stop(t0 + 0.6);
+  // 3) Arpège scintillant en sortie de whoosh + shimmer cristallin.
+  [880, 1175, 1568, 2093].forEach((f, i) => setTimeout(() => playTone(f, 0.14, 'triangle', 0.12), 380 + i * 70));
+  setTimeout(() => playNoise(0.28, 0.06, { type: 'highpass', freq: 6000, q: 0.5 }), 540);
+}
+
+// Sort raté (fizzle) : glissando descendant penaud (le ballon se dégonfle) +
+// « pfff » de souffle grave. Joué à la brisure du cercle magique.
+export function soundFizzle() {
+  const c = getCtx();
+  const master = getMaster();
+  if (!c || !master) return;
+  const t0 = c.currentTime;
+  const osc = c.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(620, t0);
+  osc.frequency.exponentialRampToValueAtTime(110, t0 + 0.55);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.13, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.6);
+  osc.connect(g); g.connect(master);
+  osc.start(t0); osc.stop(t0 + 0.6);
+  // « Pfff » : bouffée de bruit filtré grave qui retombe + plouf final.
+  setTimeout(() => playNoise(0.4, 0.14, { type: 'lowpass', freq: 700, q: 0.6 }), 180);
+  setTimeout(() => playTone(92, 0.22, 'triangle', 0.11), 460);
+}
+
+// Sort DÉCOUVERT : fanfare triomphale ascendante + shimmer aigu (style
+// soundReveal) — joué à l'apparition du bandeau doré « Nouveau sort découvert ».
+export function soundSpellDiscover() {
+  [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => playTone(f, 0.2, 'sine', 0.2), i * 90)); // do majeur montant
+  setTimeout(() => playTone(1568, 0.4, 'triangle', 0.16), 460); // sol aigu tenu
+  setTimeout(() => playNoise(0.4, 0.08, { type: 'highpass', freq: 5500, q: 0.5 }), 480); // shimmer
+}

@@ -34,6 +34,7 @@ import { applyCachedItems, refreshItems } from './logic/itemsConfig';
 import { applyCachedEvents, refreshEvents } from './logic/eventsConfig';
 import { applyCachedQuestions, refreshQuestions } from './logic/questionsConfig';
 import { applyCachedRecipes, refreshRecipes } from './logic/recipesConfig';
+import { applyCachedSpells, refreshSpells } from './logic/spellsConfig';
 import { applyCachedCategories, refreshCategories } from './logic/categoriesConfig';
 import { applyCachedThemes, refreshThemes } from './logic/themesConfig';
 import { useGameStore } from './store/gameStore';
@@ -74,6 +75,9 @@ if (import.meta.env.VITE_OFFLINE === '1') {
   refreshItems().catch(() => {});
   applyCachedRecipes();
   refreshRecipes().catch(() => {});
+  // Sorts (Magie) : noms/coûts/séquences pour la table des sorts et le codex.
+  applyCachedSpells();
+  refreshSpells().catch(() => {});
   // Équilibrage : aligne prix/coûts des pouvoirs sur les valeurs du TBI (sinon
   // l'achat afficherait les valeurs par défaut alors que le TBI applique les
   // valeurs équilibrées). Mute POWERS/LOOT en place.
@@ -119,6 +123,10 @@ if (import.meta.env.VITE_OFFLINE === '1') {
   // Recettes d'alchimie personnalisées (table quete_recipes) par-dessus les intégrées.
   applyCachedRecipes();
   refreshRecipes().catch(() => {});
+
+  // Sorts personnalisés (table quete_spells) par-dessus les intégrés (Magie).
+  applyCachedSpells();
+  refreshSpells().catch(() => {});
 }
 
 function Root() {

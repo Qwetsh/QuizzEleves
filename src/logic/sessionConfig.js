@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient.js';
 import { logText } from './logFormat.js';
 import { extOn } from '../extensions/registry.js';
 import { getDieFaces } from './forge.js';
+import { magicRegenPerMin, magicMaxOf } from './magic.js';
 import { hasActivePromise } from './pacts.js';
 import { questionRerollOptions } from '../store/effectEngine.js';
 
@@ -294,6 +295,7 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
   }
   for (const k of Object.keys(questionLog)) questionLog[k] = questionLog[k].slice(-20);
   const forgeOn = extOn(extensions, 'forge');
+  const magicOn = extOn(extensions, 'magic');
   return {
     questionLog,
     status,
@@ -375,6 +377,22 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
       // posées, pour l'atelier de forge mobile. Publié seulement si l'extension
       // est active (sinon le mobile ne montre pas l'atelier).
       ...(forgeOn ? { dieFaces: getDieFaces(t), faceStock: t.faceStock || [] } : {}),
+      // Magie : barre {stored, lastTs} + taux/plafond RÉSOLUS côté TBI (passifs
+      // et buffs inclus) — le mobile anime la barre LOCALEMENT à partir de ces
+      // trois valeurs, sans recalculer les équipements. Codex publié en CLÉS ;
+      // le matching des séquences reste au TBI (autorité).
+      ...(magicOn ? {
+        magic: {
+          stored: t.magic?.stored ?? 0,
+          lastTs: t.magic?.lastTs ?? Date.now(),
+          regenPerMin: magicRegenPerMin(t),
+          max: magicMaxOf(t),
+        },
+        knownRunes: t.knownRunes || [],
+        knownSpells: t.knownSpells || [],
+        faceMods: t.faceMods || {},
+        lastCastAt: t.lastCastAt || 0,
+      } : {}),
     })),
   };
 }

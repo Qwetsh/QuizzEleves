@@ -5,14 +5,30 @@
 import { FORGE_EFFECTS, FORGE_FAMILY_COLOR } from '../../logic/forgeEffects';
 import { clampFaceValue, faceEffects } from '../../logic/forge';
 import '../../styles/forge.css';
+import '../../styles/magic-hud.css';
 
 const famColor = (meta) => (meta && FORGE_FAMILY_COLOR[meta.family]) || '#9aa1ad'; // acier par défaut
+
+// Badge de face bénie ✨ / maudite ☠️ (extension Magie, team.faceMods[slot]).
+// Réutilisé par Dice3D pour marquer aussi les faces d'un dé NON forgé (pips).
+export function FaceModBadge({ mod, style }) {
+  if (!mod) return null;
+  const cursed = mod.kind === 'curse';
+  return (
+    <span
+      className={'face-mod ' + (cursed ? 'face-mod--curse' : 'face-mod--bless')}
+      style={style}
+      aria-hidden="true"
+    >{cursed ? '\u{2620}\u{FE0F}' : '\u{2728}'}</span>
+  );
+}
 
 export default function FaceTile({
   face,
   size = 64,
   base = null,        // adresse du slot (atelier) — petit chiffre en coin
   slotTag = null,     // slot CIBLE d'une face liée (boutique/réserve) — badge « →N »
+  mod = null,         // marque bénie/maudite (Magie) — badge ✨/☠️ en coin
   selected = false,
   dim = false,
   clickable = false,
@@ -45,6 +61,7 @@ export default function FaceTile({
     >
       {base != null && <span className="facetile-base">{base}</span>}
       {slotTag != null && <span className="facetile-slot">{'→'}{slotTag}</span>}
+      <FaceModBadge mod={mod} />
       <span className="facetile-top"><span className="facetile-val">{v}</span></span>
       {metas.length > 0 && (
         <span className="facetile-ribbon">

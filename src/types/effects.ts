@@ -37,6 +37,14 @@ export type EffectAction =
   | { action: 'curseExtraQuestion'; target?: Target; n?: Amount; chance?: number }
   | { action: 'randomPathNext'; target?: Target; chance?: number }
   | { action: 'buff'; target?: Target; buff: Buff; chance?: number }
+  // — Magie (extension « magic ») —
+  | { action: 'gainMagic'; target?: Target; n?: Amount; chance?: number }
+  | { action: 'learnRune'; target?: Target; rune?: string; chance?: number }
+  | { action: 'learnSpell'; target?: Target; spell?: string; chance?: number }
+  | { action: 'blessFace'; target?: Target; face?: number; n?: Amount; chance?: number }
+  | { action: 'curseFace'; target?: Target; face?: number; n?: Amount; chance?: number }
+  | { action: 'cleanseFaces'; target?: Target; scope?: 'bless' | 'curse' | 'all'; chance?: number }
+  | { action: 'unstableAnswers'; target?: Target; interval?: number; chance?: number }
   // Échappatoire pour les actions de contenu non encore listées ici.
   | { action: string; [k: string]: unknown };
 

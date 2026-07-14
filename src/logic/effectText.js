@@ -176,6 +176,29 @@ export function describeAction(a, lang = getLang()) {
       : `fumigène${a.turns ? ` pendant ${amountLabel(a.turns, lang)} ${turnW(a.turns, lang)}` : ''}`;
     case 'extraTime': return en ? `+${amountLabel(a.n, lang)}s on the next question` : `+${amountLabel(a.n, lang)}s à la prochaine question`;
     case 'stealTime': return en ? `steal ${amountLabel(a.n, lang)}s from ${who} (added to your next question)` : `vole ${amountLabel(a.n, lang)}s à ${who} (ajoutées à ta prochaine question)`;
+    // — Magie —
+    case 'gainMagic': return self
+      ? (en ? `gain ${amountLabel(a.n ?? 10, lang)} ✨ magic` : `gagne ${amountLabel(a.n ?? 10, lang)} ✨ magie`)
+      : (en ? `give ${amountLabel(a.n ?? 10, lang)} ✨ magic to ${who}` : `donne ${amountLabel(a.n ?? 10, lang)} ✨ magie à ${who}`);
+    case 'learnRune': return en
+      ? `reveal a rune in the codex${a.rune ? ` (${a.rune})` : ' (random unknown)'}`
+      : `révèle une rune au codex${a.rune ? ` (${a.rune})` : ' (inconnue au hasard)'}`;
+    case 'learnSpell': return en
+      ? `teach a spell${a.spell ? ` (${a.spell})` : ' (random unknown)'}`
+      : `apprend un sort${a.spell ? ` (${a.spell})` : ' (inconnu au hasard)'}`;
+    case 'blessFace': return en
+      ? `bless a die face${a.face ? ` (${a.face})` : ''} of ${self ? 'yours' : who}: +${amountLabel(a.n ?? 10, lang)} gold when it lands`
+      : `bénit une face${a.face ? ` (${a.face})` : ''} du dé ${self ? '' : `de ${who} `}: +${amountLabel(a.n ?? 10, lang)} or quand elle tombe`;
+    case 'curseFace': return en
+      ? `curse a die face${a.face ? ` (${a.face})` : ''} of ${who}: −${amountLabel(a.n ?? 10, lang)} gold when it lands`
+      : `maudit une face${a.face ? ` (${a.face})` : ''} du dé de ${who} : −${amountLabel(a.n ?? 10, lang)} or quand elle tombe`;
+    case 'cleanseFaces': {
+      const scope = a.scope === 'bless' ? (en ? 'blessings' : 'bénédictions') : a.scope === 'curse' ? (en ? 'curses' : 'malédictions') : (en ? 'blessings & curses' : 'bénédictions et malédictions');
+      return en ? `dispel the die's ${scope} (${who})` : `dissipe les ${scope} du dé (${who})`;
+    }
+    case 'unstableAnswers': return en
+      ? `${who}'s next question: answers shuffle every ${a.interval ?? 3}s`
+      : `prochaine question de ${who} : les réponses changent de place toutes les ${a.interval ?? 3}s`;
     default: return a.action || '';
   }
 }

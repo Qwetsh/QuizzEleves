@@ -208,6 +208,8 @@ const REFLECTABLE = (action) => {
     case 'loseItem':
     case 'blockPowers':
     case 'blockConsumables':
+    case 'curseFace':
+    case 'unstableAnswers':
       return true;
     case 'buff': return !!action.__dot; // DoT « saignement d'or » uniquement
     default: return false;
@@ -932,6 +934,80 @@ function stepHead(set, get, action, ctx) {
       const t = resolveTargets(get, action.target || 'self', ctx);
       if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
       for (const idx of t.indices) get().engineUnenchant?.(idx);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    // --- Actions Magie (extension « magic ») ---
+    case 'gainMagic': {
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const n = Math.max(1, resolveAmount(action.n, srcTeam) || 10);
+      for (const idx of t.indices) get().engineGainMagic?.(idx, n);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'learnRune': {
+      // Révèle une rune au codex (précise via action.rune, sinon une inconnue au hasard).
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineLearnRune?.(idx, action.rune);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'learnSpell': {
+      // Révèle un sort au codex (précis via action.spell, sinon un inconnu au hasard).
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineLearnSpell?.(idx, action.spell);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'blessFace': {
+      // Bénit une face du dé de la cible : +or quand cette face tombe. La face
+      // vient de l'action, du contexte (choisie au téléphone avant le cast) ou
+      // est tirée au hasard (« magie sauvage » des découvertes expérimentales).
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const face = action.face ?? ctx.face ?? (1 + Math.floor(Math.random() * 6));
+      const gold = Math.max(1, resolveAmount(action.n, srcTeam) || 10);
+      for (const idx of t.indices) get().engineMarkFace?.(idx, face, 'bless', gold, ctx.sourceTeam ?? get().currentTeam);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'curseFace': {
+      // Maudit une face du dé de la cible : −or quand cette face tombe. Renvoi possible.
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const face = action.face ?? ctx.face ?? (1 + Math.floor(Math.random() * 6));
+      const gold = Math.max(1, resolveAmount(action.n, srcTeam) || 10);
+      const curseFaceIdx = applyReflection(set, get, action, ctx, t.indices).indices;
+      for (const idx of curseFaceIdx) get().engineMarkFace?.(idx, face, 'curse', gold, ctx.sourceTeam ?? get().currentTeam);
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'cleanseFaces': {
+      // Dissipe les bénédictions/malédictions du dé (scope 'bless'|'curse'|'all').
+      const t = resolveTargets(get, action.target || 'self', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      for (const idx of t.indices) get().engineCleanseFaces?.(idx, action.scope || 'all');
+      clearCtxResolution(set, get, 'targetTeam');
+      return 'done';
+    }
+    case 'unstableAnswers': {
+      // Réponses instables : à la PROCHAINE question de la cible, les réponses
+      // changent de place toutes les `interval` s (réutilise le Modeleur du
+      // Sablier : flag modeleurInterval consommé par askQuestion). Si la météo
+      // « sablier » a déjà posé un intervalle, on garde le plus AGRESSIF (min).
+      const t = resolveTargets(get, action.target || 'target', ctx);
+      if (t.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const interval = Math.max(1, action.interval || 3);
+      const unstableIdx = applyReflection(set, get, action, ctx, t.indices).indices;
+      const nt = [...get().teams];
+      for (const idx of unstableIdx) nt[idx] = { ...nt[idx], modeleurInterval: Math.min(nt[idx].modeleurInterval || 99, interval) };
+      set({ teams: nt });
+      for (const idx of unstableIdx) get().emitCurseVfx?.(idx, { icon: '🌫️', color: '#8745d4', tone: 'malus' });
+      get().addLog(tg('log.fx.unstable', { n: interval }));
+      announce(set, get, '🌫️', tg('log.fx.unstable.toast'), '#8745d4');
       clearCtxResolution(set, get, 'targetTeam');
       return 'done';
     }

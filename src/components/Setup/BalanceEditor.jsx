@@ -15,6 +15,9 @@ import {
 } from '../../logic/itemsConfig';
 import { fetchRecipeRows, saveRecipeRow, deleteRecipeRow, refreshRecipes } from '../../logic/recipesConfig';
 import { BASE_RECIPES } from '../../data/recipes';
+import { fetchSpellRows, saveSpellRow, deleteSpellRow, refreshSpells } from '../../logic/spellsConfig';
+import { BASE_SPELLS } from '../../data/spells';
+import { RUNES, RUNE_KEYS, runeName } from '../../data/runes';
 import { DEFAULTS, readCache, saveBalance } from '../../logic/balanceConfig';
 import { tierLevelsFor } from '../../logic/powerEffects';
 import { FORGE_EFFECTS } from '../../logic/forgeEffects';
@@ -22,7 +25,7 @@ import { faceEffects, MAX_FACE_EFFECTS, MAX_FACE_VALUE } from '../../logic/forge
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
 import FaceTile from '../Game/FaceTile';
 import { useGameStore } from '../../store/gameStore';
-import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger } from './EffectBuilder';
+import { TriggerCard, AmountInput, DEFAULT_DICE, makeTrigger, ActionList, defaultAction, describeAction } from './EffectBuilder';
 import AlchemyRecipeForm, { recipeLine } from './AlchemyRecipeForm';
 import { describeItemEffects, itemEffectLines } from '../../logic/effectText';
 import '../../styles/questions-editor.css';
@@ -36,6 +39,7 @@ const TABS = [
   { key: 'loot', label: '\u{1F3B0} Loot' },
   { key: 'forge', label: '\u{1F3B2} Forge' },
   { key: 'weather', label: '🌦️ Météo' },
+  { key: 'spells', label: '✨ Sorts' },
 ];
 
 // Modèle d'une recette en cours d'édition (onglet Alchimie).
@@ -57,6 +61,7 @@ const EFFECT_LABELS = {
   extraTime: 'Temps prochaine question (+s)', shieldNext: 'Annule le prochain recul',
   gainCharge: 'Recharge un pouvoir', fumigene: 'Annule un pouvoir offensif',
   randomPath: 'Voie aléatoire aux carrefours',
+  magicRegen: 'Magie : régénération (+✨/min)', magicMax: 'Magie : plafond (+✨ max)',
 };
 // Unité affichée dans l'aperçu chiffré de l'éditeur (AmountInput) selon l'effet.
 const EFFECT_UNIT = {
@@ -66,7 +71,10 @@ const EFFECT_UNIT = {
   lootBonusConsumable: ' %', lootBonusEquipment: ' %', lootBonusSubject: ' %', reflectChance: ' %',
   reculReduction: ' case(s)', moveForward: ' case(s)', diceMalus: ' case(s)',
 };
-const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'diceMalus', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'trapImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath', 'itemStealImmune', 'goldStealImmune', 'reflectChance'];
+// ⚠️ magicRegen/magicMax : valeurs FIXES uniquement (JAMAIS dans DICEABLE_EFFECTS) —
+// le taux de régén est relu en continu (accrual lazy, cf. logic/magic.js) et doit
+// rester stable entre deux lectures ; ils sont donc édités au Stepper (nombre).
+const EQUIP_EFFECTS = ['timerBonus', 'indiceBoost', 'moneyPerCorrect', 'taxReduction', 'stealProtection', 'reculReduction', 'reculReductionPct', 'diceMalus', 'hardcoreChance', 'tempeteImmune', 'oubliProtect', 'duelImmune', 'trapImmune', 'fightStealBonus', 'lootBonusConsumable', 'lootBonusEquipment', 'lootBonusSubject', 'randomPath', 'itemStealImmune', 'goldStealImmune', 'reflectChance', 'magicRegen', 'magicMax'];
 const CONSUM_EFFECTS = ['gainMoney', 'gainMoneyAll', 'moveForward', 'extraTime', 'shieldNext', 'gainCharge', 'fumigene'];
 // Effets simples dont la quantité peut être ALÉATOIRE (dé).
 const DICEABLE_EFFECTS = new Set([
@@ -215,6 +223,309 @@ function WeatherTab({ ov, setOv, setStatus }) {
           </div>
         ));
       })()}
+    </>
+  );
+}
+
+// --- Onglet « Sorts » (extension Magie) --------------------------------------
+// (a) Réglages de la ressource magie → overrides `magic` du blob balance (fusion
+//     plate, cf. balanceConfig.applyBalance) ; sauvegardés par le pied commun.
+// (b) CRUD des sorts de la table Supabase quete_spells (pattern recettes :
+//     DB = source de vérité ; les intégrés BASE_SPELLS sont copiables — même
+//     clé → la copie REMPLACE l'intégré via setCustomSpells).
+
+// Glyphe SVG d'une rune : polyline du premier gabarit de tracé (repère 0..100).
+function RuneGlyph({ runeKey, size = 30, color = '#8745d4' }) {
+  const pts = RUNES[runeKey]?.variants?.[0] || [];
+  if (!pts.length) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ flexShrink: 0 }} aria-label={runeName(runeKey)}>
+      <polyline points={pts.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ')}
+        fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Ligne DB / sort intégré → brouillon d'édition (formes internes de data/spells.js).
+const spellRowToDraft = (r) => ({
+  key: r.key, name: r.name || '', name_en: r.name_en || '', icon: r.icon || '✨', color: r.color || '#8745d4',
+  desc: r.description || '', desc_en: r.description_en || '',
+  runes: Array.isArray(r.runes) ? [...r.runes] : [],
+  cost: Number(r.cost) || 0, targeted: !!r.targeted, facePick: !!r.face_pick,
+  actions: Array.isArray(r.actions) ? clone(r.actions) : [],
+  enabled: r.enabled !== false, ord: r.ord ?? 0, isNew: false,
+});
+const spellFromBase = (s, ord) => ({
+  key: s.key, name: s.name, name_en: s.name_en || '', icon: s.icon || '✨', color: s.color || '#8745d4',
+  desc: s.desc || '', desc_en: s.desc_en || '',
+  runes: [...(s.runes || [])], cost: s.cost ?? 0, targeted: !!s.targeted, facePick: !!s.facePick,
+  actions: clone(s.actions || []), enabled: true, ord, isNew: true, fromBase: true,
+});
+const blankSpell = (ord) => ({
+  key: '', name: 'Nouveau sort', name_en: '', icon: '✨', color: '#8745d4', desc: '', desc_en: '',
+  runes: [RUNE_KEYS[0], RUNE_KEYS[1]], cost: 30, targeted: false, facePick: false,
+  actions: [defaultAction()], enabled: true, ord, isNew: true,
+});
+// Clé canonique d'une séquence (l'ORDRE compte — cf. matchSpell).
+const spellSeq = (runes) => (runes || []).filter(Boolean).join('>');
+
+// Réglages MAGIC : float = saisie décimale (proba 0-1), sinon Stepper entier.
+const MAGIC_FIELDS = [
+  { k: 'max', label: 'Plafond de la barre (✨ max)', min: 10, max: 999 },
+  { k: 'regenPerMin', label: 'Régénération de base (✨ / minute)', min: 0, max: 99 },
+  { k: 'start', label: 'Magie au départ de la partie', min: 0, max: 999 },
+  { k: 'fizzleCost', label: 'Coût d’un raté (séquence sans sort)', min: 0, max: 99 },
+  { k: 'castCooldownMs', label: 'Anti-spam entre 2 sorts (ms)', min: 0, max: 60000, step: 500, sec: true },
+  { k: 'recogThreshold', label: 'Seuil de reconnaissance d’une rune (0-1)', min: 0, max: 1, step: 0.05, float: true },
+  { k: 'answerRuneRate', label: 'Proba max rune / bonne réponse (0-1)', min: 0, max: 1, step: 0.05, float: true },
+  { k: 'starterRunes', label: 'Runes connues au départ', min: 0, max: RUNE_KEYS.length },
+  { k: 'starterSpells', label: 'Sorts connus au départ (les moins chers)', min: 0, max: 20 },
+];
+
+function SpellsTab({ ov, setOv, setStatus }) {
+  const D = DEFAULTS.magic;
+  const m = { ...D, ...(ov.magic || {}) };
+  const setMagic = (k, v) => { setStatus(null); setOv((p) => ({ ...p, magic: { ...(p.magic || {}), [k]: v } })); };
+
+  // CRUD des sorts (état local : l'onglet est démonté au changement d'onglet).
+  const [rows, setRows] = useState(null);
+  const [loadErr, setLoadErr] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const reload = () => fetchSpellRows()
+    .then((r) => { setLoadErr(null); setRows(r); return r; })
+    .catch((e) => { setLoadErr(e.message || 'Supabase injoignable'); setRows([]); return []; });
+  useEffect(() => { reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const upd = (patch) => { setMsg(null); setDraft((d) => ({ ...d, ...patch })); };
+  const runesOk = !!draft && draft.runes.length >= 2 && draft.runes.length <= 4 && draft.runes.every(Boolean);
+  const valid = !!draft && !!draft.name.trim() && runesOk;
+
+  // Même séquence qu'un AUTRE sort (intégré ou perso) → avertissement : un seul
+  // des deux serait reconnu au tracé (matchSpell prend le premier trouvé).
+  const seq = spellSeq(draft?.runes);
+  const clash = draft && [...BASE_SPELLS, ...(rows || []).map(spellRowToDraft)]
+    .find((s) => s.key !== draft.key && spellSeq(s.runes) === seq);
+
+  const chooseRow = (r) => { setMsg(null); setDraft(spellRowToDraft(r)); };
+  const chooseNew = () => { setMsg(null); setDraft(blankSpell((rows || []).length)); };
+  // « Copier en custom » : pré-remplit un NOUVEAU sort depuis un intégré (même
+  // clé → remplace l'intégré une fois enregistré). Déjà copié → rouvre la ligne.
+  const chooseBase = (s) => {
+    setMsg(null);
+    const existing = (rows || []).find((r) => r.key === s.key);
+    if (existing) { setDraft(spellRowToDraft(existing)); return; }
+    setDraft(spellFromBase(s, (rows || []).length));
+  };
+  const duplicate = () => {
+    if (!draft) return;
+    setMsg(null);
+    setDraft({ ...clone(draft), key: '', name: `${draft.name} (copie)`, isNew: true, fromBase: false, ord: (rows || []).length });
+  };
+
+  async function save() {
+    if (busy || !valid) return;
+    setBusy(true); setMsg(null);
+    try {
+      // Clé générée pour un sort vraiment nouveau ; unique aussi vis-à-vis des
+      // intégrés (une copie d'intégré garde SA clé pour le remplacer).
+      const key = draft.key || uniqueKey(draft.name, [...(rows || []), ...BASE_SPELLS]);
+      const saved = await saveSpellRow({ ...draft, key, runes: draft.runes.filter(Boolean) }, { isNew: draft.isNew });
+      await refreshSpells();
+      await reload();
+      setDraft(spellRowToDraft(saved));
+      setMsg('Enregistré ✓');
+    } catch (e) { setMsg('Erreur : ' + (e.message || 'Supabase injoignable')); }
+    setBusy(false);
+  }
+  async function del() {
+    if (busy || !draft || draft.isNew) return;
+    if (!window.confirm(`Supprimer le sort « ${draft.name} » ?`)) return;
+    setBusy(true); setMsg(null);
+    try {
+      await deleteSpellRow(draft.key);
+      await refreshSpells();
+      await reload();
+      setDraft(null);
+      setMsg('Supprimé');
+    } catch (e) { setMsg('Erreur : ' + (e.message || 'Supabase injoignable')); }
+    setBusy(false);
+  }
+
+  const setRune = (i, v) => upd({ runes: draft.runes.map((r, j) => (j === i ? v : r)) });
+  const addRune = () => { if (draft.runes.length < 4) upd({ runes: [...draft.runes, RUNE_KEYS[0]] }); };
+  const delRune = (i) => { if (draft.runes.length > 2) upd({ runes: draft.runes.filter((_, j) => j !== i) }); };
+
+  const listBtn = (selected) => ({
+    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8, cursor: 'pointer',
+    border: selected ? '2px solid #7a5ad4' : '1px solid rgba(122,94,58,0.2)',
+    background: selected ? 'rgba(122,90,212,0.08)' : '#fff', textAlign: 'left',
+  });
+
+  return (
+    <>
+      {/* --- (a) Réglages de la ressource magie --- */}
+      <div className="qed-label" style={{ marginBottom: 10 }}>✨ Réglages de la magie</div>
+      {MAGIC_FIELDS.map((f) => (
+        <div className="bal-row" key={f.k}>
+          <span className="bal-label" style={{ width: 290 }}>{f.label}</span>
+          {f.float ? (
+            <>
+              <input type="number" className="qed-input" style={{ width: 92 }} step={f.step} min={f.min} max={f.max}
+                value={m[f.k]} onChange={(e) => setMagic(f.k, Math.max(f.min, Math.min(f.max, parseFloat(e.target.value) || 0)))} />
+              <span className="bal-default">= {Math.round(m[f.k] * 100)}% · défaut {Math.round(D[f.k] * 100)}%</span>
+            </>
+          ) : (
+            <>
+              <Stepper value={m[f.k]} onChange={(v) => setMagic(f.k, v)} min={f.min} max={f.max} step={f.step || 1} />
+              <span className="bal-default">{f.sec ? `= ${m[f.k] / 1000}s · ` : ''}défaut : {D[f.k]}</span>
+            </>
+          )}
+        </div>
+      ))}
+
+      {/* --- (b) CRUD des sorts --- */}
+      <div className="qed-label" style={{ margin: '18px 0 8px' }}>📜 Sorts — table quete_spells (DB = source de vérité)</div>
+      {loadErr && (
+        <div style={{ fontSize: 12.5, color: '#b5341f', background: 'rgba(181,52,31,0.08)', border: '1px solid rgba(181,52,31,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+          Erreur de chargement : {loadErr} — la table <code>quete_spells</code> existe-t-elle ?
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        {/* Liste maître : persos puis intégrés copiables */}
+        <div style={{ width: 250, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button className="btn btn--green btn--sm" onClick={chooseNew}>+ Nouveau sort</button>
+          <div className="bal-default" style={{ fontSize: 11 }}>{rows == null ? 'Chargement…' : `${rows.length} sort(s) perso`}</div>
+          {(rows || []).map((r) => (
+            <button key={r.key} type="button" onClick={() => chooseRow(r)}
+              style={{ ...listBtn(draft && !draft.isNew && draft.key === r.key), opacity: r.enabled === false ? 0.5 : 1 }}>
+              <span style={{ fontSize: 18 }}>{r.icon || '✨'}</span>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || '(sans nom)'}</span>
+              {BASE_SPELLS.some((b) => b.key === r.key) && <span className="bal-default" title="Remplace le sort intégré (supprimer restaure l'original)">✎</span>}
+              {r.enabled === false && <span className="bal-default" style={{ fontSize: 10 }}>off</span>}
+            </button>
+          ))}
+          {(() => {
+            const overridden = new Set((rows || []).map((r) => r.key));
+            const base = BASE_SPELLS.filter((s) => !overridden.has(s.key));
+            if (!base.length) return null;
+            return (
+              <>
+                <div className="bal-default" style={{ margin: '8px 0 2px' }}>Intégrés (clique pour copier en custom)</div>
+                {base.map((s) => (
+                  <button key={s.key} type="button" onClick={() => chooseBase(s)}
+                    style={listBtn(draft?.isNew && draft?.fromBase && draft.key === s.key)}>
+                    <span style={{ fontSize: 18 }}>{s.icon}</span>
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                    <span className="bal-default" style={{ fontSize: 10 }}>⚙️</span>
+                  </button>
+                ))}
+              </>
+            );
+          })()}
+        </div>
+
+        {/* Détail du sort sélectionné */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {!draft ? (
+            <div className="bal-default" style={{ padding: 20 }}>Sélectionne un sort à gauche, copie un intégré, ou crée-en un nouveau.</div>
+          ) : (
+            <>
+              {draft.fromBase && (
+                <div style={{ fontSize: 11.5, color: 'var(--ink-500)', background: 'rgba(232,169,88,0.12)', border: '1px solid rgba(122,94,58,0.2)', borderRadius: 8, padding: '6px 10px', marginBottom: 10 }}>
+                  Copie du sort intégré « {draft.name} » : une fois enregistrée (même clé), elle <b>remplace</b> l'intégré. La supprimer restaure l'original.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+                <input className="qed-input" style={{ width: 54, fontSize: 22, textAlign: 'center', padding: 4 }} value={draft.icon} maxLength={4}
+                  onChange={(e) => upd({ icon: e.target.value })} title="Icône (emoji)" />
+                <input type="color" value={draft.color || '#8745d4'} onChange={(e) => upd({ color: e.target.value })} title="Couleur du sort"
+                  style={{ width: 34, height: 34, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }} />
+                <input className="qed-input" style={{ flex: 1, minWidth: 140 }} value={draft.name} onChange={(e) => upd({ name: e.target.value })} placeholder="Nom (FR)" />
+                <input className="qed-input" style={{ flex: 1, minWidth: 140 }} value={draft.name_en} onChange={(e) => upd({ name_en: e.target.value })} placeholder="Name (EN)" />
+              </div>
+
+              <div className="bal-row" style={{ gap: 12, flexWrap: 'wrap' }}>
+                <span className="bal-label" style={{ width: 90 }}>Coût ✨</span>
+                <Stepper value={draft.cost} onChange={(v) => upd({ cost: v })} min={0} max={999} step={5} />
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5 }}>
+                  <input type="checkbox" checked={draft.targeted} onChange={(e) => upd({ targeted: e.target.checked })} /> vise une équipe
+                </label>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5 }}>
+                  <input type="checkbox" checked={draft.facePick} onChange={(e) => upd({ facePick: e.target.checked })} /> choisit une face (1-6)
+                </label>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5 }}>
+                  <input type="checkbox" checked={draft.enabled} onChange={(e) => upd({ enabled: e.target.checked })} /> activé
+                </label>
+              </div>
+
+              {/* Séquence de runes (2-4, ordonnée) : glyphes + un dropdown par slot */}
+              <div className="bal-row" style={{ alignItems: 'flex-start', marginTop: 6 }}>
+                <span className="bal-label" style={{ width: 90 }}>Runes (2-4)</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                    {draft.runes.map((k, i) => (
+                      <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        {i > 0 && <span className="bal-default">→</span>}
+                        <span style={{ display: 'inline-flex', padding: 3, border: '1px solid rgba(122,94,58,0.25)', borderRadius: 8, background: '#fff' }} title={runeName(k)}>
+                          <RuneGlyph runeKey={k} size={34} color={draft.color || '#8745d4'} />
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {draft.runes.map((k, i) => (
+                      <span key={i} style={{ display: 'inline-flex', gap: 2, alignItems: 'center' }}>
+                        <select className="qed-select" value={k} onChange={(e) => setRune(i, e.target.value)}>
+                          {RUNE_KEYS.map((rk) => <option key={rk} value={rk}>{RUNES[rk].icon} {runeName(rk)}</option>)}
+                        </select>
+                        <button className="bal-fx-x" disabled={draft.runes.length <= 2} onClick={() => delRune(i)} title="Retirer cette rune">{'\u{1F5D1}'}</button>
+                      </span>
+                    ))}
+                    {draft.runes.length < 4 && <button className="btn btn--ghost btn--sm" onClick={addRune}>+ rune</button>}
+                  </div>
+                  {clash && (
+                    <div style={{ fontSize: 11.5, color: '#a06a12' }}>
+                      ⚠ Même séquence que « {clash.name} » — un seul des deux serait reconnu au tracé.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="qed-field" style={{ marginTop: 8 }}>
+                <label className="qed-label">Description (FR)</label>
+                <textarea className="qed-textarea" value={draft.desc} onChange={(e) => upd({ desc: e.target.value })} placeholder="Ce que fait le sort, vu par les joueurs…" />
+              </div>
+              <div className="qed-field">
+                <label className="qed-label">Description (EN)</label>
+                <textarea className="qed-textarea" value={draft.desc_en} onChange={(e) => upd({ desc_en: e.target.value })} />
+              </div>
+
+              {/* Effets : mêmes ACTIONS du moteur que les événements scriptés. */}
+              <div className="qed-field">
+                <label className="qed-label">✨ Effets du sort (actions du moteur)</label>
+                <ActionList actions={draft.actions} onChange={(actions) => upd({ actions })} />
+                {draft.actions?.length > 0 && (
+                  <div style={{ fontSize: 11.5, color: 'var(--ink-500)', marginTop: 6 }}>
+                    Aperçu : {draft.actions.map(describeAction).join(' · ')}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, borderTop: '1px solid rgba(122,94,58,0.15)', paddingTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button className="btn btn--green" onClick={save} disabled={busy || !valid}>{busy ? 'Enregistrement…' : (draft.isNew ? 'Créer' : 'Enregistrer')}</button>
+                <button className="btn btn--ghost btn--sm" onClick={duplicate} disabled={busy}>{'⧉'} Dupliquer</button>
+                {!draft.isNew && <button className="btn btn--ghost btn--sm" onClick={del} disabled={busy} style={{ color: '#b5341f' }}>{'\u{1F5D1}'} Supprimer</button>}
+                {!valid && <span className="qed-err">{!draft.name.trim() ? 'Un nom est requis.' : 'Il faut 2 à 4 runes.'}</span>}
+                {msg && <span style={{ fontSize: 12, fontWeight: 600, color: msg.startsWith('Erreur') ? '#b5341f' : '#2f9d5a' }}>{msg}</span>}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }

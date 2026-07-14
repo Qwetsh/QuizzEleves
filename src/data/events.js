@@ -89,6 +89,14 @@ const BUILTIN_EVENTS = {
     actions: [{ action: 'buff', target: 'self', buff: { type: 'themeBonus', turns: 2, n: 5 } }] },
   effacement:       { name: 'Effacement astral',        name_en: 'Erasure',            icon: '🧽', desc: 'L\'encre pâlit : un enchantement de l\'une de tes pièces s\'efface…', desc_en: 'The ink fades: an enchantment on one of your pieces is erased…', category: 'item', optional: false, weight: 0.4, requires: ['enchant'],
     actions: [{ action: 'unenchant', target: 'self' }] },
+
+  // --- MAGIE (extension `magic`) : runes, sorts, flux de magie ---
+  grimoireOublie:   { name: 'Grimoire à la dérive',      name_en: 'Drifting Grimoire',  icon: '📜', desc: 'Un grimoire flotte dans le vide : une nouvelle RUNE s\'inscrit à ton codex !', desc_en: 'A grimoire drifts in the void: a new RUNE is inscribed in your codex!', category: 'item', optional: false, weight: 0.7, requires: ['magic'],
+    actions: [{ action: 'learnRune', target: 'self' }] },
+  maitreDesSorts:   { name: 'Maître des sorts errant',   name_en: 'Wandering Spellmaster', icon: '🧙', desc: 'Un vieux mage t\'enseigne un SORT complet (runes comprises) : consulte ton codex !', desc_en: 'An old mage teaches you a complete SPELL (runes included): check your codex!', category: 'item', optional: false, weight: 0.4, requires: ['magic'],
+    actions: [{ action: 'learnSpell', target: 'self' }] },
+  fluxDeMana:       { name: 'Flux de mana',              name_en: 'Mana Surge',         icon: '✨', desc: 'Une vague d\'énergie traverse le plateau : +25 magie pour toi !', desc_en: 'A wave of energy sweeps the board: +25 magic for you!', category: 'money', optional: false, weight: 0.6, requires: ['magic'],
+    actions: [{ action: 'gainMagic', target: 'self', n: 25 }] },
 };
 
 // --- Classement « ton » des événements (affichage groupé du Setup) ---------
@@ -108,6 +116,7 @@ export const EVENT_TONE = {
   troisCoffres: 'positive', benediction: 'positive', poseurPiege: 'positive', forge: 'positive',
   reliquaire: 'positive', herboriste: 'positive', chaudronAbandonne: 'positive',
   pluieEssences: 'positive', eureka: 'positive', scribeAmbulant: 'positive',
+  grimoireOublie: 'positive', maitreDesSorts: 'positive', fluxDeMana: 'positive',
   runeMysterieuse: 'positive', subventionScribe: 'positive', encreRunique: 'positive',
   // Négatifs
   recul: 'negative', don: 'negative', oubli: 'negative', embuscade: 'negative',

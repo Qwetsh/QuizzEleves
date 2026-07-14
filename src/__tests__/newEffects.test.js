@@ -52,6 +52,11 @@ function freshGame(overrides = [{}, {}], board = LINEAR) {
     movePath: null, preRollPos: null, preRollValue: null,
     pendingActions: null, showTilePicker: null, showActionDice: null,
     showSubjectPicker: false, rerollUsed: false, trapDepth: 0, categoryPools: {},
+    // Loot de bonne réponse NEUTRALISÉ : les canaux consommable/équipement tirent
+    // Math.random() à chaque bonne réponse et un drop ouvre LootReveal — ce qui
+    // diffère afterCorrectResolve (bilan d'investissement) et rendait ces tests
+    // FLAKY (~20 %). Catalogue vide → aucun tirage ne peut aboutir.
+    enabledItems: [],
   });
 }
 

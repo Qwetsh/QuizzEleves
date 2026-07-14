@@ -5,6 +5,8 @@
 // + listes d'ACTIONS atomiques.
 import { SUBJECTS, SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../../data/subjects';
 import { ITEMS } from '../../data/items';
+import { RUNES, RUNE_KEYS, runeName } from '../../data/runes';
+import { SPELLS, spellName } from '../../data/spells';
 
 const ACTIONS = [
   { key: 'money', label: '💰 Or' },
@@ -42,6 +44,14 @@ const ACTIONS = [
   { key: 'grantItem', label: '🎒 Donner un objet précis' },
   { key: 'enchantEquipped', label: '🔮 Enchanter une pièce équipée' },
   { key: 'unenchant', label: '🧽 Effacer un enchantement' },
+  // Magie (extension) :
+  { key: 'gainMagic', label: '✨ Donner de la magie' },
+  { key: 'learnRune', label: '🌀 Révéler une rune (codex)' },
+  { key: 'learnSpell', label: '📜 Apprendre un sort' },
+  { key: 'blessFace', label: '🎲 Bénir une face du dé (+or)' },
+  { key: 'curseFace', label: '☠️ Maudire une face du dé (−or)' },
+  { key: 'cleanseFaces', label: '💧 Purifier le dé (bénéd./maléd.)' },
+  { key: 'unstableAnswers', label: '🌫️ Réponses instables (mélange)' },
 ];
 
 // Types d'effet de durée (buff) — voir gameStore (application) et teamStatus (affichage).
@@ -67,6 +77,7 @@ const BUFF_TYPES = [
   { k: 'insurance', label: 'assurance : récupère N% de l’or qu’on te prend' },
   { k: 'interest', label: 'intérêts : +N% de ton or par tour' },
   { k: 'tithe', label: 'dîme : prélève N% de l’or gagné par les adversaires' },
+  { k: 'magicRegen', label: 'magie : régénération accélérée (+N ✨/min)' },
 ];
 const TARGETS = [
   { key: 'self', label: 'moi' }, { key: 'target', label: 'une cible' },
@@ -136,6 +147,17 @@ export function describeAction(a) {
     case 'grantItem': return `donner ${a.key && ITEMS[a.key] ? `${ITEMS[a.key].icon} ${ITEMS[a.key].name}` : 'un objet'} à ${who}`;
     case 'enchantEquipped': return `enchanter une pièce équipée de ${who}`;
     case 'unenchant': return `effacer un enchantement de ${who}`;
+    // — Magie —
+    case 'gainMagic': return `donner ${amountLabel(a.n ?? 10)} ✨ magie à ${who}`;
+    case 'learnRune': return `révéler une rune${a.rune ? ` (${runeName(a.rune)})` : ' (inconnue au hasard)'} à ${who}`;
+    case 'learnSpell': {
+      const sp = SPELLS.find((s) => s.key === a.spell);
+      return `apprendre un sort${a.spell ? ` (${sp ? spellName(sp) : a.spell})` : ' (inconnu au hasard)'} à ${who}`;
+    }
+    case 'blessFace': return `bénir ${a.face ? `la face ${a.face}` : 'une face (au choix/hasard)'} du dé de ${who} : +${amountLabel(a.n ?? 10)} or quand elle tombe`;
+    case 'curseFace': return `maudire ${a.face ? `la face ${a.face}` : 'une face (au choix/hasard)'} du dé de ${who} : −${amountLabel(a.n ?? 10)} or quand elle tombe`;
+    case 'cleanseFaces': return `dissiper les ${a.scope === 'bless' ? 'bénédictions' : a.scope === 'curse' ? 'malédictions' : 'bénédictions et malédictions'} du dé de ${who}`;
+    case 'unstableAnswers': return `prochaine question de ${who} : réponses mélangées toutes les ${a.interval ?? 3}s`;
     case 'rerollQuestion': {
       return typeof a.chance === 'number'
         ? `changer la question (${Math.round(a.chance * 100)}% ${subjLabel(a.subject)}, sinon ${subjLabel(a.elseSubject || 'hardcore')})`
@@ -347,6 +369,13 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'grantItem') Object.assign(base, { target: 'self', key: '' });
         if (k === 'enchantEquipped') base.target = 'self';
         if (k === 'unenchant') base.target = 'self';
+        if (k === 'gainMagic') Object.assign(base, { target: 'self', n: 10 });
+        if (k === 'learnRune') base.target = 'self';
+        if (k === 'learnSpell') base.target = 'self';
+        if (k === 'blessFace') Object.assign(base, { target: 'self', n: 10 });
+        if (k === 'curseFace') Object.assign(base, { target: 'target', n: 10 });
+        if (k === 'cleanseFaces') Object.assign(base, { target: 'self', scope: 'all' });
+        if (k === 'unstableAnswers') Object.assign(base, { target: 'target', interval: 3 });
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
@@ -465,6 +494,72 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         <>
           <W>effacer un enchantement de</W>
           <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+
+      {a.action === 'gainMagic' && (
+        <>
+          <W>donner</W>
+          <AmountInput value={a.n ?? 10} onChange={(v) => upd({ n: v })} min={1} unit=" ✨" />
+          <W>✨ magie à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'learnRune' && (
+        <>
+          <W>révéler la rune</W>
+          <select className="qed-select fx-blank" value={a.rune || ''} onChange={(e) => upd({ rune: e.target.value || undefined })}>
+            <option value="">🎲 au hasard (inconnue)</option>
+            {RUNE_KEYS.map((k) => <option key={k} value={k}>{RUNES[k].icon} {runeName(k)}</option>)}
+          </select>
+          <W>au codex de</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'learnSpell' && (
+        <>
+          <W>apprendre le sort</W>
+          <select className="qed-select fx-blank" value={a.spell || ''} onChange={(e) => upd({ spell: e.target.value || undefined })}>
+            <option value="">🎲 au hasard (inconnu)</option>
+            {SPELLS.map((s) => <option key={s.key} value={s.key}>{s.icon} {spellName(s)}</option>)}
+          </select>
+          <W>à</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {(a.action === 'blessFace' || a.action === 'curseFace') && (
+        <>
+          <W>{a.action === 'blessFace' ? 'bénir la face' : 'maudire la face'}</W>
+          <select className="qed-select fx-blank" value={a.face ?? ''} onChange={(e) => upd({ face: e.target.value === '' ? undefined : Number(e.target.value) })}>
+            <option value="">au choix / au hasard</option>
+            {[1, 2, 3, 4, 5, 6].map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <W>du dé de</W>
+          <TargetSelect value={a.target || (a.action === 'curseFace' ? 'target' : 'self')} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>{a.action === 'blessFace' ? ': +' : ': −'}</W>
+          <AmountInput value={a.n ?? 10} onChange={(v) => upd({ n: v })} min={1} unit=" 🪙" />
+          <W>or quand elle tombe</W>
+        </>
+      )}
+      {a.action === 'cleanseFaces' && (
+        <>
+          <W>dissiper</W>
+          <select className="qed-select fx-blank" value={a.scope || 'all'} onChange={(e) => upd({ scope: e.target.value })}>
+            <option value="all">bénédictions ET malédictions</option>
+            <option value="bless">les bénédictions</option>
+            <option value="curse">les malédictions</option>
+          </select>
+          <W>du dé de</W>
+          <TargetSelect value={a.target || 'self'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+        </>
+      )}
+      {a.action === 'unstableAnswers' && (
+        <>
+          <W>à la prochaine question de</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} />
+          <W>, mélanger les réponses toutes les</W>
+          {numInput(a.interval ?? 3, (v) => upd({ interval: Math.max(1, v) }), { min: 1, max: 30 })}
+          <W>secondes</W>
         </>
       )}
 
@@ -617,6 +712,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
                 else if (t === 'tithe') setB({ type: t, n: typeof b.n === 'number' ? b.n : 25 });
                 else if (t === 'diceMalus') setB({ type: t, n: typeof b.n === 'number' ? b.n : 1 });
                 else if (t === 'minRoll') setB({ type: t, n: typeof b.n === 'number' ? b.n : 3 });
+                else if (t === 'magicRegen') setB({ type: t, n: typeof b.n === 'number' ? b.n : 2 });
                 else setB({ type: t });
               }}>
                 {BUFF_TYPES.map((t) => <option key={t.k} value={t.k}>{t.label}</option>)}
@@ -649,6 +745,10 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
                 <AmountInput value={typeof b.n === 'number' ? b.n : 1} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au dé</W></>)}
               {b.type === 'minRoll' && (<><W>minimum</W>
                 <AmountInput value={typeof b.n === 'number' ? b.n : 3} onChange={(v) => setB({ n: v })} min={1} scale={false} /><W>au dé</W></>)}
+              {/* magicRegen : valeur FIXE uniquement (pas de dé/échelle) — le taux
+                  est relu en continu par magicRegenPerMin et doit rester stable. */}
+              {b.type === 'magicRegen' && (<><W>de +</W>
+                {numInput(typeof b.n === 'number' ? b.n : 2, (v) => setB({ n: Math.max(1, v) }), { min: 1, max: 99 })}<W>✨ magie / minute</W></>)}
             </div>
           </div>
         );

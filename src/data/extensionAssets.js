@@ -14,6 +14,9 @@ for (const path in urls) {
 // `id` = nom du fichier d'affiche (src/assets/extensions/<id>.jpg).
 export const COMING_SOON = [
   { id: 'quetes', icon: '🗺️', name: 'Quêtes et aventures', name_en: 'Quests & adventures' },
-  { id: 'runes', icon: '🔮', name: 'Maîtrise des runes', name_en: 'Rune mastery' },
   { id: 'rencontres', icon: '🤝', name: 'Rencontres', name_en: 'Encounters' },
 ];
+
+// L'extension Magie réutilise l'affiche « runes.jpg » (ex-aperçu « Maîtrise des
+// runes », devenue l'extension jouable `magic`).
+if (EXTENSION_IMG.runes && !EXTENSION_IMG.magic) EXTENSION_IMG.magic = EXTENSION_IMG.runes;

@@ -1,0 +1,310 @@
+/* Extension « Magie » — Table des sorts + Codex (mobile, réutilisable TBI).
+   100 % procédural : fond nocturne étoilé, cercle magique SVG, traînée canvas,
+   glow CSS. Les composants gardent leur LAYOUT en styles inline (pattern
+   AlchemyView) ; ce fichier porte le thème, les keyframes et les classes
+   animées. Le fond vit sur .mgc-root (posé par le conteneur : onglet mobile
+   MagicView ou future modale TBI). */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Nunito:wght@400;600;700;800&display=swap');
+
+/* ---- Racine : nuit violette + poussière d'étoiles (dégradés tuilés) ---- */
+.mgc-root {
+  min-height: 100%;
+  overflow-y: auto;
+  font-family: 'Nunito', var(--font-ui), system-ui, sans-serif;
+  color: #e8e1f6;
+  background-image:
+    radial-gradient(1px 1px at 24px 36px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 128px 154px, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1.6px 1.6px at 76px 92px, rgba(205, 180, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 172px 44px, rgba(150, 220, 255, 0.35), transparent),
+    radial-gradient(140% 90% at 50% -10%, #241640 0%, #150e2c 52%, #0c081c 100%);
+  background-size: 200px 200px, 200px 200px, 200px 200px, 200px 200px, 100% 100%;
+}
+.mgc-root::-webkit-scrollbar { display: none; }
+.mgc-root { scrollbar-width: none; }
+
+/* ---- Bascule Table / Codex (segmented, pattern onglets Alchimie) ---- */
+.mgc-seg {
+  display: flex;
+  gap: 5px;
+  margin: 8px 18px 6px;
+  padding: 4px;
+  background: rgba(120, 90, 220, 0.14);
+  border: 1px solid rgba(150, 120, 255, 0.22);
+  border-radius: 16px;
+}
+.mgc-seg button {
+  flex: 1;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 9px 0;
+  font-family: 'Baloo 2', var(--font-display), sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  background: transparent;
+  color: #9a8ac2;
+  transition: all 0.2s;
+}
+.mgc-seg button.is-on {
+  background: linear-gradient(180deg, #3a2a68, #2a1d4e);
+  color: #efe6ff;
+  box-shadow: 0 2px 8px rgba(90, 50, 190, 0.45), inset 0 1px 0 rgba(200, 170, 255, 0.25);
+}
+
+/* ---- Barre de magie (violet → cyan, glow, reflet qui balaie) ---- */
+.mgc-bar-track {
+  position: relative;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(16, 10, 34, 0.9);
+  border: 1px solid rgba(150, 120, 255, 0.35);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+.mgc-bar-fill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7b3fe4, #9d6bff 46%, #4adfff);
+  box-shadow: 0 0 12px rgba(135, 69, 212, 0.8), 0 0 22px rgba(74, 223, 255, 0.35);
+  transition: width 0.5s linear; /* le composant re-calcule ~2×/s : glissement continu */
+}
+.mgc-bar-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(110deg, transparent 32%, rgba(255, 255, 255, 0.4) 50%, transparent 68%);
+  background-size: 220% 100%;
+  animation: mgc-shine 2.8s linear infinite;
+}
+@keyframes mgc-shine { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+
+/* ---- Zone de tracé : « table des sorts » ---- */
+.mgc-zone {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid rgba(150, 120, 255, 0.3);
+  background:
+    radial-gradient(90% 80% at 50% 42%, rgba(80, 50, 160, 0.28), transparent 70%),
+    linear-gradient(180deg, #1a1136, #110b26 60%, #0d081d);
+  box-shadow: inset 0 0 40px rgba(60, 30, 130, 0.4), 0 10px 26px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.mgc-zone.is-shake { animation: mgc-shake 0.45s linear; }
+@keyframes mgc-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* Coins ornés (volutes en L, or pâle) */
+.mgc-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(232, 195, 74, 0.5);
+  pointer-events: none;
+  z-index: 3;
+}
+.mgc-corner.tl { top: 7px; left: 7px; border-right: none; border-bottom: none; border-top-left-radius: 9px; }
+.mgc-corner.tr { top: 7px; right: 7px; border-left: none; border-bottom: none; border-top-right-radius: 9px; }
+.mgc-corner.bl { bottom: 7px; left: 7px; border-right: none; border-top: none; border-bottom-left-radius: 9px; }
+.mgc-corner.br { bottom: 7px; right: 7px; border-left: none; border-top: none; border-bottom-right-radius: 9px; }
+
+/* Cercle magique de fond (discret, rotation lente + contre-rotation) */
+.mgc-table-circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(86%, 52vh);
+  height: min(86%, 52vh);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  overflow: visible;
+}
+.mgc-rot { transform-box: fill-box; transform-origin: center; animation: mgc-rot 70s linear infinite; }
+.mgc-rot-rev { transform-box: fill-box; transform-origin: center; animation: mgc-rot-rev 95s linear infinite; }
+@keyframes mgc-rot { to { transform: rotate(360deg); } }
+@keyframes mgc-rot-rev { to { transform: rotate(-360deg); } }
+.mgc-tc-ring { fill: none; stroke: rgba(160, 130, 255, 0.22); stroke-width: 1.6; }
+.mgc-tc-ring2 { fill: none; stroke: rgba(160, 130, 255, 0.14); stroke-width: 0.8; }
+.mgc-tc-grads { fill: none; stroke: rgba(190, 165, 255, 0.2); stroke-width: 5; stroke-dasharray: 0.4 3.8; }
+.mgc-tc-tri { fill: none; stroke: rgba(160, 130, 255, 0.12); stroke-width: 0.8; }
+
+/* Canvas de tracé : reçoit le doigt (pas de scroll pendant le tracé) */
+.mgc-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+  z-index: 2;
+}
+
+/* Aide + message « signe non reconnu » (pilule flottante en bas de la table) */
+.mgc-zone-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(205, 190, 240, 0.55);
+  pointer-events: none;
+  z-index: 3;
+}
+.mgc-note {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #e6d9ff;
+  background: rgba(24, 12, 44, 0.88);
+  border: 1px solid rgba(160, 120, 255, 0.4);
+  border-radius: 999px;
+  padding: 5px 14px;
+  pointer-events: none;
+  z-index: 3;
+  animation: mgc-noteIn 0.25s ease both;
+}
+@keyframes mgc-noteIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } }
+
+/* ---- Séquence de runes (chips) ---- */
+.mgc-chip {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(70, 45, 140, 0.55), rgba(40, 25, 85, 0.55));
+  border: 1px solid rgba(170, 135, 255, 0.45);
+  box-shadow: 0 0 12px rgba(120, 70, 230, 0.35), inset 0 1px 0 rgba(210, 185, 255, 0.25);
+  animation: mgc-pop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+.mgc-chip--empty {
+  background: transparent;
+  border: 1.5px dashed rgba(150, 120, 255, 0.22);
+  box-shadow: none;
+  color: rgba(160, 135, 220, 0.4);
+  font-weight: 800;
+  font-size: 13px;
+  animation: none;
+}
+@keyframes mgc-pop { from { opacity: 0; transform: scale(0.3) rotate(-14deg); } }
+/* Envol des runes à l'incantation (délai en cascade posé inline) */
+.mgc-chips.is-fly .mgc-chip:not(.mgc-chip--empty) { animation: mgc-flyUp 0.48s ease-in both; }
+@keyframes mgc-flyUp {
+  30% { opacity: 1; }
+  to { opacity: 0; transform: translateY(-52px) scale(0.35) rotate(16deg); }
+}
+
+/* Glyphe SVG : tracé qui se dessine + point de départ qui pulse */
+.mgc-glyph-draw {
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 0; /* état final = repli reduced-motion */
+  animation: mgc-draw 0.55s ease-out both;
+}
+@keyframes mgc-draw { from { stroke-dashoffset: 100; } }
+.mgc-glyph-start { animation: mgc-startPulse 1.8s ease-in-out infinite; }
+@keyframes mgc-startPulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+/* ---- Sort reconnu (connu) / combinaison inconnue ---- */
+.mgc-spell {
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--sc, #8745d4) 65%, transparent);
+  background:
+    radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--sc, #8745d4) 22%, transparent), transparent 70%),
+    rgba(22, 13, 44, 0.75);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--sc, #8745d4) 30%, transparent);
+  animation: mgc-fadeUp 0.3s ease both;
+}
+.mgc-unknown {
+  border-radius: 14px;
+  border: 1px dashed rgba(160, 135, 230, 0.4);
+  background: rgba(20, 12, 40, 0.6);
+  color: #b9a8e0;
+  animation: mgc-fadeUp 0.3s ease both;
+}
+@keyframes mgc-fadeUp { from { opacity: 0; transform: translateY(10px); } }
+
+/* Cible / face (sélecteurs du sort connu) */
+.mgc-target, .mgc-face {
+  border: 1.5px solid rgba(160, 130, 255, 0.3);
+  background: rgba(30, 18, 60, 0.7);
+  color: #d9cdf5;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.mgc-target.is-on {
+  border-color: var(--tc, #9d6bff);
+  background: color-mix(in srgb, var(--tc, #9d6bff) 30%, rgba(30, 18, 60, 0.8));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tc, #9d6bff) 55%, transparent);
+  color: #fff;
+}
+.mgc-face.is-on {
+  border-color: #e8c34a;
+  background: rgba(120, 90, 20, 0.5);
+  box-shadow: 0 0 12px rgba(232, 195, 74, 0.55);
+  color: #ffe9a8;
+}
+
+/* ---- Bouton « ✨ Incanter » ---- */
+.mgc-cast {
+  width: 100%;
+  max-width: 340px;
+  border: none;
+  border-radius: 18px;
+  padding: 15px 0;
+  font-family: 'Baloo 2', var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.4px;
+  background: linear-gradient(180deg, #3a2a68, #241944);
+  color: #8d7cb8;
+  cursor: default;
+}
+.mgc-cast.is-ready {
+  background: linear-gradient(180deg, #9d6bff, #6a2fd4);
+  color: #fff;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(40, 10, 90, 0.6);
+  animation: mgc-glowPulse 1.7s ease-in-out infinite;
+}
+@keyframes mgc-glowPulse {
+  0%, 100% { box-shadow: 0 6px 18px rgba(120, 60, 230, 0.45), 0 0 10px rgba(160, 110, 255, 0.4), inset 0 1px 0 rgba(230, 210, 255, 0.4); }
+  50% { box-shadow: 0 6px 30px rgba(150, 80, 255, 0.85), 0 0 26px rgba(180, 130, 255, 0.7), inset 0 1px 0 rgba(230, 210, 255, 0.4); }
+}
+
+/* ---- Codex : cartes runes / sorts / dé ---- */
+.mgc-card {
+  border-radius: 14px;
+  border: 1px solid rgba(165, 135, 250, 0.32);
+  background: linear-gradient(180deg, rgba(46, 30, 92, 0.5), rgba(26, 16, 54, 0.6));
+  box-shadow: inset 0 1px 0 rgba(210, 185, 255, 0.16), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.mgc-card--unknown {
+  border-style: dashed;
+  border-color: rgba(140, 115, 200, 0.22);
+  background: rgba(18, 11, 36, 0.55);
+  box-shadow: none;
+}
+
+/* Reflet doux sur les glyphes de rune du codex */
+.mgc-cdx-glyph { filter: drop-shadow(0 0 7px rgba(150, 100, 255, 0.55)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mgc-root *, .mgc-root { animation: none !important; }
+  .mgc-bar-fill { transition: none; }
+}

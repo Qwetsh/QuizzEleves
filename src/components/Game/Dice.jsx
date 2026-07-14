@@ -39,6 +39,9 @@ export default function Dice() {
   const disabled = rolling || finished || awaitingChoice || showQuestion || showEvent || pendingLanding || showDiceModal || !!pendingActions || !!showChargePicker || !!showTargetPicker || !!showDuelChoice || !!hackOverlay;
   const team = teams[currentTeam];
   const faces = dieVisualOn && team ? getDieFaces(team) : null;
+  // Faces bénies/maudites (Magie) : marques du dé de l'équipe ACTIVE (badge ✨/☠️).
+  const magicOn = useGameStore((s) => extOn(s.extensions, 'magic'));
+  const faceMods = magicOn && team ? team.faceMods : null;
   const ctx = { diceValue, showQuestion, rolling, showEvent, awaitingChoice, finished, pendingLanding, pendingActions };
   const canRelance = team?.powers?.relance?.charges > 0 && canUsePowerInContext('relance', ctx);
 
@@ -58,10 +61,10 @@ export default function Dice() {
           title={disabled ? undefined : T('game.openForge')}
           style={{ cursor: disabled ? 'default' : 'pointer' }}
         >
-          <Dice3D value={diceValue || 1} rolling={false} idleSpin={dieVisualOn} faces={faces} size={88} disabled={disabled} />
+          <Dice3D value={diceValue || 1} rolling={false} idleSpin={dieVisualOn} faces={faces} faceMods={faceMods} size={88} disabled={disabled} />
         </div>
       ) : (
-        <Dice3D value={diceValue || 1} rolling={false} idleSpin={dieVisualOn} faces={faces} size={88} disabled={disabled} />
+        <Dice3D value={diceValue || 1} rolling={false} idleSpin={dieVisualOn} faces={faces} faceMods={faceMods} size={88} disabled={disabled} />
       )}
 
       <div style={{ fontSize: 14, fontFamily: 'var(--font-display)', color: pendingLanding ? 'var(--gold-600)' : 'var(--ink-500)' }}>

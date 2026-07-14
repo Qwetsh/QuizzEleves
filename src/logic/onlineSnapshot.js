@@ -21,7 +21,7 @@ const RENDER_FIELDS = [
   'showDiceModal', 'showQuestion', 'showEvent', 'showFight', 'showDuelChoice',
   'showTargetPicker', 'showChargePicker', 'showSpecPicker', 'showEnchantPicker',
   'showShop', 'showShopPrompt', 'showInventory', 'lootReveal',
-  'indiceHidden', 'weatherCeremony',
+  'indiceHidden', 'weatherCeremony', 'spellCeremony',
 ];
 
 // Champs JAMAIS diffusés (Disk IO) : volumineux et inutiles au miroir. En tête,

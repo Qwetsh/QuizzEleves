@@ -12,6 +12,8 @@ import { itemImg } from '../../logic/itemAssets';
 import { itemEffectLines, enchantEffectLines } from '../../logic/effectText';
 import { getTeamEffects } from '../../logic/teamStatus';
 import AlchemyView from './AlchemyView';
+import SpellTableView from './SpellTableView';
+import CodexView from './CodexView';
 import ControllerView from './ControllerView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
@@ -1993,7 +1995,44 @@ function AdminPanel({ code, session, onClose }) {
 // Barre d'onglets fixe en bas (Équipe / Pouvoirs / Boutique / Troc / Historique).
 // L'onglet « Troc » réunit désormais trocs ouverts ET complots (cf. TradeView) :
 // il s'affiche dès que l'une OU l'autre extension est active (`hasTrade`).
-function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, hasForge, tradeAlert = 0, T = tFor(false) }) {
+// Magie : conteneur de l'onglet ✨ — sous-onglets Table des sorts / Codex sur le
+// fond nocturne .mgc-root. Les DONNÉES viennent du payload session (barre
+// {stored,lastTs,regenPerMin,max} résolue au TBI, codex en clés) ; le cast part
+// en intent `castSpell` — le TBI valide (coût, match, découverte, fizzle).
+function MagicView({ session, teamIdx, code, token }) {
+  const [sub, setSub] = useState('table');
+  const team = session.teams[teamIdx];
+  const en = !!session.englishMode;
+  const T = tFor(en);
+  // Anti-spam local : le cooldown lit lastCastAt (publié à côté de magic).
+  const magic = { ...(team.magic || {}), lastCastAt: team.lastCastAt || 0 };
+  return (
+    <div className="mgc-root" style={{ position: 'fixed', inset: 0, bottom: 64, display: 'flex', flexDirection: 'column' }}>
+      <div className="mgc-seg">
+        <button className={sub === 'table' ? 'is-on' : ''} onClick={() => setSub('table')}>{'\u{1FA84}'} {T('mobile.magic.table')}</button>
+        <button className={sub === 'codex' ? 'is-on' : ''} onClick={() => setSub('codex')}>{'\u{1F4D6}'} {T('mobile.magic.codex')}</button>
+      </div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: sub === 'codex' ? 'auto' : 'hidden' }}>
+        {sub === 'table' ? (
+          <SpellTableView
+            magic={magic}
+            knownRunes={team.knownRunes || []}
+            knownSpells={team.knownSpells || []}
+            teams={session.teams || []}
+            myIdx={teamIdx}
+            locked={!!session.locked || session.status === 'finished'}
+            en={en}
+            onCast={(payload) => sendIntent(code, token, 'castSpell', payload).catch(() => {})}
+          />
+        ) : (
+          <CodexView knownRunes={team.knownRunes || []} knownSpells={team.knownSpells || []} faceMods={team.faceMods || {}} en={en} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, hasForge, hasMagic, tradeAlert = 0, T = tFor(false) }) {
   const Tab = ({ id, icon, label, badge = 0 }) => (
     <button
       onClick={() => setTab(id)}
@@ -2031,6 +2070,7 @@ function TabBar({ tab, setTab, hasShop, hasTrade, hasAlchemy, hasScribe, hasForg
       {hasAlchemy && <Tab id="alchemy" icon={'⚗️'} label={T('mobile.tabAlchemy')} />}
       {hasScribe && <Tab id="scribe" icon={'\u{2712}️'} label={T('mobile.tabScribe')} />}
       {hasForge && <Tab id="forge" icon={'🔨'} label={T('mobile.tabForge')} />}
+      {hasMagic && <Tab id="magic" icon={'\u{2728}'} label={T('mobile.tabMagic')} />}
       <Tab id="history" icon={'\u{1F4DC}'} label={T('mobile.tabHistory')} />
     </nav>
   );
@@ -2537,6 +2577,9 @@ export default function MobileApp() {
     const hasDiplo = extOn(session.extensions, 'diplomacy') && owned && !!token;
     const hasAlchemy = craftEnabledFor(session.extensions, team, 'alchemy') && owned && !!token;
     const hasScribe = craftEnabledFor(session.extensions, team, 'enchant') && owned && !!token;
+    // Magie : table des sorts + codex, réservés au propriétaire (le cast engage
+    // la magie de l'équipe). Pas de gating métier (la magie n'est pas un craft).
+    const hasMagic = extOn(session.extensions, 'magic') && owned && !!token;
     // L'onglet « Troc » réunit trocs ouverts et complots : présent si l'une OU
     // l'autre extension est active.
     const hasExchange = hasTrade || hasDiplo;
@@ -2546,6 +2589,7 @@ export default function MobileApp() {
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView team={session.teams[teamIdx]} en={!!session?.englishMode} onCraft={(keys) => sendIntent(code, token, 'craft', { keys }).catch(() => {})} />
       : tab === 'scribe' && hasScribe ? <ScribeView team={session.teams[teamIdx]} en={!!session.englishMode} bottomInset={70} onInscribe={(parts) => { sendIntent(code, token, 'craftParchment', { parts }).catch(() => {}); }} />
       : tab === 'forge' && hasForge ? <ForgeView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
+      : tab === 'magic' && hasMagic ? <MagicView session={session} teamIdx={teamIdx} code={code} token={token} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     // Choix de métier (extension « Métiers ») : overlay bloquant tant que le
@@ -2554,7 +2598,7 @@ export default function MobileApp() {
     content = (
       <>
         {view}
-        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} hasScribe={hasScribe} hasForge={hasForge} tradeAlert={tradeAlert} T={T} />
+        <TabBar tab={tab} setTab={setTab} hasShop={hasShop} hasTrade={hasExchange} hasAlchemy={hasAlchemy} hasScribe={hasScribe} hasForge={hasForge} hasMagic={hasMagic} tradeAlert={tradeAlert} T={T} />
         {metierToChoose && (
           <MetierPickerMobile
             team={team} en={!!session?.englishMode} T={T}
