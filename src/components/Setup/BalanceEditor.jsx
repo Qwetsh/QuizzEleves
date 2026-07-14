@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ITEMS, RARITIES, SLOTS } from '../../data/items';
-import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
+import { SUBJECTS, SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../../data/subjects';
 import { POWERS } from '../../data/powers';
 import { SETS } from '../../data/sets';
 import ItemIcon from '../Modals/ItemIcon';
@@ -396,6 +396,9 @@ const rowToDraft = (r) => ({
   key: r.key, name: r.name, desc: r.description ?? '', descExpert: r.desc_expert ?? '',
   icon: r.icon ?? '', img: r.img ?? '', set: r.set_key ?? '',
   slot: r.slot, rarity: r.rarity, price: r.price, lootOnly: !!r.loot_only,
+  // Gating par matière (OR) : lootable / en boutique seulement si une de ces
+  // matières est active. [] = toujours disponible.
+  requiresSubjects: Array.isArray(r.requires_subjects) ? r.requires_subjects : [],
   // Famille (alchimie : ingredient/potion) + enchant (parchemin) : DOIVENT être
   // recopiés, sinon l'édition d'un ingrédient/potion/parchemin les efface au save.
   family: r.family || '', enchant: r.enchant || undefined,
@@ -405,7 +408,7 @@ const rowToDraft = (r) => ({
 const newDraft = (ord, over = {}) => ({
   key: '', name: 'Nouvel objet', desc: '', descExpert: '', icon: '✨', img: '', set: '',
   slot: 'head', rarity: 'commun', price: 10, lootOnly: false, effects: [],
-  family: '', enchant: undefined,
+  family: '', enchant: undefined, requiresSubjects: [],
   enabled: true, ord, _isNew: true, ...over,
 });
 const slugify = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -1432,7 +1435,33 @@ export default function BalanceEditor({ onClose }) {
                         <input type="checkbox" checked={!!draft.lootOnly} onChange={(ev) => set({ lootOnly: ev.target.checked })} />
                         Loot only — introuvable en boutique (reste en loot : coffres, duels…)
                       </label>
-                      <label className="bal-toggle" style={{ marginTop: 8 }}>
+
+                      {/* Gating par matière : l'objet n'apparaît en loot / boutique que si
+                          AU MOINS une matière cochée est active dans la partie. */}
+                      <div className="bal-row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
+                        <span className="bal-label">Matières requises</span>
+                        <div className="bal-chips" style={{ flex: 1 }}>
+                          {[...SUBJECT_KEYS, ...FORCED_SUBJECT_KEYS].map((k) => {
+                            const on = (draft.requiresSubjects || []).includes(k);
+                            return (
+                              <button key={k} type="button" className={`bal-chip ${on ? 'is-active' : ''}`}
+                                onClick={() => {
+                                  const cur = draft.requiresSubjects || [];
+                                  set({ requiresSubjects: on ? cur.filter((s) => s !== k) : [...cur, k] });
+                                }}>
+                                {SUBJECTS[k]?.icon} {SUBJECTS[k]?.name || k}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="bal-default" style={{ marginTop: 2 }}>
+                        {(draft.requiresSubjects || []).length
+                          ? 'Lootable / en boutique SEULEMENT si au moins une de ces matières est sélectionnée pour la partie.'
+                          : 'Aucune restriction : disponible quelles que soient les matières choisies.'}
+                      </div>
+
+                      <label className="bal-toggle" style={{ marginTop: 12 }}>
                         <input type="checkbox" checked={draft.enabled} onChange={(ev) => set({ enabled: ev.target.checked })} />
                         Activé (décocher = retiré du jeu sans le supprimer)
                       </label>

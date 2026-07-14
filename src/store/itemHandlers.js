@@ -138,15 +138,28 @@ const shopWeightOf = (item) =>
 
 const isConsumableKey = (k) => ITEMS[k]?.slot === 'consumable';
 
+// Gating par matière : un objet portant `requiresSubjects` (liste de clés, OR)
+// n'est éligible au loot / à la boutique que si AU MOINS une de ces matières est
+// active dans la partie. `activeSubjects` = Set|tableau de clés actives, ou
+// null/undefined pour NE PAS filtrer (ex. aperçu hors partie → on n'exclut rien).
+export function itemSubjectAllowed(item, activeSubjects) {
+  const req = item?.requiresSubjects;
+  if (!req || !req.length) return true;
+  if (!activeSubjects) return true;
+  const set = activeSubjects instanceof Set ? activeSubjects : new Set(activeSubjects);
+  return req.some((s) => set.has(s));
+}
+
 // Tire `count` objets d'une catégorie ('consumable' | 'equipment') parmi les
 // objets activés, en excluant les clés déjà présentes (`exclude`).
-export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS), exclude = [], allowFamilies = []) {
+export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS), exclude = [], allowFamilies = [], activeSubjects = null) {
   const ex = new Set(exclude);
   const fam = new Set(allowFamilies); // familles autorisées en vitrine (ext. active)
   const pool = enabledKeys.filter((k) => {
     const it = ITEMS[k];
     if (!it || ex.has(k)) return false;
     if (it.family && !fam.has(it.family)) return false; // ingrédient/potion/parchemin : seulement si autorisé
+    if (!itemSubjectAllowed(it, activeSubjects)) return false; // gating par matière
     return category === 'consumable' ? it.slot === 'consumable' : it.slot !== 'consumable';
   });
   return pickWeightedItems(count, pool, shopWeightOf);
@@ -165,12 +178,12 @@ function pinnedShopConsumables(enabledKeys, allowFamilies) {
   return enabledKeys.filter((k) => isPinnedShopKey(k, allowFamilies));
 }
 
-export function generateShopStock(enabledKeys = Object.keys(ITEMS), allowFamilies = []) {
+export function generateShopStock(enabledKeys = Object.keys(ITEMS), allowFamilies = [], activeSubjects = null) {
   const pinned = pinnedShopConsumables(enabledKeys, allowFamilies);
   return [
     ...pinned,
-    ...pickShopItems('consumable', Math.max(0, SHOP_CONSUMABLE_SLOTS - pinned.length), enabledKeys, pinned, allowFamilies),
-    ...pickShopItems('equipment', SHOP_EQUIPMENT_SLOTS, enabledKeys),
+    ...pickShopItems('consumable', Math.max(0, SHOP_CONSUMABLE_SLOTS - pinned.length), enabledKeys, pinned, allowFamilies, activeSubjects),
+    ...pickShopItems('equipment', SHOP_EQUIPMENT_SLOTS, enabledKeys, [], [], activeSubjects),
   ];
 }
 
@@ -178,11 +191,11 @@ export function generateShopStock(enabledKeys = Object.keys(ITEMS), allowFamilie
 // du stock courant ET différent de l'objet acheté (pour qu'il ne réapparaisse
 // pas aussitôt). null si le pool est épuisé. Un objet ÉPINGLÉ (parchemin vierge)
 // se réapprovisionne à l'IDENTIQUE → il reste toujours en boutique.
-export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys(ITEMS), allowFamilies = []) {
+export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys(ITEMS), allowFamilies = [], activeSubjects = null) {
   if (isPinnedShopKey(boughtKey, allowFamilies)) return boughtKey;
   const category = isConsumableKey(boughtKey) ? 'consumable' : 'equipment';
   // L'équipement ne reçoit jamais de famille ; les consommables oui (ext. active).
-  const picked = pickShopItems(category, 1, enabledKeys, [...stock, boughtKey], category === 'consumable' ? allowFamilies : []);
+  const picked = pickShopItems(category, 1, enabledKeys, [...stock, boughtKey], category === 'consumable' ? allowFamilies : [], activeSubjects);
   return picked[0] || null;
 }
 
@@ -190,8 +203,8 @@ export function pickReplacement(boughtKey, stock = [], enabledKeys = Object.keys
 // activés. legendaryChance : probabilité (0-1) de tomber sur un légendaire.
 // opts.category : 'all' (défaut), 'consumable' ou 'equipment' pour restreindre le pool.
 // Retourne null si aucun objet n'est activé dans la catégorie.
-export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(ITEMS), { category = 'all' } = {}) {
-  let valid = enabledKeys.filter((k) => ITEMS[k] && !ITEMS[k].family); // pas d'ingrédient/potion/parchemin en loot aléatoire
+export function pickLootItem(legendaryChance = 0.15, enabledKeys = Object.keys(ITEMS), { category = 'all', activeSubjects = null } = {}) {
+  let valid = enabledKeys.filter((k) => ITEMS[k] && !ITEMS[k].family && itemSubjectAllowed(ITEMS[k], activeSubjects)); // pas d'ingrédient/potion/parchemin en loot aléatoire
   if (category === 'consumable') valid = valid.filter((k) => ITEMS[k].slot === 'consumable');
   else if (category === 'equipment') valid = valid.filter((k) => ITEMS[k].slot !== 'consumable');
   if (valid.length === 0) return null;
@@ -274,7 +287,7 @@ export function buyItem(set, get, itemKey, teamIndex) {
     set({ teams: newTeams, showShop: { ...showShop, stock: restStock } });
   } else {
     // Boutique : un nouvel objet de la même catégorie arrive aussitôt.
-    const replacement = pickReplacement(itemKey, restStock, get().enabledItems, get().shopFamilies?.() || []);
+    const replacement = pickReplacement(itemKey, restStock, get().enabledItems, get().shopFamilies?.() || [], get().activeSubjects?.() || null);
     set({ teams: newTeams, shopStock: replacement ? [...restStock, replacement] : restStock });
   }
   saveGame(get());

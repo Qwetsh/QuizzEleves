@@ -28,6 +28,9 @@ function rowToItem(r) {
     rarity: r.rarity,
     price: r.price,
     lootOnly: !!r.loot_only,
+    // Gating par matière (OR) : l'objet n'est lootable / en boutique que si au
+    // moins une de ces matières est active. Absent/[] = toujours disponible.
+    requiresSubjects: Array.isArray(r.requires_subjects) && r.requires_subjects.length ? r.requires_subjects : undefined,
     effects: Array.isArray(r.effects) ? r.effects : [],
     // Alchimie / Enchantement : sous-famille de consommable + effet de parchemin.
     family: r.family || undefined,
@@ -57,6 +60,7 @@ export function itemToPayload(it) {
     rarity: it.rarity,
     price: it.price,
     loot_only: !!it.lootOnly,
+    requires_subjects: (Array.isArray(it.requiresSubjects) && it.requiresSubjects.length) ? it.requiresSubjects : null,
     effects: it.effects || [],
     family: it.family || null,
     enchant: it.enchant || null,

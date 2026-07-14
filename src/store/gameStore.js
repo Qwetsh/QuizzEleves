@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { TEAM_COLORS, TEAM_DEFAULTS, TEAM_DEFAULT_EMOJIS, TEAM_BLAZON_GLYPHS } from '../data/teamPresets.js';
 import { defaultCharacterFor } from '../data/characters.js';
 import { EVENTS } from '../data/events.js';
-import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES } from '../data/subjects.js';
+import { SUBJECTS, SUBJECT_KEYS, DEFAULT_BOARD_SUBJECTS, LV2_SUBJECTS, MODULES, FORCED_SUBJECT_KEYS } from '../data/subjects.js';
 import { POWERS, addCharge, MAX_CHARGES } from '../data/powers.js';
 import { generateBoard } from '../logic/boardGenerator.js';
 import { composeSpaceBoard } from '../logic/mapComposer.js';
@@ -298,6 +298,22 @@ export const useGameStore = create((set, get) => ({
     }
     if (subject !== 'lv2') return subject;
     return get().teams[teamIdx]?.lv2 || 'espagnol';
+  },
+
+  // Ensemble des matières ACTIVES dans la partie (clés) — pour le gating d'objets
+  // par matière (`requiresSubjects`, cf. itemHandlers.itemSubjectAllowed). Union :
+  // sélection du Setup + voies du plateau + sous-thèmes derrière chaque voie
+  // (categoryPools) + matières forcées ayant du contenu (cultureG/hardcore/…).
+  activeSubjects: () => {
+    const s = get();
+    const out = new Set();
+    (Array.isArray(s.selectedSubjects) ? s.selectedSubjects : []).forEach((k) => out.add(k));
+    (Array.isArray(s.boardSubjects) ? s.boardSubjects : []).forEach((k) => out.add(k));
+    Object.values(s.categoryPools || {}).forEach((arr) => Array.isArray(arr) && arr.forEach((k) => out.add(k)));
+    const q = s.questions || {};
+    FORCED_SUBJECT_KEYS.forEach((k) => { if (q[k]?.length) out.add(k); });
+    if (!out.size) DEFAULT_BOARD_SUBJECTS.forEach((k) => out.add(k));
+    return [...out];
   },
 
   // Duels : true = duel forcé automatique (historique) ; false = l'équipe qui
@@ -846,7 +862,7 @@ export const useGameStore = create((set, get) => ({
         answers: [], itemUses: [], powerUses: [],
       },
       statsArchived: false,
-      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies()) : [],
+      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies(), get().activeSubjects()) : [],
       shopStockTurns: 0,
       // Forge : vitrine ORGANISÉE PAR SLOT (une offre par slot 1→6, effets résolus only).
       shopFaceStock: forgeOn ? pickFaceStock() : [],
@@ -1882,6 +1898,7 @@ export const useGameStore = create((set, get) => ({
       if (!get().itemsEnabled()) { get().afterCorrectResolve(); return; }
       const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
       const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
+      const lootSubjects = get().activeSubjects();
       const lootTeam = get().teams[currentTeam];
       // Relance chanceuse (L5) : bonus de loot one-shot armé par la relance (sur 6+).
       // Palier 1 = +chance de loot ; palier 2 = chance d'un 2ᵉ drop. Consommé ici.
@@ -1898,16 +1915,16 @@ export const useGameStore = create((set, get) => ({
       const equipRate = LOOT.answerLootRate * timeRatio + getEffectValue(lootTeam, 'lootBonusEquipment') / 100 + relLootBonus + butinBonus;
       const drops = [];
       if (Math.random() < consumRate) {
-        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable', activeSubjects: lootSubjects });
         if (k) drops.push(k);
       }
       if (Math.random() < equipRate) {
-        const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment' });
+        const k = itemH.pickLootItem(LOOT.answerLegendaryChance, enabledForLoot, { category: 'equipment', activeSubjects: lootSubjects });
         if (k) drops.push(k);
       }
       // Double loot (palier 2) : un 2ᵉ tirage (consommable) à la probabilité donnée.
       if (relDoubleLoot && Math.random() < relDoubleLoot) {
-        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable', activeSubjects: lootSubjects });
         if (k) drops.push(k);
       }
       // Canal INGRÉDIENTS (extension Alchimie) : taux séparé + affinité de matière
@@ -1932,13 +1949,13 @@ export const useGameStore = create((set, get) => ({
       }
       // Butin « garanti » (face Forge) : si rien n'est tombé, force un consommable.
       if (lootTeam.forgeButin === 'guaranteed' && !drops.length) {
-        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable' });
+        const k = itemH.pickLootItem(0, enabledForLoot, { category: 'consumable', activeSubjects: lootSubjects });
         if (k) drops.push(k);
       }
       // Objet légendaire (Indice ultime) : bonne réponse après un indice → octroie
       // un équipement LÉGENDAIRE garanti. Le drapeau est consommé ici.
       if (lootTeam.indiceLegendaryArmed) {
-        const kl = itemH.pickLootItem(1, enabledForLoot, { category: 'equipment' });
+        const kl = itemH.pickLootItem(1, enabledForLoot, { category: 'equipment', activeSubjects: lootSubjects });
         if (kl) drops.push(kl);
         const nt = [...get().teams];
         nt[currentTeam] = { ...nt[currentTeam], indiceLegendaryArmed: undefined };
@@ -2223,7 +2240,7 @@ export const useGameStore = create((set, get) => ({
     if (!get().itemsEnabled()) return; // extension objets coupée → action `loot` neutre
     const idx = teamIdx ?? get().currentTeam;
     const enabled = get().enabledItems || Object.keys(ITEMS);
-    const key = itemH.pickLootItem(0, enabled, category ? { category } : {});
+    const key = itemH.pickLootItem(0, enabled, { ...(category ? { category } : {}), activeSubjects: get().activeSubjects() });
     if (!key) return;
     const res = itemH.grantItem(set, get, idx, key);
     // Sac plein → objet revendu : pas de cérémonie de gain (cohérent coffre).
@@ -3735,7 +3752,7 @@ export const useGameStore = create((set, get) => ({
     // régénère si le stock est absent ou trop petit pour le nouveau format.
     if (get().itemsEnabled()
         && (!Array.isArray(saved.shopStock) || saved.shopStock.length < itemH.SHOP_CONSUMABLE_SLOTS)) {
-      set({ shopStock: itemH.generateShopStock(get().enabledItems, get().shopFamilies()), shopStockTurns: 0 });
+      set({ shopStock: itemH.generateShopStock(get().enabledItems, get().shopFamilies(), get().activeSubjects()), shopStockTurns: 0 });
     }
   },
 

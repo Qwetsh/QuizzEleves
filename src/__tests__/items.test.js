@@ -5,7 +5,7 @@ import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, RARITIES, SLOTS, setItemsData } from '../data/items.js';
 import { getEffectValue, reducedRecul, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { resolveWrongAnswer } from '../logic/turnHelpers.js';
-import { generateShopStock, generateBlackMarketStock, pickLootItem, pickReplacement, isValidMove, BAG_SIZE } from '../store/itemHandlers.js';
+import { generateShopStock, generateBlackMarketStock, pickLootItem, pickReplacement, isValidMove, BAG_SIZE, itemSubjectAllowed } from '../store/itemHandlers.js';
 import { EVENTS } from '../data/events.js';
 
 // Le sac est positionnel (BAG_SIZE cases, null = vide) : on compare le contenu
@@ -132,6 +132,46 @@ describe('catalogue items.js', () => {
     // Aucun objet active
     expect(generateShopStock([])).toEqual([]);
     expect(pickLootItem(0.5, [])).toBeNull();
+  });
+
+  it('requiresSubjects : gating loot + boutique par matière active', () => {
+    const snapshot = { ...ITEMS };
+    setItemsData({
+      baseConso: { name: 'Base conso', icon: '🧪', slot: 'consumable', rarity: 'commun', price: 5 },
+      mathConso: { name: 'Math conso', icon: '📐', slot: 'consumable', rarity: 'commun', price: 5, requiresSubjects: ['maths'] },
+      baseEquip: { name: 'Base equip', icon: '🪖', slot: 'head', rarity: 'commun', price: 5 },
+      engEquip: { name: 'Eng equip', icon: '🇬🇧', slot: 'head', rarity: 'commun', price: 5, requiresSubjects: ['anglais', 'espagnol'] },
+    });
+    const keys = ['baseConso', 'mathConso', 'baseEquip', 'engEquip'];
+
+    // Helper direct : OR sur la liste, sans restriction = toujours OK, null = non bloqué.
+    expect(itemSubjectAllowed(ITEMS.mathConso, ['francais'])).toBe(false);
+    expect(itemSubjectAllowed(ITEMS.mathConso, ['francais', 'maths'])).toBe(true);
+    expect(itemSubjectAllowed(ITEMS.baseConso, ['francais'])).toBe(true);
+    expect(itemSubjectAllowed(ITEMS.mathConso, null)).toBe(true);
+
+    // Loot : matière requise absente → jamais tiré.
+    for (let n = 0; n < 30; n++) {
+      expect(pickLootItem(0, keys, { category: 'consumable', activeSubjects: ['francais'] })).not.toBe('mathConso');
+      expect(pickLootItem(0, keys, { category: 'equipment', activeSubjects: ['francais'] })).not.toBe('engEquip');
+    }
+    // Matière requise présente (une du OR suffit) → devient tirable.
+    const equips = new Set();
+    for (let n = 0; n < 80; n++) equips.add(pickLootItem(0, keys, { category: 'equipment', activeSubjects: ['anglais'] }));
+    expect(equips.has('engEquip')).toBe(true);
+
+    // Boutique : exclu sans la matière, présent avec.
+    for (let n = 0; n < 20; n++) {
+      const stock = generateShopStock(keys, [], ['francais']);
+      expect(stock).not.toContain('mathConso');
+      expect(stock).not.toContain('engEquip');
+    }
+    const shop = new Set();
+    for (let n = 0; n < 40; n++) generateShopStock(keys, [], ['maths', 'anglais']).forEach((k) => shop.add(k));
+    expect(shop.has('mathConso')).toBe(true);
+    expect(shop.has('engEquip')).toBe(true);
+
+    setItemsData(snapshot);
   });
 
   it('le parchemin vierge est ÉPINGLÉ en boutique quand l\'enchantement est actif', () => {
