@@ -5,6 +5,7 @@ import { validateParchment, ENCHANT_CAP_PER_PIECE } from '../data/enchantPalette
 import { moveForward } from '../logic/pathfinding.js';
 import { LOOT } from '../logic/balanceConfig.js';
 import { metierAllows } from '../logic/metier.js';
+import { extOn } from '../extensions/registry.js';
 import { saveGame } from './persistence.js';
 import { runEffects, consumableActions, announce } from './effectEngine.js';
 import { tg, tgPlural } from '../i18n';
@@ -150,6 +151,18 @@ export function itemSubjectAllowed(item, activeSubjects) {
   return req.some((s) => set.has(s));
 }
 
+// Gating par extension : un objet portant `requiresExtensions` (liste d'ids, ET)
+// n'existe dans la partie que si TOUTES ces extensions sont actives — un objet
+// qui a besoin à la fois de la magie et des objets exige les deux. `extensions`
+// = map { id: bool } de la partie, ou null/undefined pour NE PAS filtrer
+// (ex. aperçu hors partie). NB : extOn traite une clé absente comme active.
+export function itemExtensionAllowed(item, extensions) {
+  const req = item?.requiresExtensions;
+  if (!req || !req.length) return true;
+  if (extensions == null) return true;
+  return req.every((id) => extOn(extensions, id));
+}
+
 // Tire `count` objets d'une catégorie ('consumable' | 'equipment') parmi les
 // objets activés, en excluant les clés déjà présentes (`exclude`).
 export function pickShopItems(category, count, enabledKeys = Object.keys(ITEMS), exclude = [], allowFamilies = [], activeSubjects = null) {
@@ -287,7 +300,7 @@ export function buyItem(set, get, itemKey, teamIndex) {
     set({ teams: newTeams, showShop: { ...showShop, stock: restStock } });
   } else {
     // Boutique : un nouvel objet de la même catégorie arrive aussitôt.
-    const replacement = pickReplacement(itemKey, restStock, get().enabledItems, get().shopFamilies?.() || [], get().activeSubjects?.() || null);
+    const replacement = pickReplacement(itemKey, restStock, get().lootableItems?.() || get().enabledItems, get().shopFamilies?.() || [], get().activeSubjects?.() || null);
     set({ teams: newTeams, shopStock: replacement ? [...restStock, replacement] : restStock });
   }
   saveGame(get());

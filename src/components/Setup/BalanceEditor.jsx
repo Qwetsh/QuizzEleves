@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ITEMS, RARITIES, SLOTS } from '../../data/items';
 import { SUBJECTS, SUBJECT_KEYS, FORCED_SUBJECT_KEYS } from '../../data/subjects';
+import { EXTENSIONS } from '../../extensions/registry';
 import { POWERS } from '../../data/powers';
 import { SETS } from '../../data/sets';
 import ItemIcon from '../Modals/ItemIcon';
@@ -710,6 +711,9 @@ const rowToDraft = (r) => ({
   // Gating par matière (OR) : lootable / en boutique seulement si une de ces
   // matières est active. [] = toujours disponible.
   requiresSubjects: Array.isArray(r.requires_subjects) ? r.requires_subjects : [],
+  // Gating par extension (ET) : disponible seulement si TOUTES ces extensions
+  // sont actives. [] = toujours disponible.
+  requiresExtensions: Array.isArray(r.requires_extensions) ? r.requires_extensions : [],
   // Famille (alchimie : ingredient/potion) + enchant (parchemin) : DOIVENT être
   // recopiés, sinon l'édition d'un ingrédient/potion/parchemin les efface au save.
   family: r.family || '', enchant: r.enchant || undefined,
@@ -719,7 +723,7 @@ const rowToDraft = (r) => ({
 const newDraft = (ord, over = {}) => ({
   key: '', name: 'Nouvel objet', desc: '', descExpert: '', icon: '✨', img: '', set: '',
   slot: 'head', rarity: 'commun', price: 10, lootOnly: false, effects: [],
-  family: '', enchant: undefined, requiresSubjects: [],
+  family: '', enchant: undefined, requiresSubjects: [], requiresExtensions: [],
   enabled: true, ord, _isNew: true, ...over,
 });
 const slugify = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -1788,6 +1792,32 @@ export default function BalanceEditor({ onClose }) {
                         {(draft.requiresSubjects || []).length
                           ? 'Lootable / en boutique SEULEMENT si au moins une de ces matières est sélectionnée pour la partie.'
                           : 'Aucune restriction : disponible quelles que soient les matières choisies.'}
+                      </div>
+
+                      {/* Gating par extension : l'objet n'existe dans la partie que si
+                          TOUTES les extensions cochées sont actives (ET — contrairement
+                          aux matières en OU). */}
+                      <div className="bal-row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
+                        <span className="bal-label">Extensions requises</span>
+                        <div className="bal-chips" style={{ flex: 1 }}>
+                          {EXTENSIONS.map((ext) => {
+                            const on = (draft.requiresExtensions || []).includes(ext.id);
+                            return (
+                              <button key={ext.id} type="button" className={`bal-chip ${on ? 'is-active' : ''}`}
+                                onClick={() => {
+                                  const cur = draft.requiresExtensions || [];
+                                  set({ requiresExtensions: on ? cur.filter((x) => x !== ext.id) : [...cur, ext.id] });
+                                }}>
+                                {ext.icon} {ext.short}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="bal-default" style={{ marginTop: 2 }}>
+                        {(draft.requiresExtensions || []).length
+                          ? 'Disponible SEULEMENT si TOUTES ces extensions sont actives dans la partie (loot, boutique, Marché Noir, coffres…).'
+                          : 'Aucune restriction : disponible quelles que soient les extensions actives.'}
                       </div>
 
                       <label className="bal-toggle" style={{ marginTop: 12 }}>

@@ -389,6 +389,12 @@ export const useGameStore = create((set, get) => ({
     ...(extOn(get().extensions, 'enchant') ? ['parchment'] : []),
     ...(extOn(get().extensions, 'magic') ? ['magic'] : []),
   ],
+  // Objets réellement disponibles dans CETTE partie : activés dans l'éditeur ET
+  // dont toutes les extensions requises (requiresExtensions, ET) sont actives.
+  // Source unique pour TOUS les tirages (loot, boutique, Marché Noir, coffres,
+  // duels) — un objet dont l'extension est coupée n'existe nulle part.
+  lootableItems: () => (get().enabledItems || Object.keys(ITEMS))
+    .filter((k) => itemH.itemExtensionAllowed(ITEMS[k], get().extensions)),
 
   enabledEvents: Object.keys(EVENTS),
   toggleEvent: (key) => {
@@ -592,7 +598,7 @@ export const useGameStore = create((set, get) => ({
     if (!get().itemsEnabled() || !cfg.enabled) { set({ showStarterChest: false, lastStarterReward: null }); return; }
     if (!t || t.starterChestOpened) { set({ showStarterChest: false, lastStarterReward: null }); return; }
     // Pool d'objets proposés selon la catégorie choisie (hors légendaires lootOnly).
-    const enabled = get().enabledItems || Object.keys(ITEMS);
+    const enabled = get().lootableItems();
     const pool = enabled.filter((k) => {
       const it = ITEMS[k];
       if (!it || it.lootOnly || it.family) return false; // pas d'ingrédient/potion/parchemin au coffre de départ
@@ -871,7 +877,7 @@ export const useGameStore = create((set, get) => ({
         answers: [], itemUses: [], powerUses: [], spellCasts: [],
       },
       statsArchived: false,
-      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().enabledItems, get().shopFamilies(), get().activeSubjects()) : [],
+      shopStock: get().itemsEnabled() ? itemH.generateShopStock(get().lootableItems(), get().shopFamilies(), get().activeSubjects()) : [],
       shopStockTurns: 0,
       // Forge : vitrine ORGANISÉE PAR SLOT (une offre par slot 1→6, effets résolus only).
       shopFaceStock: forgeOn ? pickFaceStock() : [],
@@ -1923,7 +1929,7 @@ export const useGameStore = create((set, get) => ({
       // Extension objets désactivée : aucun butin (couture d'octroi coupée).
       if (!get().itemsEnabled()) { get().afterCorrectResolve(); return; }
       const timeRatio = Math.max(0, Math.min(1, timeLeft / maxTime));
-      const enabledForLoot = get().enabledItems || Object.keys(ITEMS);
+      const enabledForLoot = get().lootableItems();
       const lootSubjects = get().activeSubjects();
       const lootTeam = get().teams[currentTeam];
       // Relance chanceuse (L5) : bonus de loot one-shot armé par la relance (sur 6+).
@@ -2277,7 +2283,7 @@ export const useGameStore = create((set, get) => ({
   engineLoot: (teamIdx, category) => {
     if (!get().itemsEnabled()) return; // extension objets coupée → action `loot` neutre
     const idx = teamIdx ?? get().currentTeam;
-    const enabled = get().enabledItems || Object.keys(ITEMS);
+    const enabled = get().lootableItems();
     const key = itemH.pickLootItem(0, enabled, { ...(category ? { category } : {}), activeSubjects: get().activeSubjects() });
     if (!key) return;
     const res = itemH.grantItem(set, get, idx, key);
@@ -2407,7 +2413,7 @@ export const useGameStore = create((set, get) => ({
   // Donne N ingrédients d'alchimie ALÉATOIRES (pondérés) à une équipe.
   engineGrantIngredient: (teamIdx, n = 1) => {
     const idx = teamIdx ?? get().currentTeam;
-    const enabled = get().enabledItems || Object.keys(ITEMS);
+    const enabled = get().lootableItems();
     for (let i = 0; i < Math.max(1, n); i++) {
       const key = itemH.pickLootIngredient(enabled, null);
       if (key) get().engineGrantItem(idx, key, { reveal: i === 0, title: '🌿 Ingrédient récolté !' });
@@ -4021,7 +4027,7 @@ export const useGameStore = create((set, get) => ({
     // régénère si le stock est absent ou trop petit pour le nouveau format.
     if (get().itemsEnabled()
         && (!Array.isArray(saved.shopStock) || saved.shopStock.length < itemH.SHOP_CONSUMABLE_SLOTS)) {
-      set({ shopStock: itemH.generateShopStock(get().enabledItems, get().shopFamilies(), get().activeSubjects()), shopStockTurns: 0 });
+      set({ shopStock: itemH.generateShopStock(get().lootableItems(), get().shopFamilies(), get().activeSubjects()), shopStockTurns: 0 });
     }
   },
 

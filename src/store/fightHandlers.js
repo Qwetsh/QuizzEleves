@@ -98,7 +98,7 @@ function resolveBossOutcome(set, get, f) {
   if (f.winnerSide === 'attacker') {
     const gold = P.rewardGold ?? 50;
     let placed = { ...team, money: (team.money || 0) + gold };
-    const lootKey = pickLootItem(LOOT.fightLegendaryChance, get().enabledItems || Object.keys(ITEMS));
+    const lootKey = pickLootItem(LOOT.fightLegendaryChance, get().lootableItems());
     let note = '';
     if (lootKey) { const r = receiveItem(placed, lootKey); placed = r.team; note = r.note; }
     newTeams[idx] = placed;
@@ -292,7 +292,7 @@ function applyFightReward(set, get) {
 
     if (pool.length === 0) {
       // Le perdant n'a rien : on fouille le champ de bataille
-      const foundKey = pickLootItem(LOOT.fightLegendaryChance, get().enabledItems || Object.keys(ITEMS));
+      const foundKey = pickLootItem(LOOT.fightLegendaryChance, get().lootableItems());
       if (!foundKey) {
         // Aucun objet active dans la partie : lot de consolation en pieces
         newTeams[winnerIdx] = { ...winner, money: winner.money + 10 };

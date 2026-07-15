@@ -5,7 +5,7 @@ import { useGameStore } from '../store/gameStore.js';
 import { ITEMS, RARITIES, SLOTS, setItemsData } from '../data/items.js';
 import { getEffectValue, reducedRecul, reducedSteal, reducedTax } from '../logic/itemEffects.js';
 import { resolveWrongAnswer } from '../logic/turnHelpers.js';
-import { generateShopStock, generateBlackMarketStock, pickLootItem, pickReplacement, isValidMove, BAG_SIZE, itemSubjectAllowed } from '../store/itemHandlers.js';
+import { generateShopStock, generateBlackMarketStock, pickLootItem, pickReplacement, isValidMove, BAG_SIZE, itemSubjectAllowed, itemExtensionAllowed } from '../store/itemHandlers.js';
 import { EVENTS } from '../data/events.js';
 
 // Le sac est positionnel (BAG_SIZE cases, null = vide) : on compare le contenu
@@ -171,6 +171,41 @@ describe('catalogue items.js', () => {
     expect(shop.has('mathConso')).toBe(true);
     expect(shop.has('engEquip')).toBe(true);
 
+    setItemsData(snapshot);
+  });
+
+  it('requiresExtensions : gating par extension (ET) + lootableItems()', () => {
+    const snapshot = { ...ITEMS };
+    const prevState = { extensions: useGameStore.getState().extensions, enabledItems: useGameStore.getState().enabledItems };
+    setItemsData({
+      libre: { name: 'Libre', icon: '🧪', slot: 'consumable', rarity: 'commun', price: 5 },
+      magique: { name: 'Magique', icon: '✨', slot: 'consumable', rarity: 'commun', price: 5, requiresExtensions: ['magic'] },
+      magoForge: { name: 'Mago-forgé', icon: '🔨', slot: 'head', rarity: 'commun', price: 5, requiresExtensions: ['magic', 'forge'] },
+    });
+    const keys = ['libre', 'magique', 'magoForge'];
+
+    // Helper direct : ET sur la liste, sans restriction = toujours OK, null = non bloqué.
+    expect(itemExtensionAllowed(ITEMS.libre, { magic: false })).toBe(true);
+    expect(itemExtensionAllowed(ITEMS.magique, { magic: false })).toBe(false);
+    expect(itemExtensionAllowed(ITEMS.magique, { magic: true })).toBe(true);
+    expect(itemExtensionAllowed(ITEMS.magique, null)).toBe(true);
+    // Clé ABSENTE de la map = extension active (sémantique extOn / vieilles saves).
+    expect(itemExtensionAllowed(ITEMS.magique, {})).toBe(true);
+    // ET : les DEUX extensions doivent être actives.
+    expect(itemExtensionAllowed(ITEMS.magoForge, { magic: true, forge: false })).toBe(false);
+    expect(itemExtensionAllowed(ITEMS.magoForge, { magic: false, forge: true })).toBe(false);
+    expect(itemExtensionAllowed(ITEMS.magoForge, { magic: true, forge: true })).toBe(true);
+
+    // lootableItems() : source unique des tirages, filtrée par extensions.
+    useGameStore.setState({ enabledItems: keys, extensions: { magic: false, forge: true } });
+    expect(useGameStore.getState().lootableItems()).toEqual(['libre']);
+    useGameStore.setState({ extensions: { magic: true, forge: true } });
+    expect(useGameStore.getState().lootableItems()).toEqual(keys);
+    useGameStore.setState({ extensions: { magic: true, forge: false } });
+    expect(useGameStore.getState().lootableItems()).toEqual(['libre', 'magique']);
+
+    // Restaure l'état du store (extensions par défaut ≠ {} : {} = tout actif).
+    useGameStore.setState(prevState);
     setItemsData(snapshot);
   });
 

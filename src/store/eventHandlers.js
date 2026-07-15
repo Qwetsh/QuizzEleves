@@ -106,7 +106,7 @@ export function acceptEvent(set, get) {
 
   if (key === 'marchandAmbulant') {
     const count = showEvent.event?.params?.count ?? 3;
-    const merchandise = generateMerchantStock(count, get().enabledItems || Object.keys(ITEMS));
+    const merchandise = generateMerchantStock(count, get().lootableItems());
     if (merchandise.length === 0) {
       // Aucun objet active : le marchand n'a rien a vendre
       set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.merchantEmpty') } }, eventApplied: true });
@@ -118,7 +118,7 @@ export function acceptEvent(set, get) {
 
   if (key === 'troisCoffres') {
     const count = showEvent.event?.params?.count ?? 3;
-    const gifts = generateMerchantStock(count, get().enabledItems || Object.keys(ITEMS));
+    const gifts = generateMerchantStock(count, get().lootableItems());
     if (gifts.length === 0) {
       set({ showEvent: { ...showEvent, phase: 'result', data: { ...showEvent.data, message: tg('log.ev.chestsEmpty') } }, eventApplied: true });
       return;
@@ -165,7 +165,7 @@ export function acceptEvent(set, get) {
     // légendaires normalement introuvables) + remise. Fermer la boutique
     // termine le tour (cf. closeShop). On clôt l'event tout de suite.
     const P = showEvent.event?.params || {};
-    const stock = generateBlackMarketStock(P.count ?? 5, get().enabledItems || Object.keys(ITEMS));
+    const stock = generateBlackMarketStock(P.count ?? 5, get().lootableItems());
     const discount = 1 - (P.discountPct ?? 30) / 100;
     // Voir le Marché Noir compte comme une visite de boutique → reset du prompt.
     const nt = get().teams.slice();
@@ -458,7 +458,7 @@ export function eventTrade(set, get, pick) {
   const given = ITEMS[givenKey];
   const afterSacrifice = { ...team, equipment, bag };
 
-  const newKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS));
+  const newKey = pickLootItem(LOOT.chestLegendaryChance, get().lootableItems());
   if (!newKey) {
     const nt = [...teams]; nt[currentTeam] = afterSacrifice;
     addLog(tg('log.ev.tradeNothing', { emoji: team.emoji, icon: given.icon, item: locName(given) }));
@@ -870,7 +870,7 @@ export function applyEventEffect(set, get) {
         }
         if (toBurn === 0) break;
       }
-      const eqKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS), { category: 'equipment' });
+      const eqKey = pickLootItem(LOOT.chestLegendaryChance, get().lootableItems(), { category: 'equipment' });
       const afterBurn = { ...team, bag };
       if (!eqKey) { newTeams[currentTeam] = afterBurn; message = tg('log.ev.forgeEmpty'); break; }
       const eq = ITEMS[eqKey];
@@ -887,7 +887,7 @@ export function applyEventEffect(set, get) {
     case 'reliquaire': {
       // Donne une pièce d'un SET déjà commencé (≥1 pièce équipée), slot non rempli
       // par cette pièce ; fallback : n'importe quelle pièce de set.
-      const enabled = get().enabledItems || Object.keys(ITEMS);
+      const enabled = get().lootableItems();
       const started = Object.keys(equippedSetCounts(team));
       let candidates = started.length
         ? enabled.filter((k) => {
@@ -911,7 +911,7 @@ export function applyEventEffect(set, get) {
     }
     case 'tournoi': {
       // Question : gagnant = l'équipe active loote un conso ; perdant = un adversaire le rafle.
-      const prizeKey = pickLootItem(0, get().enabledItems || Object.keys(ITEMS), { category: 'consumable' });
+      const prizeKey = pickLootItem(0, get().lootableItems(), { category: 'consumable' });
       if (!prizeKey) { message = tg('log.ev.tournoiEmpty'); break; }
       const prize = ITEMS[prizeKey];
       if (data?.questionResult === true) {
@@ -938,7 +938,7 @@ export function applyEventEffect(set, get) {
       break;
     }
     case 'coffre': {
-      lootKey = pickLootItem(LOOT.chestLegendaryChance, get().enabledItems || Object.keys(ITEMS));
+      lootKey = pickLootItem(LOOT.chestLegendaryChance, get().lootableItems());
       const item = ITEMS[lootKey];
       if (!item) { message = tg('log.ev.coffreEmpty'); break; }
       const rarityName = loc(RARITIES[item.rarity], 'name') || '';
