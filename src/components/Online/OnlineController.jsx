@@ -10,6 +10,7 @@ import ControllerView from '../Mobile/ControllerView';
 import OnlineTeamPanel from './OnlineTeamPanel';
 import DuelRaceView from './DuelRaceView';
 import { useT } from '../../i18n';
+import '../../styles/online-game.css';
 
 // `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres
 // depuis le lobby dédié). Même manette, mêmes intents — seule la vue de DUEL
@@ -58,10 +59,15 @@ export default function OnlineController({ code, ctrl, lastSync = 0, host = fals
     );
   }
 
-  // C'est mon tour → manette plein écran (le reste passe au second plan).
+  // C'est mon tour → manette : plein écran au téléphone, COLONNE latérale sur
+  // grand écran (.olc-turnside via online-game.css) — le plateau reste visible.
   const myTurn = !!(ctrl && ctrl.controller && ctrl.turn && ctrl.turn.team === ownedIdx);
   if (myTurn) {
-    return <ControllerView session={ctrl} teamIdx={ownedIdx} code={code} token={token} T={T} lastSync={lastSync} />;
+    return (
+      <div className="olc-turnside">
+        <ControllerView session={ctrl} teamIdx={ownedIdx} code={code} token={token} T={T} lastSync={lastSync} />
+      </div>
+    );
   }
 
   // Hors de mon tour : je spectate le plateau et peux gérer mon équipe
@@ -69,19 +75,9 @@ export default function OnlineController({ code, ctrl, lastSync = 0, host = fals
   return (
     <>
       {ctrl && !panelOpen && (
-        <button
-          onClick={() => setPanelOpen(true)}
-          style={{
-            position: 'fixed', bottom: 16, right: 16, zIndex: 320, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 999,
-            background: 'linear-gradient(#8effb0, #2fb551)', color: '#06210f', fontWeight: 700,
-            border: '2px solid #05070a', boxShadow: '0 6px 16px rgba(0,0,0,0.4)', fontFamily: 'var(--font-ui)',
-          }}
-        >
-          🎽 Mon équipe
-          {tradeAlert > 0 && (
-            <span style={{ background: '#c9472f', color: '#fff', borderRadius: 999, padding: '0 7px', fontSize: 12 }}>{tradeAlert}</span>
-          )}
+        <button className="olc-myteam-btn" onClick={() => setPanelOpen(true)}>
+          🎽 MON ÉQUIPE
+          {tradeAlert > 0 && <span className="olc-myteam-badge">{tradeAlert}</span>}
         </button>
       )}
       {ctrl && panelOpen && (

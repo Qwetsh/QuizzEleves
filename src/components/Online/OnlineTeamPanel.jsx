@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { extOn } from '../../extensions/registry';
 import { TeamView, ShopView, PowersView, TradeView } from '../Mobile/MobileApp';
+import '../../styles/online-game.css';
 
 export default function OnlineTeamPanel({ code, token, ctrl, ownedIdx, trades = [], hasTrade = false, hasDiplo = false, tradeAlert = 0, onClose }) {
   const [tab, setTab] = useState('team');
@@ -21,33 +22,16 @@ export default function OnlineTeamPanel({ code, token, ctrl, ownedIdx, trades = 
   ];
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, right: 0, bottom: 0, width: 420, maxWidth: '96vw', zIndex: 330,
-      background: '#0e1319', borderLeft: '2px solid #16351f', boxShadow: '-12px 0 40px rgba(0,0,0,0.5)',
-      display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-ui)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderBottom: '1px solid #16351f' }}>
+    <div className="olc-panel">
+      <div className="olc-panel-tabs">
         {tabs.map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id)}
-            style={{
-              flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
-              border: '1px solid #16351f',
-              background: tab === tb.id ? '#16351f' : '#111a15',
-              color: tab === tb.id ? '#66ff8a' : '#bfeccb',
-            }}
-          >
+          <button key={tb.id} className={`olc-tab ${tab === tb.id ? 'is-on' : ''}`} onClick={() => setTab(tb.id)}>
             {tb.label}
           </button>
         ))}
-        <button
-          onClick={onClose}
-          style={{ padding: '8px 10px', borderRadius: 8, cursor: 'pointer', border: '1px solid #16351f', background: '#111a15', color: '#8b9096' }}
-          title="Fermer"
-        >✕</button>
+        <button className="olc-tab olc-tab--close" onClick={onClose} title="Fermer">✕</button>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <div className="olc-panel-body">
         {tab === 'team' && <TeamView {...common} />}
         {tab === 'shop' && hasShop && <ShopView {...common} />}
         {tab === 'powers' && <PowersView {...common} />}

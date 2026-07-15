@@ -1,0 +1,114 @@
+/* ============================================================
+   Jeu en ligne sur GRAND écran — le tour se joue dans une
+   COLONNE latérale intégrée (le plateau reste visible), au lieu
+   de la manette plein écran pensée téléphone. Sur petit écran
+   (téléphone), comportement historique : plein écran.
+   ============================================================ */
+
+/* --- Panneau de TOUR (ControllerView remis en boîte) --- */
+@media (min-width: 900px) {
+  .olc-turnside .mob-ctrl {
+    /* inset:0 (plein écran) → colonne calée à droite */
+    left: auto;
+    width: 440px;
+    z-index: 210; /* au-dessus des modales TBI miroir (la colonne est MA manette) */
+    background: rgba(16, 11, 5, 0.97);
+    border-left: 3px solid #150f08;
+    box-shadow: -14px 0 36px rgba(0, 0, 0, 0.55);
+    padding: 16px 18px 18px;
+  }
+  /* Le contenu se cale en HAUT de la colonne (le centrage vertical plein
+     écran laisse un grand vide dans une colonne). */
+  .olc-turnside .mob-ctrl-body { justify-content: flex-start; padding-top: 18px; }
+}
+
+/* --- Panneau « Mon équipe » (hors tour) : même colonne, thème rétro bois --- */
+.olc-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 96vw;
+  z-index: 330;
+  background: #241a10;
+  border-left: 3px solid #150f08;
+  box-shadow: 0 0 0 2px #b79a63 inset, -14px 0 40px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+}
+.olc-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 8px;
+  border-bottom: 2px solid #150f08;
+  background: #1d160e;
+}
+.olc-tab {
+  flex: 1;
+  padding: 9px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-display, sans-serif);
+  font-size: 12.5px;
+  letter-spacing: 0.3px;
+  border: 2px solid #150f08;
+  background: #3a2e22;
+  color: #cdbf9e;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.olc-tab.is-on {
+  background: #57c84d;
+  color: #0c2a0a;
+  box-shadow: 0 0 10px rgba(87, 200, 77, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.olc-tab--close { flex: 0 0 auto; padding: 9px 12px; color: #e88f8f; }
+.olc-panel-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  /* Les vues mobiles (fond parchemin) remplissent la colonne. */
+  background: radial-gradient(120% 60% at 50% 0%, #fbf3df 0%, #f0e3c3 55%, #e6d6ab 100%);
+}
+/* REMISE EN BOÎTE des vues mobiles : TeamView/ShopView/… rendent `.mob-root`
+   (position: fixed; inset: 0 = plein écran téléphone) — dans le drawer, elles
+   doivent remplir LA COLONNE, pas l'écran (c'était le « format téléphone
+   étiré » : le drawer existait mais les vues s'en échappaient). */
+.olc-panel-body .mob-root {
+  position: absolute;
+  inset: 0;
+}
+
+/* Bouton flottant « Mon équipe » (hors tour) — habillage console. */
+.olc-myteam-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 320;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  font-family: var(--font-display, sans-serif);
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  background: #57c84d;
+  color: #0c2a0a;
+  border: 3px solid #150f08;
+  box-shadow: 0 0 16px rgba(87, 200, 77, 0.45), 0 6px 16px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.olc-myteam-btn:hover { background: #6ad55f; }
+.olc-myteam-badge {
+  background: #c9472f;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+}
