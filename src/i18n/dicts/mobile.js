@@ -28,7 +28,7 @@ export default {
   'mobile.pickName': { fr: 'Choisis un nom', en: 'Choose a name' },
   'mobile.pickDefense': { fr: 'Choisis ton pouvoir de défense 🛡️', en: 'Choose your defense power 🛡️' },
   'mobile.pickAttack': { fr: "Choisis ton pouvoir d'attaque ⚔️", en: 'Choose your attack power ⚔️' },
-  'mobile.waitingForTeacher': { fr: 'En attente du prof pour lancer la partie…', en: 'Waiting for the teacher to start the game…' },
+  'mobile.waitingForTeacher': { fr: 'En attente du lancement de la partie…', en: 'Waiting for the game to start…' },
   'mobile.editMyTeam': { fr: 'Modifier mon équipe', en: 'Edit my team' },
 
   // — Choix d'équipe —

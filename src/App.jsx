@@ -12,6 +12,7 @@ import OnlineHost from './components/Online/OnlineHost';
 // l'ancien Setup via ?classic (filet de sécurité pendant la transition).
 const SelectionCassettes = lazy(() => import('./components/Setup/SelectionCassettes'));
 const HomeScreen = lazy(() => import('./components/Home/HomeScreen'));
+const OnlineLobby = lazy(() => import('./components/Online/OnlineLobby'));
 const CLASSIC_SETUP = new URLSearchParams(window.location.search).has('classic');
 
 const pageVariants = {
@@ -45,6 +46,11 @@ export default function App() {
           <motion.div key="home" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
             {/* ?classic n'a pas d'accueil : l'ancien Setup tout-en-un directement. */}
             {CLASSIC_SETUP ? <Setup /> : <Suspense fallback={null}><HomeScreen /></Suspense>}
+          </motion.div>
+        )}
+        {phase === 'onlineLobby' && (
+          <motion.div key="onlineLobby" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
+            <Suspense fallback={null}><OnlineLobby /></Suspense>
           </motion.div>
         )}
         {phase === 'setup' && (

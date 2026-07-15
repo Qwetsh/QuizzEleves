@@ -247,12 +247,15 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const { DOMAINS, GROUPS } = model;
   // Actions store (toujours appelées ; utilisées seulement en live/main).
   const startGameFromPerimeter = useGameStore((s) => s.startGameFromPerimeter);
-  const startOnlineGame = useGameStore((s) => s.startOnlineGame);
-  const onlineLobbyTeams = useGameStore((s) => s.lobbyTeams);
+  const setOnlineCompose = useGameStore((s) => s.setOnlineCompose);
   const setPhase = useGameStore((s) => s.setPhase);
   const useBrevet = useGameStore((s) => s.useBrevet);
   // Niveaux scolaires choisis au lancement — MULTI-sélection (ex. 6e + 5e).
-  const [levels, setLevels] = useState(['6e', '5e', '4e', '3e']);
+  // En ligne : restaurés depuis onlineCompose (aller-retour lobby ↔ console).
+  const [levels, setLevels] = useState(() => {
+    const st = useGameStore.getState();
+    return (main && st.connectionMode === 'online') ? st.onlineCompose.levels : ['6e', '5e', '4e', '3e'];
+  });
   const toggleLevel = (id) => setLevels((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   const [showLaunch, setShowLaunch] = useState(false); // menu de lancement (niveaux + classe)
   // Onglet initial selon l'intention d'accueil (RÉGLAGES s'ouvre directement).
@@ -304,9 +307,14 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const enabledItems = useGameStore((s) => s.enabledItems);
   const starterChestConfig = useGameStore((s) => s.starterChestConfig);
   const phoneMode = connectionMode === 'phone';
+  // En ligne : la console est ouverte DEPUIS le lobby (bouton THÈMES) — elle
+  // VALIDE la composition dans le store (onlineCompose) et y retourne.
+  const onlineMode = main && connectionMode === 'online';
   const itemsOn = extOn(extensions, 'equipment'); // coffre/objets dépendent de l'extension « Objets »
 
-  const [slots, setSlots] = useState([]);
+  // Composition : en ligne, restaurée depuis le store (aller-retour lobby ↔
+  // console sans perdre les cassettes insérées) ; sinon state local pur.
+  const [slots, setSlots] = useState(() => (onlineMode ? (useGameStore.getState().onlineCompose.slots || []) : []));
   const [drag, setDrag] = useState(null);
   const [hoverSlot, setHoverSlot] = useState(-1);
   const [lastCard, setLastCard] = useState(null);
@@ -553,10 +561,13 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     const perimeter = perimeterFor(levels);
     if (!perimeter.boardSubjects.length) return;
     setShowLaunch(false);
-    // En ligne : les équipes viennent du LOBBY (créées par les joueurs), pas des
-    // équipes locales par défaut. Sinon flux normal (cassettes).
-    if (connectionMode === 'online') startOnlineGame(perimeter);
-    else startGameFromPerimeter(perimeter);
+    // En ligne : on ne lance PAS d'ici — on VALIDE la composition dans le store
+    // et on retourne au lobby (c'est son bouton LANCER qui démarre, avec les
+    // équipes du lobby). Sinon flux normal (lancement direct).
+    if (onlineMode) {
+      setOnlineCompose({ slots, levels, perimeter });
+      setPhase('onlineLobby');
+    } else startGameFromPerimeter(perimeter);
   };
 
   const demo = () => {
@@ -635,9 +646,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
   const statusText = loadedCount === 0 ? '0 VOIE · PRÊT' : `${loadedCount}/${voiesCount} VOIES`;
   // En ligne : on ne peut lancer que si ≥1 équipe a rejoint ET que toutes sont prêtes.
-  const onlineTeamsLive = (onlineLobbyTeams || []).filter((r) => !r.removed);
-  const onlineReady = connectionMode !== 'online' || (onlineTeamsLive.length >= 1 && onlineTeamsLive.every((r) => r.ready));
-  const launchOn = loadedCount > 0 && onlineReady;
+  // En ligne, la console ne LANCE plus : elle VALIDE la composition (le
+  // lancement vit dans l'écran lobby). Le bouton n'attend donc que des voies.
+  const launchOn = loadedCount > 0;
   const deckSpin = loadedCount > 0 ? 'running' : 'paused';
   const lcdText = lastCard ? lastCard.label.toUpperCase() : '— — — — —';
   const windowTint = lastCard ? lastCard.color : '#2c2419';
@@ -736,17 +747,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
       return (
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Participants — contextuels au mode choisi à l'accueil : écran tactile =
-              création d'équipes ici, téléphones = lobby QR, en ligne = lobby lien. */}
+              création d'équipes ici, téléphones = lobby QR. (En ligne, l'onglet
+              n'existe pas : les joueurs vivent dans l'écran LOBBY dédié.) */}
           <div className="qm-console-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto', ...panelInset }}>
-            {phoneMode ? <LobbyPanel /> : connectionMode === 'online' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-600,#5a4a30)', lineHeight: 1.5 }}>
-                  Partage le lien (ou le code) ci-dessous. Chaque joueur ouvre la partie, <b>crée son équipe</b> (nom + logo) et se met « prêt ».
-                  Tu pourras <b>lancer</b> quand tout le monde est prêt. Garde cet onglet ouvert : c’est lui qui fait tourner le jeu.
-                </div>
-                <LobbyPanel online />
-              </div>
-            ) : (<><TeamCount /><TeamCustomization /></>)}
+            {phoneMode ? <LobbyPanel /> : (<><TeamCount /><TeamCustomization /></>)}
           </div>
         </div>
       );
@@ -884,8 +888,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 « play » (exploration des thèmes / réglages seuls). */}
             {!(main && (phoneMode || homeIntent !== 'play')) && (
               <button onClick={onLaunchClick} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
-                <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
-                <span>LANCER</span>
+                <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>{onlineMode ? '✓' : '▶'}</span>
+                <span>{onlineMode ? 'VALIDER' : 'LANCER'}</span>
               </button>
             )}
           </div>
@@ -894,13 +898,15 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
         {/* ============ SÉLECTEUR DE FONCTION (console de setup) ============ */}
         {main && (
           <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#1d160e', borderBottom: '3px solid #120c06' }}>
-            {/* Retour à la page d'accueil (le mode de jeu se choisit là-bas). */}
-            <button onClick={() => setPhase('home')} style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: '#3a2c1a', color: '#e3d0aa' }}>⌂ ACCUEIL</button>
+            {/* Retour : page d'accueil, ou LOBBY quand la console est ouverte
+                depuis le lobby en ligne (bouton THÈMES). */}
+            <button onClick={() => setPhase(onlineMode ? 'onlineLobby' : 'home')} style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: '#3a2c1a', color: '#e3d0aa' }}>{onlineMode ? '← LOBBY' : '⌂ ACCUEIL'}</button>
             <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 2 }}>FONCTION</span>
             <div style={{ display: 'flex', gap: 6 }}>
               {CONSOLE_TABS.filter((tb) =>
                 homeIntent === 'browse' ? tb.id === 'themes'
                 : homeIntent === 'settings' ? tb.id === 'reglages'
+                : onlineMode ? tb.id !== 'mode' // en ligne : les joueurs vivent dans le LOBBY
                 : true).map((tb) => {
                 const on = tab === tb.id;
                 return (

@@ -240,6 +240,13 @@ export const useGameStore = create((set, get) => ({
   homeIntent: 'play',
   openConsole: (intent = 'play') => set({ homeIntent: intent, phase: 'setup' }),
 
+  // --- Lobby « jeu en ligne » (phase 'onlineLobby', écran OnlineLobby) ---
+  // La composition des thèmes vit ici (et plus seulement dans le state local de
+  // la console cassettes) : l'hôte compose depuis le lobby (bouton THÈMES →
+  // console → ✓ VALIDER → retour lobby), et le LANCER du lobby lit `perimeter`.
+  onlineCompose: { slots: [], levels: ['6e', '5e', '4e', '3e'], perimeter: null },
+  setOnlineCompose: (patch) => set({ onlineCompose: { ...get().onlineCompose, ...patch } }),
+
   // Bac a sable dev : partie simulee qui ne touche pas a la sauvegarde
   devSandbox: false,
 

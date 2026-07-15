@@ -72,11 +72,19 @@ export default function HomeScreen() {
     return !!(s && s.phase === 'game' && Array.isArray(s.teams) && s.teams.length);
   });
 
+  const setPhase = useGameStore((s) => s.setPhase);
   // Choisit un mode et ouvre la console de composition (thèmes → LANCER).
   const play = (conn, controller) => {
     setConnectionMode(conn);
     setPhoneController(controller);
     openConsole('play');
+  };
+  // Héberger en ligne : direction l'écran LOBBY dédié (session auto, création
+  // de MON équipe intégrée, lien à partager, LANCER là-bas).
+  const hostOnline = () => {
+    setConnectionMode('online');
+    setPhoneController(true);
+    setPhase('onlineLobby');
   };
   const joinOnline = () => {
     const c = joinCode.trim().toUpperCase();
@@ -132,7 +140,7 @@ export default function HomeScreen() {
           {sub === 'online' && (
             <div className="home-menu" style={panel}>
               <div style={subTitle}>🌐 MULTI EN LIGNE</div>
-              <MenuBtn emblem="📡" label="HÉBERGER UNE PARTIE" sub="Tu composes la partie et partages un lien ; chacun crée son équipe et joue depuis son écran." onClick={() => play('online', true)} />
+              <MenuBtn emblem="📡" label="HÉBERGER UNE PARTIE" sub="Tu ouvres un lobby, tu crées ton équipe et tu partages le lien ; chacun crée la sienne et joue depuis son écran." onClick={hostOnline} />
               <div className="home-btn" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: 9 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <span style={{ fontSize: 26, flex: '0 0 34px', textAlign: 'center' }}>🔗</span>

@@ -7,23 +7,13 @@
 import { useEffect, useState } from 'react';
 import App from '../../App';
 import { useGameStore } from '../../store/gameStore';
-import { fetchSession, subscribeSession, subscribePresence } from '../../logic/sessionConfig';
+import { fetchSession, subscribeSession, subscribePresence, onlineToken } from '../../logic/sessionConfig';
 import { hydrateSnapshot } from '../../logic/onlineSnapshot';
 import OnlineController from './OnlineController';
-import { LobbyCreateScreen } from '../Mobile/MobileApp';
+import OnlineLobby from './OnlineLobby';
 
-// Jeton local persistant (identité du joueur → possession de son équipe), même
-// clé que OnlineController pour que l'équipe créée au lobby soit bien reconnue.
-const tokenKey = (code) => `quete_online_token_${code}`;
-function loadToken(code) {
-  try {
-    const ex = localStorage.getItem(tokenKey(code));
-    if (ex) return ex;
-    const t = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-    localStorage.setItem(tokenKey(code), t);
-    return t;
-  } catch { return Math.random().toString(36).slice(2); }
-}
+// Jeton local persistant (identité du joueur → possession de son équipe) :
+// helper partagé onlineToken (même clé que OnlineController / OnlineLobby).
 
 function Splash({ code, children }) {
   return (
@@ -43,7 +33,7 @@ export default function OnlineClient({ code }) {
   const [lastSync, setLastSync] = useState(0);
   const [hostOnline, setHostOnline] = useState(false);
   const [viewers, setViewers] = useState(0);
-  const [token] = useState(() => loadToken(code));
+  const [token] = useState(() => onlineToken(code));
 
   useEffect(() => {
     if (!code) return;
@@ -76,11 +66,9 @@ export default function OnlineClient({ code }) {
   if (!started) {
     if (data === undefined) return <Splash code={code}>Connexion à la partie</Splash>;
     if (data === null) return <Splash code={code}>Partie introuvable — vérifie le code (l’hôte doit avoir ouvert le lobby) :</Splash>;
-    return (
-      <div style={{ position: 'absolute', inset: 0, overflow: 'auto', background: '#f4e8cf' }}>
-        <LobbyCreateScreen code={code} token={token} lv2Mode={!!data.lv2Mode} englishMode={!!data.englishMode} />
-      </div>
-    );
+    // Même écran lobby que l'hôte (variante client : pas de bouton thèmes /
+    // lancer / retrait), avec MA création d'équipe intégrée.
+    return <OnlineLobby client code={code} token={token} lv2Mode={!!data.lv2Mode} englishMode={!!data.englishMode} />;
   }
 
   // --- Phase JEU : plateau en direct + ma manette / gestion d'équipe ---

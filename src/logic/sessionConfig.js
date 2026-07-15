@@ -23,6 +23,20 @@ export function randomToken() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
+// Jeton local PERSISTANT d'un joueur « en ligne » pour une partie donnée (même
+// clé partout : lobby, contrôleur, client — ET l'hôte, qui est un joueur comme
+// les autres). Détermine la possession d'équipe via team.token.
+export function onlineToken(code) {
+  const key = `quete_online_token_${code}`;
+  try {
+    const ex = localStorage.getItem(key);
+    if (ex) return ex;
+    const t = randomToken();
+    localStorage.setItem(key, t);
+    return t;
+  } catch { return randomToken(); }
+}
+
 // Sans I/O/0/1 pour éviter les confusions de lecture du code d'appairage.
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 

@@ -9,7 +9,7 @@ import { POWERS } from '../../data/powers';
 import TeamAvatar from '../TeamAvatar';
 import { locName } from '../../i18n/content';
 import {
-  createSession, buildSessionPayload, joinUrl, onlineJoinUrl,
+  createSession, buildSessionPayload, joinUrl,
   fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
 } from '../../logic/sessionConfig';
 import { useT } from '../../i18n';
@@ -61,7 +61,9 @@ function TitleBar() {
   );
 }
 
-export default function LobbyPanel({ online = false }) {
+// Lobby du mode TÉLÉPHONE (QR en classe). Le lobby « jeu en ligne » a son
+// propre écran dédié : src/components/Online/OnlineLobby.jsx.
+export default function LobbyPanel() {
   const T = useT();
   const sessionCode = useGameStore((s) => s.sessionCode);
   const setSessionCode = useGameStore((s) => s.setSessionCode);
@@ -125,10 +127,8 @@ export default function LobbyPanel({ online = false }) {
     );
   }
 
-  const url = online ? onlineJoinUrl(sessionCode) : joinUrl(sessionCode);
-  // En ligne : on ne peut lancer que si TOUTES les équipes présentes sont prêtes.
-  const allReady = teamsLive.length > 0 && teamsLive.every((r) => r.ready);
-  const canStart = teamsLive.length >= 1 && (!online || allReady);
+  const url = joinUrl(sessionCode);
+  const canStart = teamsLive.length >= 1;
   return (
     <div className="lobby90">
       <div className="lobby90-win">
@@ -185,24 +185,9 @@ export default function LobbyPanel({ online = false }) {
             })}
           </div>
 
-          {online ? (
-            <>
-              {/* L'hôte joue AUSSI via un client : il ouvre sa propre fenêtre de jeu
-                  (l'onglet actuel = l'écran/serveur partagé). Le lancement se fait
-                  par le bouton « LANCER » de l'en-tête (thème + tout le monde prêt). */}
-              <button className="lobby90-start" onClick={() => window.open(url, '_blank', 'noopener')}>
-                🎮 Jouer / créer mon équipe
-              </button>
-              <div className="lobby90-waiting" style={{ textAlign: 'center' }}>
-                Ouvre ta fenêtre de jeu (bouton ci-dessus) pour créer ton équipe. Cet onglet est l’écran partagé.
-                Insère un thème puis clique « LANCER » (en haut) quand {allReady ? 'tout le monde est prêt' : 'tous les joueurs sont prêts'}.
-              </div>
-            </>
-          ) : (
-            <button className="lobby90-start" onClick={start} disabled={!canStart}>
-              ▶▶ {T('setup.lobbyStart', { n: teamsLive.length })}
-            </button>
-          )}
+          <button className="lobby90-start" onClick={start} disabled={!canStart}>
+            ▶▶ {T('setup.lobbyStart', { n: teamsLive.length })}
+          </button>
 
           {devOn() && (
             <div className="lobby90-sim">
@@ -212,7 +197,7 @@ export default function LobbyPanel({ online = false }) {
                   <button
                     key={n}
                     className="lobby90-chip"
-                    onClick={() => window.open(`${online ? onlineJoinUrl(sessionCode) : joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
+                    onClick={() => window.open(`${joinUrl(sessionCode)}&token=test-${sessionCode}-${n}`, `qm-phone-${n}`, 'width=430,height=880')}
                   >
                     {T('setup.lobbySimStudent', { n })}
                   </button>

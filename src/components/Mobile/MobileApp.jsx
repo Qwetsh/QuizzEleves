@@ -95,15 +95,19 @@ const EMOJI_CHOICES = ['🦁', '🐯', '🦅', '🐺', '🦊', '🐻', '🐉', '
 // Écran « crée ton équipe » (mode téléphone, statut lobby). L'élève saisit un
 // nom + un logo, et peut choisir ses 2 pouvoirs. À l'envoi, sa fiche est
 // poussée dans le lobby (upsert par token) ; il attend que le prof démarre.
-export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = false }) {
+// `initial` (optionnel) : ligne quete_lobby_teams déjà créée avec CE jeton —
+// le formulaire se PRÉ-REMPLIT et repart de l'écran « prêt ✓ » (au lieu de
+// proposer une création vierge alors que l'équipe existe, ex. aller-retour
+// lobby ↔ console côté hôte en ligne).
+export function LobbyCreateScreen({ code, token, onSubmitted, lv2Mode, englishMode = false, initial = null }) {
   const T = tFor(englishMode);
-  const [name, setName] = useState('');
-  const [character, setCharacter] = useState(CHARACTERS[0].id);
+  const [name, setName] = useState(initial?.name || '');
+  const [character, setCharacter] = useState(initial?.character || CHARACTERS[0].id);
   const emoji = characterById(character)?.badge || EMOJI_CHOICES[0];
-  const [powerDef, setPowerDef] = useState(null);
-  const [powerOff, setPowerOff] = useState(null);
-  const [lv2, setLv2] = useState('espagnol'); // langue LV2 (si le mode est actif)
-  const [submitted, setSubmitted] = useState(false);
+  const [powerDef, setPowerDef] = useState(initial?.power_def || null);
+  const [powerOff, setPowerOff] = useState(initial?.power_off || null);
+  const [lv2, setLv2] = useState(initial?.lv2 || 'espagnol'); // langue LV2 (si le mode est actif)
+  const [submitted, setSubmitted] = useState(!!initial?.ready);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
