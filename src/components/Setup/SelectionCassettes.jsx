@@ -570,6 +570,22 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     } else startGameFromPerimeter(perimeter);
   };
 
+  // DÉMO (dev, données réelles) : insère les 3 premières cassettes du bac —
+  // le drag-drop n'étant pas automatisable, indispensable pour tester le flux
+  // complet (console → valider → lancer) sans souris.
+  const demoLive = () => {
+    const picks = [];
+    for (const g of GROUPS) {
+      const it = g.items[0];
+      if (it) picks.push({ domain: g.domain, ...it });
+      if (picks.length >= 3) break;
+    }
+    if (!picks.length) return;
+    const next = picks.map(makeVoie);
+    while (next.length < voiesCount) next.push(null);
+    setSlots(next.slice(0, voiesCount));
+  };
+
   const demo = () => {
     const a = makeVoie(themeById('div_series'));
     const b = makeVoie(themeById('spo_int'));
@@ -882,6 +898,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 </div>
               ) : !liveData ? (
                 <button onClick={demo} style={{ marginTop: 3, fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e3d0aa', background: '#3a2c1a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 8px', cursor: 'pointer' }}>▸ SCÉNARIO DÉMO</button>
+              ) : import.meta.env.DEV ? (
+                <button onClick={demoLive} title="DEV : insère 3 cassettes (test sans drag)" style={{ marginTop: 3, fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e3d0aa', background: '#3a2c1a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 8px', cursor: 'pointer' }}>▸ DÉMO</button>
               ) : null}
             </div>
             {/* LANCER : caché en mode téléphone (le lobby lance) et hors intention

@@ -534,9 +534,12 @@ export async function assignLobbyIndices(code, byToken) {
     supabase.from(LOBBY_TABLE).update({ idx }).eq('code', code).eq('token', token)));
 }
 
+// Suffixe unique par abonnement (cf. subscribeSession) : évite « cannot add
+// postgres_changes after subscribe() » si deux abonnés partagent le topic
+// (StrictMode, lobby en ligne + autre écoute…).
 export function subscribeLobby(code, onChange) {
   const channel = supabase
-    .channel(`quete-lobby-${code}`)
+    .channel(`quete-lobby-${code}-${Math.random().toString(36).slice(2, 9)}`)
     .on('postgres_changes',
       { event: '*', schema: 'public', table: LOBBY_TABLE, filter: `code=eq.${code}` },
       () => onChange())
@@ -565,9 +568,10 @@ export async function deleteIntent(id) {
 }
 
 // Le TBI s'abonne aux nouvelles intentions (INSERT) d'une session.
+// Suffixe unique par abonnement : même piège de topic partagé que ci-dessus.
 export function subscribeIntents(code, onInsert) {
   const channel = supabase
-    .channel(`quete-intents-${code}`)
+    .channel(`quete-intents-${code}-${Math.random().toString(36).slice(2, 9)}`)
     .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: INTENTS_TABLE, filter: `code=eq.${code}` },
       (payload) => onInsert(payload.new))
@@ -604,9 +608,13 @@ export async function deleteTrade(id) {
 }
 
 // Abonnement à toutes les évolutions d'offres d'une session (TBI + mobiles).
+// Nom de canal UNIQUE par abonnement (même piège que subscribeSession) : chez
+// l'hôte-joueur en ligne, TradeConsumer ET OnlineController s'abonnent tous
+// deux aux trades — un topic partagé lèverait « cannot add postgres_changes
+// callbacks after subscribe() » et CRASHERAIT le plateau.
 export function subscribeTrades(code, onChange) {
   const channel = supabase
-    .channel(`quete-trades-${code}`)
+    .channel(`quete-trades-${code}-${Math.random().toString(36).slice(2, 9)}`)
     .on('postgres_changes',
       { event: '*', schema: 'public', table: TRADES_TABLE, filter: `code=eq.${code}` },
       (payload) => onChange(payload))

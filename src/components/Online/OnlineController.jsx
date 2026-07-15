@@ -4,31 +4,20 @@
 // Réutilise intégralement le moteur manette existant (aucune logique de jeu ici).
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { sendIntent, randomToken, fetchTrades, subscribeTrades } from '../../logic/sessionConfig';
+import { sendIntent, onlineToken, fetchTrades, subscribeTrades } from '../../logic/sessionConfig';
 import { extOn } from '../../extensions/registry';
 import ControllerView from '../Mobile/ControllerView';
 import OnlineTeamPanel from './OnlineTeamPanel';
 import DuelRaceView from './DuelRaceView';
 import { useT } from '../../i18n';
 
-const tokenKey = (code) => `quete_online_token_${code}`;
-
-// Jeton local persistant : identifie ce joueur (possession d'équipe) à travers
-// les reloads, sans compte (même principe que le token du lobby téléphone).
-function loadToken(code) {
-  try {
-    const ex = localStorage.getItem(tokenKey(code));
-    if (ex) return ex;
-    const t = randomToken();
-    localStorage.setItem(tokenKey(code), t);
-    return t;
-  } catch { return randomToken(); }
-}
-
-export default function OnlineController({ code, ctrl, lastSync = 0 }) {
+// `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres
+// depuis le lobby dédié). Même manette, mêmes intents — seule la vue de DUEL
+// est sautée : FightModal (plein écran hôte) la rend déjà via HostDuelRace.
+export default function OnlineController({ code, ctrl, lastSync = 0, host = false }) {
   const T = useT();
   const teams = useGameStore((s) => s.teams);
-  const [token] = useState(() => loadToken(code));
+  const [token] = useState(() => onlineToken(code));
   const [panelOpen, setPanelOpen] = useState(false);
   const [trades, setTrades] = useState([]);
 
@@ -54,7 +43,9 @@ export default function OnlineController({ code, ctrl, lastSync = 0 }) {
 
   // Duel éclair : si je suis un duelliste (attaquant OU défenseur), la vue de duel
   // prend le dessus — même pour le défenseur, dont ce n'est pas le tour.
+  // Côté hôte : FightModal rend déjà le duel (HostDuelRace, jouable) → on skippe.
   const fight = ctrl?.turn?.fight;
+  if (fight && host) return null;
   if (fight && (ownedIdx === fight.attackerIndex || ownedIdx === fight.defenderIndex)) {
     return (
       <DuelRaceView

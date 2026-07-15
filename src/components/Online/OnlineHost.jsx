@@ -8,6 +8,7 @@ import { useGameStore } from '../../store/gameStore';
 import { OFFLINE } from '../../logic/offline';
 import { createSession, publishSession, subscribePresence, randomToken, buildControllerPayload } from '../../logic/sessionConfig';
 import { serializeSnapshot } from '../../logic/onlineSnapshot';
+import OnlineController from './OnlineController';
 
 // Lien à partager pour rejoindre en spectateur (respecte la base GitHub Pages).
 export function onlineUrl(code) {
@@ -24,6 +25,10 @@ export default function OnlineHost() {
   const reset = useGameStore((s) => s.reset);
   const [open, setOpen] = useState(true);
   const [viewers, setViewers] = useState(0);
+  // Payload manette LOCAL (même construction que celui publié aux distants) :
+  // l'hôte est un JOUEUR comme les autres — sa manette tourne dans SA fenêtre.
+  const [ctrl, setCtrl] = useState(null);
+  const [lastSync, setLastSync] = useState(0);
   const creatingRef = useRef(false);
   const tokenRef = useRef(null);
   if (!tokenRef.current) tokenRef.current = randomToken();
@@ -46,8 +51,12 @@ export default function OnlineHost() {
     let timer = null;
     const publish = () => {
       const s = useGameStore.getState();
-      // snapshot = plateau (spectateur) ; ctrl = payload manette (joueurs distants).
-      publishSession(code, { ...serializeSnapshot(s), publishedAt: Date.now(), ctrl: buildControllerPayload(s) }).catch(() => {});
+      // snapshot = plateau (spectateur) ; ctrl = payload manette (joueurs distants
+      // ET manette locale de l'hôte — même payload, mêmes règles anti-fuite).
+      const c = buildControllerPayload(s);
+      setCtrl(c);
+      setLastSync(Date.now());
+      publishSession(code, { ...serializeSnapshot(s), publishedAt: Date.now(), ctrl: c }).catch(() => {});
     };
     const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; publish(); }, 300); };
     const unsub = useGameStore.subscribe(schedule);
@@ -65,9 +74,15 @@ export default function OnlineHost() {
     return leave;
   }, [active, code]);
 
-  if (!active || !code || !open) return null;
+  if (!active || !code) return null;
   const url = onlineUrl(code);
   return (
+    <>
+      {/* Manette de l'hôte-joueur : son tour (ControllerView), hors tour
+          (bouton « Mon équipe » → panneau) — mêmes intents que les distants,
+          appliqués par l'IntentConsumer de cette même fenêtre. */}
+      <OnlineController host code={code} ctrl={ctrl} lastSync={lastSync} />
+      {open && (
     <div style={{
       position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 300,
       display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', borderRadius: 999,
@@ -97,5 +112,7 @@ export default function OnlineHost() {
         title="Masquer"
       >✕</button>
     </div>
+      )}
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
 import TeamAvatar from '../TeamAvatar';
 import DuelRaceView from '../Online/DuelRaceView';
+import { onlineToken } from '../../logic/sessionConfig';
 import { useT } from '../../i18n';
 
 // Le simulateur dev peut forcer le duel generique via fight.forceDefault
@@ -353,16 +354,20 @@ function RewardScreen({ fight, attacker, defender }) {
 }
 
 // Duel éclair (mode en ligne) rendu côté HÔTE : réutilise DuelRaceView pour la
-// phase « course à la question ». L'hôte répond pour son équipe LOCALE (celle
-// sans jeton — les équipes distantes répondent depuis leur propre écran).
+// phase « course à la question ». L'hôte répond pour SON équipe : celle qui
+// porte son jeton local (l'hôte est un joueur comme les autres depuis le lobby
+// dédié) ou, héritage, une équipe sans jeton. Les équipes distantes répondent
+// depuis leur propre écran.
 function HostDuelRace({ fight, teams }) {
   const fightBegin = useGameStore((s) => s.fightBegin);
   const submitFightAnswer = useGameStore((s) => s.submitFightAnswer);
   const fightChooseReward = useGameStore((s) => s.fightChooseReward);
   const closeFight = useGameStore((s) => s.closeFight);
+  const sessionCode = useGameStore((s) => s.sessionCode);
 
+  const hostToken = sessionCode ? onlineToken(sessionCode) : null;
   const parts = [fight.attackerIndex, fight.defenderIndex].filter((i) => i >= 0);
-  const localIdx = parts.find((i) => teams[i] && !teams[i].token);
+  const localIdx = parts.find((i) => teams[i] && (!teams[i].token || (hostToken && teams[i].token === hostToken)));
   const myTeamIdx = localIdx == null ? -1 : localIdx;
 
   const norm = {
