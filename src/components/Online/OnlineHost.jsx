@@ -100,7 +100,13 @@ export default function OnlineHost() {
         📋 Copier le lien
       </button>
       <button
-        onClick={() => { if (window.confirm('Quitter la partie en ligne ?')) reset(); }}
+        onClick={() => {
+          if (!window.confirm('Quitter la partie en ligne ?')) return;
+          // Marque la session TERMINÉE (best effort) : les invités qui ouvrent
+          // encore le lien voient « partie terminée » au lieu d'un jeu fantôme.
+          publishSession(code, { status: 'ended', publishedAt: Date.now() }).catch(() => {});
+          reset();
+        }}
         style={{ cursor: 'pointer', background: '#2a0e0c', color: '#ff8a7a', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 12 }}
         title="Quitter la partie"
       >

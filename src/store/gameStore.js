@@ -4066,6 +4066,11 @@ export const useGameStore = create((set, get) => ({
       hackOverlay: null,
       weather: null, weatherNotice: null, weatherCeremony: null, turnCount: 0, lastWeatherTurn: 0,
       nbTeams: 3, setupTeams: createDefaultTeams(3),
+      // Session partagée (téléphone / en ligne) : une nouvelle partie = un
+      // NOUVEAU code. Sans ça, re-héberger réutilisait l'ancien code dont la
+      // ligne DB contient encore le snapshot de la partie quittée → les
+      // invités du lien atterrissaient dans une partie fantôme.
+      sessionCode: null, lobbyTeams: [],
       extensions: defaultExtensions(),
       enabledEvents: Object.keys(EVENTS),
       enabledItems: Object.keys(ITEMS),

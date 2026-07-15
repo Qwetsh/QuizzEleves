@@ -62,6 +62,12 @@ export default function OnlineClient({ code }) {
     });
   }, [code, token]);
 
+  // Session CLOSE par l'hôte (⏹ Quitter) : fini pour tout le monde — on
+  // n'entre ni au lobby ni dans le jeu fantôme (prioritaire, même « started »).
+  if (data?.status === 'ended') {
+    return <Splash code={code}>L'hôte a mis fin à cette partie. Demande-lui un nouveau lien ! Code :</Splash>;
+  }
+
   // --- Phase LOBBY (partie pas encore lancée) : créer son équipe ---
   if (!started) {
     if (data === undefined) return <Splash code={code}>Connexion à la partie</Splash>;

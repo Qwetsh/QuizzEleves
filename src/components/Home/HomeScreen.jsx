@@ -85,8 +85,11 @@ export default function HomeScreen() {
   // de MON équipe intégrée, lien à partager, LANCER là-bas).
   const setSessionCode = useGameStore((s) => s.setSessionCode);
   const setOnlineCompose = useGameStore((s) => s.setOnlineCompose);
+  const setLobbyTeams = useGameStore((s) => s.setLobbyTeams);
   const hostOnline = () => {
     clearLobbyResume(); // nouveau lobby = on oublie l'ancien
+    setSessionCode(null); // …et son code : session NEUVE (pas de partie fantôme)
+    setLobbyTeams([]);
     setConnectionMode('online');
     setPhoneController(true);
     setPhase('onlineLobby');

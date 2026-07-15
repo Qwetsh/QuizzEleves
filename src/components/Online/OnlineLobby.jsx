@@ -167,7 +167,13 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
           )}
           {!client && (
             <button type="button" className="olb-btn" style={{ alignSelf: 'flex-start', padding: '8px 14px', fontSize: 13 }}
-              onClick={() => { clearLobbyResume(); setPhase('home'); }}>⌂ ACCUEIL</button>
+              onClick={() => {
+                // Abandon du lobby : on OUBLIE le code (re-héberger = session
+                // neuve ; revenir = bouton « Reprendre le lobby » uniquement).
+                clearLobbyResume();
+                setSessionCode(null);
+                setPhase('home');
+              }}>⌂ ACCUEIL</button>
           )}
         </div>
 
