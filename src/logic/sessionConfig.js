@@ -37,6 +37,20 @@ export function onlineToken(code) {
   } catch { return randomToken(); }
 }
 
+// Reprise du LOBBY en ligne côté hôte après un reload : { code, compose }
+// en localStorage tant que le lobby est ouvert (écrit par OnlineLobby, lu par
+// l'accueil), effacé au lancement de la partie ou au retour accueil.
+export const LOBBY_RESUME_KEY = 'quete-online-lobby';
+export function readLobbyResume() {
+  try { return JSON.parse(localStorage.getItem(LOBBY_RESUME_KEY) || 'null'); } catch { return null; }
+}
+export function writeLobbyResume(data) {
+  try { localStorage.setItem(LOBBY_RESUME_KEY, JSON.stringify(data)); } catch { /* best effort */ }
+}
+export function clearLobbyResume() {
+  try { localStorage.removeItem(LOBBY_RESUME_KEY); } catch { /* best effort */ }
+}
+
 // Sans I/O/0/1 pour éviter les confusions de lecture du code d'appairage.
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 

@@ -40,7 +40,15 @@ export function saveGame(state) {
         data[key] = state[key];
       }
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (quotaErr) {
+      // Quota localStorage dépassé (grosses parties : le pool `questions` peut
+      // peser plusieurs Mo avec des cassettes intégrales). Save DÉGRADÉE sans
+      // le pool — resumeGame le RECONSTRUIT depuis level/useBrevet (catalogue).
+      data.questions = null;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
   } catch (e) {
     console.warn('Failed to save game:', e);
   }

@@ -3945,6 +3945,13 @@ export const useGameStore = create((set, get) => ({
   resumeGame: () => {
     const saved = loadGame();
     if (!saved) return;
+    // Save DÉGRADÉE (quota localStorage dépassé → pool `questions` retiré à la
+    // sauvegarde) : on le RECONSTRUIT depuis le catalogue. Si le catalogue a
+    // changé entre-temps, les compteurs « déjà posées » peuvent glisser d'un
+    // cran — reprise dégradée mieux que pas de reprise.
+    if (!saved.questions || !Object.keys(saved.questions).length) {
+      saved.questions = getQuestions(saved.level || 'cycle4', { brevet: !!saved.useBrevet });
+    }
     set({
       ...saved,
       devSandbox: false,

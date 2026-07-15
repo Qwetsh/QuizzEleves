@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { loadGame } from '../../store/persistence';
-import { onlineJoinUrl } from '../../logic/sessionConfig';
+import { onlineJoinUrl, readLobbyResume, clearLobbyResume } from '../../logic/sessionConfig';
 import '../../styles/home.css';
 
 const FONT_DISPLAY = "'Archivo Black', system-ui, sans-serif";
@@ -71,6 +71,8 @@ export default function HomeScreen() {
     const s = loadGame();
     return !!(s && s.phase === 'game' && Array.isArray(s.teams) && s.teams.length);
   });
+  // Lobby en ligne interrompu (reload de l'hôte avant le lancement) ?
+  const [lobbyResume] = useState(() => readLobbyResume());
 
   const setPhase = useGameStore((s) => s.setPhase);
   // Choisit un mode et ouvre la console de composition (thèmes → LANCER).
@@ -81,9 +83,21 @@ export default function HomeScreen() {
   };
   // Héberger en ligne : direction l'écran LOBBY dédié (session auto, création
   // de MON équipe intégrée, lien à partager, LANCER là-bas).
+  const setSessionCode = useGameStore((s) => s.setSessionCode);
+  const setOnlineCompose = useGameStore((s) => s.setOnlineCompose);
   const hostOnline = () => {
+    clearLobbyResume(); // nouveau lobby = on oublie l'ancien
     setConnectionMode('online');
     setPhoneController(true);
+    setPhase('onlineLobby');
+  };
+  // Reprend le lobby interrompu : même code de session (les joueurs déjà
+  // connectés y sont encore) + composition de thèmes restaurée.
+  const resumeLobby = () => {
+    setConnectionMode('online');
+    setPhoneController(true);
+    setSessionCode(lobbyResume.code);
+    if (lobbyResume.compose) setOnlineCompose(lobbyResume.compose);
     setPhase('onlineLobby');
   };
   const joinOnline = () => {
@@ -118,6 +132,9 @@ export default function HomeScreen() {
             <div className="home-menu" style={panel}>
               {hasSave && (
                 <MenuBtn primary emblem="▶" label="REPRENDRE LA PARTIE" sub="Une partie sauvegardée t'attend." onClick={resumeGame} />
+              )}
+              {!hasSave && lobbyResume?.code && (
+                <MenuBtn primary emblem="📡" label={`REPRENDRE LE LOBBY (${lobbyResume.code})`} sub="Ton lobby en ligne est toujours ouvert — les joueurs connectés t'y attendent." onClick={resumeLobby} />
               )}
               <MenuBtn emblem="🧑‍🚀" label="SOLO" sub="Affronte des adversaires pilotés par l'ordinateur." disabled badge="🔒 BIENTÔT" />
               <MenuBtn emblem="🎮" label="MULTI LOCAL" sub="Tout le monde dans la même pièce, autour d'un écran." onClick={() => setSub('local')} />

@@ -15,6 +15,7 @@ import { useGameStore } from '../../store/gameStore';
 import {
   createSession, buildSessionPayload, onlineJoinUrl, onlineToken,
   fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
+  writeLobbyResume, clearLobbyResume, subscribePresence,
 } from '../../logic/sessionConfig';
 import { LobbyCreateScreen } from '../Mobile/MobileApp';
 import TeamAvatar from '../TeamAvatar';
@@ -56,13 +57,15 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
   const extensions = useGameStore((s) => s.extensions);
   const lv2ModeStore = useGameStore((s) => s.lv2Mode);
   const englishModeStore = useGameStore((s) => s.englishMode);
-  const perimeter = useGameStore((s) => s.onlineCompose.perimeter);
+  const onlineCompose = useGameStore((s) => s.onlineCompose);
+  const perimeter = onlineCompose.perimeter;
 
   const code = client ? codeProp : sessionCode;
   const lv2Mode = client ? !!lv2Prop : !!lv2ModeStore;
   const englishMode = client ? !!enProp : !!englishModeStore;
   const [rows, setRows] = useState([]);
   const [rowsLoaded, setRowsLoaded] = useState(false); // 1er fetch fini (pré-remplissage fiable)
+  const [hostOnline, setHostOnline] = useState(true); // présence (badge côté client)
   const [err, setErr] = useState(null);
   const [launching, setLaunching] = useState(false);
   // Jeton du joueur local (l'hôte est un joueur comme les autres). Dérivé du
@@ -80,6 +83,22 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, sessionCode]);
+
+  // Hôte : mémorise { code, compose } pour reprendre le lobby après un reload
+  // (l'état lobby n'est pas dans la sauvegarde de partie).
+  useEffect(() => {
+    if (client || !sessionCode) return;
+    writeLobbyResume({ code: sessionCode, compose: onlineCompose });
+  }, [client, sessionCode, onlineCompose]);
+
+  // Présence : l'hôte s'annonce dès le LOBBY ; les clients savent s'il est là
+  // (un lobby sans hôte ne pourra pas lancer — autant le dire).
+  useEffect(() => {
+    if (!code || !token) return;
+    return subscribePresence(code, { role: client ? 'spectator' : 'host', token }, (list) => {
+      setHostOnline(list.some((p) => p.role === 'host'));
+    });
+  }, [code, client, token]);
 
   // Équipes du lobby en direct (état local + store côté hôte : startOnlineGame
   // lit get().lobbyTeams).
@@ -108,7 +127,8 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
     const byToken = {};
     teamsLive.forEach((r, i) => { byToken[r.token] = i; });
     try { await assignLobbyIndices(code, byToken); } catch { /* best effort */ }
-    if (!startOnlineGame(perimeter)) setLaunching(false);
+    if (startOnlineGame(perimeter)) clearLobbyResume(); // la partie a SA save
+    else setLaunching(false);
   };
 
   // Ce qui manque encore pour lancer (affiché sous le bouton, côté hôte).
@@ -147,7 +167,7 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
           )}
           {!client && (
             <button type="button" className="olb-btn" style={{ alignSelf: 'flex-start', padding: '8px 14px', fontSize: 13 }}
-              onClick={() => setPhase('home')}>⌂ ACCUEIL</button>
+              onClick={() => { clearLobbyResume(); setPhase('home'); }}>⌂ ACCUEIL</button>
           )}
         </div>
 
@@ -198,7 +218,11 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
 
         {/* ---- Actions (hôte) / statut (client) ---- */}
         {client ? (
-          <div className="olb-hint">EN ATTENTE DU LANCEMENT PAR L'HÔTE — la partie démarrera ici automatiquement</div>
+          <div className="olb-hint" style={hostOnline ? undefined : { color: '#e88f8f' }}>
+            {hostOnline
+              ? 'EN ATTENTE DU LANCEMENT PAR L\'HÔTE — la partie démarrera ici automatiquement'
+              : '🔴 HÔTE DÉCONNECTÉ — en attente de son retour…'}
+          </div>
         ) : (
           <>
             <div className="olb-actions">
