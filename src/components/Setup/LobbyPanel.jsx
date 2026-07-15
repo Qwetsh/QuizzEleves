@@ -17,6 +17,35 @@ import '@fontsource/vt323/400.css';
 import '@fontsource/archivo-black/400.css';
 import '../../styles/lobby-retro.css';
 
+// URL de la partie : un CLIC la copie dans le presse-papier (feedback ✓),
+// pour la coller direct dans une conversation — plus pratique que le QR à
+// distance. Repli textarea+execCommand hors contexte sécurisé (http local).
+function CopyUrl({ url }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch { return; }
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+  return (
+    <button type="button" className={`lobby90-url lobby90-url--btn ${copied ? 'is-copied' : ''}`}
+      onClick={copy} title="Cliquer pour copier le lien">
+      {copied ? '✓ LIEN COPIÉ !' : <>{url} <span aria-hidden="true">📋</span></>}
+    </button>
+  );
+}
+
 // Barre de titre commune (fenêtre logicielle « LOBBY.EXE »).
 function TitleBar() {
   return (
@@ -125,7 +154,7 @@ export default function LobbyPanel({ online = false }) {
                   {sessionCode.split('').map((ch, i) => <span key={i}>{ch}</span>)}
                 </div>
               </div>
-              <div className="lobby90-url">{url}</div>
+              <CopyUrl url={url} />
             </div>
           </div>
 

@@ -11,6 +11,7 @@ import OnlineHost from './components/Online/OnlineHost';
 // Console de setup « CURIOSCOPE » (écran principal) : paresseuse. Repli vers
 // l'ancien Setup via ?classic (filet de sécurité pendant la transition).
 const SelectionCassettes = lazy(() => import('./components/Setup/SelectionCassettes'));
+const HomeScreen = lazy(() => import('./components/Home/HomeScreen'));
 const CLASSIC_SETUP = new URLSearchParams(window.location.search).has('classic');
 
 const pageVariants = {
@@ -40,6 +41,12 @@ export default function App() {
   return (
     <div className="absolute inset-0 no-select" style={{ fontFamily: 'var(--font-ui)' }}>
       <AnimatePresence mode="wait">
+        {phase === 'home' && (
+          <motion.div key="home" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
+            {/* ?classic n'a pas d'accueil : l'ancien Setup tout-en-un directement. */}
+            {CLASSIC_SETUP ? <Setup /> : <Suspense fallback={null}><HomeScreen /></Suspense>}
+          </motion.div>
+        )}
         {phase === 'setup' && (
           <motion.div key="setup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={pageTransition} className="absolute inset-0">
             {CLASSIC_SETUP ? <Setup /> : <Suspense fallback={null}><SelectionCassettes main /></Suspense>}

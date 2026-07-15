@@ -60,6 +60,19 @@
   color: #ffb64a; text-shadow: 0 0 10px rgba(255,150,40,.85);
 }
 .lobby90-url { font-size: 13px; color: #3ea862; word-break: break-all; max-width: 230px; }
+/* Variante bouton : l'URL se copie au clic. */
+.lobby90-url--btn {
+  font-family: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px dashed rgba(102, 255, 138, 0.35);
+  border-radius: 5px;
+  padding: 3px 6px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.lobby90-url--btn:hover { border-color: #66ff8a; color: #66ff8a; box-shadow: 0 0 10px rgba(102, 255, 138, 0.25); }
+.lobby90-url--btn.is-copied { color: #d9ffe6; border-color: #66ff8a; box-shadow: 0 0 14px rgba(102, 255, 138, 0.45); }
 
 /* --- Liste « CONNECTÉS » façon terminal --- */
 .lobby90-list { border-radius: 8px; background: #060a07; border: 2px solid #16351f; box-shadow: inset 0 0 20px rgba(0,255,120,.06); padding: 8px 10px; }

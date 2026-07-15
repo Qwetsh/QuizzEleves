@@ -113,7 +113,12 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     const teams = [...S().teams];
     teams[0] = { ...teams[0], powers: { double: { charges: 1, level } } };
     useGameStore.setState({ teams, showTargetPicker: { powerKey: 'double' } });
+    // Neutralise la « chance d'une question bonus » (5 % aux niv.2/3) LE TEMPS
+    // DU CAST : sans ce mock, ~5 % des runs gagnaient une extra → multiTotal 4
+    // au lieu de 3 dans les tests de rafale (flake CI).
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
     S().applyOffensivePower(1);
+    spy.mockRestore();
   };
 
   it('niv.1 : +1 question extra sans bonus pièces', () => {

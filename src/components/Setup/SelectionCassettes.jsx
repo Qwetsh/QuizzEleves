@@ -28,7 +28,6 @@ import { getQuestions } from '../../data/questions';
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
 import LobbyPanel from './LobbyPanel';
-import OnlineSetup from './OnlineSetup';
 import ExtensionsChecklist from './ExtensionsChecklist';
 import BoardParams from './BoardParams';
 import EventsChecklist from './EventsChecklist';
@@ -138,7 +137,7 @@ const VU = Array.from({ length: 30 }, (_, i) => {
 // Sélecteur de fonction de la console (onglets stylés « boutons illuminés »).
 const CONSOLE_TABS = [
   { id: 'themes', label: 'THÈMES', emblem: '📼' },
-  { id: 'mode', label: 'MODE DE JEU', emblem: '🎮' },
+  { id: 'mode', label: 'JOUEURS', emblem: '👥' },
   { id: 'reglages', label: 'RÉGLAGES', emblem: '🎛' },
 ];
 
@@ -158,9 +157,10 @@ const OUTILS_CAT = { id: 'outils', emblem: '🛠️', label: 'OUTILS / ÉDITEURS
 const TOOLS_UNLOCK_KEY = 'quete_tools_unlock';
 const TOOLS_CODE = '54150';
 
-// Modes de jeu. Les 3 premiers sont actifs : ils pilotent connectionMode
-// (board/phone) + phoneController (manette téléphone — l'équipe active joue
-// son tour depuis son mobile, le TBI reste maître et utilisable en parallèle).
+// Modes de jeu (connectionMode + phoneController). Le CHOIX se fait désormais
+// sur la page d'accueil (HomeScreen) — ici la liste ne sert plus qu'au badge
+// « mode en cours » du bandeau FONCTION. `companion` reste défini pour la
+// rétrocompat (saves / bascule interne) mais n'est plus proposé à l'accueil.
 const GAME_MODES = [
   { id: 'tbi', conn: 'board', controller: false, emblem: '🖥️', name: 'Surface tactile (TBI)', desc: 'Tout se joue sur l’écran tactile. Les équipes se créent ici.', ready: true },
   { id: 'companion', conn: 'phone', controller: false, emblem: '📱', name: 'Téléphone + TBI', desc: 'Les joueurs rejoignent par QR ; on joue sur le TBI.', ready: true },
@@ -255,7 +255,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const [levels, setLevels] = useState(['6e', '5e', '4e', '3e']);
   const toggleLevel = (id) => setLevels((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   const [showLaunch, setShowLaunch] = useState(false); // menu de lancement (niveaux + classe)
-  const [tab, setTab] = useState('themes');
+  // Onglet initial selon l'intention d'accueil (RÉGLAGES s'ouvre directement).
+  const [tab, setTab] = useState(() => (useGameStore.getState().homeIntent === 'settings' ? 'reglages' : 'themes'));
   const [reglSub, setReglSub] = useState('extensions'); // sous-onglet actif de RÉGLAGES
   // Accès aux outils/éditeurs hors dev : triple-clic sur le logo de la console + code.
   const [toolsUnlocked, setToolsUnlocked] = useState(() => {
@@ -289,10 +290,11 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const classLabel = useGameStore((s) => s.classLabel);
   const setClassLabel = useGameStore((s) => s.setClassLabel);
   const connectionMode = useGameStore((s) => s.connectionMode);
-  const setConnectionMode = useGameStore((s) => s.setConnectionMode);
-  // Manette téléphone : piloté par la carte « Téléphone-manette » du MODE DE JEU.
+  // Manette téléphone : choisi sur la page d'accueil (avec le mode de jeu).
   const phoneController = useGameStore((s) => s.phoneController);
-  const setPhoneController = useGameStore((s) => s.setPhoneController);
+  // Intention d'ouverture depuis l'accueil : 'play' (composer + lancer),
+  // 'browse' (thèmes seulement), 'settings' (réglages seulement).
+  const homeIntent = useGameStore((s) => s.homeIntent);
   const extensions = useGameStore((s) => s.extensions);
   // Lectures pour les résumés du rail RÉGLAGES + le slider de fréquence d'événements.
   const boardParams = useGameStore((s) => s.boardParams);
@@ -722,36 +724,29 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   // Setup existants dans un encart clair (façon afficheur intégré à la machine).
   const panelInset = { border: '5px solid #150f08', borderRadius: 14, background: '#efe3c6', boxShadow: 'inset 0 0 0 3px #b79a63, inset 0 2px 8px rgba(0,0,0,.15)', padding: '18px 22px', fontFamily: 'var(--font-ui)', color: 'var(--ink-700, #241a10)' };
 
-  // Carte « mode de jeu » (rétro, harmonisée avec la console).
+  // Mode en cours (choisi sur la page d'accueil) — sert au badge du bandeau
+  // FONCTION et au titre du panneau JOUEURS.
   const selectedModeId = connectionMode === 'online' ? 'online'
     : phoneMode ? (phoneController ? 'manette' : 'companion') : 'tbi';
-  const renderModeCard = (m) => {
-    const sel = m.ready && m.id === selectedModeId;
-    return (
-      <button key={m.id} type="button" disabled={!m.ready}
-        onClick={() => { if (!m.ready) return; setConnectionMode(m.conn); setPhoneController(!!m.controller); }}
-        style={{ flex: 1, textAlign: 'left', position: 'relative', padding: '14px 16px', borderRadius: 12, cursor: m.ready ? 'pointer' : 'not-allowed', border: '3px solid ' + (sel ? '#57c84d' : '#150f08'), background: sel ? '#16331a' : (m.ready ? '#2a2117' : '#211a12'), opacity: m.ready ? 1 : 0.75, boxShadow: sel ? '0 0 14px rgba(87,200,77,.4),inset 0 2px 0 rgba(255,255,255,.1)' : 'inset 0 -3px 0 rgba(0,0,0,.4)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ fontSize: 22 }}>{m.emblem}</span>
-          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 15, letterSpacing: 0.5, color: sel ? '#9be88f' : (m.ready ? '#f4e7cc' : '#8a7656') }}>{m.name}</span>
-          {sel && <span style={{ marginLeft: 'auto', width: 9, height: 9, borderRadius: '50%', background: '#9be88f', boxShadow: '0 0 8px #9be88f' }} />}
-        </div>
-        <div style={{ fontFamily: FONT_UI, fontSize: 12.5, marginTop: 6, lineHeight: 1.35, color: m.ready ? '#a89878' : '#6b5f48' }}>{m.desc}</div>
-        {!m.ready && <div style={{ position: 'absolute', top: 10, right: 10, fontFamily: FONT_MONO, fontSize: 12, letterSpacing: 1, color: '#e8a13a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 6px', background: '#1d160e' }}>🔒 PROCHAINEMENT</div>}
-      </button>
-    );
-  };
+  const currentMode = GAME_MODES.find((m) => m.id === selectedModeId) || GAME_MODES[0];
 
-  // Panneau central des onglets « mode de jeu » et « réglages ».
+  // Panneau central des onglets « joueurs » et « réglages ».
   const renderConsolePanel = () => {
     if (tab === 'mode') {
       return (
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', gap: 12 }}>{GAME_MODES.map(renderModeCard)}</div>
-          {/* Participants — contextuels au mode : TBI = création d'équipes, téléphone = lobby QR,
-              en ligne = création locale + bandeau explicatif (le lien de partage apparaît en jeu). */}
+          {/* Participants — contextuels au mode choisi à l'accueil : écran tactile =
+              création d'équipes ici, téléphones = lobby QR, en ligne = lobby lien. */}
           <div className="qm-console-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto', ...panelInset }}>
-            {phoneMode ? <LobbyPanel /> : connectionMode === 'online' ? <OnlineSetup /> : (<><TeamCount /><TeamCustomization /></>)}
+            {phoneMode ? <LobbyPanel /> : connectionMode === 'online' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-600,#5a4a30)', lineHeight: 1.5 }}>
+                  Partage le lien (ou le code) ci-dessous. Chaque joueur ouvre la partie, <b>crée son équipe</b> (nom + logo) et se met « prêt ».
+                  Tu pourras <b>lancer</b> quand tout le monde est prêt. Garde cet onglet ouvert : c’est lui qui fait tourner le jeu.
+                </div>
+                <LobbyPanel online />
+              </div>
+            ) : (<><TeamCount /><TeamCustomization /></>)}
           </div>
         </div>
       );
@@ -885,7 +880,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 <button onClick={demo} style={{ marginTop: 3, fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#e3d0aa', background: '#3a2c1a', border: '2px solid #5a4023', borderRadius: 4, padding: '1px 8px', cursor: 'pointer' }}>▸ SCÉNARIO DÉMO</button>
               ) : null}
             </div>
-            {!(main && phoneMode) && (
+            {/* LANCER : caché en mode téléphone (le lobby lance) et hors intention
+                « play » (exploration des thèmes / réglages seuls). */}
+            {!(main && (phoneMode || homeIntent !== 'play')) && (
               <button onClick={onLaunchClick} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
                 <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
                 <span>LANCER</span>
@@ -897,9 +894,14 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
         {/* ============ SÉLECTEUR DE FONCTION (console de setup) ============ */}
         {main && (
           <div style={{ position: 'relative', zIndex: 3, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 22px', background: '#1d160e', borderBottom: '3px solid #120c06' }}>
+            {/* Retour à la page d'accueil (le mode de jeu se choisit là-bas). */}
+            <button onClick={() => setPhase('home')} style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', border: '2px solid #5a4023', background: '#3a2c1a', color: '#e3d0aa' }}>⌂ ACCUEIL</button>
             <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: '#8a7656', letterSpacing: 2 }}>FONCTION</span>
             <div style={{ display: 'flex', gap: 6 }}>
-              {CONSOLE_TABS.map((tb) => {
+              {CONSOLE_TABS.filter((tb) =>
+                homeIntent === 'browse' ? tb.id === 'themes'
+                : homeIntent === 'settings' ? tb.id === 'reglages'
+                : true).map((tb) => {
                 const on = tab === tb.id;
                 return (
                   <button key={tb.id} onClick={() => setTab(tb.id)} style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 1, padding: '6px 13px', borderRadius: 6, cursor: 'pointer', border: '2px solid #150f08', display: 'flex', alignItems: 'center', gap: 7, background: on ? '#57c84d' : '#3a2e22', color: on ? '#0c2a0a' : '#cdbf9e', boxShadow: on ? '0 0 10px rgba(87,200,77,.5),inset 0 2px 0 rgba(255,255,255,.35)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
@@ -909,6 +911,12 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 );
               })}
             </div>
+            {/* Badge du mode en cours (choisi à l'accueil). */}
+            {homeIntent === 'play' && (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#9be88f', border: '2px solid #2a4a22', borderRadius: 4, padding: '3px 10px', background: '#162412' }}>
+                MODE : {currentMode.emblem} {currentMode.name.toUpperCase()}
+              </span>
+            )}
             <div style={{ flex: 1 }} />
             {/* Le nom de classe est demandé dans le menu de lancement (il ne sert
                 qu'aux statistiques d'une partie jouée avec des élèves). */}

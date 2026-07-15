@@ -1,0 +1,88 @@
+/* ============================================================
+   Page d'accueil (écran titre) — même identité rétro que la
+   console CURIOSCOPE : bois sombre, crème, ambre, LED verte.
+   ============================================================ */
+
+.home-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(130% 130% at 50% 28%, #2a1d0c, #0d0703);
+  font-family: var(--font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Étoiles scintillantes du fond (le jeu vit dans l'espace). */
+.home-star {
+  position: absolute;
+  color: #e8d9bb;
+  pointer-events: none;
+  animation: home-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes home-twinkle {
+  0%, 100% { opacity: 0.12; transform: scale(0.85); }
+  50% { opacity: 0.75; transform: scale(1.1); }
+}
+
+/* Titre : léger halo qui respire. */
+.home-title {
+  animation: home-glow 4s ease-in-out infinite;
+}
+@keyframes home-glow {
+  0%, 100% { text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 26px rgba(232, 161, 58, 0.25); }
+  50% { text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 40px rgba(232, 161, 58, 0.5); }
+}
+
+/* Boutons du menu principal : plastique de console, LED au survol. */
+.home-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 15px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 3px solid #150f08;
+  background: #2a2117;
+  color: #f4e7cc;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.home-btn:hover:not(:disabled) {
+  background: #3a2e22;
+  transform: translateX(6px);
+  box-shadow: 0 0 14px rgba(87, 200, 77, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.14), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+}
+.home-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  color: #8a7656;
+}
+.home-btn--primary {
+  border-color: #150f08;
+  background: #16331a;
+  color: #9be88f;
+  box-shadow: 0 0 14px rgba(87, 200, 77, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.12), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+}
+.home-btn--primary:hover:not(:disabled) {
+  background: #1c4222;
+  box-shadow: 0 0 22px rgba(87, 200, 77, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.16), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Apparition en cascade des entrées de menu. */
+.home-menu > * {
+  animation: home-rise 0.4s ease-out backwards;
+}
+.home-menu > *:nth-child(1) { animation-delay: 0.05s; }
+.home-menu > *:nth-child(2) { animation-delay: 0.1s; }
+.home-menu > *:nth-child(3) { animation-delay: 0.15s; }
+.home-menu > *:nth-child(4) { animation-delay: 0.2s; }
+.home-menu > *:nth-child(5) { animation-delay: 0.25s; }
+.home-menu > *:nth-child(6) { animation-delay: 0.3s; }
+.home-menu > *:nth-child(7) { animation-delay: 0.35s; }
+@keyframes home-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}

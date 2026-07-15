@@ -232,8 +232,13 @@ function giveSpecTo(team, items, gold) {
 
 export const useGameStore = create((set, get) => ({
   // --- Phase ---
-  phase: 'setup',
+  phase: 'home',
   setPhase: (phase) => set({ phase }),
+  // Intention d'ouverture de la console (SelectionCassettes) depuis l'accueil :
+  // 'play' = composer ET lancer (mode de jeu déjà choisi à l'accueil) ;
+  // 'browse' = feuilleter les thèmes seulement ; 'settings' = réglages seulement.
+  homeIntent: 'play',
+  openConsole: (intent = 'play') => set({ homeIntent: intent, phase: 'setup' }),
 
   // Bac a sable dev : partie simulee qui ne touche pas a la sauvegarde
   devSandbox: false,
@@ -336,7 +341,8 @@ export const useGameStore = create((set, get) => ({
   // Mode de connexion (Setup) : 'board' = équipes créées au tableau (historique) ;
   // 'phone' = équipes créées depuis les téléphones (lobby + QR).
   connectionMode: 'board',
-  setConnectionMode: (m) => { if (get().phase === 'setup') set({ connectionMode: m }); },
+  // Modifiable seulement hors partie (accueil + console) — jamais en cours de jeu.
+  setConnectionMode: (m) => { if (get().phase === 'home' || get().phase === 'setup') set({ connectionMode: m }); },
   // Session partagée (mode téléphone) : code de lobby/partie + équipes du lobby
   // (live, alimentées depuis Supabase par LobbyPanel).
   sessionCode: null,
@@ -4037,7 +4043,7 @@ export const useGameStore = create((set, get) => ({
     if (!get().devSandbox) clearSave();
     set({
       devSandbox: false,
-      phase: 'setup', teams: [], currentTeam: 0, board: null, boardDecor: null, boardSpace: null, finished: false,
+      phase: 'home', teams: [], currentTeam: 0, board: null, boardDecor: null, boardSpace: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
       shopStock: [], shopStockTurns: 0,
       starterChestConfig: defaultStarterChestConfig(), starterGold: null,
