@@ -151,12 +151,31 @@ export default function EventModal() {
   );
 }
 
-// Révélation d'événement : SAUT HYPERSPATIAL plein écran (starfield qui file en
-// vitesse-lumière + son) durant ~2,2 s, flash de sortie, puis onDone → l'événement.
+// Révélation d'événement : SAUT HYPERSPATIAL (starfield qui file en vitesse-
+// lumière + son) durant ~2,2 s, flash de sortie, puis onDone → l'événement.
+// La cinématique se joue DANS L'ÉCRAN DE LA TV rétro (pas sur tout l'écran) :
+// on épouse le rect de .rg-tv-screen-inner, avec repli plein écran si le chrome
+// n'est pas monté (layout legacy, tests).
 const HYPER_MS = 2200;
+const measureTvFrame = () => {
+  if (typeof document === 'undefined') return null;
+  const el = document.querySelector('.rg-tv-screen-inner') || document.querySelector('.rg-tv-screen');
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  return { left: r.left, top: r.top, width: r.width, height: r.height, borderRadius: getComputedStyle(el).borderRadius };
+};
 function HyperspacePhase({ onDone }) {
   const T = useT();
   const canvasRef = useRef(null);
+  // Mesuré AVANT le premier rendu (initialiseur) : le canvas monte directement
+  // à la bonne taille — pas de starfield étiré au premier frame.
+  const [tvFrame, setTvFrame] = useState(measureTvFrame);
+  useEffect(() => {
+    const onWinResize = () => setTvFrame(measureTvFrame());
+    window.addEventListener('resize', onWinResize);
+    return () => window.removeEventListener('resize', onWinResize);
+  }, []);
 
   useEffect(() => {
     soundHyperspace(HYPER_MS / 1000);
@@ -165,9 +184,10 @@ function HyperspacePhase({ onDone }) {
     const ctx = canvas.getContext('2d');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let W, H, cx, cy;
+    // Taille = celle du CONTENEUR (cadre TV ou plein écran), pas de la fenêtre.
     const resize = () => {
-      W = canvas.width = Math.floor(window.innerWidth * dpr);
-      H = canvas.height = Math.floor(window.innerHeight * dpr);
+      W = canvas.width = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+      H = canvas.height = Math.max(1, Math.floor(canvas.clientHeight * dpr));
       cx = W / 2; cy = H / 2;
     };
     resize();
@@ -212,12 +232,21 @@ function HyperspacePhase({ onDone }) {
       else if (!done) { done = true; onDone(); }
     };
     raf = requestAnimationFrame(frame);
-    window.addEventListener('resize', resize);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+    // rAF : laisse React appliquer le nouveau rect du cadre avant de relire
+    // clientWidth/clientHeight (le listener fenêtre part avant le re-rendu).
+    const onResize = () => requestAnimationFrame(resize);
+    window.addEventListener('resize', onResize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); };
   }, []);
 
   return (
-    <motion.div className="evm-hyper" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+    <motion.div
+      className="evm-hyper"
+      // Cadre TV : left/top/width/height priment sur l'inset:0 de la classe
+      // (sur-contrainte CSS → right/bottom ignorés) ; l'arrondi CRT est repris.
+      style={tvFrame || undefined}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+    >
       <canvas ref={canvasRef} className="evm-hyper-canvas" />
       <div className="evm-hyper-label">{T('modal.event.hyperspace')}</div>
     </motion.div>
