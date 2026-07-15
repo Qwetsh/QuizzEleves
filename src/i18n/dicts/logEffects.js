@@ -128,6 +128,7 @@ export default {
 
   // --- Alchimie / Enchantement (événements) ---
   'log.fx.discoverRecipe': { fr: '📖 {emoji} {name} découvre une recette : {potion} !', en: '📖 {emoji} {name} discovers a recipe: {potion}!' },
+  'log.fx.recipeReveal.title': { fr: '📖 {emoji} {name} découvre une recette !', en: '📖 {emoji} {name} discovers a recipe!' },
   'log.fx.runeEnchant': { fr: '🔮 {emoji} {name} : une rune enchante {icon} {item} !', en: '🔮 {emoji} {name}: a rune enchants {icon} {item}!' },
   'log.fx.runeEnchant.toast': { fr: 'Rune gravée !', en: 'Rune inscribed!' },
   'log.fx.unenchant': { fr: '🧽 {emoji} {name} : un enchantement de {icon} {item} s\'efface…', en: '🧽 {emoji} {name}: an enchantment fades from {icon} {item}…' },

@@ -2434,6 +2434,14 @@ export const useGameStore = create((set, get) => ({
     set({ teams: nt });
     const pName = ITEMS[recipe.potion] ? loc(ITEMS[recipe.potion], 'name') : recipe.potion;
     get().addLog(tg('log.fx.discoverRecipe', { emoji: team.emoji, name: team.name, potion: pName }));
+    // VRAI reveal à l'écran (LootReveal, présentation seule — la potion n'est
+    // PAS octroyée) : la potion découverte + sa recette en sous-titre.
+    const ing = (recipe.ingredients || [])
+      .map((k) => (ITEMS[k] ? `${ITEMS[k].icon} ${loc(ITEMS[k], 'name')}` : k)).join(' + ');
+    get().showLoot(recipe.potion, {
+      title: tg('log.fx.recipeReveal.title', { emoji: team.emoji, name: team.name }),
+      subtitle: ing,
+    });
   },
 
   // --- Magie (extension « magic ») : handlers du moteur d'effets ---
