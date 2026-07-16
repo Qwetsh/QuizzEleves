@@ -11,7 +11,10 @@
     /* inset:0 (plein écran) → colonne calée à droite */
     left: auto;
     width: 440px;
-    z-index: 210; /* au-dessus des modales TBI miroir (la colonne est MA manette) */
+    /* Au-dessus des modales/overlays de SPECTACLE (coffre 210, duel 200,
+       question…) : la colonne est MA manette, elle doit rester utilisable
+       pendant que l'écran central fait le show. */
+    z-index: 300;
     background: rgba(16, 11, 5, 0.97);
     border-left: 3px solid #150f08;
     box-shadow: -14px 0 36px rgba(0, 0, 0, 0.55);
@@ -82,11 +85,13 @@
   inset: 0;
 }
 
-/* Bouton flottant « Mon équipe » (hors tour) — habillage console. */
+/* Bouton flottant « Mon équipe » — habillage console. En HAUT, à GAUCHE du
+   rail bois (320px) : la zone basse appartient au HUD des équipes, et le
+   coin haut-droit au rail. */
 .olc-myteam-btn {
   position: fixed;
-  bottom: 16px;
-  right: 16px;
+  top: 12px;
+  right: 336px;
   z-index: 320;
   cursor: pointer;
   display: flex;
@@ -103,6 +108,15 @@
   box-shadow: 0 0 16px rgba(87, 200, 77, 0.45), 0 6px 16px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.35);
 }
 .olc-myteam-btn:hover { background: #6ad55f; }
+/* Pendant MON tour : la colonne de tour occupe le bord droit → le bouton se
+   décale à sa gauche (desktop) ; au téléphone (contrôles plein écran), il
+   serait par-dessus — on le masque, la manette prime. */
+@media (min-width: 900px) {
+  .olc-myteam-btn--beside { right: 456px; }
+}
+@media (max-width: 899px) {
+  .olc-myteam-btn--beside { display: none; }
+}
 .olc-myteam-badge {
   background: #c9472f;
   color: #fff;

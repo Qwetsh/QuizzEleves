@@ -326,6 +326,10 @@ export default {
   'mobile.ctrlTitle': { fr: 'À toi de jouer !', en: 'Your move!' },
   'mobile.ctrlHide': { fr: 'Réduire', en: 'Hide' },
   'mobile.ctrlExpand': { fr: 'Ouvrir la manette', en: 'Open controller' },
+  // Variantes « jeu en ligne » (PC/écran perso : pas de « manette » ni de « tableau » partagé).
+  'mobile.ctrlExpandOnline': { fr: 'Rouvrir mes commandes', en: 'Reopen my controls' },
+  'mobile.ctrlRollHintOnline': { fr: 'Lance le dé — il roule sur le plateau', en: 'Roll the die — watch it on the board' },
+  'mobile.ctrlShopOnlineHint': { fr: 'Ta boutique est ouverte à tout moment : bouton « 🎽 MON ÉQUIPE » en haut à droite.', en: 'Your shop is always open: “🎽 MY TEAM” button, top right.' },
   'mobile.ctrlRoll': { fr: 'Lancer le dé', en: 'Roll the die' },
   'mobile.ctrlRollHint': { fr: 'Appuie pour lancer le dé sur le tableau', en: 'Tap to roll the die on the board' },
   'mobile.ctrlRolling': { fr: 'Le dé roule sur le tableau…', en: 'The die is rolling on the board…' },

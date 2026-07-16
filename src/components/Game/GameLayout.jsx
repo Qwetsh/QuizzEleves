@@ -170,8 +170,10 @@ export default function GameLayout() {
           </div>
         )}
 
-        {/* Boutons Boutique + Inventaire flottants — juste au-dessus du HUD des equipes */}
-        {team && (
+        {/* Boutons Boutique + Inventaire flottants — juste au-dessus du HUD des equipes.
+            EN LIGNE : masqués — l'écran est un affichage partagé (plateau inerte),
+            chaque joueur a SA boutique / SON inventaire dans son dock personnel. */}
+        {team && !onlineMode && (
           <div
             style={{
               position: 'absolute',
@@ -330,13 +332,17 @@ export default function GameLayout() {
       <InvestPickerModal />
       <InvestResultModal />
       <VictoryModal />
-      <ShopModal />
-      <ShopPromptModal />
-      <InventoryModal />
-      <ScribeModal />
-      <AlchemyModal />
-      <SpellTableModal />
-      {forgeOn && <ForgeModal />}
+      {/* Interfaces PERSO du TBI (boutique/inventaire/ateliers de l'équipe
+          active) : PAS en ligne — elles s'afficheraient chez TOUS les joueurs
+          alors que chacun gère ça en privé dans son dock. Les modales de
+          SPECTACLE (question, événement, duel, loot, victoire) restent. */}
+      {!onlineMode && <ShopModal />}
+      {!onlineMode && <ShopPromptModal />}
+      {!onlineMode && <InventoryModal />}
+      {!onlineMode && <ScribeModal />}
+      {!onlineMode && <AlchemyModal />}
+      {!onlineMode && <SpellTableModal />}
+      {forgeOn && !onlineMode && <ForgeModal />}
       <FightModal />
       <DuelChoiceModal />
       <LootReveal />

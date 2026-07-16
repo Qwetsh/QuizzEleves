@@ -59,23 +59,22 @@ export default function OnlineController({ code, ctrl, lastSync = 0, host = fals
     );
   }
 
-  // C'est mon tour → manette : plein écran au téléphone, COLONNE latérale sur
+  // Mon tour → contrôles : plein écran au téléphone, COLONNE latérale sur
   // grand écran (.olc-turnside via online-game.css) — le plateau reste visible.
   const myTurn = !!(ctrl && ctrl.controller && ctrl.turn && ctrl.turn.team === ownedIdx);
-  if (myTurn) {
-    return (
-      <div className="olc-turnside">
-        <ControllerView session={ctrl} teamIdx={ownedIdx} code={code} token={token} T={T} lastSync={lastSync} />
-      </div>
-    );
-  }
 
-  // Hors de mon tour : je spectate le plateau et peux gérer mon équipe
-  // (équipement / boutique / pouvoirs) via un panneau, comme au tour adverse.
+  // Le dock « MON ÉQUIPE » (boutique / inventaire / pouvoirs / troc PRIVÉS)
+  // est disponible EN PERMANENCE — pendant mon tour aussi : chacun a son
+  // écran, acheter ou réorganiser son sac ne dérange personne.
   return (
     <>
+      {myTurn && (
+        <div className="olc-turnside">
+          <ControllerView online session={ctrl} teamIdx={ownedIdx} code={code} token={token} T={T} lastSync={lastSync} />
+        </div>
+      )}
       {ctrl && !panelOpen && (
-        <button className="olc-myteam-btn" onClick={() => setPanelOpen(true)}>
+        <button className={`olc-myteam-btn ${myTurn ? 'olc-myteam-btn--beside' : ''}`} onClick={() => setPanelOpen(true)}>
           🎽 MON ÉQUIPE
           {tradeAlert > 0 && <span className="olc-myteam-badge">{tradeAlert}</span>}
         </button>

@@ -192,6 +192,8 @@ export default {
   'modal.event.tag': { fr: 'ÉVÉNEMENT', en: 'LOG ENTRY' },
   'modal.event.hyperspace': { fr: 'SAUT HYPERSPATIAL…', en: 'HYPERSPACE JUMP…' },
   'modal.chest.tapPrompt': { fr: '👆 Touche le coffre pour l\'ouvrir !', en: '👆 Tap the chest to open it!' },
+  // En ligne, le coffre est un SPECTACLE : le joueur actif l'ouvre depuis ses commandes.
+  'modal.chest.tapPromptOnline': { fr: '🎁 L\'équipe ouvre son coffre depuis ses commandes…', en: '🎁 The team opens its chest from its controls…' },
   'modal.chest.opening': { fr: '✨ Ouverture…', en: '✨ Opening…' },
   'modal.chest.chooseOne': { fr: 'Choisis UN objet pour démarrer :', en: 'Choose ONE item to start:' },
   'modal.chest.chooseN': { fr: 'Choisis {n} objets ({picked}/{n}) :', en: 'Choose {n} items ({picked}/{n}):' },

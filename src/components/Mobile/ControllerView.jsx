@@ -531,7 +531,10 @@ function StarterChestPanel({ chest, busy, act, T }) {
   );
 }
 
-export default function ControllerView({ session, teamIdx, code, token, T, lastSync = 0 }) {
+// `online` : monté dans le client « jeu en ligne » (colonne PC / plein écran
+// tel) — libellés adaptés (pas de « manette » ni de « tableau » partagé) et
+// pas d'ouverture de la boutique TBI (chacun a SA boutique dans son dock).
+export default function ControllerView({ session, teamIdx, code, token, T, lastSync = 0, online = false }) {
   const turn = session.turn;
   const en = !!session.englishMode;
   const team = session.teams?.[teamIdx];
@@ -577,7 +580,7 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
     return (
       <button className="mob-ctrl-banner" onClick={() => setCollapsed(false)}>
         <span>{T('mobile.ctrlTitle')}</span>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{T('mobile.ctrlExpand')} ▲</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{T(online ? 'mobile.ctrlExpandOnline' : 'mobile.ctrlExpand')} ▲</span>
       </button>
     );
   }
@@ -587,7 +590,7 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
     case 'idle':
       body = (
         <>
-          <div className="mob-ctrl-hint">{T('mobile.ctrlRollHint')}</div>
+          <div className="mob-ctrl-hint">{T(online ? 'mobile.ctrlRollHintOnline' : 'mobile.ctrlRollHint')}</div>
           <button className="mob-ctrl-roll" disabled={busy} onClick={() => act('turnRoll')}>🎲</button>
           <div className="mob-ctrl-hint">{busy ? T('mobile.ctrlSent') : T('mobile.ctrlRoll')}</div>
           {turn.checkpoint && (
@@ -784,13 +787,20 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
         : <div className="mob-ctrl-hint">{T('mobile.ctrlWatchBoard')}</div>;
       break;
     case 'shopPrompt':
+      // En LIGNE, pas de boutique « au tableau » (la modale TBI n'est plus
+      // montée sur les écrans en ligne) : on rappelle où vit SA boutique
+      // privée (dock MON ÉQUIPE) et on continue.
       body = (
         <>
           <div style={{ fontSize: 44 }}>🛒</div>
           <div className="mob-ctrl-subtitle">{T('mobile.ctrlShopPrompt')}</div>
-          <button className="mob-btn mob-btn--gold" style={{ width: '100%', maxWidth: 320 }} disabled={busy}
-            onClick={() => act('turnShopAccept')}>{T('mobile.ctrlShopOpen')}</button>
-          <button className="mob-btn mob-btn--ghost" style={{ color: '#f3e9d3' }} disabled={busy}
+          {online ? (
+            <div className="mob-ctrl-hint" style={{ maxWidth: 320 }}>{T('mobile.ctrlShopOnlineHint')}</div>
+          ) : (
+            <button className="mob-btn mob-btn--gold" style={{ width: '100%', maxWidth: 320 }} disabled={busy}
+              onClick={() => act('turnShopAccept')}>{T('mobile.ctrlShopOpen')}</button>
+          )}
+          <button className={`mob-btn ${online ? 'mob-btn--gold' : 'mob-btn--ghost'}`} style={{ width: online ? '100%' : undefined, maxWidth: 320, color: online ? undefined : '#f3e9d3' }} disabled={busy}
             onClick={() => act('turnShopDismiss')}>{T('mobile.ctrlShopLater')}</button>
         </>
       );
