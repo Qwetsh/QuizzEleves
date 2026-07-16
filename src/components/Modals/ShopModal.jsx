@@ -295,9 +295,13 @@ function UnlockStall({ unownedPowers, money, onBuyNew }) {
 }
 
 /* ---------- Modale ---------- */
-export default function ShopModal() {
+// `dock` (mode « jeu en ligne ») : la boutique devient PRIVÉE — elle s'ouvre
+// localement pour MON équipe (dock.teamIdx), et chaque achat part en intent
+// d'équipe (dock.dispatch) au lieu de muter l'équipe active du TBI.
+// Sans `dock` : comportement TBI historique (store showShop + équipe active).
+export default function ShopModal({ dock = null }) {
   const T = useT();
-  const showShop = useGameStore((s) => s.showShop);
+  const showShopState = useGameStore((s) => s.showShop);
   const closeShop = useGameStore((s) => s.closeShop);
   const buyPowerCharge = useGameStore((s) => s.buyPowerCharge);
   const upgradePowerLevel = useGameStore((s) => s.upgradePowerLevel);
@@ -310,7 +314,15 @@ export default function ShopModal() {
 
   const [tab, setTab] = useState('objets'); // 'objets' | 'pouvoirs'
 
-  const team = showShop ? teams[currentTeam] : null;
+  const showShop = dock ? dock.open : showShopState;
+  const teamIdx = dock ? dock.teamIdx : currentTeam;
+  const onClose = dock ? dock.onClose : closeShop;
+  const doBuyItem = dock ? (key) => dock.dispatch('buyItem', { key }) : buyItem;
+  const doBuyCharge = dock ? (key) => dock.dispatch('buyPowerCharge', { key }) : buyPowerCharge;
+  const doUpgrade = dock ? (key) => dock.dispatch('upgradePower', { key }) : upgradePowerLevel;
+  const doBuyNew = dock ? (key) => dock.dispatch('buyPower', { key }) : buyNewPower;
+
+  const team = showShop ? teams[teamIdx] : null;
 
   const ownedPowers = team
     ? Object.entries(team.powers || {}).filter(([key]) => POWERS[key])
@@ -320,7 +332,7 @@ export default function ShopModal() {
     ? Object.entries(POWERS).filter(([key]) => !team.powers?.[key])
     : [];
 
-  const marcheNoir = typeof showShop === 'object' && showShop?.marcheNoir;
+  const marcheNoir = !dock && typeof showShop === 'object' && showShop?.marcheNoir;
 
   // Vitrine normale : on sépare consommables et équipements.
   const consoStock = (shopStock || []).filter((k) => ITEMS[k]?.slot === 'consumable');
@@ -330,13 +342,13 @@ export default function ShopModal() {
     <AnimatePresence>
       {showShop && team && (
         marcheNoir ? (
-          <TemplePanel title={T('modal.shop.marcheNoir.title')} team={team} onClose={closeShop} medallion={<span style={{ fontSize: 22 }}>🕯️</span>} className="shop shop--marche-noir">
+          <TemplePanel title={T('modal.shop.marcheNoir.title')} team={team} onClose={onClose} medallion={<span style={{ fontSize: 22 }}>🕯️</span>} className="shop shop--marche-noir">
             <div className="inv-wood">
               <div className="shop-scroll">
                 <ItemStall
                   team={team}
                   items={showShop.stock}
-                  onBuyItem={buyItem}
+                  onBuyItem={doBuyItem}
                   discount={showShop.discount ?? 1}
                   banner={T('modal.shop.marcheNoir.banner')}
                   note={T('modal.shop.marcheNoir.note', { pct: Math.round((1 - (showShop.discount ?? 1)) * 100) })}
@@ -345,7 +357,7 @@ export default function ShopModal() {
             </div>
           </TemplePanel>
         ) : (
-          <TemplePanel title={T('modal.shop.title')} team={team} onClose={closeShop} medallion={<CoinRune />} className="shop">
+          <TemplePanel title={T('modal.shop.title')} team={team} onClose={onClose} medallion={<CoinRune />} className="shop">
             <div className="inv-wood">
               <div className="shop-scroll">
                 <div className="shop-tabs" role="tablist">
@@ -371,8 +383,8 @@ export default function ShopModal() {
 
                 {tab === 'objets' ? (
                   <>
-                    <ItemStall team={team} items={consoStock} onBuyItem={buyItem} banner={T('modal.shop.consumables')} />
-                    <ItemStall team={team} items={equipStock} onBuyItem={buyItem} banner={T('modal.shop.equipment')} />
+                    <ItemStall team={team} items={consoStock} onBuyItem={doBuyItem} banner={T('modal.shop.consumables')} />
+                    <ItemStall team={team} items={equipStock} onBuyItem={doBuyItem} banner={T('modal.shop.equipment')} />
                     {consoStock.length === 0 && equipStock.length === 0 && (
                       <div className="shop-empty">{T('modal.shop.empty')}</div>
                     )}
@@ -382,18 +394,18 @@ export default function ShopModal() {
                     <RechargeStall
                       ownedPowers={ownedPowers}
                       money={team.money}
-                      onBuyCharge={buyPowerCharge}
+                      onBuyCharge={doBuyCharge}
                     />
                     <UpgradeStall
                       ownedPowers={ownedPowers}
                       money={team.money}
-                      onUpgrade={upgradePowerLevel}
+                      onUpgrade={doUpgrade}
                       masteryOn={masteryOn}
                     />
                     <UnlockStall
                       unownedPowers={unownedPowers}
                       money={team.money}
-                      onBuyNew={buyNewPower}
+                      onBuyNew={doBuyNew}
                     />
                   </>
                 )}

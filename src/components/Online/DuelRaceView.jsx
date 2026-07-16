@@ -21,6 +21,9 @@ function useCountdown(deadline) {
 const wrap = {
   position: 'fixed', inset: 0, zIndex: 340, display: 'grid', placeItems: 'center',
   background: 'rgba(6,9,12,0.9)', fontFamily: 'var(--font-ui)', color: '#eafff0', padding: 16,
+  // Rendue depuis FightModal (fenêtre hôte), la vue vit SOUS le rg-root inerte
+  // du mode en ligne : on ré-active explicitement les clics du duelliste.
+  pointerEvents: 'auto',
 };
 const card = {
   width: 560, maxWidth: '96vw', background: '#0f1419', border: '2px solid #16351f', borderRadius: 16,

@@ -3,10 +3,15 @@
 export default {
   // --- HUD / GameLayout ---
   'game.yourTurn': { fr: 'C\'est ton tour !', en: 'Your turn!' },
+  // En ligne : le badge s'adresse à un JOUEUR précis — quand l'équipe active
+  // n'est pas la sienne, on annonce le tour de l'autre (pas de tutoiement).
+  'game.theirTurn': { fr: 'est en train de jouer…', en: 'is playing…' },
   'game.openShop': { fr: 'Ouvrir la boutique', en: 'Open the shop' },
   'game.openInventory': { fr: 'Ouvrir l\'inventaire', en: 'Open the inventory' },
   'game.openScribe': { fr: 'Ouvrir l\'Autel du Scribe', en: 'Open the Scribe\'s Altar' },
   'game.openForge': { fr: 'Gérer mon dé (forge)', en: 'Manage my die (forge)' },
+  'game.forgeBtn': { fr: 'Forge', en: 'Forge' },
+  'game.tradeBtn': { fr: 'Troc', en: 'Trade' },
   'game.scribeBtn': { fr: 'Autel', en: 'Altar' },
   'game.openAlchemy': { fr: 'Ouvrir l\'atelier d\'alchimie', en: 'Open the alchemy workshop' },
   'game.alchBtn': { fr: 'Alchimie', en: 'Alchemy' },

@@ -192,8 +192,18 @@ export default {
   'modal.event.tag': { fr: 'ÉVÉNEMENT', en: 'LOG ENTRY' },
   'modal.event.hyperspace': { fr: 'SAUT HYPERSPATIAL…', en: 'HYPERSPACE JUMP…' },
   'modal.chest.tapPrompt': { fr: '👆 Touche le coffre pour l\'ouvrir !', en: '👆 Tap the chest to open it!' },
-  // En ligne, le coffre est un SPECTACLE : le joueur actif l'ouvre depuis ses commandes.
-  'modal.chest.tapPromptOnline': { fr: '🎁 L\'équipe ouvre son coffre depuis ses commandes…', en: '🎁 The team opens its chest from its controls…' },
+  // En ligne, vu des AUTRES écrans : le joueur actif ouvre son coffre chez lui.
+  'modal.chest.tapPromptOnline': { fr: '🎁 L\'équipe ouvre son coffre sur son écran…', en: '🎁 The team is opening its chest on their screen…' },
+  // --- Troc PC (modale « jeu en ligne ») ---
+  'modal.trade.title': { fr: 'Troc', en: 'Trade' },
+  'modal.trade.none': { fr: 'Aucune offre pour le moment.', en: 'No offers yet.' },
+  'modal.trade.cancel': { fr: 'Annuler', en: 'Cancel' },
+  'modal.trade.compose': { fr: 'Proposer un deal', en: 'Propose a deal' },
+  'modal.trade.turns': { fr: 'tours', en: 'turns' },
+  'modal.trade.pactShort': { fr: '🕊️ pacte {n} tours', en: '🕊️ pact {n} turns' },
+  'modal.trade.peaceGive': { fr: 'Je promets de ne pas attaquer {who} pendant', en: 'I promise not to attack {who} for' },
+  'modal.trade.peaceWant': { fr: '{who} promet de ne pas m\'attaquer pendant', en: '{who} promises not to attack me for' },
+  'modal.trade.sentOk': { fr: 'Offre envoyée !', en: 'Offer sent!' },
   'modal.chest.opening': { fr: '✨ Ouverture…', en: '✨ Opening…' },
   'modal.chest.chooseOne': { fr: 'Choisis UN objet pour démarrer :', en: 'Choose ONE item to start:' },
   'modal.chest.chooseN': { fr: 'Choisis {n} objets ({picked}/{n}) :', en: 'Choose {n} items ({picked}/{n}):' },

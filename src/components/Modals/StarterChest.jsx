@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
+import { canDriveTurn } from '../../logic/onlineSelf';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, RARITIES } from '../../data/items';
@@ -82,14 +83,16 @@ function ChestInner({ team }) {
   };
   const validate = () => { soundClick(); close(picked); };
 
-  // En LIGNE, le coffre est un SPECTACLE : c'est la manette du joueur actif
-  // qui le pilote. Sans ce garde-fou, l'overlay (portail hors plateau inerte)
-  // restait cliquable sur TOUS les écrans — n'importe qui pouvait ouvrir le
-  // coffre d'un autre.
+  // En LIGNE, le coffre se clique DIRECTEMENT — mais uniquement sur l'écran du
+  // joueur dont c'est le tour (portail hors plateau : le gating de GameLayout
+  // ne s'applique pas ici). Sur le miroir, ses clics partent en intents
+  // (closeStarterChest → turnStarterChest via onlineMirror) ; les autres
+  // écrans regardent le spectacle.
   const online = useGameStore((s) => s.connectionMode === 'online' || !!s._mirror);
+  const drive = useGameStore(canDriveTurn);
 
   return (
-    <motion.div className="sc-overlay" style={online ? { pointerEvents: 'none' } : undefined} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div className="sc-overlay" style={!drive ? { pointerEvents: 'none' } : undefined} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div
         className="sc-panel" style={{ width: modalWidth, maxWidth: '94vw' }}
         initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
@@ -156,7 +159,7 @@ function ChestInner({ team }) {
         {/* Invite (idle) ou révélation (open) */}
         {phase !== 'open' ? (
           <p className="sc-prompt">
-            {phase === 'charging' ? T('modal.chest.opening') : <><b>{T(online ? 'modal.chest.tapPromptOnline' : 'modal.chest.tapPrompt')}</b></>}
+            {phase === 'charging' ? T('modal.chest.opening') : <><b>{T(online && !drive ? 'modal.chest.tapPromptOnline' : 'modal.chest.tapPrompt')}</b></>}
           </p>
         ) : (
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}

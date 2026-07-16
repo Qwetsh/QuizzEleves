@@ -5,6 +5,8 @@
 // Habillage spatial HUD (cohérent avec la modale d'événement / le coffre).
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
+import { isOnlineMode } from '../../logic/onlineSelf';
+import { useOnlineDock } from '../../logic/onlineDock';
 import { useT } from '../../i18n';
 import ModalOverlay from './ModalOverlay';
 import { soundClick } from '../../logic/sounds';
@@ -22,8 +24,14 @@ export default function ShopPromptModal() {
   const T = useT();
   const show = useGameStore((s) => s.showShopPrompt);
   const team = useGameStore((s) => s.teams[s.currentTeam]);
-  const accept = useGameStore((s) => s.acceptShopPrompt);
+  const acceptStore = useGameStore((s) => s.acceptShopPrompt);
   const dismiss = useGameStore((s) => s.dismissShopPrompt);
+  // En ligne : « Visiter » ferme le prompt (intent côté miroir / direct côté
+  // hôte) et ouvre MA boutique privée localement — le showShop de l'hôte n'est
+  // plus diffusé (boutique par joueur).
+  const online = useGameStore(isOnlineMode);
+  const openDock = useOnlineDock((s) => s.openDock);
+  const accept = () => { acceptStore(); if (online) openDock('shop'); };
 
   return (
     <AnimatePresence>

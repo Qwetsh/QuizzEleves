@@ -16,9 +16,12 @@ import { itemEffectLines, enchantEffectLines } from '../../logic/effectText';
 import SetBonusInfo from './SetBonusInfo';
 
 // pop : { cellKey: 'bag:N' | 'equip:slot', itemKey, enchants? }
-export default function ItemActionCard({ pop, onUse, onSell, onClose }) {
+// `team` (optionnel) : équipe à afficher — dock « jeu en ligne » (MON équipe) ;
+// par défaut l'équipe active (TBI / carte active, comportement historique).
+export default function ItemActionCard({ pop, onUse, onSell, onClose, team: teamProp }) {
   const T = useT();
-  const team = useGameStore((s) => s.teams[s.currentTeam]);
+  const activeTeam = useGameStore((s) => s.teams[s.currentTeam]);
+  const team = teamProp || activeTeam;
   if (!ITEMS[pop.itemKey]) return null;
   const item = ITEMS[pop.itemKey];
   const rar = RARITIES[item.rarity];

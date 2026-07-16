@@ -12,6 +12,7 @@ import BottomBar from './BottomBar';
 import InfoPopover from './InfoPopover';
 import MobileSessionPanel from './MobileSessionPanel';
 import IntentConsumer from './IntentConsumer';
+import OnlinePrivateDock from '../Online/OnlinePrivateDock';
 import VolumeControl from './VolumeControl';
 import TradeConsumer from './TradeConsumer';
 import ForgeServiceOverlay from './ForgeServiceOverlay';
@@ -20,6 +21,7 @@ import TestLinksPanel from './TestLinksPanel';
 import DevItemGiver from './DevItemGiver';
 import DevFaceGiver from './DevFaceGiver';
 import { OFFLINE } from '../../logic/offline';
+import { onlineSelfIdx, canDriveTurn } from '../../logic/onlineSelf';
 import { bagUnitCount } from '../../store/itemHandlers';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor } from '../../logic/metier';
@@ -101,10 +103,20 @@ export default function GameLayout() {
   // l'autorité → on ne monte aucun consumer réseau (sinon il volerait/supprimerait
   // les intents/trades du vrai hôte).
   const mirror = useGameStore((s) => !!s._mirror);
-  // En ligne, l'ÉCRAN (hôte comme spectateur) est un affichage partagé : on
-  // neutralise les clics du plateau — tout le jeu passe par les manettes des
-  // joueurs (intents). Ça évite que l'hôte pilote toutes les équipes.
+  // En ligne, l'écran de CHAQUE joueur rend le plateau complet — mais seules
+  // SES surfaces sont interactives : les modales/le dé du TOUR pour le joueur
+  // dont c'est le tour (turnUi), le reste (journal, infos) pour tous. La base
+  // reste inerte (décor, boutons DEV) — gating par surface, plus de blanket.
+  // Hors ligne : tout reste interactif (TBI classe, comportement historique).
   const boardInert = mirror || onlineMode;
+  const selfIdx = useGameStore(onlineSelfIdx);
+  const driveTurn = useGameStore(canDriveTurn);
+  // pointerEvents par surface : undefined hors ligne (aucun changement),
+  // 'auto'/'none' en ligne selon que cette fenêtre pilote le tour ou non.
+  const turnUi = onlineMode ? { pointerEvents: driveTurn ? 'auto' : 'none' } : undefined;
+  const sharedUi = onlineMode ? { pointerEvents: 'auto' } : undefined;
+  // Marché Noir (événement) : seule boutique PARTAGÉE en ligne.
+  const marcheNoirOpen = useGameStore((s) => typeof s.showShop === 'object' && !!s.showShop?.marcheNoir);
   const triggerWeather = useGameStore((s) => s.triggerWeather);
   const [isFs, toggleFs] = useFullscreen();
   const T = useT();
@@ -123,7 +135,9 @@ export default function GameLayout() {
             scanlines/8-bit en overlays non interactifs, bandeau de commandes. */}
         <section className="rg-tv">
           <div className="rg-tv-screen">
-            <div className="rg-tv-screen-inner">
+            {/* En ligne : le plateau (jonctions, checkpoint, pose de piège) se
+                clique UNIQUEMENT pendant son propre tour. */}
+            <div className="rg-tv-screen-inner" style={turnUi}>
               <BoardSVG />
               <div className="rg-tv-fx rg-tv-fx--vignette" />
               <div className="rg-tv-fx rg-tv-fx--glare" />
@@ -137,7 +151,7 @@ export default function GameLayout() {
               <div className="rg-tv-badge">CH·{pixelChannel ? 2 : 1} {pixelChannel ? T('game.tvPixel') : T('game.tvColor')}</div>
             </div>
           </div>
-          <div className="rg-tv-strip">
+          <div className="rg-tv-strip" style={sharedUi}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span className="rg-tv-brand">SONOVISION</span>
               <span className="rg-tv-sub">TRINI-VISION™</span>
@@ -158,13 +172,17 @@ export default function GameLayout() {
         {/* Bandeau météo (préavis / météo ambiante en cours) — pilule centrée */}
         {weatherOn && <WeatherBanner />}
 
-        {/* Top bar overlay — current team */}
+        {/* Top bar overlay — current team. En ligne, le badge s'adresse à UN
+            joueur : « C'est ton tour ! » seulement si l'équipe active est la
+            sienne, sinon « "équipe" est en train de jouer… ». */}
         {team && (
           <div className="absolute top-4 left-5 z-50 rg-team-badge">
             <div className="rg-team-badge__tile" style={{ background: team.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TeamAvatar team={team} size={40} /></div>
             <div>
               <div className="rg-team-badge__name">{team.name}</div>
-              <div className="rg-team-badge__sub">{T('game.yourTurn')}</div>
+              <div className="rg-team-badge__sub">
+                {!onlineMode || selfIdx === currentTeam ? T('game.yourTurn') : T('game.theirTurn')}
+              </div>
             </div>
             <span className="rg-team-badge__led" />
           </div>
@@ -246,8 +264,10 @@ export default function GameLayout() {
         )}
       </div>
 
-      {/* Bottom bar — team cards */}
-      <BottomBar />
+      {/* Bottom bar — team cards (fiches d'info consultables par tous en ligne) */}
+      <div style={sharedUi}>
+        <BottomBar />
+      </div>
 
       {/* HUD — right rail (colonne bois façon meuble hi-fi) */}
       <div
@@ -266,16 +286,17 @@ export default function GameLayout() {
           </div>
         </div>
 
-        {/* Dice area — plateau de dé en bois sombre */}
-        <div className="rg-tray" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        {/* Dice area — plateau de dé en bois sombre. En ligne : dé, pouvoirs et
+            consommables ne répondent qu'au joueur dont c'est le tour. */}
+        <div className="rg-tray" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', padding: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, ...turnUi }}>
           <Dice />
           <MagicGauge team={team} detailed />
           <PowerButtons />
           <ConsumableBar />
         </div>
 
-        {/* Journal section — fenêtre Win95 */}
-        <div className="rg-win95" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0 }}>
+        {/* Journal section — fenêtre Win95 (consultable par tous en ligne) */}
+        <div className="rg-win95" style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, ...sharedUi }}>
           <div className="rg-win95-bar">
             <div className="rg-win95-bar__title"><span style={{ fontSize: 12 }}>{"\u{1F4D3}"}</span>JOURNAL.EXE</div>
             <div style={{ display: 'flex', gap: 3 }}>
@@ -290,15 +311,18 @@ export default function GameLayout() {
           </div>
         </div>
 
-        {/* Bottom actions */}
-        <div className="rg-rail-actions" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', display: 'flex', gap: 8 }}>
+        {/* Bottom actions \u2014 en ligne : plein \u00E9cran pour tous ; \u00AB quitter \u00BB passe
+            par le bandeau online (l'h\u00F4te y cl\u00F4t proprement la session). */}
+        <div className="rg-rail-actions" style={{ position: 'relative', zIndex: 2, flex: '0 0 auto', display: 'flex', gap: 8, ...sharedUi }}>
           {!OFFLINE && !onlineMode && <MobileSessionPanel />}
           <button className="btn btn--ghost btn--sm" onClick={toggleFs} aria-label={T('game.fullscreen')} style={{ flex: 1 }}>
             {isFs ? `\u2716 ${T('game.exitFullscreen')}` : `\u26F6 ${T('game.fullscreen')}`}
           </button>
-          <button className="btn btn--ghost btn--sm" onClick={reset} aria-label={T('game.quit')}>
-            {"\u2715"}
-          </button>
+          {!onlineMode && (
+            <button className="btn btn--ghost btn--sm" onClick={reset} aria-label={T('game.quit')}>
+              {"\u2715"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -309,50 +333,69 @@ export default function GameLayout() {
       {!OFFLINE && !mirror && <StatsArchiver />}
       {!OFFLINE && !mirror && <TestLinksPanel />}
 
-      {/* Animations */}
+      {/* Animations (spectacles non interactifs) */}
       <FlyingCoins />
       <LightningStrike />
       <CurseStrike />
       <PowerCinematic />
       <ActionDiceOverlay />
-      <SubjectPickerModal />
       <EffectToast />
-
-      {/* Modals */}
       <ForgeCeremony />
       <SpellCeremony />
       <WeatherOverlay />
-      <DiceRollModal />
-      <QuestionModal />
-      <EventModal />
-      <ChargePickerModal />
-      <SpecPickerModal />
-      <EnchantPickerModal />
-      <TargetPickerModal />
-      <InvestPickerModal />
-      <InvestResultModal />
-      <VictoryModal />
-      {/* Interfaces PERSO du TBI (boutique/inventaire/ateliers de l'équipe
-          active) : PAS en ligne — elles s'afficheraient chez TOUS les joueurs
-          alors que chacun gère ça en privé dans son dock. Les modales de
-          SPECTACLE (question, événement, duel, loot, victoire) restent. */}
+
+      {/* Modales de TOUR : rendues chez tout le monde (spectacle partagé), mais
+          en ligne seuls les clics du joueur DONT C'EST LE TOUR comptent — sur
+          le miroir ils partent en intents `turn*` (onlineMirror), chez l'hôte
+          ils appliquent directement (autorité). Le wrapper ne porte que le
+          pointer-events : les modales sont en position fixed, layout intact. */}
+      <div style={turnUi}>
+        <SubjectPickerModal />
+        <DiceRollModal />
+        <QuestionModal />
+        <EventModal />
+        <ChargePickerModal />
+        <SpecPickerModal />
+        <EnchantPickerModal />
+        <TargetPickerModal />
+        <InvestPickerModal />
+        <InvestResultModal />
+        <DuelChoiceModal />
+        <LootReveal />
+        <StarterChest />
+        <MetierPickerModal />
+        <ShopPromptModal />
+        <TrapInspectModal />
+        {/* Marché Noir (boutique louche d'événement) : spectacle partagé piloté
+            par le joueur actif — la boutique NORMALE en ligne est privée (dock). */}
+        {onlineMode && marcheNoirOpen && <ShopModal />}
+      </div>
+      {/* Victoire : boutons (rejouer/quitter) réservés à l'hôte en ligne. */}
+      <div style={onlineMode ? { pointerEvents: mirror ? 'none' : 'auto' } : undefined}>
+        <VictoryModal />
+      </div>
+      {/* Interfaces PERSO (boutique/inventaire/ateliers) : hors ligne = équipe
+          active au TBI (historique). En ligne, chacun a les SIENNES via le dock
+          privé (OnlinePrivateDock) — ces instances-ci restent hors ligne only. */}
       {!onlineMode && <ShopModal />}
-      {!onlineMode && <ShopPromptModal />}
       {!onlineMode && <InventoryModal />}
       {!onlineMode && <ScribeModal />}
       {!onlineMode && <AlchemyModal />}
       {!onlineMode && <SpellTableModal />}
       {forgeOn && !onlineMode && <ForgeModal />}
+      {/* Duel : en ligne, les duellistes jouent via DuelRaceView (overlay dédié
+          par-dessus) — FightModal reste le spectacle partagé, inerte. */}
       <FightModal />
-      <DuelChoiceModal />
-      <LootReveal />
-      <StarterChest />
-      <MetierPickerModal />
       <ForgeServiceOverlay />
-      <TrapInspectModal />
+
+      {/* Dock PRIVÉ du joueur en ligne : SES boutique/inventaire/ateliers/troc,
+          en vraies modales PC, mutations via intents d'équipe. */}
+      {onlineMode && <OnlinePrivateDock />}
 
       {/* Fiche d'info flottante « façon BG3 » (effets HUD + mots-clés du journal) */}
-      <InfoPopover />
+      <div style={sharedUi}>
+        <InfoPopover />
+      </div>
     </div>
   );
 }

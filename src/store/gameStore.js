@@ -350,6 +350,14 @@ export const useGameStore = create((set, get) => ({
   connectionMode: 'board',
   // Modifiable seulement hors partie (accueil + console) — jamais en cours de jeu.
   setConnectionMode: (m) => { if (get().phase === 'home' || get().phase === 'setup') set({ connectionMode: m }); },
+
+  // Identité « jeu en ligne » de CETTE fenêtre (hôte-joueur comme client distant) :
+  // jeton local → MON équipe (teams[i].token) + code de session (pour émettre des
+  // intents depuis le miroir). Champs purement locaux — jamais sauvegardés ni
+  // broadcast (hydrateSnapshot ne touche que SNAPSHOT_FIELDS).
+  _onlineToken: null,
+  _onlineCode: null,
+  setOnlineIdentity: (token, code = null) => set({ _onlineToken: token || null, _onlineCode: code || null }),
   // Session partagée (mode téléphone) : code de lobby/partie + équipes du lobby
   // (live, alimentées depuis Supabase par LobbyPanel).
   sessionCode: null,
@@ -2728,7 +2736,12 @@ export const useGameStore = create((set, get) => ({
   // Prompt « Visiter la boutique ? » : accepter ouvre la boutique (reset compteur
   // via openShop) ; « Plus tard » referme et remet le compteur à 0 (snooze : ne
   // re-proposé que dans shopPromptDelay tours).
-  acceptShopPrompt: () => { set({ showShopPrompt: false }); get().openShop(); },
+  // En ligne, accepter n'ouvre PAS la boutique globale : chaque joueur a la
+  // sienne (dock privé local, ouvert par ShopPromptModal côté joueur actif).
+  acceptShopPrompt: () => {
+    set({ showShopPrompt: false });
+    if (get().connectionMode !== 'online') get().openShop();
+  },
   dismissShopPrompt: () => {
     const { teams, currentTeam } = get();
     const nt = teams.slice();
@@ -3011,6 +3024,13 @@ export const useGameStore = create((set, get) => ({
     } else if (type === 'sellBag') {
       const i = itemH.normalizeBag(team.bag).findIndex((c) => itemH.cellKey(c) === payload.key);
       if (i >= 0) itemH.sellBagItem(set, get, i, idx);
+    } else if (type === 'moveItem') {
+      // Dock PC « jeu en ligne » : déplacement POSITIONNEL ('bag:N'/'equip:slot').
+      // Contrairement au téléphone (sac compacté → intents par clé), le miroir
+      // rend le sac exact de l'hôte. moveInventoryItem garde tout (isValidMove).
+      if (typeof payload.from === 'string' && typeof payload.to === 'string') {
+        itemH.moveInventoryItem(set, get, payload.from, payload.to, idx);
+      }
     } else if (type === 'craft') {
       // Alchimie : le mobile envoie les CLÉS des 3 ingrédients (payload.keys) —
       // PAS des index : son sac est compacté (filter(Boolean)) alors que le TBI a
@@ -3235,8 +3255,36 @@ export const useGameStore = create((set, get) => ({
         if (st.showEvent?.phase === 'choice' && st.showEvent.key === 'bossProf'
           && typeof payload.subject === 'string') get().startBossFight(payload.subject);
         return;
+      case 'turnEventTradePick':
+        // eventTrade re-vérifie le pick contre les propositions de l'événement.
+        if (st.showEvent?.phase === 'choice') get().eventTrade(payload.pick);
+        return;
+      case 'turnEventPillage':
+        if (st.showEvent?.phase === 'choice') get().eventPillageApply(payload.pick);
+        return;
       case 'turnEventClose':
         if (st.showEvent?.phase === 'result') get().closeEvent();
+        return;
+      // --- Investissement (modale de mise + bilan) ---
+      case 'turnInvestConfirm':
+        if (st.showInvestPicker) get().confirmInvest(payload.amount);
+        return;
+      case 'turnInvestCancel':
+        if (st.showInvestPicker) get().cancelInvest();
+        return;
+      case 'turnInvestDismiss':
+        if (st.investResult) get().dismissInvestResult();
+        return;
+      // --- Maîtrise : choix de voie (picker ouvert pour l'équipe active) ---
+      case 'turnChooseSpec':
+        if (st.showSpecPicker && typeof payload.specKey === 'string') get().chooseSpec(payload.specKey);
+        return;
+      // --- Enchantement : choix de la pièce à enchanter ---
+      case 'turnEnchantSlot':
+        if (st.showEnchantPicker && typeof payload.slot === 'string') get().chooseEnchantSlot(payload.slot);
+        return;
+      case 'turnEnchantCancel':
+        if (st.showEnchantPicker) get().cancelEnchant();
         return;
       // --- Loot / coffre de départ / prompt boutique ---
       case 'turnLootDismiss':
@@ -3251,6 +3299,11 @@ export const useGameStore = create((set, get) => ({
         return;
       case 'turnShopDismiss':
         if (st.showShopPrompt) get().dismissShopPrompt();
+        return;
+      case 'turnShopClose':
+        // En ligne : fermeture de la boutique PORTÉE PAR L'HÔTE (Marché Noir) —
+        // le miroir ne peut pas fermer localement, le snapshot la rouvrirait.
+        if (st.showShop) get().closeShop();
         return;
       // --- Combat : périphérie seulement (le mini-jeu se joue au TBI) ---
       case 'turnFightBegin':

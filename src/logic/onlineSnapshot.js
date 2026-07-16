@@ -20,8 +20,18 @@ const RENDER_FIELDS = [
   'pendingLanding', 'awaitingChoice', 'eventApplied',
   'showDiceModal', 'showQuestion', 'showEvent', 'showFight', 'showDuelChoice',
   'showTargetPicker', 'showChargePicker', 'showSpecPicker', 'showEnchantPicker',
-  'showShop', 'showShopPrompt', 'showInventory', 'lootReveal',
-  'indiceHidden', 'weatherCeremony', 'spellCeremony',
+  // showShop reste diffusé pour le MARCHÉ NOIR (boutique louche d'événement,
+  // spectacle partagé piloté par le joueur actif) — la boutique NORMALE, elle,
+  // est privée par joueur (dock local, acceptShopPrompt n'ouvre plus en ligne).
+  'showShop', 'showShopPrompt', 'lootReveal',
+  // Le joueur actif joue son tour SUR SON ÉCRAN (UX souris) : toutes les
+  // modales de tour doivent être diffusées, sinon il resterait bloqué devant
+  // un plateau muet pendant que l'hôte affiche l'interrupt.
+  'showStarterChest', 'lastStarterReward', 'showInvestPicker', 'investResult',
+  'showSubjectPicker', 'showTilePicker', 'showMetierPicker',
+  'indiceHidden', 'indiceUsed', 'rerollUsed', 'weatherCeremony', 'spellCeremony',
+  // NB : showInventory n'est PLUS diffusé — l'inventaire est une interface
+  // PRIVÉE par joueur en ligne (dock local).
 ];
 
 // Champs JAMAIS diffusés (Disk IO) : volumineux et inutiles au miroir. En tête,

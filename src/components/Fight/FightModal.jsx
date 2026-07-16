@@ -364,6 +364,12 @@ function HostDuelRace({ fight, teams }) {
   const fightChooseReward = useGameStore((s) => s.fightChooseReward);
   const closeFight = useGameStore((s) => s.closeFight);
   const sessionCode = useGameStore((s) => s.sessionCode);
+  const mirror = useGameStore((s) => !!s._mirror);
+
+  // Client miroir : ses actions de combat passent par les intents (DuelRaceView
+  // monté par OnlineController) — cette instance à actions DIRECTES est
+  // réservée à la fenêtre de l'hôte (autorité).
+  if (mirror) return null;
 
   const hostToken = sessionCode ? onlineToken(sessionCode) : null;
   const parts = [fight.attackerIndex, fight.defenderIndex].filter((i) => i >= 0);

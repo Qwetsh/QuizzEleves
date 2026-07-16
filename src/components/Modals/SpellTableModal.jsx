@@ -11,17 +11,27 @@ import { tFor } from '../../i18n';
 import SpellTableView from '../Mobile/SpellTableView';
 import CodexView from '../Mobile/CodexView';
 
-export default function SpellTableModal() {
-  const show = useGameStore((s) => s.showSpellTable);
-  const close = useGameStore((s) => s.closeSpellTable);
+// `dock` (jeu en ligne) : table PRIVÉE de MON équipe, incantation via l'intent
+// `castSpell` (dock.dispatch) — la cérémonie joue via le snapshot diffusé.
+export default function SpellTableModal({ dock = null }) {
+  const showSpellTable = useGameStore((s) => s.showSpellTable);
+  const closeSpellTable = useGameStore((s) => s.closeSpellTable);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
   const en = useGameStore((s) => s.englishMode);
   const castSpellFor = useGameStore((s) => s.castSpellFor);
+  // Même verrou d'ambiance que le payload mobile (session.locked) : incanter est
+  // grisé pendant une résolution — l'hôte refuse de toute façon (double filet).
+  const resolving = useGameStore((s) => !!(s.showQuestion || s.showEvent || s.showFight || s.showDuelChoice
+    || s.rolling || s.showDiceModal || s.awaitingChoice || s.pendingActions || s.pendingLanding));
   const [sub, setSub] = useState('table');
 
+  const show = dock ? dock.open : showSpellTable;
+  const close = dock ? dock.onClose : closeSpellTable;
+  const teamIdx = dock ? dock.teamIdx : currentTeam;
+
   if (!show) return null;
-  const team = teams[currentTeam];
+  const team = teams[teamIdx];
   if (!team) return null;
   const T = tFor(en);
 
@@ -36,6 +46,13 @@ export default function SpellTableModal() {
   const teamList = teams.map((t, idx) => ({ idx, name: t.name, emoji: t.emoji, color: t.color }));
 
   const onCast = (payload) => {
+    if (dock) {
+      // À distance : l'issue (réussite/fizzle) n'est connue que par l'hôte —
+      // on ferme pour laisser la cérémonie diffusée se jouer à l'écran.
+      dock.dispatch('castSpell', payload);
+      close();
+      return;
+    }
     const r = castSpellFor(currentTeam, payload);
     // Incantation partie au moteur (réussie, découverte OU fizzle) : place à la
     // cérémonie. Refus silencieux (noMana/cooldown/busy) : la table reste ouverte.
@@ -60,8 +77,8 @@ export default function SpellTableModal() {
               knownRunes={team.knownRunes || []}
               knownSpells={team.knownSpells || []}
               teams={teamList}
-              myIdx={currentTeam}
-              locked={false}
+              myIdx={teamIdx}
+              locked={dock ? resolving : false}
               en={en}
               onCast={onCast}
               bottomInset={8}

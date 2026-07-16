@@ -74,16 +74,30 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /* ---------- Modale ---------- */
-export default function InventoryModal() {
+// `dock` (mode « jeu en ligne ») : inventaire PRIVÉ de MON équipe (dock.teamIdx),
+// ouvert localement ; les gestes partent en intents d'équipe (dock.dispatch) —
+// le drag & drop reste POSITIONNEL (le miroir est fidèle au sac de l'hôte,
+// contrairement au sac compacté du téléphone). Sans `dock` : TBI historique.
+export default function InventoryModal({ dock = null }) {
   const T = useT();
-  const showInventory = useGameStore((s) => s.showInventory);
+  const showInventoryState = useGameStore((s) => s.showInventory);
   const closeInventory = useGameStore((s) => s.closeInventory);
-  const moveInventoryItem = useGameStore((s) => s.moveInventoryItem);
+  const moveInventoryItemStore = useGameStore((s) => s.moveInventoryItem);
   const useConsumable = useGameStore((s) => s.useConsumable);
   const sellBagItem = useGameStore((s) => s.sellBagItem);
   const sellEquipment = useGameStore((s) => s.sellEquipment);
   const teams = useGameStore((s) => s.teams);
   const currentTeam = useGameStore((s) => s.currentTeam);
+  // En dock, « utiliser » un consommable n'a de sens que pendant MON tour
+  // (intent turnUseConsumable, gardé côté hôte).
+  const myTurnDock = !!dock && dock.teamIdx === currentTeam;
+
+  const showInventory = dock ? dock.open : showInventoryState;
+  const teamIdx = dock ? dock.teamIdx : currentTeam;
+  const onClose = dock ? dock.onClose : closeInventory;
+  const moveInventoryItem = dock
+    ? (from, to) => dock.dispatch('moveItem', { from, to })
+    : moveInventoryItemStore;
 
   const [drag, setDrag] = useState(null);
   const dragRef = useRef(null);
@@ -118,7 +132,7 @@ export default function InventoryModal() {
 
   // Échap ferme ; Tab reste piégé dans le panneau.
   const onKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') { closeInventory(); return; }
+    if (e.key === 'Escape') { onClose(); return; }
     if (e.key !== 'Tab') return;
     const focusable = Array.from(dialogRef.current?.querySelectorAll(FOCUSABLE) || []);
     if (!focusable.length) { e.preventDefault(); return; }
@@ -126,9 +140,9 @@ export default function InventoryModal() {
     const last = focusable[focusable.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }, [closeInventory]);
+  }, [onClose]);
 
-  const team = showInventory ? teams[currentTeam] : null;
+  const team = showInventory ? teams[teamIdx] : null;
   const equipment = team?.equipment || { head: null, body: null, feet: null };
   const bag = normalizeBag(team?.bag);
 
@@ -145,7 +159,7 @@ export default function InventoryModal() {
 
   const liveTeam = () => {
     const st = useGameStore.getState();
-    return st.teams[st.currentTeam];
+    return st.teams[dock ? dock.teamIdx : st.currentTeam];
   };
 
   const onGrab = (e, key) => {
@@ -217,10 +231,16 @@ export default function InventoryModal() {
     // soit appliqué — d'où une superposition visible. flushSync garantit
     // l'ordre : carte fermée, puis picker.
     flushSync(() => setPopover(null));
-    useConsumable(+pop.cellKey.slice(4));
+    if (dock) dock.dispatch('turnUseConsumable', { key: pop.itemKey });
+    else useConsumable(+pop.cellKey.slice(4));
   };
   const onSell = (pop) => {
     setPopover(null);
+    if (dock) {
+      if (pop.cellKey.startsWith('bag:')) dock.dispatch('sellBag', { key: pop.itemKey });
+      else dock.dispatch('sellEquip', { slot: pop.cellKey.slice(6) });
+      return;
+    }
     if (pop.cellKey.startsWith('bag:')) sellBagItem(+pop.cellKey.slice(4));
     else sellEquipment(pop.cellKey.slice(6));
   };
@@ -238,7 +258,7 @@ export default function InventoryModal() {
           aria-label={T('modal.inv.title')}
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
-            if (e.target === e.currentTarget) closeInventory();
+            if (e.target === e.currentTarget) onClose();
             else setPopover(null);
           }}
         >
@@ -264,7 +284,7 @@ export default function InventoryModal() {
                 </div>
                 <button
                   className="rgi-close"
-                  onClick={() => { soundClick(); closeInventory(); }}
+                  onClick={() => { soundClick(); onClose(); }}
                   aria-label={T('common.close')}
                 >
                   ✕
@@ -350,7 +370,9 @@ export default function InventoryModal() {
 
           {/* Popover d'actions */}
           {popover && (
-            <ItemActionCard pop={popover} onUse={onUse} onSell={onSell} onClose={() => setPopover(null)} />
+            <ItemActionCard pop={popover} team={team}
+              onUse={!dock || myTurnDock ? onUse : null}
+              onSell={onSell} onClose={() => setPopover(null)} />
           )}
         </motion.div>
       )}

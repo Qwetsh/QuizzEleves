@@ -26,15 +26,27 @@ const SPLASH = Array.from({ length: 14 }, (_, i) => {
   return { dx: `${Math.round(Math.cos(a) * dist)}px`, dy: `${Math.round(Math.sin(a) * dist - 16)}px`, d: `${(i % 5) * 26}ms` };
 });
 
-export default function ForgeModal() {
-  const showForge = useGameStore((s) => s.showForge);
+// `dock` (jeu en ligne) : atelier PRIVÉ de MON équipe (dock.teamIdx) — achat et
+// pose de face via les intents `buyFace`/`forgeFace` (dock.dispatch), mêmes
+// gardes que l'atelier téléphone. Sans `dock` : TBI historique (direct).
+export default function ForgeModal({ dock = null }) {
+  const showForgeState = useGameStore((s) => s.showForge);
   const closeForge = useGameStore((s) => s.closeForge);
-  const buyFace = useGameStore((s) => s.buyFace);
-  const forgeFace = useGameStore((s) => s.forgeFace);
+  const buyFaceStore = useGameStore((s) => s.buyFace);
+  const forgeFaceStore = useGameStore((s) => s.forgeFace);
   const shopFaces = useGameStore((s) => s.shopFaceStock) || [];
-  const team = useGameStore((s) => s.teams[s.currentTeam]);
+  const teamActive = useGameStore((s) => s.teams[s.currentTeam]);
+  const teamDock = useGameStore((s) => (dock ? s.teams[dock.teamIdx] : null));
   const en = useGameStore((s) => s.englishMode);
   const T = tFor(en);
+
+  const showForge = dock ? dock.open : showForgeState;
+  const team = dock ? teamDock : teamActive;
+  const onClose = dock ? dock.onClose : closeForge;
+  const buyFace = dock ? (i) => dock.dispatch('buyFace', { faceIndex: i }) : buyFaceStore;
+  const forgeFace = dock
+    ? (slot, stockIndex) => dock.dispatch('forgeFace', { slotIndex: slot, stockIndex })
+    : forgeFaceStore;
 
   const [fusion, setFusion] = useState(null);    // { slot, oldFace, newFace } coulée
   const [drag, setDrag] = useState(null);        // { stockIndex, slot, face, x, y }
@@ -61,7 +73,8 @@ export default function ForgeModal() {
     const slot = (f.slot || 1) - 1;
     setFusion({ slot, oldFace: isFaceForged(faces[slot]) ? faces[slot] : null, newFace: f });
     try { soundCast(); } catch { /* audio indispo */ }
-    forgeFace(slot, stockIndex, undefined, true);
+    if (dock) forgeFace(slot, stockIndex);
+    else forgeFace(slot, stockIndex, undefined, true);
   };
 
   // --- Glisser-déposer (réserve → emplacement) via pointer capture ---
@@ -101,14 +114,14 @@ export default function ForgeModal() {
   const onTileCancel = (e) => { if (e.pointerId !== dragRef.current.id) return; resetDrag(); setDrag(null); setHoverSlot(null); };
 
   return (
-    <div className="forge-desk-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) closeForge(); }}>
+    <div className="forge-desk-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="forge-desk">
         <div className="forge-desk-embers" aria-hidden="true">
           {DESK_EMBERS.map(([left, drift, dur, delay], i) => (
             <span key={i} className="forge-mob-ember" style={{ left, '--drift': drift, animationDuration: dur, animationDelay: delay }} />
           ))}
         </div>
-        <button className="forge-desk-x" onClick={() => { soundClick(); closeForge(); }} aria-label={T('common.close')}>✕</button>
+        <button className="forge-desk-x" onClick={() => { soundClick(); onClose(); }} aria-label={T('common.close')}>✕</button>
 
         <div className="forge-desk-head">
           <span className="forge-desk-title">🔨 {T('modal.forge.title')}</span>

@@ -9,6 +9,7 @@ import App from '../../App';
 import { useGameStore } from '../../store/gameStore';
 import { fetchSession, subscribeSession, subscribePresence, onlineToken } from '../../logic/sessionConfig';
 import { hydrateSnapshot } from '../../logic/onlineSnapshot';
+import { bindMirrorTurnActions } from '../../logic/onlineMirror';
 import OnlineController from './OnlineController';
 import OnlineLobby from './OnlineLobby';
 
@@ -52,6 +53,15 @@ export default function OnlineClient({ code }) {
     const unsub = subscribeSession(code, apply);
     return () => { alive = false; unsub(); };
   }, [code]);
+
+  // Partie lancée : cette fenêtre appartient à MON équipe (jeton) et les
+  // actions de tour du store deviennent des émetteurs d'intents (le clic sur
+  // une modale du plateau pilote le tour à distance — l'hôte reste l'autorité).
+  useEffect(() => {
+    if (!started) return;
+    useGameStore.getState().setOnlineIdentity(token, code);
+    bindMirrorTurnActions(code, token);
+  }, [started, code, token]);
 
   // Présence : l'hôte est-il là ? combien de joueurs/spectateurs ?
   useEffect(() => {

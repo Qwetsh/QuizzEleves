@@ -6,6 +6,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/gameStore';
+import { canDriveTurn } from '../../logic/onlineSelf';
 import { useT } from '../../i18n';
 import { locName, locDesc } from '../../i18n/content';
 import { ITEMS, SLOTS, RARITIES } from '../../data/items';
@@ -77,6 +78,9 @@ export default function LootReveal() {
   const T = useT();
   const lootReveal = useGameStore((s) => s.lootReveal);
   const dismissLoot = useGameStore((s) => s.dismissLoot);
+  // En ligne (portail hors du gating de GameLayout) : seul le joueur dont c'est
+  // le tour referme le butin — miroir : dismissLoot → intent turnLootDismiss.
+  const drive = useGameStore(canDriveTurn);
   const team = useGameStore((s) => s.teams[s.currentTeam]);
   const item = lootReveal ? ITEMS[lootReveal.itemKey] : null;
   // Effets mécaniques de l'objet gagné (pillage, coffre, butin…) : on montre
@@ -91,6 +95,7 @@ export default function LootReveal() {
       {item && (
         <motion.div
           className="loot-overlay"
+          style={!drive ? { pointerEvents: 'none' } : undefined}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

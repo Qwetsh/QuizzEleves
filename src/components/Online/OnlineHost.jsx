@@ -6,9 +6,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { OFFLINE } from '../../logic/offline';
-import { createSession, publishSession, subscribePresence, randomToken, buildControllerPayload } from '../../logic/sessionConfig';
+import { createSession, publishSession, subscribePresence, randomToken, buildControllerPayload, onlineToken } from '../../logic/sessionConfig';
 import { serializeSnapshot } from '../../logic/onlineSnapshot';
-import OnlineController from './OnlineController';
 
 // Lien à partager pour rejoindre en spectateur (respecte la base GitHub Pages).
 export function onlineUrl(code) {
@@ -25,15 +24,19 @@ export default function OnlineHost() {
   const reset = useGameStore((s) => s.reset);
   const [open, setOpen] = useState(true);
   const [viewers, setViewers] = useState(0);
-  // Payload manette LOCAL (même construction que celui publié aux distants) :
-  // l'hôte est un JOUEUR comme les autres — sa manette tourne dans SA fenêtre.
-  const [ctrl, setCtrl] = useState(null);
-  const [lastSync, setLastSync] = useState(0);
   const creatingRef = useRef(false);
   const tokenRef = useRef(null);
   if (!tokenRef.current) tokenRef.current = randomToken();
 
   const active = !OFFLINE && !mirror && connectionMode === 'online' && phase === 'game';
+
+  // Identité de la fenêtre hôte : l'hôte est un JOUEUR — son jeton (le même que
+  // celui de son équipe créée au lobby) rend SES surfaces de tour interactives
+  // à l'écran. Ses actions restent DIRECTES (il est l'autorité, pas d'intent).
+  useEffect(() => {
+    if (!active || !code) return;
+    useGameStore.getState().setOnlineIdentity(onlineToken(code), code);
+  }, [active, code]);
 
   // Crée la session à l'entrée en partie online (une seule fois).
   useEffect(() => {
@@ -51,12 +54,9 @@ export default function OnlineHost() {
     let timer = null;
     const publish = () => {
       const s = useGameStore.getState();
-      // snapshot = plateau (spectateur) ; ctrl = payload manette (joueurs distants
-      // ET manette locale de l'hôte — même payload, mêmes règles anti-fuite).
-      const c = buildControllerPayload(s);
-      setCtrl(c);
-      setLastSync(Date.now());
-      publishSession(code, { ...serializeSnapshot(s), publishedAt: Date.now(), ctrl: c }).catch(() => {});
+      // snapshot = plateau ; ctrl = payload manette (duel éclair des joueurs
+      // distants — l'hôte, lui, joue en DIRECT sur son plateau).
+      publishSession(code, { ...serializeSnapshot(s), publishedAt: Date.now(), ctrl: buildControllerPayload(s) }).catch(() => {});
     };
     const schedule = () => { if (!timer) timer = setTimeout(() => { timer = null; publish(); }, 300); };
     const unsub = useGameStore.subscribe(schedule);
@@ -78,10 +78,6 @@ export default function OnlineHost() {
   const url = onlineUrl(code);
   return (
     <>
-      {/* Manette de l'hôte-joueur : son tour (ControllerView), hors tour
-          (bouton « Mon équipe » → panneau) — mêmes intents que les distants,
-          appliqués par l'IntentConsumer de cette même fenêtre. */}
-      <OnlineController host code={code} ctrl={ctrl} lastSync={lastSync} />
       {open && (
     <div style={{
       position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 300,
