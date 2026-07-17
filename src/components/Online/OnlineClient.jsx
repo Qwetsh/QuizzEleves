@@ -64,13 +64,17 @@ export default function OnlineClient({ code }) {
   }, [started, code, token]);
 
   // Présence : l'hôte est-il là ? combien de joueurs/spectateurs ?
+  // `started` dans les deps : subscribePresence PURGE tout canal du même topic
+  // avant de créer le sien — pendant le lobby, l'abonnement d'OnlineLobby tue
+  // donc celui-ci. On se réabonne au passage en jeu (le lobby est démonté),
+  // sinon hostOnline resterait figé à false (« Hôte hors ligne » à tort).
   useEffect(() => {
     if (!code) return;
     return subscribePresence(code, { role: 'spectator', token }, (list) => {
       setHostOnline(list.some((p) => p.role === 'host'));
       setViewers(list.filter((p) => p.role === 'spectator').length);
     });
-  }, [code, token]);
+  }, [code, token, started]);
 
   // Session CLOSE par l'hôte (⏹ Quitter) : fini pour tout le monde — on
   // n'entre ni au lobby ni dans le jeu fantôme (prioritaire, même « started »).

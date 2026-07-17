@@ -46,8 +46,8 @@ export function amountLabel(n, lang = getLang()) {
 }
 
 const TARGET = {
-  fr: { self: 'soi', target: 'une cible', randomOpponent: 'un adversaire au hasard', all: 'toutes les équipes' },
-  en: { self: 'self', target: 'a target', randomOpponent: 'a random opponent', all: 'all teams' },
+  fr: { self: 'soi', target: 'une cible', randomOpponent: 'un adversaire au hasard', all: 'toutes les équipes', allOthers: 'toutes les autres équipes' },
+  en: { self: 'self', target: 'a target', randomOpponent: 'a random opponent', all: 'all teams', allOthers: 'all other teams' },
 };
 const targetWho = (a, lang) => TARGET[EN(lang) ? 'en' : 'fr'][a.target] || a.target || TARGET[EN(lang) ? 'en' : 'fr'].self;
 const subjectLabel = (s, lang) => (s === 'choose'

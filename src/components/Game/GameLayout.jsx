@@ -368,7 +368,11 @@ export default function GameLayout() {
         <ChargePickerModal />
         <SpecPickerModal />
         <EnchantPickerModal />
-        <TargetPickerModal />
+        {/* Sélecteur de cible (pouvoir offensif / moteur d'effets) : choix
+            PRIVÉ du joueur qui pilote le tour — en ligne on ne l'affiche pas
+            aux autres (cohérent avec les consommables ; l'EFFET, lui, est
+            bien diffusé une fois la cible choisie). */}
+        {(!onlineMode || driveTurn) && <TargetPickerModal />}
         <InvestPickerModal />
         <InvestResultModal />
         <DuelChoiceModal />

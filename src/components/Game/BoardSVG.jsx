@@ -799,12 +799,60 @@ export default function BoardSVG() {
     clearTeamMove(teamIndex);
   }, [clearTeamMove]);
 
+  // Pan à la souris : clic GAUCHE + glisser fait défiler le plateau (plus
+  // naturel que la molette/auto-scroll). Seuil de 5 px avant de « voler » le
+  // geste, pour préserver les clics du plateau (jonctions, pièges, pose de
+  // piège, checkpoints) ; le clic qui suit un vrai drag est absorbé en phase
+  // capture. Tactile inchangé (le défilement natif du conteneur suffit).
+  const panRef = useRef(null);     // drag en cours { x, y, sl, st, dragging }
+  const didDragRef = useRef(false); // vrai drag terminé → absorbe le clic suivant
+  const onPanDown = useCallback((e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    didDragRef.current = false;
+    const c = containerRef.current;
+    if (!c) return;
+    panRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY, sl: c.scrollLeft, st: c.scrollTop, dragging: false };
+  }, []);
+  const onPanMove = useCallback((e) => {
+    const p = panRef.current;
+    const c = containerRef.current;
+    if (!p || !c || e.pointerId !== p.id) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (!p.dragging) {
+      if (Math.hypot(dx, dy) < 5) return;
+      p.dragging = true;
+      // Capture APRÈS le seuil seulement : capturer dès le down retargetterait
+      // les clics normaux (jonctions…) vers le conteneur.
+      try { e.currentTarget.setPointerCapture(p.id); } catch { /* noop */ }
+      c.style.cursor = 'grabbing';
+    }
+    c.scrollLeft = p.sl - dx;
+    c.scrollTop = p.st - dy;
+  }, []);
+  const onPanEnd = useCallback(() => {
+    const c = containerRef.current;
+    if (c) c.style.cursor = '';
+    if (panRef.current?.dragging) didDragRef.current = true;
+    panRef.current = null;
+  }, []);
+  const onPanClickCapture = useCallback((e) => {
+    if (!didDragRef.current) return;
+    didDragRef.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   if (!board) return null;
 
   return (
     <div
       ref={containerRef}
       className="absolute inset-0 overflow-auto"
+      onPointerDown={onPanDown}
+      onPointerMove={onPanMove}
+      onPointerUp={onPanEnd}
+      onPointerCancel={onPanEnd}
+      onClickCapture={onPanClickCapture}
       style={boardSpace ? {
         // Espace : le fond du conteneur prolonge le dégradé du SVG (zones
         // au-delà du viewBox lors du scroll caméra)

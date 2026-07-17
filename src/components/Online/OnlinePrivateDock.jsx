@@ -81,12 +81,16 @@ export default function OnlinePrivateDock() {
 
   return (
     <>
-      {/* Rangée de boutons — même emplacement que la rangée TBI hors ligne */}
+      {/* Rangée de boutons — même emplacement que la rangée TBI hors ligne.
+          Monté à la racine (pas dans la zone plateau) : on réserve donc
+          nous-mêmes la hauteur du bandeau d'équipes (148 px) et on se centre
+          sur la zone plateau (largeur totale moins la colonne droite 320 px),
+          sinon la rangée finit SOUS les HUD d'équipes. */}
       <div
         style={{
           position: 'absolute',
-          bottom: 14,
-          left: '50%',
+          bottom: 162,
+          left: 'calc((100% - 320px) / 2)',
           transform: 'translateX(-50%)',
           zIndex: 56,
           display: 'flex', alignItems: 'center', gap: 16,

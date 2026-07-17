@@ -2,18 +2,14 @@
 // déjà PROPRIÉTAIRE de cette équipe (?claim=idx&token=…). Permet de jouer
 // plusieurs équipes en fenêtres séparées sur un seul PC, sans refaire le lobby.
 //
-// Visible uniquement en localhost OU quand les outils d'édition sont déverrouillés
-// (code 54150), et seulement si une session mobile est active (sessionCode).
+// Visible uniquement en DEV local (jamais sur le site déployé — même outils
+// déverrouillés), et seulement si une session mobile est active (sessionCode).
 import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { joinUrl } from '../../logic/sessionConfig';
 import TeamAvatar from '../TeamAvatar';
 
-const TOOLS_UNLOCK_KEY = 'quete_tools_unlock';
-function devOn() {
-  if (import.meta.env.DEV) return true;
-  try { return localStorage.getItem(TOOLS_UNLOCK_KEY) === '1'; } catch { return false; }
-}
+const devOn = () => import.meta.env.DEV;
 
 // Jeton stable et distinct par équipe (réutilisé si on rouvre le même lien).
 const testLink = (code, i) => `${joinUrl(code)}&claim=${i}&token=test-${code}-${i}`;
