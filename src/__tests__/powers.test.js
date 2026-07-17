@@ -201,6 +201,36 @@ describe('Double : rafale et timer réduit (niv.3)', () => {
     expect(team(1).correct).toBe(2);
   });
 
+  it('bonus « quand je réponds bien » : versé UNE fois, à la dernière question de la rafale', () => {
+    // Un objet/buff « +10 or quand je réponds bien » ne doit PAS se cumuler à chaque
+    // question de la rafale — seulement à la fin (doubleNoBonus isole l'or de vitesse).
+    const teams = [...S().teams];
+    teams[1] = { ...teams[1], money: 50, doubleActive: true, doubleExtra: 1, doubleNoBonus: true,
+      buffs: [{ type: 'themeBonus', n: 10, turns: 5 }] };
+    useGameStore.setState({ teams, currentTeam: 1 });
+
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 10); // Q1 : bonus PAS versé (extra restant)
+    expect(team(1).money).toBe(50);
+    S().answerQuestion(S().showQuestion.question.c, 10); // Q2 (dernière) : bonus versé une seule fois
+    expect(team(1).money).toBe(60);
+  });
+
+  it('erreur en cours de rafale : le bonus de bonne réponse n’est jamais versé', () => {
+    const teams = [...S().teams];
+    teams[1] = { ...teams[1], money: 50, doubleActive: true, doubleExtra: 1, doubleNoBonus: true,
+      buffs: [{ type: 'themeBonus', n: 10, turns: 5 }] };
+    useGameStore.setState({ teams, currentTeam: 1 });
+
+    S().askQuestion('maths');
+    S().answerQuestion(S().showQuestion.question.c, 10); // Q1 juste : bonus pas encore versé
+    expect(team(1).money).toBe(50);
+    const wrong = (S().showQuestion.question.c + 1) % 4;
+    S().answerQuestion(wrong, 10); // Q2 fausse : rafale cassée → bonus jamais versé
+    expect(team(1).money).toBe(50);
+    expect(team(1).doubleActive).toBe(false);
+  });
+
   it('rafale interrompue par une erreur : timer réduit nettoyé aussi', () => {
     castDouble(3);
     useGameStore.setState({ currentTeam: 1 });

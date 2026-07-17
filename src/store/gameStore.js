@@ -1731,12 +1731,16 @@ export const useGameStore = create((set, get) => ({
       // explainEffectValue D\u00c9TAILLE chaque source (objet, set, \u00d7s\u00e9rie\u2026) en un seul tirage.
       const base = noBonus ? 0 : calculateMoneyGain(timeLeft, maxTime);
       const bonusBreak = explainEffectValue(tTeam, 'moneyPerCorrect');
+      // moneyPerCorrect est un BONUS : reserve a la derniere question d'une rafale
+      // entierement reussie (comme l'or de vitesse), pour ne pas se cumuler a chaque
+      // question. Une erreur en rafale part par la branche « mauvaise reponse ».
+      const perCorrectTotal = noBonus ? 0 : bonusBreak.total;
       // Facteur d'or de la rafale Double (Chrono partagé ×1.5 / Rafale tranquille ÷2).
       const gFactor = team.doubleActive ? (team.doubleGoldFactor || 1) : 1;
       // Aubaine (face Forge) : multiplie l'or de la bonne réponse de ce tour.
       const aubaine = team.forgeGoldMult || 1;
       // Antisèche (Indice L10) : bonus d'or forfaitaire sur cette bonne réponse.
-      const gain = Math.round((base + bonusBreak.total) * gFactor * aubaine) + (indiceBonusMoney || 0);
+      const gain = Math.round((base + perCorrectTotal) * gFactor * aubaine) + (indiceBonusMoney || 0);
       // s\u00e9rie = +1 par TOUR r\u00e9ussi : pendant une rafale Double, on n'incr\u00e9mente
       // qu'\u00e0 la derni\u00e8re question (doubleExtra \u00e9puis\u00e9) ; cass\u00e9e sur erreur/timeout.
       const turnComplete = !team.doubleActive || (team.doubleExtra || 0) === 0;
@@ -1781,7 +1785,7 @@ export const useGameStore = create((set, get) => ({
       }
       // D\u00e9tail d\u00e9pliable seulement si un bonus d'\u00e9quipement/set a jou\u00e9.
       let gainDetail;
-      if (bonusBreak.parts.length > 0) {
+      if (!noBonus && bonusBreak.parts.length > 0) {
         gainDetail = [];
         if (base > 0) gainDetail.push({ label: tg('log.store.detail.speed'), amount: base });
         for (const p of bonusBreak.parts) gainDetail.push({ label: p.label, note: `(${p.formula})`, amount: p.amount });
@@ -2059,15 +2063,25 @@ export const useGameStore = create((set, get) => ({
       }
     };
 
-    // Effets de durée actifs à la bonne réponse : bonus d'or (sur thème) + avance.
+    // Bonus « à la bonne réponse » (buffs de durée + déclencheurs d'objets/équip/sets) :
+    // réservés à la DERNIÈRE question d'une rafale Double ENTIÈREMENT réussie. Sans ce
+    // garde-fou, un objet « bonus quand je réponds bien » se déclencherait à CHAQUE
+    // question de la rafale (avantage démesuré). Une erreur en cours de rafale part par
+    // la branche « mauvaise réponse » (return plus haut) et n'atteint jamais ce code :
+    // le bonus n'est donc versé que si TOUTES les questions de la rafale sont justes.
+    const turnCompleteBonus = !team.doubleActive || (team.doubleExtra || 0) === 0;
     const buffCorrect = [];
-    const tBonus = findBuff(team, 'themeBonus', showQuestion.subject);
-    if (tBonus) buffCorrect.push({ action: 'money', mode: 'gain', target: 'self', n: tBonus.n ?? 5, unit: 'flat' });
-    const advBuff = findBuff(team, 'advanceOnCorrect');
-    if (advBuff) buffCorrect.push({ action: 'move', target: 'self', dir: 'forward', n: advBuff.n ?? 'd4' });
-    // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…),
-    // précédés de la récompense d'un éventuel pari « Défi » (team.wager.do) et des buffs.
-    const onCorrect = [...(team.wager?.do || []), ...buffCorrect, ...effectH.equipTriggerActions(get().teams[currentTeam], 'correct', showQuestion.subject)];
+    if (turnCompleteBonus) {
+      const tBonus = findBuff(team, 'themeBonus', showQuestion.subject);
+      if (tBonus) buffCorrect.push({ action: 'money', mode: 'gain', target: 'self', n: tBonus.n ?? 5, unit: 'flat' });
+      const advBuff = findBuff(team, 'advanceOnCorrect');
+      if (advBuff) buffCorrect.push({ action: 'move', target: 'self', dir: 'forward', n: advBuff.n ?? 'd4' });
+    }
+    // Déclencheurs d'équipement « à la bonne réponse » (perte/gain/charge…), gatés eux
+    // aussi par la fin de rafale, précédés de la récompense d'un éventuel pari « Défi »
+    // (team.wager.do — porte sur la question pariée, jamais rejoué en rafale).
+    const equipCorrect = turnCompleteBonus ? effectH.equipTriggerActions(get().teams[currentTeam], 'correct', showQuestion.subject) : [];
+    const onCorrect = [...(team.wager?.do || []), ...buffCorrect, ...equipCorrect];
     if (onCorrect.length) {
       effectH.runEffects(set, get, onCorrect, { source: 'item' });
       if (get().pendingActions) { set({ deferredTurnEnd: finishCorrect }); return; }
