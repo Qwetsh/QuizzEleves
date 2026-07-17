@@ -30,7 +30,11 @@ export default function PowerSetup() {
   const stepTotal = teams.length * 2;
   const catColor = isDef ? '#6aa8ff' : '#ff7b6b';
 
+  // Tour d'un BOT (mode solo) : le driver choisit tout seul — l'écran reste
+  // un spectacle, les cartes sont verrouillées le temps de la sélection.
+  const botTurn = !!team.isBot;
   const handleSelect = (key) => {
+    if (botTurn) return;
     selectPower(powerSetupIndex, powerSetupCategory, key);
     advancePowerSetup();
   };
@@ -55,10 +59,15 @@ export default function PowerSetup() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, margin: '4px 0 22px' }}>
             <TeamAvatar team={team} size={48} />
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 30, letterSpacing: 0.5, color: team.color, textShadow: '0 2px 0 #000' }}>{team.name}</span>
+            {botTurn && (
+              <span style={{ fontFamily: FONT_MONO, fontSize: 18, letterSpacing: 1, color: '#e8a13a', background: '#120c06', border: '2px solid #5a4023', borderRadius: 6, padding: '2px 10px' }}>
+                🤖 choisit…
+              </span>
+            )}
           </div>
 
           {/* Cartes-cartouches des pouvoirs */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={botTurn ? { pointerEvents: 'none', opacity: 0.75 } : undefined}>
             {powers.map(([key, p]) => (
               <div
                 key={key}

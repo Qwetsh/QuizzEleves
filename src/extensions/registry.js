@@ -140,6 +140,17 @@ export function applyExtensionToggle(extensions, id, on) {
 export const defaultExtensions = () =>
   Object.fromEntries(EXTENSIONS.map((e) => [e.id, e.default !== false]));
 
+// Mode SOLO (bots IA) : extensions que l'IA ne sait pas jouer (v1) — forcées
+// OFF au lancement d'une partie avec bots. Restent : Objets et Maîtrise
+// (l'économie simple des bots s'appuie dessus). La save embarquant ses
+// extensions, une reprise de partie solo reste cohérente.
+const SOLO_DISABLED = ['forge', 'alchemy', 'enchant', 'magic', 'metier', 'trade', 'diplomacy', 'weather'];
+export const soloExtensions = (extensions) => {
+  const next = { ...(extensions || defaultExtensions()) };
+  for (const id of SOLO_DISABLED) next[id] = false;
+  return next;
+};
+
 // Une extension est active si explicitement true OU absente (compat des saves
 // antérieures au système : tout activé = comportement historique).
 export const extOn = (extensions, id) => extensions == null || extensions[id] !== false;

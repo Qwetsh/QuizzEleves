@@ -22,6 +22,7 @@ import DevItemGiver from './DevItemGiver';
 import DevFaceGiver from './DevFaceGiver';
 import { OFFLINE } from '../../logic/offline';
 import { onlineSelfIdx, canDriveTurn } from '../../logic/onlineSelf';
+import { isBot } from '../../logic/botBrain';
 import { bagUnitCount } from '../../store/itemHandlers';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor } from '../../logic/metier';
@@ -111,9 +112,18 @@ export default function GameLayout() {
   const boardInert = mirror || onlineMode;
   const selfIdx = useGameStore(onlineSelfIdx);
   const driveTurn = useGameStore(canDriveTurn);
+  // Solo IA : quand l'équipe active est pilotée par un bot, l'humain ne doit pas
+  // pouvoir agir à sa place (dé, réponses, jonctions, cibles, pouvoirs…). Le
+  // driver bot appelle les actions du store DIRECTEMENT (hors DOM), donc rendre
+  // ces surfaces inertes (pointerEvents:none) ne le gêne pas — ça ferme juste la
+  // fenêtre de course « je clique avant que le bot joue ».
+  const activeIsBot = useGameStore((s) => isBot(s.teams?.[s.currentTeam]));
   // pointerEvents par surface : undefined hors ligne (aucun changement),
-  // 'auto'/'none' en ligne selon que cette fenêtre pilote le tour ou non.
-  const turnUi = onlineMode ? { pointerEvents: driveTurn ? 'auto' : 'none' } : undefined;
+  // 'auto'/'none' en ligne selon que cette fenêtre pilote le tour ou non ;
+  // 'none' hors ligne quand c'est le tour d'un bot.
+  const turnUi = onlineMode
+    ? { pointerEvents: driveTurn ? 'auto' : 'none' }
+    : (activeIsBot ? { pointerEvents: 'none' } : undefined);
   const sharedUi = onlineMode ? { pointerEvents: 'auto' } : undefined;
   // Marché Noir (événement) : seule boutique PARTAGÉE en ligne.
   const marcheNoirOpen = useGameStore((s) => typeof s.showShop === 'object' && !!s.showShop?.marcheNoir);
@@ -200,6 +210,7 @@ export default function GameLayout() {
               transform: 'translateX(-50%)',
               zIndex: 56,
               display: 'flex', alignItems: 'center', gap: 16,
+              ...turnUi,
             }}
           >
             {itemsOn && (

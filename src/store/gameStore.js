@@ -11,7 +11,8 @@ import { moveForward, moveBack } from '../logic/pathfinding.js';
 import { boardCategoriesFor } from '../logic/boardCategories';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { pickRandomEvent } from '../logic/eventPicker.js';
-import { defaultExtensions, extOn, applyExtensionToggle } from '../extensions/registry.js';
+import { defaultExtensions, extOn, applyExtensionToggle, soloExtensions } from '../extensions/registry.js';
+import { BOT_NAMES } from '../logic/botBrain.js';
 import { craftEnabledFor, metierActive, metierPending, METIER_IDS, METIER_BY_ID, metierName } from '../logic/metier.js';
 import { defaultDieFaces, getDieFaces, clampFaceValue, faceEffects, DIE_SLOTS, isForgeServiceTrade } from '../logic/forge.js';
 import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock, pickReplacementFace, faceShortLabel, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
@@ -381,6 +382,28 @@ export const useGameStore = create((set, get) => ({
     const teams = [...get().setupTeams];
     teams[index] = { ...teams[index], ...updates };
     set({ setupTeams: teams });
+  },
+
+  // --- Mode SOLO (bots IA) ---
+  // Config transitoire accueil → lancement (en partie, `teams[i].isBot` fait
+  // foi — persisté avec la save). L'équipe 0 est TOUJOURS l'humain.
+  soloConfig: null,
+  setupSoloTeams: (nBots, botLevel = 'moyen') => {
+    const n = Math.max(1, Math.min(3, Math.trunc(nBots) || 1));
+    const human = createDefaultTeams(1)[0];
+    const bots = Array.from({ length: n }, (_, i) => ({
+      ...createDefaultTeams(n + 1)[i + 1], // couleur/emoji/blason/perso par index
+      name: BOT_NAMES[i % BOT_NAMES.length],
+      isBot: true,
+      botLevel,
+    }));
+    set({ soloConfig: { nBots: n, level: botLevel }, nbTeams: n + 1, setupTeams: [human, ...bots] });
+  },
+  // Quitter le flux solo (retour à un mode multi) : on oublie les bots, sinon
+  // ils resteraient embarqués dans la prochaine partie locale.
+  clearSoloSetup: () => {
+    if (!get().soloConfig) return;
+    set({ soloConfig: null, nbTeams: 3, setupTeams: createDefaultTeams(3) });
   },
 
   boardParams: {
@@ -849,6 +872,10 @@ export const useGameStore = create((set, get) => ({
   // équipes et passe en phase 'powerSelect'.
   _beginGameWithBoard: ({ boardSubjects, categoryPools, questions, displayInject, statsSubjects, lv2On = false }) => {
     const { setupTeams, boardParams } = get();
+    // Partie SOLO (équipes bots) : forcer OFF les extensions que l'IA ne sait
+    // pas jouer (v1) — AVANT la construction des équipes (forge/magie lisent
+    // les extensions juste en dessous). La save embarque ce jeu d'extensions.
+    if (setupTeams.some((t) => t.isBot)) set({ extensions: soloExtensions(get().extensions) });
     // Injection display-only des voies larges dans le catalogue runtime SUBJECTS.
     if (displayInject) {
       for (const [key, cat] of Object.entries(displayInject)) {
@@ -1624,6 +1651,29 @@ export const useGameStore = create((set, get) => ({
       return;
     }
     const timeLeft = Math.max(0, Math.round(((sq.deadline || Date.now()) - Date.now()) / 1000));
+    set({ showQuestion: { ...sq, selected: index, answerRevealed: true, timeLeftAtReveal: timeLeft } });
+  },
+
+  // Réponse d'un BOT (mode solo) : même flux que selectAnswer, mais le temps
+  // restant figé est SIMULÉ (ratio × durée du chrono) au lieu d'être lu sur la
+  // vraie deadline — un bot qui « répond » en 3 s raflerait sinon le gain d'or
+  // maximal à chaque bonne réponse. Toute la chaîne aval (continueQuestion →
+  // answerQuestion) est inchangée. La seconde chance reste gérée par le flux
+  // normal : on passe par les mêmes gardes que selectAnswer.
+  botSelectAnswer: (index, ratio = 0.4) => {
+    const sq = get().showQuestion;
+    if (!sq || sq.answerRevealed || !sq.question) return;
+    if (!Number.isInteger(index) || index < 0 || index >= (sq.question.a?.length || 0)) return;
+    if ((get().indiceHidden || []).includes(index)) return;
+    // Seconde chance (buff) : même règle que selectAnswer — la 1re mauvaise
+    // sélection est rejouée sans révélation. On délègue au flux normal.
+    const curTeam = get().teams[get().currentTeam];
+    if (index !== sq.question.c && !sq.secondChanceUsed && findBuff(curTeam, 'secondChance')) {
+      get().selectAnswer(index);
+      return;
+    }
+    const r = Math.max(0, Math.min(1, ratio));
+    const timeLeft = Math.max(0, Math.round(questionDuration(sq) * r));
     set({ showQuestion: { ...sq, selected: index, answerRevealed: true, timeLeftAtReveal: timeLeft } });
   },
 
@@ -4132,7 +4182,7 @@ export const useGameStore = create((set, get) => ({
       showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
       hackOverlay: null,
       weather: null, weatherNotice: null, weatherCeremony: null, turnCount: 0, lastWeatherTurn: 0,
-      nbTeams: 3, setupTeams: createDefaultTeams(3),
+      nbTeams: 3, setupTeams: createDefaultTeams(3), soloConfig: null,
       // Session partagée (téléphone / en ligne) : une nouvelle partie = un
       // NOUVEAU code. Sans ça, re-héberger réutilisait l'ancien code dont la
       // ligne DB contient encore le snapshot de la partie quittée → les

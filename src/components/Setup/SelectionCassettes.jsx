@@ -27,6 +27,7 @@ import { getQuestions } from '../../data/questions';
 // Composants Setup existants hébergés dans les panneaux de la console.
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
+import { characterById } from '../../data/characters';
 import LobbyPanel from './LobbyPanel';
 import ExtensionsChecklist from './ExtensionsChecklist';
 import BoardParams from './BoardParams';
@@ -239,6 +240,37 @@ function ConsoleEditorTools() {
   );
 }
 
+// Cartes des adversaires IA (mode solo, onglet JOUEURS) — lecture seule :
+// sprite, nom et difficulté. La composition se règle sur la page d'accueil.
+const BOT_LEVEL_LABELS = { facile: '🌱 Facile', moyen: '⚔️ Moyen', difficile: '🔥 Difficile' };
+function SoloBotCards({ teams }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {teams.map((team, i) => {
+        if (!team.isBot) return null;
+        const sprite = characterById(team.character)?.body;
+        return (
+          <div key={`solo-bot-${i}`} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+            borderRadius: 10, background: '#e7dabb', border: '3px dashed rgba(21,15,8,.45)',
+          }}>
+            <span style={{ width: 16, height: 40, borderRadius: 4, flexShrink: 0, background: team.color, border: '2px solid #150f08' }} />
+            <span style={{ width: 46, height: 46, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {sprite
+                ? <img src={sprite} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                : team.emoji}
+            </span>
+            <span style={{ flex: 1, fontWeight: 700, fontSize: 17, color: '#241a10' }}>🤖 {team.name}</span>
+            <span style={{ fontFamily: "'VT323', monospace", fontSize: 17, letterSpacing: 1, color: '#5a4023' }}>
+              {BOT_LEVEL_LABELS[team.botLevel] || team.botLevel}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SelectionCassettes({ voies = 6, reperesRatio = true, live = false, main = false }) {
   const liveData = live || main; // `main` (console de setup) implique les données réelles
   // Source de données : arbre réel (live/main) ou mocks (preview ?cassettes).
@@ -307,6 +339,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const enabledItems = useGameStore((s) => s.enabledItems);
   const starterChestConfig = useGameStore((s) => s.starterChestConfig);
   const phoneMode = connectionMode === 'phone';
+  // Mode SOLO (accueil → bots IA) : l'onglet JOUEURS ne personnalise que
+  // l'équipe humaine, les adversaires sont des cartes en lecture seule.
+  const soloConfig = useGameStore((s) => s.soloConfig);
+  const setupTeams = useGameStore((s) => s.setupTeams);
   // En ligne : la console est ouverte DEPUIS le lobby (bouton THÈMES) — elle
   // VALIDE la composition dans le store (onlineCompose) et y retourne.
   const onlineMode = main && connectionMode === 'online';
@@ -766,7 +802,14 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               création d'équipes ici, téléphones = lobby QR. (En ligne, l'onglet
               n'existe pas : les joueurs vivent dans l'écran LOBBY dédié.) */}
           <div className="qm-console-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto', ...panelInset }}>
-            {phoneMode ? <LobbyPanel /> : (<><TeamCount /><TeamCustomization /></>)}
+            {phoneMode ? <LobbyPanel /> : soloConfig ? (
+              <>
+                <div style={{ fontFamily: "'VT323', monospace", fontSize: 16, letterSpacing: 2, color: '#5a4023', textTransform: 'uppercase', marginBottom: 8 }}>Ton équipe</div>
+                <TeamCustomization indices={[0]} />
+                <div style={{ fontFamily: "'VT323', monospace", fontSize: 16, letterSpacing: 2, color: '#5a4023', textTransform: 'uppercase', margin: '14px 0 8px' }}>Adversaires (ordinateur)</div>
+                <SoloBotCards teams={setupTeams} />
+              </>
+            ) : (<><TeamCount /><TeamCustomization /></>)}
           </div>
         </div>
       );

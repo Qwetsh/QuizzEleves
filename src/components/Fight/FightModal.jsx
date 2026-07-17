@@ -373,7 +373,10 @@ function HostDuelRace({ fight, teams }) {
 
   const hostToken = sessionCode ? onlineToken(sessionCode) : null;
   const parts = [fight.attackerIndex, fight.defenderIndex].filter((i) => i >= 0);
-  const localIdx = parts.find((i) => teams[i] && (!teams[i].token || (hostToken && teams[i].token === hostToken)));
+  // « Mon équipe » = l'équipe locale : sans jeton OU portant le jeton de
+  // l'hôte. Un BOT (solo) n'a pas de jeton mais n'est PAS l'équipe locale —
+  // sinon l'humain répondrait à la course à sa place.
+  const localIdx = parts.find((i) => teams[i] && !teams[i].isBot && (!teams[i].token || (hostToken && teams[i].token === hostToken)));
   const myTeamIdx = localIdx == null ? -1 : localIdx;
 
   const norm = {

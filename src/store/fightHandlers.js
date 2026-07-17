@@ -122,10 +122,14 @@ function resolveBossOutcome(set, get, f) {
 // Fin de l'ecran versus -> ecran d'explication (briefing) du mini-jeu.
 // En ligne : pas de mini-jeu TBI → on lance directement le « duel éclair »
 // (course à la question, jouée sur l'écran de chaque duelliste).
+// Mode SOLO (équipes bots) : même route — les mini-jeux TBI se jouent à deux
+// joueurs physiques, un bot ne peut pas y toucher ; la course, si (il « répond »
+// via le driver, et le timeout du boss est déjà géré par serveRaceQuestion).
 export function fightBegin(set, get) {
   const f = get().showFight;
   if (!f || f.phase !== 'versus') return;
-  if (get().connectionMode === 'online') { serveRaceQuestion(set, get); return; }
+  const soloBots = (get().teams || []).some((t) => t?.isBot);
+  if (get().connectionMode === 'online' || soloBots) { serveRaceQuestion(set, get); return; }
   set({ showFight: { ...f, phase: 'briefing' } });
 }
 

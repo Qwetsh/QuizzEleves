@@ -2,7 +2,7 @@
 //  PAGE D'ACCUEIL — écran titre du jeu.
 //
 //  Le mode de jeu se choisit ICI, AVANT les thèmes (l'inverse d'avant) :
-//    · Solo (contre des IA) — verrouillé pour l'instant
+//    · Solo (contre 1-3 bots IA — difficulté choisie ici)
 //    · Multi local (écran tactile OU écran + téléphones-manettes)
 //    · Multi en ligne (héberger / rejoindre par code)
 //  Plus les entrées hors-jeu : voir les thèmes (exploration), réglages
@@ -63,9 +63,10 @@ export default function HomeScreen() {
   const openConsole = useGameStore((s) => s.openConsole);
   const resumeGame = useGameStore((s) => s.resumeGame);
 
-  // null = menu principal | 'local' | 'online' | 'credits'
+  // null = menu principal | 'solo' | 'local' | 'online' | 'credits'
   const [sub, setSub] = useState(null);
   const [joinCode, setJoinCode] = useState('');
+  const [botCount, setBotCount] = useState(2);
   // Partie sauvegardée reprenable ? (lecture unique au montage)
   const [hasSave] = useState(() => {
     const s = loadGame();
@@ -75,10 +76,20 @@ export default function HomeScreen() {
   const [lobbyResume] = useState(() => readLobbyResume());
 
   const setPhase = useGameStore((s) => s.setPhase);
+  const setupSoloTeams = useGameStore((s) => s.setupSoloTeams);
+  const clearSoloSetup = useGameStore((s) => s.clearSoloSetup);
   // Choisit un mode et ouvre la console de composition (thèmes → LANCER).
   const play = (conn, controller) => {
+    clearSoloSetup(); // un mode multi oublie les équipes bots du flux solo
     setConnectionMode(conn);
     setPhoneController(controller);
+    openConsole('play');
+  };
+  // Solo : équipes = [joueur, N bots] posées dans le store, puis flux local.
+  const startSolo = (level) => {
+    setupSoloTeams(botCount, level);
+    setConnectionMode('board');
+    setPhoneController(false);
     openConsole('play');
   };
   // Héberger en ligne : direction l'écran LOBBY dédié (session auto, création
@@ -139,12 +150,42 @@ export default function HomeScreen() {
               {!hasSave && lobbyResume?.code && (
                 <MenuBtn primary emblem="📡" label={`REPRENDRE LE LOBBY (${lobbyResume.code})`} sub="Ton lobby en ligne est toujours ouvert — les joueurs connectés t'y attendent." onClick={resumeLobby} />
               )}
-              <MenuBtn emblem="🧑‍🚀" label="SOLO" sub="Affronte des adversaires pilotés par l'ordinateur." disabled badge="🔒 BIENTÔT" />
+              <MenuBtn emblem="🧑‍🚀" label="SOLO" sub="Affronte des adversaires pilotés par l'ordinateur." onClick={() => setSub('solo')} />
               <MenuBtn emblem="🎮" label="MULTI LOCAL" sub="Tout le monde dans la même pièce, autour d'un écran." onClick={() => setSub('local')} />
               <MenuBtn emblem="🌐" label="MULTI EN LIGNE" sub="Chacun chez soi : héberge une partie ou rejoins-en une." onClick={() => setSub('online')} />
               <MenuBtn emblem="📼" label="VOIR LES THÈMES" sub="Feuillette le bac à cassettes, sans lancer de partie." onClick={() => openConsole('browse')} />
               <MenuBtn emblem="🎛" label="RÉGLAGES" sub="Extensions, plateau, règles, butin, événements." onClick={() => openConsole('settings')} />
               <MenuBtn emblem="✨" label="CRÉDITS" onClick={() => setSub('credits')} />
+            </div>
+          )}
+
+          {sub === 'solo' && (
+            <div className="home-menu" style={panel}>
+              <div style={subTitle}>🧑‍🚀 SOLO — TES ADVERSAIRES</div>
+              {/* Nombre de bots (1-3) */}
+              <div className="home-btn" style={{ cursor: 'default', alignItems: 'center', gap: 14 }}>
+                <span style={{ fontSize: 26, flex: '0 0 34px', textAlign: 'center' }}>🤖</span>
+                <span style={{ flex: 1, fontFamily: FONT_DISPLAY, fontSize: 15, letterSpacing: 0.6 }}>ADVERSAIRES</span>
+                <span style={{ display: 'flex', gap: 6 }}>
+                  {[1, 2, 3].map((n) => (
+                    <button key={n} type="button" onClick={() => setBotCount(n)}
+                      style={{
+                        width: 42, height: 38, borderRadius: 8, cursor: 'pointer',
+                        fontFamily: FONT_DISPLAY, fontSize: 16,
+                        border: '2px solid #150f08',
+                        background: botCount === n ? '#e8a13a' : '#3a2c1a',
+                        color: botCount === n ? '#241a10' : '#a89878',
+                      }}>
+                      {n}
+                    </button>
+                  ))}
+                </span>
+              </div>
+              {/* Difficulté : lance le flux (thèmes → LANCER) */}
+              <MenuBtn emblem="🌱" label="FACILE" sub="Des bots distraits — parfait pour découvrir le jeu." onClick={() => startSolo('facile')} />
+              <MenuBtn emblem="⚔️" label="MOYEN" sub="Des bots corrects, qui te laisseront peu de répit." onClick={() => startSolo('moyen')} />
+              <MenuBtn emblem="🔥" label="DIFFICILE" sub="Des bots redoutables, rapides et rarement dans l'erreur." onClick={() => startSolo('difficile')} />
+              <BackBtn onClick={() => setSub(null)} />
             </div>
           )}
 

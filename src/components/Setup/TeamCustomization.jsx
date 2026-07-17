@@ -9,17 +9,23 @@ const FONT_UI = "'Hanken Grotesk', system-ui, sans-serif";
 // Fiches d'équipe façon « étiquettes de cassette » : carton crème, bordure
 // charbon épaisse, bande de couleur d'équipe, nom écrit sur une ligne
 // pointillée. Le picker d'emoji s'ouvre dans un tiroir sombre (console).
-export default function TeamCustomization() {
+// `indices` : sous-ensemble d'équipes à afficher (mode solo : l'humain seul,
+// les bots ont leurs cartes en lecture seule) — défaut : toutes.
+export default function TeamCustomization({ indices }) {
   const T = useT();
   const setupTeams = useGameStore((s) => s.setupTeams);
   const updateSetupTeam = useGameStore((s) => s.updateSetupTeam);
   const lv2Mode = useGameStore((s) => s.lv2Mode);
   // Index de l'equipe dont le picker d'avatar est ouvert (null = ferme)
   const [pickerOpen, setPickerOpen] = useState(null);
+  const shown = indices
+    ? indices.map((i) => setupTeams[i]).filter(Boolean)
+    : setupTeams;
 
   return (
     <div className="flex flex-col gap-2">
-      {setupTeams.map((team, i) => {
+      {shown.map((team, k) => {
+        const i = indices ? indices[k] : k;
         const inputId = `team-name-${i}`;
         const isOpen = pickerOpen === i;
         return (

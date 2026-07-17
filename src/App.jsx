@@ -7,6 +7,7 @@ import Setup from './components/Setup/Setup';
 import PowerSetup from './components/Setup/PowerSetup';
 import GameLayout from './components/Game/GameLayout';
 import OnlineHost from './components/Online/OnlineHost';
+import BotDriver from './components/Game/BotDriver';
 
 // Console de setup « CURIOSCOPE » (écran principal) : paresseuse. Repli vers
 // l'ancien Setup via ?classic (filet de sécurité pendant la transition).
@@ -77,6 +78,9 @@ export default function App() {
 
       {/* Diffusion « jeu en ligne » (hôte). Inactif hors mode online / sur miroir. */}
       <OnlineHost />
+      {/* Bots du mode SOLO : monté hors AnimatePresence pour couvrir la
+          sélection des pouvoirs ET la partie (inactif sans équipe bot). */}
+      <BotDriver />
     </div>
   );
 }
