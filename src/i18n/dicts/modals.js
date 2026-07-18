@@ -10,6 +10,13 @@ export default {
   'modal.loading': { fr: 'Chargement...', en: 'Loading...' },
   'modal.explanation': { fr: 'Explication :', en: 'Explanation:' },
 
+  // ---- CurioChallengeModal (défi Curioscope solo) ----
+  'modal.curio.title': { fr: '🔭 Défi Curioscope', en: '🔭 Curioscope Challenge' },
+  'modal.curio.round': { fr: 'Manche {i}/{n}', en: 'Round {i}/{n}' },
+  'modal.curio.total': { fr: 'Total : {n} pts', en: 'Total: {n} pts' },
+  'modal.curio.finish': { fr: 'Terminer ✔', en: 'Finish ✔' },
+  'modal.curio.hint': { fr: 'Touche la carte pour poser ton repère (zoome si besoin), puis valide.', en: 'Tap the map to place your marker (zoom if needed), then confirm.' },
+
   // ---- EventModal ----
   'modal.event.special': { fr: 'Événement spécial', en: 'Special event' },
   'modal.event.accept': { fr: 'Accepter', en: 'Accept' },

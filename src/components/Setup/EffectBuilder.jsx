@@ -32,6 +32,7 @@ const ACTIONS = [
   { key: 'stealCharge', label: '⚡ Voler une charge de pouvoir' },
   { key: 'bounty', label: '🎯 Prime (prochaine erreur = or)' },
   { key: 'invest', label: '📈 Investir (mise au choix, N% si juste)' },
+  { key: 'startMinigame', label: '🔭 Défi Curioscope (guessr)' },
   { key: 'setCheckpoint', label: '🚩 Point de contrôle' },
   { key: 'curseTimer', label: '⏱️ Malédiction : timer réduit' },
   { key: 'curseExtraQuestion', label: '❓ Malédiction : question(s) en +' },
@@ -355,6 +356,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'stealCharge') base.target = 'target';
         if (k === 'bounty') Object.assign(base, { target: 'target', n: 15 });
         if (k === 'invest') Object.assign(base, { rate: 200 });
+        if (k === 'startMinigame') Object.assign(base, { minigame: 'curioscope', universes: ['monde_reel'], rounds: 1, tiers: [{ min: 4000, kind: 'money', n: 25 }, { min: 2000, kind: 'move', n: 2 }] });
         if (k === 'setCheckpoint') base.consumeChance = 100;
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
         if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
@@ -567,6 +569,43 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
       {(a.action === 'shieldNext') && (<><W>annule</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" recul(s)" /><W>recul(s)</W></>)}
       {(a.action === 'extraTime') && (<><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" s" /><W>s à la prochaine question</W></>)}
       {(a.action === 'stealTime') && (<><W>je vole</W><AmountInput value={a.n} onChange={(v) => upd({ n: v })} min={1} unit=" s" /><W>s à</W><TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={targetOpts} /><W>(cumulé pour ma prochaine question)</W></>)}
+      {a.action === 'startMinigame' && (() => {
+        // Paliers de conversion points → récompense (lus du plus haut au plus
+        // bas par le moteur). Schéma borné { min, kind, n } — cf. effectEngine.
+        const tiers = a.tiers || [];
+        const updTier = (i, patch) => { const nx = tiers.map((t, j) => (j === i ? { ...t, ...patch } : t)); upd({ tiers: nx }); };
+        const delTier = (i) => upd({ tiers: tiers.filter((_, j) => j !== i) });
+        return (
+          <>
+            <W>je joue</W>
+            {numInput(a.rounds ?? 1, (v) => upd({ rounds: Math.max(1, v) }), { min: 1, max: 5 })}
+            <W>manche(s) — récompense :</W>
+            {tiers.map((t, i) => (
+              <span key={i} style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                <W>si ≥</W>
+                {numInput(t.min ?? 0, (v) => updTier(i, { min: v }), { max: 99999 })}
+                <W>pts :</W>
+                <select className="qed-select fx-blank" value={t.kind || 'none'} onChange={(e) => updTier(i, { kind: e.target.value })}>
+                  <option value="none">rien</option>
+                  <option value="money">gagner de l'or</option>
+                  <option value="move">avancer</option>
+                  <option value="loot">looter un objet</option>
+                </select>
+                {(t.kind === 'money' || t.kind === 'move') && numInput(t.n ?? 0, (v) => updTier(i, { n: v }), { min: 1, max: 999 })}
+                {t.kind === 'money' && <W>🪙</W>}
+                {t.kind === 'move' && <W>case(s)</W>}
+                <button type="button" className="bal-fx-x" title="Retirer ce palier" onClick={() => delTier(i)}>{'\u{1F5D1}'}</button>
+              </span>
+            ))}
+            {tiers.length < 4 && (
+              <button type="button" className="btn btn--ghost btn--sm" style={{ marginLeft: 4 }}
+                onClick={() => upd({ tiers: [...tiers, { min: 0, kind: 'none' }] })}>
+                + palier
+              </button>
+            )}
+          </>
+        );
+      })()}
       {a.action === 'gainCharge' && <W>au choix du joueur</W>}
 
       {a.action === 'fumigene' && (

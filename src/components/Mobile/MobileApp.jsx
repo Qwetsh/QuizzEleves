@@ -15,6 +15,7 @@ import AlchemyView from './AlchemyView';
 import SpellTableView from './SpellTableView';
 import CodexView from './CodexView';
 import ControllerView from './ControllerView';
+import CurioPlaceView from '../Fight/CurioPlaceView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2622,6 +2623,22 @@ export default function MobileApp() {
         {owned && !!token && session.controller && session.status === 'playing'
           && session.turn && session.turn.team === teamIdx && !team.hacked
           && <ControllerView session={session} teamIdx={teamIdx} code={code} token={token} T={T} lastSync={lastSync} />}
+        {/* Duel Curioscope (guessr) : les DEUX duellistes placent leur pin sur
+            leur téléphone — y compris le défenseur, qui n'est pas l'équipe
+            active (l'écran partagé n'affiche que la photo + la révélation). */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.curio && session.turn.fight.phase === 'minigame'
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <CurioPlaceView
+              fight={session.turn.fight}
+              teams={session.teams}
+              mySide={session.turn.fight.attackerIndex === teamIdx ? 'attacker' : 'defender'}
+              onValidate={(pos) => sendIntent(code, token, 'turnCurioValidate', { x: pos.x, y: pos.y }).catch(() => {})}
+              onNext={() => sendIntent(code, token, 'turnCurioNext', {}).catch(() => {})}
+            />
+          )}
       </>
     );
   }

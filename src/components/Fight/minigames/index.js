@@ -3,7 +3,8 @@ import BubbleHunt from './BubbleHunt.jsx';
 import TimelineGame from './TimelineGame.jsx';
 import CompteEstBon from './CompteEstBon.jsx';
 import MotLePlusLong from './MotLePlusLong.jsx';
-import GeoDuel from './GeoDuel.jsx';
+import Curioscope from './Curioscope.jsx';
+import { getUniverse } from '../../../data/universes.js';
 import MemoryGame from './MemoryGame.jsx';
 import {
   IRREGULAR_VERBS, REGULAR_VERBS, SVT_CHALLENGES, TIMELINE_EVENTS,
@@ -22,14 +23,15 @@ import {
  * dont la forme dépend du moteur :
  *   - bubble   : [{ id, prompt, prompt_en?, good[], bad[] }]  (touche-la-catégorie)
  *   - timeline : [{ name, year }]                              (ordonne-par-valeur)
- *   - maths/french/geo : pas de `content` (jeu auto-suffisant)
+ *   - curioscope : { universes: ['monde_reel', ...], target? } (guessr multi-univers)
+ *   - maths/french : pas de `content` (jeu auto-suffisant)
  */
 const ENGINES = {
   bubble: { Component: BubbleHunt, persistent: false },
   timeline: { Component: TimelineGame, persistent: true },
   maths: { Component: CompteEstBon, persistent: false },
   french: { Component: MotLePlusLong, persistent: false },
-  geo: { Component: GeoDuel, persistent: true, pointsBased: true },
+  curioscope: { Component: Curioscope, persistent: true, pointsBased: true },
   memory: { Component: MemoryGame, persistent: false },
 };
 
@@ -70,7 +72,7 @@ const THEME_MINIGAMES = {
     howto: { demo: 'word', goal: 'fight.mg.francais.goal', steps: ['fight.mg.francais.step1', 'fight.mg.francais.step2', 'fight.mg.francais.step3', 'fight.mg.francais.step4'] },
   },
   geographie: {
-    engine: 'geo',
+    engine: 'curioscope', content: { universes: ['monde_reel'] },
     name: 'fight.mg.geographie.name', rules: 'fight.mg.geographie.rules', winLabel: 'fight.mg.geographie.winLabel',
     howto: { demo: 'geo', goal: 'fight.mg.geographie.goal', steps: ['fight.mg.geographie.step1', 'fight.mg.geographie.step2', 'fight.mg.geographie.step3', 'fight.mg.geographie.step4'] },
   },
@@ -91,6 +93,15 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.vocabulaire.name', rules: 'fight.mg.vocabulaire.rules',
     howto: { demo: 'memory', goal: 'fight.mg.vocabulaire.goal', steps: ['fight.mg.vocabulaire.step1', 'fight.mg.vocabulaire.step2', 'fight.mg.vocabulaire.step3', 'fight.mg.vocabulaire.step4'] },
   },
+
+  // Curioscope multi-univers : guessr sur les cartes d'Azeroth (spots chargés
+  // depuis la DB — tant qu'aucun spot n'existe, garde-fou getMinigame → duel
+  // générique). Clé = subject des questions WoW (seed-world-of-warcraft.mjs).
+  world_of_warcraft: {
+    engine: 'curioscope', content: { universes: ['wow_kalimdor', 'wow_royaumes_est'] },
+    name: 'fight.mg.wow.name', rules: 'fight.mg.wow.rules', winLabel: 'fight.mg.geographie.winLabel',
+    howto: { demo: 'geo', goal: 'fight.mg.wow.goal', steps: ['fight.mg.wow.step1', 'fight.mg.wow.step2', 'fight.mg.wow.step3', 'fight.mg.wow.step4'] },
+  },
 };
 
 const DEFAULT_MINIGAME = {
@@ -104,6 +115,13 @@ const DEFAULT_MINIGAME = {
 export function getMinigame(subject) {
   const theme = THEME_MINIGAMES[subject];
   if (!theme) return DEFAULT_MINIGAME;
+  // Garde-fou Curioscope : si AUCUN univers du thème n'a de spots chargés
+  // (DB vide / hors ligne sans cache), repli sur le duel générique — sinon
+  // le placement n'aurait aucune cible à proposer.
+  if (theme.engine === 'curioscope' && theme.content?.universes) {
+    const ok = theme.content.universes.some((id) => (getUniverse(id)?.spots() || []).length > 0);
+    if (!ok) return DEFAULT_MINIGAME;
+  }
   const engine = ENGINES[theme.engine] || {};
   return {
     Component: engine.Component,
@@ -124,3 +142,14 @@ export function getDefaultMinigame() {
 
 // Exposé pour les tests / le simulateur : liste des thèmes câblés.
 export const MINIGAME_THEMES = Object.keys(THEME_MINIGAMES);
+
+// Le thème `subject` est-il un duel Curioscope JOUABLE (≥1 univers avec des
+// spots chargés) ? Retourne la liste des univers jouables, sinon null.
+// Utilisé par fightBegin (store) pour router les surfaces téléphone/en ligne
+// vers le duel guessr piloté par le store (curioFightHandlers).
+export function curioUniverses(subject) {
+  const theme = THEME_MINIGAMES[subject];
+  if (!theme || theme.engine !== 'curioscope') return null;
+  const ok = (theme.content?.universes || []).filter((id) => (getUniverse(id)?.spots() || []).length > 0);
+  return ok.length ? ok : null;
+}

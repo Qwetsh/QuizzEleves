@@ -17,6 +17,9 @@ export const SAVE_FIELDS = [
   // Météo : état ambiant + préavis + compteurs de cadence (l'overlay transitoire
   // weatherCeremony n'est PAS persisté — il est recréé au prochain déclenchement).
   'weather', 'weatherNotice', 'turnCount', 'lastWeatherTurn',
+  // Curioscope : anti-répétition des spots (un spot montré au TBI est connu de
+  // toute la classe — l'historique doit survivre au reload).
+  'curioSeen', 'curioSeq',
 ];
 
 /**

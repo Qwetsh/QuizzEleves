@@ -176,6 +176,17 @@ export function describeAction(a, lang = getLang()) {
       : `fumigène${a.turns ? ` pendant ${amountLabel(a.turns, lang)} ${turnW(a.turns, lang)}` : ''}`;
     case 'extraTime': return en ? `+${amountLabel(a.n, lang)}s on the next question` : `+${amountLabel(a.n, lang)}s à la prochaine question`;
     case 'stealTime': return en ? `steal ${amountLabel(a.n, lang)}s from ${who} (added to your next question)` : `vole ${amountLabel(a.n, lang)}s à ${who} (ajoutées à ta prochaine question)`;
+    case 'startMinigame': {
+      // Défi Curioscope solo : N manches + résumé des paliers de conversion.
+      const rounds = a.rounds || 1;
+      const tierTxt = (a.tiers || [])
+        .filter((t) => t.kind && t.kind !== 'none')
+        .map((t) => `≥${t.min || 0} pts: ${t.kind === 'money' ? `+${t.n || 0} 🪙` : t.kind === 'move' ? (en ? `+${t.n || 0} space(s)` : `+${t.n || 0} case(s)`) : (en ? '1 item' : '1 objet')}`)
+        .join(', ');
+      return en
+        ? `Curioscope challenge: ${rounds} guessr round${rounds > 1 ? 's' : ''}${tierTxt ? ` (${tierTxt})` : ''}`
+        : `défi Curioscope : ${rounds} manche${rounds > 1 ? 's' : ''} de guessr${tierTxt ? ` (${tierTxt})` : ''}`;
+    }
     // — Magie —
     case 'gainMagic': return self
       ? (en ? `gain ${amountLabel(a.n ?? 10, lang)} ✨ magic` : `gagne ${amountLabel(a.n ?? 10, lang)} ✨ magie`)

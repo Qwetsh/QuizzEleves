@@ -72,6 +72,12 @@ export default {
   'log.fx.stealTime.toast':     { fr: '+{n}s volées{tag}', en: '+{n}s stolen{tag}' },
   'log.fx.stealTimeNone':       { fr: '⏳ Aucun temps à voler.', en: '⏳ No time to steal.' },
 
+  // --- startMinigame (défi Curioscope solo) ---
+  'log.fx.curio.score':    { fr: '🔭 {emoji} {name} termine le défi Curioscope avec {pts} pts.', en: '🔭 {emoji} {name} finishes the Curioscope challenge with {pts} pts.' },
+  'log.fx.curio.toast':    { fr: '{pts} pts au défi !', en: '{pts} pts in the challenge!' },
+  'log.fx.curio.noReward': { fr: 'Pas de palier atteint…', en: 'No tier reached…' },
+  'log.fx.curio.skip':     { fr: '🔭 Défi Curioscope non jouable ici ({emoji} {name}) — ignoré.', en: '🔭 Curioscope challenge not playable here ({emoji} {name}) — skipped.' },
+
   // --- hideWrong ---
   'log.fx.hideWrong':       { fr: ['💡 {n} mauvaise réponse éliminée !', '💡 {n} mauvaises réponses éliminées !'],
                               en: ['💡 {n} wrong answer removed!', '💡 {n} wrong answers removed!'] },

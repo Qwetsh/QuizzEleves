@@ -84,14 +84,34 @@ seed, PAS au runtime).
 ### 1.5 Stockage — RIEN de lourd dans le repo git
 | Donnée | Emplacement | Pourquoi |
 |---|---|---|
-| Screenshots bruts, journaux CurioSnap, projets Hugin, exports wow.export | `C:\CurioscopeAssets\` (hors repo, **hors OneDrive** — des Go regénérables, la sync OneDrive serait pénible) | Zone de travail locale |
-| Images de spots finales (redimensionnées 1600 px, JPEG q82, ~150-250 Ko) | Supabase Storage, bucket **`quete-spots`**, noms opaques `s-<uuid>.jpg` (anti-triche, pattern `quete-questions`) | C'est aussi la sauvegarde durable |
+| Screenshots bruts, journaux CurioSnap, projets Hugin, exports wow.export | `C:\CurioscopeAssets\` (hors repo, **hors OneDrive** — des Go regénérables, la sync OneDrive serait pénible) | Zone de travail locale = **master** (tout hébergeur repeuplable depuis là) |
+| Images de spots finales (redimensionnées 1600 px, **WebP q80**, ~130 Ko ; panos ~1,5 Mo) | Supabase Storage, bucket **`quete-spots`**, noms opaques `s-<uuid>.webp` (anti-triche, pattern `quete-questions`) | Sauvegarde durable du produit fini |
 | Cartes continentales (1 image/continent) | Supabase Storage `quete-spots/maps/` | 3-5 Mo pièce, chargées 1×/partie |
 | Métadonnées spots | Table `quete_spots` (PersoDB) | DB = source de vérité |
 | Scripts pipeline + addon Lua + `universes.js` | Repo git (`scripts/curioscope/`) | Léger, versionnable |
 
-Budget : 60 spots ≈ 15 Mo, 300 spots + 30 panos ≈ 150 Mo — très loin du 1 Go du tier
-gratuit Supabase.
+### 1.5 bis Plan de croissance stockage (décidé 2026-07-17)
+
+**Règle d'architecture (dès P1, non négociable)** : `quete_spots.image_path` stocke un
+**chemin relatif** (`wow/s-<uuid>.webp`), JAMAIS d'URL complète ; la base d'URL vit
+dans une config unique (`spotsBaseUrl`). Changer d'hébergeur = copier les fichiers +
+changer une ligne. (Ne pas reproduire le pattern items qui stocke des URLs complètes.)
+
+Paliers :
+1. **Palier 0 — Supabase Storage** (gratuit, 1 Go, 5 Go egress/mois) : en WebP,
+   ≈ 6 000-7 000 spots plats ou ~2 000 spots + 300 panos. Largement suffisant pour
+   plusieurs univers.
+2. **Palier 1 — Cloudflare R2** (gratuit, 10 Go, **egress illimité gratuit**, API
+   compatible S3) : migration = copie des fichiers (ou re-upload depuis
+   `C:\CurioscopeAssets\`) + changement de `spotsBaseUrl` + 3 lignes dans les scripts
+   d'upload. ≈ 60 000 spots.
+3. **Palier 2 — R2 payant** : ~0,015 €/Go/mois (100 Go ≈ 1,50 €/mois). Jamais un
+   vrai mur.
+
+Écartés : Supabase Pro (25 $/mois, disproportionné), repo GitHub d'assets (screenshots
+Blizzard redistribués publiquement = exposition juridique inutile).
+
+Budget courant : 200 spots ≈ 26 Mo, 500 spots + 30 panos ≈ 110 Mo (WebP).
 
 ### 1.6 Schéma DB (simplifié vs brouillon initial)
 ```sql
@@ -138,41 +158,90 @@ réutiliser la base d'un autre fan site.
 
 Badges : **[TOI]** = étape manuelle utilisateur · **[CC]** = Claude Code.
 
-### P1 — Moteur générique + univers « monde réel » (aucun asset à produire)
-- [CC] `npm i leaflet react-leaflet` ; composant `UniverseMap` (CRS.Simple, imageOverlay
-  ou crs geo, zoom/pan, pose de pin, affichage révélation pins+réel+distances).
-- [CC] `src/data/universes.js` + généralisation scoring (métrique + K par univers).
-- [CC] Moteur `Curioscope.jsx` branché sur `PlacementDuel` (commit-reveal conservé),
-  entrée `curioscope` dans `ENGINES`/`THEME_MINIGAMES`.
-- [CC] Migration du GeoDuel monde réel comme univers `monde_reel` (les 90+ lieux de
-  `placementData.jsx` deviennent des spots) — le moteur est prouvé sans rien capturer.
-- [CC] Tests + E2E duel.
+### P1 — Moteur générique + univers « monde réel » — ✅ LIVRÉE 2026-07-17
+- [x] [CC] `leaflet` (SANS react-leaflet : wrapper maison) ; composant `UniverseMap.jsx`
+  (CRS.Simple, imageOverlay, zoom/pan ×11, pose de pin, pins/traits/badges/étoile en
+  divIcons, chargé en LAZY — Leaflet hors bundle initial et hors tests node).
+- [x] [CC] `src/data/universes.js` : registre + `universeMetric` (geo=haversine km /
+  flat=euclidienne lieues) + `universeScore` (max·exp) + `pickSpot`.
+- [x] [CC] Anti-répétition : `curioSeen`/`curioSeq` persistés (SAVE_FIELDS), action
+  `curioMarkSeen` (no-op en devSandbox), tirage LRU jamais-vus d'abord.
+- [x] [CC] Moteur `Curioscope.jsx` sur `PlacementDuel` (nouvelle prop `renderBoard`,
+  chemin par défaut intact), entrée `curioscope` dans `ENGINES`, thème `geographie`
+  migré (`content.universes: ['monde_reel']`). GeoDuel.jsx supprimé.
+- [x] [CC] Migration monde réel : 90+ lieux photo + 54 capitales de `placementData.jsx`
+  exposés comme spots (alternance photo/capitale conservée).
+- [x] [CC] 1058 tests (16 nouveaux `curioscope.test.js`), build + typecheck OK,
+  vérifié en jeu via simulateur DEV (placement, validation, révélation, manche 2).
 - **[TOI]** Valider l'UX en jeu (zoom, pin, révélation) sur le TBI.
 
-### P2 — Déclenchement par effet + conversion points
-- [CC] Action `startMinigame` dans `effectEngine.js` (suspend/resume), mode
-  solo-challenge, table `convert` points→actions.
-- [CC] Câblage éditeur d'objets/événements (phrase à trous) + `effectText` + glossaire.
-- **[TOI]** Décider 2-3 objets/événements d'exemple et leurs barèmes.
+### P2 — Déclenchement par effet + conversion points — ✅ LIVRÉE 2026-07-17
+- [x] [CC] Action `startMinigame` dans `effectEngine.js` : suspend la file, ouvre
+  `CurioChallengeModal` (défi SOLO : N manches, même tirage LRU que le duel),
+  reprise via `curioChallengeResolve(total)`.
+- [x] [CC] Conversion par PALIERS BORNÉS `tiers: [{ min, kind: 'money'|'move'|'loot'|'none', n }]`
+  (simplification vs `convert` générique du plan : éditable en phrase à trous,
+  compilée en actions moteur injectées en tête de file — elles se journalisent
+  elles-mêmes). Bots et mode en ligne : défi sauté proprement (journal).
+- [x] [CC] Éditeur (EffectBuilder, partagé objets+événements) : action
+  « 🔭 Défi Curioscope », manches + paliers add/remove ; `effectText` (résumé
+  paliers) ; i18n `log.fx.curio.*` + `modal.curio.*`.
+- [x] [CC] 1066 tests (8 nouveaux : suspend, paliers, filet min 0, bots, online,
+  reprise de file) ; vérifié en jeu (défi 2 manches → « avance de 2 cases »).
+- **[TOI]** Décider 2-3 objets/événements d'exemple et leurs barèmes (via
+  l'éditeur — l'action est dans le menu « + Ajouter un effet »).
 
-### P3 — Univers World of Warcraft
-- [CC] Génération de l'addon **CurioSnap** (`.toc` + `.lua`, journal SavedVariables
-  horodaté — spec §1 du brouillon initial, validée).
-- **[TOI]** Copier le dossier addon dans `Interface/AddOns/`, vérifier le message chat
-  au premier screenshot (`/reload` en fin de session pour flusher).
-- **[TOI]** Installer wow.export ; exporter la carte stitchée (ou tuiles minimap) de
-  Kalimdor et des Royaumes de l'Est → déposer dans `C:\CurioscopeAssets\maps\`.
-- [CC] Script assemblage/redimensionnement carte (~4096 px) + upload Storage.
-- [CC] Extraction HereBeDragons → `zone-transforms.json` (mapID → width/height/left/top).
-- **[TOI]** Sessions de capture : 30-60 spots équilibrés par zone/difficulté
+### P3 — Univers World of Warcraft — outillage ✅ LIVRÉ 2026-07-17, assets [TOI]
+Simplification majeure vs plan initial : l'addon interroge `C_Map` EN JEU et
+journalise directement la position sur la carte du CONTINENT (cx/cy 0..1) —
+**l'extraction HereBeDragons et la conversion zone→continent sont supprimées**
+(les tables HBD sont construites au runtime par C_Map, pas dans le .lua).
+
+- [x] [CC] Addon **CurioSnap** (`scripts/curioscope/CurioSnap/`) : zone + coords
+  zone ET continent (remontée de hiérarchie uiMap), print de contrôle, SavedVariables.
+- [x] [CC] Supabase : table `quete_spots` (cx/cy normalisés, `image_path` RELATIF,
+  RLS pattern maison) + bucket public `quete-spots` (migration `curioscope_quete_spots`).
+- [x] [CC] Pipeline `scripts/curioscope/` : `parse-snaps.mjs` (SavedVariables +
+  screenshots → `spots.csv` éditable, fusion préservant les éditions),
+  `build-spots.mjs` (WebP 1600 q80 → upload noms opaques → insert, idempotent,
+  `--dry-run`, calibration affine `--calib`), `make-map.mjs` (carte → WebP 4096 →
+  `maps/<universe>.webp`, affiche l'aspect à reporter). `snaplib.mjs` pur + testé.
+- [x] [CC] Front : `spotsConfig.js` (cache localStorage + refresh au boot TBI),
+  univers `wow_kalimdor`/`wow_royaumes_est` (flat, lieues, k=18 de départ, spots
+  dynamiques `setCurioSpots`), thème de duel `world_of_warcraft` → curioscope +
+  **garde-fou getMinigame** (0 spot chargé → duel générique, jamais de carte vide ;
+  couvre aussi le build offline). i18n `fight.mg.wow.*`. 1074 tests, build OK.
+- **[TOI]** Installer l'addon (`README.md` du dossier, étape 1) et vérifier le
+  message chat au premier screenshot (`/reload` en fin de session pour flusher).
+- [x] [CC] **Rendu « satellite » = pyramide de tuiles** (décision 2026-07-17,
+  demande utilisateur type WyriMaps/wowcarto) : `UniverseMap` mode `tiles`
+  ({z}/{x}/{y} CRS.Simple, sur-zoom au-delà du natif), `make-tiles.mjs`
+  (image assemblée → pyramide WebP → bucket, recadrage sur cadre uiMap),
+  `tilelib.mjs` pur testé (solveFrame moindres carrés).
+- [x] [CC+TOI] **Cartes satellite HD LIVE 2026-07-18** : exports minimap
+  wow.export de l'utilisateur (qualité minimap 512/tuile ADT) → `assemble-tex.mjs`
+  (stitch des tex_X_Y.png) → cadre uiMap calculé **automatiquement** depuis
+  `UiMapAssignment` du client 2.5.6 (wago.tools, constantes `WOW_UIMAP_FRAMES`
+  dans tilelib — AUCUNE calibration manuelle) → 2×3 697 tuiles (16384px, Z=6,
+  ~10 Mo). Alignement vérifié en jeu : étoile pile sur Orgrimmar/Tirisfal aux
+  coords monde calculées. Rotation d'univers corrigée (saute les univers sans
+  spots — Curioscope + CurioChallengeModal). Client = **WoW Anniversary
+  (TBC 2.5.6)** : addon Interface 20506, Outland mappé (univers wow_outremonde
+  à créer plus tard), zones map 530 (Quel'Thalas/Azuremyst) absentes du
+  stitch — à incruster un jour depuis l'export expansion01.
+- Outillage annexe : bug wow.export 0.2.19 patché localement (builds CDN
+  undefined — 3 gardes dans src/app.js), wow.export installé
+  `C:\CurioscopeAssets\tools\wow.export\`.
+- **[TOI]** Sessions de capture : **vague 1 = 150-200 spots** (seuil de lancement),
+  puis croisière **300-500** au fil de l'année ; équilibrés par zone/difficulté
   (1 = monument unique, 5 = nature anonyme ; Alt+Z, pas d'UI/minimap/nom de joueur).
-- **[TOI]** Récupérer `Screenshots/` + `WTF/.../SavedVariables/CurioSnap.lua` →
-  `C:\CurioscopeAssets\wow\session-N\`.
-- [CC] Pipeline `scripts/curioscope/` : parseur Lua→CSV (appariement par timestamp),
-  conversion zone→continent, resize 1600 px JPEG q82, upload bucket `quete-spots`,
-  insert `quete_spots`.
-- [CC] Thème de duel `curioscope_wow` + univers mixte/aléatoire.
-- **[TOI]** Calibrer `scoreK` en jouant (départ : largeur_carte/8).
+  Repères genre : Where in Warcraft ≈ 1 000 lieux en 6 ans (plafond artisanal) ; une
+  séance de classe expose ~10-20 spots au TBI (grillés pour toute la classe) → 200
+  spots ≈ un trimestre, 300-500 ≈ l'année. Rythme mesuré : 20-40 spots/h de jeu.
+- **[TOI]** Par session : copier screenshots + `CurioSnap.lua` dans
+  `C:\CurioscopeAssets\wow\session-N\` → `parse-snaps` → éditer le CSV
+  (labels/difficulté) → `build-spots` (README étapes 3-4).
+- **[TOI]** Calibrer `score.k`/`freeDist` en jouant (README étape 5).
 
 ### P4 — Panoramas 360°
 - [CC] `render: 'pano'` + Photo Sphere Viewer intégré au moteur (flat et pano cohabitent).

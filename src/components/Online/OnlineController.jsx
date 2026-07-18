@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { sendIntent, onlineToken } from '../../logic/sessionConfig';
 import DuelRaceView from './DuelRaceView';
+import CurioPlaceView from '../Fight/CurioPlaceView';
 
 // `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres).
 // La vue de duel y est sautée : FightModal (plein écran hôte) la rend déjà via
@@ -24,6 +25,19 @@ export default function OnlineController({ code, ctrl, host = false }) {
   const fight = ctrl?.turn?.fight;
   if (!fight || host) return null;
   if (ownedIdx !== fight.attackerIndex && ownedIdx !== fight.defenderIndex) return null;
+  // Duel Curioscope (guessr) : je place mon pin sur MA carte — la cible et le
+  // pin adverse n'arrivent qu'à la révélation (payload strippé par l'hôte).
+  if (fight.curio && fight.phase === 'minigame') {
+    return (
+      <CurioPlaceView
+        fight={fight}
+        teams={ctrl.teams}
+        mySide={ownedIdx === fight.attackerIndex ? 'attacker' : 'defender'}
+        onValidate={(pos) => sendIntent(code, token, 'turnCurioValidate', { x: pos.x, y: pos.y }).catch(() => {})}
+        onNext={() => sendIntent(code, token, 'turnCurioNext', {}).catch(() => {})}
+      />
+    );
+  }
   return (
     <DuelRaceView
       fight={fight} teams={ctrl.teams} myTeamIdx={ownedIdx}

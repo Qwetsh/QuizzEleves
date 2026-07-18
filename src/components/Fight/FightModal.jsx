@@ -6,6 +6,7 @@ import { locName } from '../../i18n/content';
 import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
+import CurioDuelStage from './CurioDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import DuelRaceView from '../Online/DuelRaceView';
 import { onlineToken } from '../../logic/sessionConfig';
@@ -56,7 +57,12 @@ export default function FightModal() {
         {showFight.phase === 'minigame' && showFight.race && (
           <HostDuelRace fight={showFight} teams={teams} />
         )}
-        {showFight.phase === 'minigame' && !showFight.race && (
+        {/* Duel Curioscope piloté par le store (téléphones / en ligne) : photo
+            partagée + placement sur les écrans des duellistes. */}
+        {showFight.phase === 'minigame' && showFight.curio && (
+          <CurioDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (

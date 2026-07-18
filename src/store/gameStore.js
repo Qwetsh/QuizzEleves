@@ -27,6 +27,7 @@ import * as powerH from './powerHandlers.js';
 import * as fightH from './fightHandlers.js';
 import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
+import * as curioFightH from './curioFightHandlers.js';
 import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
@@ -510,6 +511,11 @@ export const useGameStore = create((set, get) => ({
   askedQuestions: {},
   questions: {},
   log: [],
+  // Curioscope : spots déjà montrés au TBI, par univers ({ uid: { spotId: seq } })
+  // + compteur global d'ancienneté. Persistés (SAVE_FIELDS) : un spot vu est
+  // connu de toute la classe → le tirage privilégie les « moins récemment vus ».
+  curioSeen: {},
+  curioSeq: 0,
 
   // --- Analytics : journal STRUCTURÉ pour le dashboard d'analyse (≠ log texte) ---
   // Réinitialisé à chaque startGame. `answers` = 1 entrée par question répondue
@@ -543,6 +549,9 @@ export const useGameStore = create((set, get) => ({
   showTargetPicker: null,
   // Investissement : modale de mise à l'activation { teamIndex, gold, rate } | null
   showInvestPicker: null,
+  // Défi Curioscope solo (action startMinigame) :
+  // { teamIndex, universes, rounds } | null — transitoire, jamais persisté.
+  showCurioChallenge: null,
   // Bilan d'investissement à afficher après une bonne réponse (post-loot)
   // { teamIndex, stake, rate, payout } | null, + résultat en attente pendant le loot.
   investResult: null,
@@ -917,6 +926,7 @@ export const useGameStore = create((set, get) => ({
       boardDecor: useSpace ? null : generateDecor(nodes),
       boardSpace: useSpace ? space : null,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
+      curioSeen: {}, curioSeq: 0,
       // Journal analytique neuf pour cette partie (cf. recordStat / dashboard).
       gameStats: {
         startedAt: new Date().toISOString(),
@@ -930,7 +940,7 @@ export const useGameStore = create((set, get) => ({
       // Forge : vitrine ORGANISÉE PAR SLOT (une offre par slot 1→6, effets résolus only).
       shopFaceStock: forgeOn ? pickFaceStock() : [],
       ...TURN_RESET, movePath: null,
-      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null, showCurioChallenge: null,
       // Météo : partie neuve → aucun état, compteurs à zéro.
       weather: null, weatherNotice: null, weatherCeremony: null, turnCount: 0, lastWeatherTurn: 0,
       powerSetupIndex: 0, powerSetupCategory: 'def',
@@ -2716,7 +2726,7 @@ export const useGameStore = create((set, get) => ({
       boardSpace: useSpace ? space : null,
       currentTeam: 0, finished: false, askedQuestions: {}, log: [],
       ...TURN_RESET, movePath: null,
-      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null, showCurioChallenge: null,
     });
     fightH.startFight(set, get, 1, subject);
     if (forceDefault) set({ showFight: { ...get().showFight, forceDefault: true } });
@@ -2730,6 +2740,30 @@ export const useGameStore = create((set, get) => ({
   },
   fightBegin: () => fightH.fightBegin(set, get),
   fightStart: () => fightH.fightStart(set, get),
+  // Duel Curioscope piloté par le store (surfaces téléphone / en ligne) :
+  // place/valide un pin pour un camp, passe à la manche suivante.
+  curioDuelPlace: (side, pos) => curioFightH.curioDuelPlace(set, get, side, pos),
+  curioDuelValidate: (side, pos) => curioFightH.curioDuelValidate(set, get, side, pos),
+  curioDuelNext: () => curioFightH.curioDuelNext(set, get),
+  // Défi Curioscope solo terminé : la modale rend le TOTAL de points, la file
+  // d'actions reprend sur startMinigame (conversion en récompense par paliers).
+  curioChallengeResolve: (points) => {
+    if (!get().showCurioChallenge) return;
+    set({ showCurioChallenge: null });
+    effectH.resumeQueue(set, get, { _curioPoints: Math.max(0, Math.round(points) || 0) });
+  },
+  // Curioscope : marque un spot comme montré au TBI (anti-répétition LRU,
+  // cf. pickSpot). No-op en bac à sable dev pour ne pas polluer la mémoire
+  // de la vraie partie (le sandbox ne sauvegarde pas non plus).
+  curioMarkSeen: (universeId, spotId) => {
+    if (get().devSandbox) return;
+    const seen = get().curioSeen || {};
+    const seq = (get().curioSeq || 0) + 1;
+    set({
+      curioSeq: seq,
+      curioSeen: { ...seen, [universeId]: { ...(seen[universeId] || {}), [spotId]: seq } },
+    });
+  },
   fightRoundWin: (side) => fightH.fightRoundWin(set, get, side),
   fightMatchWin: (side) => fightH.fightMatchWin(set, get, side),
   fightChooseReward: (choice) => fightH.fightChooseReward(set, get, choice),
@@ -2745,6 +2779,14 @@ export const useGameStore = create((set, get) => ({
     if (type === 'turnFightBegin') { get().fightBegin(); return; }
     if (type === 'turnFightAnswer') { get().submitFightAnswer(idx, payload.index); return; }
     if (type === 'turnFightClose') { get().closeFight(); return; }
+    // Duel Curioscope (guessr) : validation du pin (place+valide en un seul
+    // intent, position dans le payload) et manche suivante.
+    if (type === 'turnCurioValidate') {
+      const side = idx === f.attackerIndex ? 'attacker' : 'defender';
+      get().curioDuelValidate(side, { x: Number(payload.x), y: Number(payload.y) });
+      return;
+    }
+    if (type === 'turnCurioNext') { get().curioDuelNext(); return; }
     if (type === 'turnFightReward') {
       const winnerIdx = f.winnerSide === 'attacker' ? f.attackerIndex : f.winnerSide === 'defender' ? f.defenderIndex : -1;
       if (idx === winnerIdx) get().fightChooseReward(payload.choice);
@@ -3057,13 +3099,20 @@ export const useGameStore = create((set, get) => ({
     if (type === 'forgeServiceRemove') { get().forgeServiceRemove(payload.slotIndex, idx); return; }
     if (type === 'forgeServiceValidate') { get().forgeServiceValidate(idx); return; }
     if (type === 'forgeServiceCancel') { get().forgeServiceCancel(idx); return; }
-    // Duel éclair (EN LIGNE) : les intents de combat peuvent venir de l'ATTAQUANT
+    // Duels à deux joueurs : les intents de combat peuvent venir de l'ATTAQUANT
     // ou du DÉFENSEUR (le défenseur n'est pas l'équipe active) → routage dédié,
-    // hors du verrou « équipe active ». Réservé au mode online : le mode classe
-    // garde son comportement (seul l'attaquant pilote le duel au TBI).
-    if (st.connectionMode === 'online' && st.showFight && typeof type === 'string'
-      && (type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin')) {
-      if (idx === st.showFight.attackerIndex || idx === st.showFight.defenderIndex) { get().applyFightIntent(idx, type, payload); return; }
+    // hors du verrou « équipe active ». En ligne : duel éclair + Curioscope.
+    // En mode « écran + téléphones » : Curioscope uniquement (les autres
+    // mini-jeux se jouent au tableau, comportement historique conservé).
+    if (st.showFight && typeof type === 'string'
+      && (idx === st.showFight.attackerIndex || idx === st.showFight.defenderIndex)) {
+      const raceTypes = type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin';
+      const curioTypes = type === 'turnCurioValidate' || type === 'turnCurioNext';
+      if ((st.connectionMode === 'online' && (raceTypes || curioTypes))
+        || (st.phoneController && curioTypes && st.showFight.curio)) {
+        get().applyFightIntent(idx, type, payload);
+        return;
+      }
     }
     // Manette téléphone : les intents « de tour » (turn*) sont réservés à
     // l'équipe ACTIVE et autorisés PENDANT sa résolution (c'est leur raison
@@ -4075,7 +4124,7 @@ export const useGameStore = create((set, get) => ({
       rolling: false,
       ...TURN_RESET,
       movePath: null,
-      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null, showCurioChallenge: null,
       showStarterChest: false, lastStarterReward: null, hackOverlay: null,
       // Météo : l'overlay transitoire ne survit pas à un reload (l'état ambiant
       // et le préavis, eux, sont persistés et restaurés via ...saved).
@@ -4176,10 +4225,11 @@ export const useGameStore = create((set, get) => ({
       devSandbox: false,
       phase: 'home', teams: [], currentTeam: 0, board: null, boardDecor: null, boardSpace: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
+      curioSeen: {}, curioSeq: 0, showCurioChallenge: null,
       shopStock: [], shopStockTurns: 0,
       starterChestConfig: defaultStarterChestConfig(), starterGold: null,
       rolling: false, ...TURN_RESET, movePath: null,
-      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null,
+      showQuestion: null, showEvent: null, showFight: null, showDiceModal: false, eventApplied: false, lootReveal: null, showCurioChallenge: null,
       hackOverlay: null,
       weather: null, weatherNotice: null, weatherCeremony: null, turnCount: 0, lastWeatherTurn: 0,
       nbTeams: 3, setupTeams: createDefaultTeams(3), soloConfig: null,

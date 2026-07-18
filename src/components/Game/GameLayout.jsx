@@ -47,6 +47,7 @@ import ChargePickerModal from '../Modals/ChargePickerModal';
 import SpecPickerModal from '../Modals/SpecPickerModal';
 import InvestPickerModal from '../Modals/InvestPickerModal';
 import InvestResultModal from '../Modals/InvestResultModal';
+import CurioChallengeModal from '../Modals/CurioChallengeModal';
 import EnchantPickerModal from '../Modals/EnchantPickerModal';
 import LootReveal from '../Modals/LootReveal';
 import StarterChest from '../Modals/StarterChest';
@@ -375,6 +376,7 @@ export default function GameLayout() {
         {(!onlineMode || driveTurn) && <TargetPickerModal />}
         <InvestPickerModal />
         <InvestResultModal />
+        <CurioChallengeModal />
         <DuelChoiceModal />
         <LootReveal />
         <StarterChest />

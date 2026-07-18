@@ -227,6 +227,26 @@ export function buildTurnPayload(s) {
         answered: { attacker: !!sf.race.answers?.attacker, defender: !!sf.race.answers?.defender },
         deadline: sf.race.deadline || null,
       } : null,
+      // Duel Curioscope (guessr, surfaces téléphone/en ligne) — ANTI-TRICHE :
+      // la position de la cible (x/y), son label (sauf mode « Place : X ») et
+      // les marques des équipes ne partent QU'À la révélation.
+      curio: sf.curio ? (() => {
+        const c = sf.curio;
+        return {
+          roundNo: c.roundNo,
+          scores: c.scores,
+          universe: c.target?.universe || null,
+          image: c.target?.image || null,
+          showName: !!c.target?.showName,
+          label: (c.target && (c.target.showName || c.reveal)) ? c.target.label : null,
+          validated: c.validated,
+          reveal: c.reveal ? {
+            ...c.reveal,
+            target: { x: c.target.x, y: c.target.y, label: c.target.label },
+            marks: c.marks,
+          } : null,
+        };
+      })() : null,
     };
   } else if (phase === 'targetPicker' && s.showTargetPicker) {
     const stp = s.showTargetPicker;

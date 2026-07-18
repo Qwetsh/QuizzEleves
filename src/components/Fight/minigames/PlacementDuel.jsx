@@ -26,11 +26,16 @@ import { useT } from '../../../i18n';
  *   chaque équipe marque à chaque manche, pas d'égalité rejouée
  * - onRoundEnd({ winner, dA, dB, pA, pB }) (optionnel) : remplace l'appel
  *   direct à onRoundWin au clic sur Suivant (utilisé par le mode points)
+ * - renderBoard(ctx) (optionnel) : plateau INTERACTIF (ex. carte Leaflet
+ *   zoomable de Curioscope) qui remplace renderScene + les épingles overlay.
+ *   ctx = { phase:'place', side, team, mark, disabled, onPlace({x,y}) }
+ *      ou { phase:'reveal', marks, target } — le plateau dessine alors
+ *   lui-même pins/traits/badges (le flux commit-reveal reste géré ici).
  */
 export default function PlacementDuel({
   attacker, defender, round, onRoundWin,
   pickTarget, renderScene, aspect = 1, formatDistance, metric,
-  scoreFn, onRoundEnd,
+  scoreFn, onRoundEnd, renderBoard,
 }) {
   const T = useT();
   const usedIds = useRef([]);
@@ -88,13 +93,18 @@ export default function PlacementDuel({
     );
   }
 
-  const place = (side, e) => {
+  const placeAt = (side, pos) => {
     if (validated[side] || reveal) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
     soundClick();
-    setMarks((prev) => ({ ...prev, [side]: { x, y } }));
+    setMarks((prev) => ({ ...prev, [side]: pos }));
+  };
+
+  const place = (side, e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    placeAt(side, {
+      x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+    });
   };
 
   const validate = (side) => {
@@ -168,6 +178,11 @@ export default function PlacementDuel({
           )}
         </div>
         <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
+          {renderBoard ? (
+            <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+              {renderBoard({ phase: 'reveal', marks, target })}
+            </div>
+          ) : (
           <div style={{ position: 'relative', aspectRatio: String(aspect), maxWidth: '100%', maxHeight: '100%', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
             {renderScene()}
             {/* traits pointilles drapeau -> cible */}
@@ -207,6 +222,7 @@ export default function PlacementDuel({
             {distanceBadge(attacker, marks.attacker)}
             {distanceBadge(defender, marks.defender)}
           </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 18, alignItems: 'center', fontFamily: 'var(--font-ui)', fontSize: 14, color: '#fff', flexWrap: 'wrap', justifyContent: 'center' }}>
           <span>
@@ -252,6 +268,20 @@ export default function PlacementDuel({
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: team.color }}>{team.name}</span>
         </div>
         <div style={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {renderBoard ? (
+            <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', boxShadow: 'inset 0 0 0 2px rgba(122,94,58,0.25)' }}>
+              {renderBoard({ phase: 'place', side: key, team, mark: marks[key], disabled: done, onPlace: (pos) => placeAt(key, pos) })}
+              {done && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(255,254,251,0.72)',
+                  fontFamily: 'var(--font-display)', fontSize: 20, color: '#2f5a18',
+                }}>
+                  {T('fight.placement.validated')}
+                </div>
+              )}
+            </div>
+          ) : (
           <div
             onPointerDown={(e) => place(key, e)}
             style={{
@@ -275,6 +305,7 @@ export default function PlacementDuel({
               </div>
             )}
           </div>
+          )}
         </div>
         <button
           onPointerDown={() => validate(key)}
@@ -287,6 +318,43 @@ export default function PlacementDuel({
       </div>
     );
   };
+
+  // Plateau interactif (Curioscope) : la PHOTO est l'indice principal → grand
+  // format au CENTRE, une carte VERTICALE collée de chaque côté (surface
+  // tactile : chaque équipe joue sur sa moitié d'écran).
+  if (renderBoard) {
+    return (
+      <div style={{ display: 'flex', gap: 8, height: '100%', minHeight: 0 }}>
+        {side('attacker', attacker)}
+        <div style={{ ...banner(), width: 'clamp(320px, 42vw, 820px)', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, justifyContent: 'center' }}>
+          {target.photo ? (
+            <>
+              {/* Mode devinette : la photo SANS le nom du lieu */}
+              <img
+                src={target.photo}
+                alt={T('fight.placement.mysteryAlt')}
+                draggable={false}
+                style={{
+                  flex: '1 1 auto', minHeight: 0, width: '100%',
+                  borderRadius: 10, objectFit: 'contain',
+                  boxShadow: '0 3px 10px rgba(0,0,0,0.3)', userSelect: 'none',
+                }}
+              />
+              <strong style={{ fontSize: 19 }}>
+                {target.showName ? T('fight.placement.place', { label: target.label }) : T('fight.placement.whereIsThis')}
+              </strong>
+            </>
+          ) : (
+            <div style={{ margin: 'auto 0' }}>{T('fight.placement.placePrefix')} <strong style={{ fontSize: 26, display: 'block', marginTop: 8 }}>{target.label}</strong></div>
+          )}
+          <div style={{ fontSize: 12, color: 'var(--ink-500)', fontFamily: 'var(--font-ui)' }}>
+            {T('fight.placement.hint')}
+          </div>
+        </div>
+        {side('defender', defender)}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>

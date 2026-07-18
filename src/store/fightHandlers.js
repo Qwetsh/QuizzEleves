@@ -12,6 +12,8 @@ import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
+import { curioUniverses } from '../components/Fight/minigames/index.js';
+import { startCurioDuel } from './curioFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
@@ -129,6 +131,14 @@ export function fightBegin(set, get) {
   const f = get().showFight;
   if (!f || f.phase !== 'versus') return;
   const soloBots = (get().teams || []).some((t) => t?.isBot);
+  // Duel Curioscope (guessr) piloté par le STORE sur les surfaces distantes :
+  // en ligne, et « écran + téléphones » (le pin se place sur le téléphone).
+  // Bots exclus (ils ne devinent pas) et boss exclu (adversaire virtuel) →
+  // duel éclair. La surface tactile garde le moteur composant (FightModal).
+  if (!soloBots && !f.bossFight && (get().connectionMode === 'online' || get().phoneController)) {
+    const universes = curioUniverses(f.subject);
+    if (universes) { startCurioDuel(set, get, universes); return; }
+  }
   if (get().connectionMode === 'online' || soloBots) { serveRaceQuestion(set, get); return; }
   set({ showFight: { ...f, phase: 'briefing' } });
 }

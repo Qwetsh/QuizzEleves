@@ -85,11 +85,33 @@ function stripQuestionSecret(showQuestion) {
 }
 
 // Duel éclair : la question de course porte la bonne réponse (race.q.c) — jamais
-// diffusée (l'hôte arbitre). On la retire du combat avant broadcast.
+// diffusée (l'hôte arbitre). Duel Curioscope : avant révélation, la CIBLE
+// (x/y + label sauf mode « Place : X ») et les MARQUES restent sur l'hôte —
+// le miroir n'a besoin que de la photo et des statuts (spectacle partagé).
 function stripFightSecret(showFight) {
-  if (!showFight || !showFight.race || !showFight.race.q) return showFight;
-  const { c, e, e_en, ...safeQ } = showFight.race.q;
-  return { ...showFight, race: { ...showFight.race, q: safeQ } };
+  if (!showFight) return showFight;
+  let out = showFight;
+  if (out.race?.q) {
+    const { c, e, e_en, ...safeQ } = out.race.q;
+    out = { ...out, race: { ...out.race, q: safeQ } };
+  }
+  if (out.curio && !out.curio.reveal) {
+    const c = out.curio;
+    out = {
+      ...out,
+      curio: {
+        ...c,
+        target: c.target ? {
+          id: null,
+          label: c.target.showName ? c.target.label : null,
+          x: null, y: null,
+          universe: c.target.universe, image: c.target.image, showName: c.target.showName,
+        } : null,
+        marks: { attacker: null, defender: null },
+      },
+    };
+  }
+  return out;
 }
 
 /**

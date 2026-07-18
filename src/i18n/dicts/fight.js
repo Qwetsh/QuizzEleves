@@ -72,11 +72,27 @@ export default {
   'fight.placement.whereIsThis': { fr: 'Où se trouve ce lieu ?', en: 'Where is this place?' },
   'fight.placement.hint': { fr: 'Touche ta scène pour poser ton repère (ajustable), puis valide. Révélation quand les deux équipes ont validé !', en: 'Tap your scene to place your marker (adjustable), then confirm. Reveal once both teams have confirmed!' },
 
-  // --- GeoDuel (Tour du monde) ---
+  // --- Curioscope (guessr multi-univers, ex-GeoDuel) ---
   'fight.geo.points': { fr: '{n} pts', en: '{n} pts' },
   'fight.geo.worldMapAlt': { fr: 'Carte du monde', en: 'World map' },
   'fight.geo.pileDessus': { fr: 'pile dessus !', en: 'spot on!' },
   'fight.geo.km': { fr: '{n} km', en: '{n} km' },
+  // Distance des univers fictifs (crs 'flat') : unité arbitraire « lieues ».
+  'curio.dist.lieues': { fr: '{n} lieues', en: '{n} leagues' },
+
+  // --- Duel Curioscope multi-surface (téléphones / en ligne) ---
+  'curio.duel.round': { fr: 'Manche {n}', en: 'Round {n}' },
+  'curio.duel.placing': { fr: 'place son repère…', en: 'placing their marker…' },
+  'curio.duel.phonesHint': { fr: 'chaque équipe place son repère sur son écran', en: 'each team places their marker on their own screen' },
+
+  // --- Thème de duel World of Warcraft (moteur curioscope, cartes d'Azeroth) ---
+  'fight.mg.wow.name': { fr: 'Explorateur d\'Azeroth', en: 'Azeroth Explorer' },
+  'fight.mg.wow.rules': { fr: 'Une capture d\'écran prise quelque part en Azeroth : chaque équipe plante son drapeau sur la carte du continent. Le plus proche marque le plus de points !', en: 'A screenshot taken somewhere in Azeroth: each team plants its flag on the continent map. Closest guess scores the most points!' },
+  'fight.mg.wow.goal': { fr: 'Reconnais le lieu et place ton repère au plus près !', en: 'Recognize the place and pin it as close as you can!' },
+  'fight.mg.wow.step1': { fr: 'Observe la capture d\'écran mystère', en: 'Study the mystery screenshot' },
+  'fight.mg.wow.step2': { fr: 'Zoome et pose ton repère sur la carte', en: 'Zoom in and place your marker on the map' },
+  'fight.mg.wow.step3': { fr: 'Valide — révélation quand les deux équipes ont joué', en: 'Confirm — reveal once both teams have played' },
+  'fight.mg.wow.step4': { fr: 'Points selon la distance : premier à 10 000 !', en: 'Points by distance: first to 10,000!' },
 
   // --- MotLePlusLong (Le Mot le Plus Long) ---
   'fight.mot.wordValidated': { fr: 'Mot validé — {n} lettres ✔', en: 'Word confirmed — {n} letters ✔' },

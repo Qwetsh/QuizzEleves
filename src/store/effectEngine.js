@@ -899,6 +899,50 @@ function stepHead(set, get, action, ctx) {
       if (get().engineLoot) get().engineLoot(ctx.sourceTeam ?? get().currentTeam, action.category);
       return 'done';
     }
+    case 'startMinigame': {
+      // Défi Curioscope en SOLO : l'équipe source joue N manches de guessr
+      // (CurioChallengeModal), la file est suspendue, puis le total de points
+      // est converti par PALIERS bornés `tiers: [{ min, kind, n }]` avec
+      // kind ∈ 'money'|'move'|'loot'|'none' — compilés ici en actions moteur
+      // injectées en tête de file (elles se journalisent elles-mêmes).
+      const src = ctx.sourceTeam ?? get().currentTeam;
+      const t = get().teams[src];
+      if (!t) return 'done';
+      if (ctx._curioPoints != null) {
+        // Reprise : la modale a rendu son total de points.
+        const pts = ctx._curioPoints;
+        clearCtxResolution(set, get, '_curioPoints');
+        get().addLog(tg('log.fx.curio.score', { emoji: t.emoji, name: t.name, pts }));
+        const tiers = [...(action.tiers || [])].sort((x, y) => (y.min || 0) - (x.min || 0));
+        const tier = tiers.find((ti) => pts >= (ti.min || 0));
+        if (!tier || !tier.kind || tier.kind === 'none') {
+          announce(set, get, '\u{1F52D}', tg('log.fx.curio.noReward'), '#8a6d3b');
+          return 'done';
+        }
+        announce(set, get, '\u{1F52D}', tg('log.fx.curio.toast', { pts }), '#2f9d5a');
+        const doActs = tier.kind === 'money' ? [{ action: 'money', mode: 'gain', target: 'self', n: tier.n || 0, unit: 'flat' }]
+          : tier.kind === 'move' ? [{ action: 'move', target: 'self', dir: 'forward', n: tier.n || 0 }]
+            : tier.kind === 'loot' ? [{ action: 'loot' }] : [];
+        if (doActs.length) {
+          const pa = get().pendingActions;
+          set({ pendingActions: { ...pa, queue: [pa.queue[0], ...doActs, ...pa.queue.slice(1)] } });
+        }
+        return 'done';
+      }
+      // Bots et mode en ligne : le défi se joue au TBI local — sauté proprement.
+      if (t.isBot || get().connectionMode === 'online') {
+        get().addLog(tg('log.fx.curio.skip', { emoji: t.emoji, name: t.name }));
+        return 'done';
+      }
+      set({
+        showCurioChallenge: {
+          teamIndex: src,
+          universes: (Array.isArray(action.universes) && action.universes.length) ? action.universes : ['monde_reel'],
+          rounds: Math.max(1, action.rounds || 1),
+        },
+      });
+      return 'suspend';
+    }
     // --- Actions Alchimie / Enchantement (événements dédiés) ---
     case 'grantItem': {
       // Donne un OBJET précis (action.key) à la/les cible(s). Révélation pour la source.

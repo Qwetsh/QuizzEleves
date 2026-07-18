@@ -37,6 +37,7 @@ import { applyCachedRecipes, refreshRecipes } from './logic/recipesConfig';
 import { applyCachedSpells, refreshSpells } from './logic/spellsConfig';
 import { applyCachedCategories, refreshCategories } from './logic/categoriesConfig';
 import { applyCachedThemes, refreshThemes } from './logic/themesConfig';
+import { applyCachedSpots, refreshSpots } from './logic/spotsConfig';
 import { useGameStore } from './store/gameStore';
 
 // Le companion mobile s'ouvre via l'URL d'appairage (?join=CODE) : c'est une
@@ -127,6 +128,10 @@ if (import.meta.env.VITE_OFFLINE === '1') {
   // Sorts personnalisés (table quete_spells) par-dessus les intégrés (Magie).
   applyCachedSpells();
   refreshSpells().catch(() => {});
+
+  // Spots Curioscope (table quete_spots) : univers fictifs du mini-jeu guessr.
+  applyCachedSpots();
+  refreshSpots().catch(() => {});
 }
 
 function Root() {
