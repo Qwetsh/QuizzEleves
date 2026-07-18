@@ -39,6 +39,9 @@ import QuestionsEditor from './QuestionsEditor';
 import BalanceEditor from './BalanceEditor';
 import EventsEditor from './EventsEditor';
 import { OFFLINE } from '../../logic/offline';
+import { getMinigame, getDefaultMinigame, MINIGAME_THEMES } from '../Fight/minigames';
+import { SUBJECTS } from '../../data/subjects';
+import { tg } from '../../i18n';
 import { EXTENSIONS, extOn } from '../../extensions/registry';
 import { EVENTS } from '../../data/events';
 
@@ -232,6 +235,35 @@ function ConsoleEditorTools() {
       </div>
       <div style={{ fontFamily: FONT_MONO, fontSize: 14, color: '#7a6a4f', borderTop: '1px solid rgba(122,94,58,.28)', paddingTop: 11, lineHeight: 1.4 }}>
         ⚗️ L'alchimie (ingrédients, potions, recettes) se règle dans l'éditeur d'équilibrage → onglet « Alchimie ».
+      </div>
+
+      {/* Testeur de mini-jeux : lance un duel bac à sable (2 équipes de test,
+          sauvegarde intacte — quitter avec ✕) sur N'IMPORTE QUEL mini-jeu,
+          sans attendre de tomber dessus en partie. Dispo aussi en prod via le
+          déverrouillage outils (triple-clic logo + code). */}
+      <div style={{ borderTop: '1px solid rgba(122,94,58,.28)', paddingTop: 14 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, letterSpacing: 0.5, color: '#3a2c1a' }}>🎮 Testeur de mini-jeux</div>
+        <div style={{ fontSize: 13, color: '#6b5f48', marginTop: 5, marginBottom: 10, lineHeight: 1.45 }}>
+          Duel d'essai entre deux équipes de test — la sauvegarde n'est pas touchée, quitte avec ✕.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {MINIGAME_THEMES.map((key) => {
+            const mg = getMinigame(key);
+            const s = SUBJECTS[key];
+            return (
+              <button key={key} style={{ ...btn, justifyContent: 'flex-start', textAlign: 'left' }}
+                onClick={() => useGameStore.getState().devStartFight(key)}>
+                <span>{s?.icon || '🎮'}</span>
+                <span style={{ minWidth: 0 }}>{tg(mg.name)}</span>
+              </button>
+            );
+          })}
+          <button style={{ ...btn, justifyContent: 'flex-start', textAlign: 'left' }}
+            onClick={() => useGameStore.getState().devStartFight(MINIGAME_THEMES[0], true)}>
+            <span>⚡</span>
+            <span style={{ minWidth: 0 }}>{tg(getDefaultMinigame().name)} (générique)</span>
+          </button>
+        </div>
       </div>
       {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
       {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}

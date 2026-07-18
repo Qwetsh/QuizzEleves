@@ -258,10 +258,17 @@ Anti-triche : cible (x/y + label sauf « Place : X ») et marques strippées de
 `buildTurnPayload` et `serializeSnapshot` tant que `reveal` est null. Bots et
 boss restent en duel éclair. 1085 tests, vérifié en jeu (spectateur + reveal).
 
-### P4 — Panoramas 360°
-- [CC] `render: 'pano'` + Photo Sphere Viewer intégré au moteur (flat et pano cohabitent).
-- **[TOI]** WoW : PanoShot + Hugin sur ~10-20 lieux emblématiques.
-- [CC] Monde réel : source Mapillary `is_pano` (script de sélection + attribution CC-BY-SA).
+### P4 — Panoramas 360° — ❌ ABANDONNÉE (décision utilisateur 2026-07-18)
+Trop coûteuse en production d'assets pour le gain ; les captures plates
+suffisent largement. (La colonne `render` de quete_spots reste en place si
+l'envie revient un jour.) L'utilisateur alimente la banque de spots plates
+pour l'ensemble des zones au fil de l'eau.
+
+### Outillage : testeur de mini-jeux (2026-07-18)
+Panneau OUTILS (déverrouillage triple-clic logo + code, dispo en prod) →
+« 🎮 Testeur de mini-jeux » : lance un duel bac à sable sur n'importe quel
+mini-jeu du registre (MINIGAME_THEMES + duel générique), sans attendre de
+tomber dessus en partie. Sauvegarde intacte, sortie par ✕.
 
 ### P5 — Extension du catalogue + confort
 - [CC] Univers Terre du Milieu (tuiles GPL récupérables directement) puis GTA V (tuiles
