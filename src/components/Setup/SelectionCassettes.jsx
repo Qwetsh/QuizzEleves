@@ -204,6 +204,67 @@ const themeById = (id) => {
   return null;
 };
 
+// Choix de surface du testeur de mini-jeux : reproduit fidèlement le duel tel
+// qu'il se joue sur chaque surface (cf. fightBegin) — tactile pur, écran +
+// téléphones-manettes (Curioscope au tel, sinon mini-jeu à l'écran), ou en
+// ligne (Curioscope sur les appareils, sinon duel éclair). Les surfaces
+// distantes affichent un QR d'accès une fois le duel lancé.
+const SURFACES = [
+  {
+    id: 'board', icon: '🖐️', label: 'Tactile (écran partagé)',
+    desc: 'Tout se joue sur cet écran, comme en classe au tableau.',
+  },
+  {
+    id: 'phone', icon: '📺', label: 'TV + téléphones',
+    desc: 'Cet écran affiche, les téléphones pilotent — QR de connexion en jeu. Curioscope se joue au téléphone, les autres mini-jeux restent à l’écran.',
+  },
+  {
+    id: 'online', icon: '🌐', label: 'Multi en ligne',
+    desc: 'Chaque équipe sur son navigateur (QR / lien) — cet écran est l’hôte. Curioscope se joue sur les appareils, sinon duel éclair de questions.',
+  },
+];
+function MinigameSurfacePicker({ test, onClose, onPick }) {
+  const mg = getMinigame(test.key);
+  const name = test.forceDefault ? `${tg(getDefaultMinigame().name)} (générique)` : tg(mg.name);
+  return (
+    <div onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 260, display: 'grid', placeItems: 'center',
+        background: 'rgba(28,18,6,0.6)', backdropFilter: 'blur(4px)', fontFamily: FONT_UI }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ width: 440, maxWidth: '92vw', padding: '20px 22px 22px', borderRadius: 18,
+          background: 'linear-gradient(180deg, #f6ecd6, #eadfc2)', border: '2px solid #150f08',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, letterSpacing: 0.5, color: '#3a2c1a' }}>
+          🎮 {name}
+        </div>
+        <div style={{ fontSize: 13, color: '#6b5f48', margin: '5px 0 14px', lineHeight: 1.45 }}>
+          Tester sur quelle surface ?
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {SURFACES.map((sf) => (
+            <button key={sf.id} onClick={() => onPick(sf.id)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+                borderRadius: 11, cursor: 'pointer', border: '2px solid #150f08', background: '#3a2e22',
+                color: '#f4e7cc', textAlign: 'left', font: 'inherit',
+                boxShadow: 'inset 0 2px 0 rgba(255,255,255,.12),inset 0 -3px 0 rgba(0,0,0,.4)' }}>
+              <span style={{ fontSize: 22, lineHeight: 1.2 }}>{sf.icon}</span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontFamily: FONT_DISPLAY, fontSize: 13.5, letterSpacing: 0.4 }}>{sf.label}</span>
+                <span style={{ display: 'block', fontSize: 12, color: '#cbb694', marginTop: 3, lineHeight: 1.4 }}>{sf.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <button onClick={onClose}
+          style={{ marginTop: 14, width: '100%', padding: '9px 0', borderRadius: 9, cursor: 'pointer',
+            border: '2px solid rgba(21,15,8,.45)', background: 'transparent', color: '#6b5f48', font: 'inherit', fontSize: 13 }}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Outils/éditeurs habillés « console » : boutons plastique foncé sur l'encart
 // crème (panelInset), au lieu du panneau bleu générique de l'ancien Setup. Les
 // éditeurs eux-mêmes s'ouvrent en plein écran (portail) — inchangés.
@@ -211,6 +272,8 @@ function ConsoleEditorTools() {
   const [showQuestionsEditor, setShowQuestionsEditor] = useState(false);
   const [showBalanceEditor, setShowBalanceEditor] = useState(false);
   const [showEventsEditor, setShowEventsEditor] = useState(false);
+  // Mini-jeu cliqué, en attente du choix de surface : { key, forceDefault }.
+  const [pendingTest, setPendingTest] = useState(null);
   const btn = {
     fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 0.4, padding: '14px 14px',
     borderRadius: 9, cursor: 'pointer', border: '2px solid #150f08', background: '#3a2e22',
@@ -240,7 +303,9 @@ function ConsoleEditorTools() {
       {/* Testeur de mini-jeux : lance un duel bac à sable (2 équipes de test,
           sauvegarde intacte — quitter avec ✕) sur N'IMPORTE QUEL mini-jeu,
           sans attendre de tomber dessus en partie. Dispo aussi en prod via le
-          déverrouillage outils (triple-clic logo + code). */}
+          déverrouillage outils (triple-clic logo + code). Le clic ouvre le
+          CHOIX DE SURFACE (tactile / TV+téléphones / en ligne) — les surfaces
+          distantes affichent ensuite un QR d'accès en jeu (SandboxSurfacePanel). */}
       <div style={{ borderTop: '1px solid rgba(122,94,58,.28)', paddingTop: 14 }}>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, letterSpacing: 0.5, color: '#3a2c1a' }}>🎮 Testeur de mini-jeux</div>
         <div style={{ fontSize: 13, color: '#6b5f48', marginTop: 5, marginBottom: 10, lineHeight: 1.45 }}>
@@ -252,19 +317,29 @@ function ConsoleEditorTools() {
             const s = SUBJECTS[key];
             return (
               <button key={key} style={{ ...btn, justifyContent: 'flex-start', textAlign: 'left' }}
-                onClick={() => useGameStore.getState().devStartFight(key)}>
+                onClick={() => setPendingTest({ key, forceDefault: false })}>
                 <span>{s?.icon || '🎮'}</span>
                 <span style={{ minWidth: 0 }}>{tg(mg.name)}</span>
               </button>
             );
           })}
           <button style={{ ...btn, justifyContent: 'flex-start', textAlign: 'left' }}
-            onClick={() => useGameStore.getState().devStartFight(MINIGAME_THEMES[0], true)}>
+            onClick={() => setPendingTest({ key: MINIGAME_THEMES[0], forceDefault: true })}>
             <span>⚡</span>
             <span style={{ minWidth: 0 }}>{tg(getDefaultMinigame().name)} (générique)</span>
           </button>
         </div>
       </div>
+      {pendingTest && (
+        <MinigameSurfacePicker
+          test={pendingTest}
+          onClose={() => setPendingTest(null)}
+          onPick={(surface) => {
+            setPendingTest(null);
+            useGameStore.getState().devStartFight(pendingTest.key, pendingTest.forceDefault, surface);
+          }}
+        />
+      )}
       {showQuestionsEditor && <QuestionsEditor onClose={() => setShowQuestionsEditor(false)} />}
       {showBalanceEditor && <BalanceEditor onClose={() => setShowBalanceEditor(false)} />}
       {showEventsEditor && <EventsEditor onClose={() => setShowEventsEditor(false)} />}

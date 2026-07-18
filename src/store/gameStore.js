@@ -251,6 +251,9 @@ export const useGameStore = create((set, get) => ({
 
   // Bac a sable dev : partie simulee qui ne touche pas a la sauvegarde
   devSandbox: false,
+  // Réglages de connexion réels stashés par le testeur de mini-jeux quand il
+  // force une surface (manette / en ligne) — restaurés au reset ✕. Non persisté.
+  _devRestore: null,
 
   // --- Setup state ---
   // `level` est un TABLEAU de niveaux (sélection multiple). 'cycle4' = méta
@@ -2701,8 +2704,12 @@ export const useGameStore = create((set, get) => ({
   },
 
   // --- Dev : simulateur de combat (localhost uniquement, voir Setup) ---
-  devStartFight: (subject, forceDefault = false) => {
-    const { setupTeams, boardParams, level, useBrevet } = get();
+  // `surface` : 'board' (tactile, défaut) | 'phone' (TV + téléphones-manettes) |
+  // 'online' (multi en ligne). Les surfaces distantes reproduisent les flags du
+  // vrai mode (manette / hôte en ligne) — les réglages réels du prof sont
+  // stashés dans _devRestore et restaurés à la sortie du bac à sable (reset ✕).
+  devStartFight: (subject, forceDefault = false, surface = 'board') => {
+    const { setupTeams, boardParams, level, useBrevet, connectionMode, phoneController, sessionCode } = get();
     const useSpace = get().mapStyle !== 'legacy';
     const { nodes, viewBox, space } = useSpace ? composeSpaceBoard(boardParams) : generateBoard(boardParams);
     // Deux equipes de test, equipees pour rendre la recompense interessante
@@ -2721,6 +2728,12 @@ export const useGameStore = create((set, get) => ({
     const questions = getQuestions(level, { brevet: useBrevet });
     set({
       devSandbox: true,
+      _devRestore: { connectionMode, phoneController, sessionCode },
+      // 'online' → OnlineHost s'active (crée la session et publie le snapshot) ;
+      // 'phone' → MobileSessionPanel publie, le panneau QR sandbox crée la session.
+      connectionMode: surface === 'online' ? 'online' : surface === 'phone' ? 'phone' : 'board',
+      phoneController: surface === 'phone',
+      sessionCode: null,
       phase: 'game', teams, board: nodes, viewBox, questions,
       boardDecor: useSpace ? null : generateDecor(nodes),
       boardSpace: useSpace ? space : null,
@@ -4221,8 +4234,12 @@ export const useGameStore = create((set, get) => ({
   reset: () => {
     // En bac a sable dev, ne pas effacer la sauvegarde de la vraie partie
     if (!get().devSandbox) clearSave();
+    // Sortie du testeur de mini-jeux : restaure les réglages de connexion réels
+    // (surface forcée par devStartFight) — appliqué APRÈS les défauts du set.
+    const devRestore = get().devSandbox ? get()._devRestore : null;
     set({
       devSandbox: false,
+      _devRestore: null,
       phase: 'home', teams: [], currentTeam: 0, board: null, boardDecor: null, boardSpace: null, finished: false,
       askedQuestions: {}, questions: {}, log: [],
       curioSeen: {}, curioSeq: 0, showCurioChallenge: null,
@@ -4245,6 +4262,11 @@ export const useGameStore = create((set, get) => ({
         casesParVoie: 4, nbVoies: 3, nbSections: 3,
         voieFinale: 'court-long', couloirsMix: 2, eventEveryX: 3,
       },
+      ...(devRestore ? {
+        connectionMode: devRestore.connectionMode,
+        phoneController: devRestore.phoneController,
+        sessionCode: devRestore.sessionCode,
+      } : {}),
     });
   },
 }));

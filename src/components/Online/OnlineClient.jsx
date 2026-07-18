@@ -4,10 +4,10 @@
 //  2) JEU : une fois l'hôte lancé, hydrate le plateau depuis l'instantané diffusé
 //     et rend l'app complète ; le joueur possède son équipe (via son jeton) et
 //     joue son tour / gère son équipe depuis son écran.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import App from '../../App';
 import { useGameStore } from '../../store/gameStore';
-import { fetchSession, subscribeSession, subscribePresence, onlineToken } from '../../logic/sessionConfig';
+import { fetchSession, subscribeSession, subscribePresence, onlineToken, sendIntent } from '../../logic/sessionConfig';
 import { hydrateSnapshot } from '../../logic/onlineSnapshot';
 import { bindMirrorTurnActions } from '../../logic/onlineMirror';
 import OnlineController from './OnlineController';
@@ -15,6 +15,15 @@ import OnlineLobby from './OnlineLobby';
 
 // Jeton local persistant (identité du joueur → possession de son équipe) :
 // helper partagé onlineToken (même clé que OnlineController / OnlineLobby).
+
+// Liens de test (testeur de mini-jeux) : ?token=<jeton imposé>&claim=<idx>
+// ouvre un client déjà propriétaire d'une équipe de la partie sandbox, sans
+// passer par le lobby (même convention que le companion mobile).
+function readTestParams() {
+  const p = new URLSearchParams(window.location.search);
+  const claim = p.get('claim');
+  return { token: p.get('token') || '', claim: claim != null && claim !== '' ? Number(claim) : null };
+}
 
 function Splash({ code, children }) {
   return (
@@ -34,7 +43,7 @@ export default function OnlineClient({ code }) {
   const [lastSync, setLastSync] = useState(0);
   const [hostOnline, setHostOnline] = useState(false);
   const [viewers, setViewers] = useState(0);
-  const [token] = useState(() => onlineToken(code));
+  const [token] = useState(() => readTestParams().token || onlineToken(code));
 
   useEffect(() => {
     if (!code) return;
@@ -61,6 +70,17 @@ export default function OnlineClient({ code }) {
     if (!started) return;
     useGameStore.getState().setOnlineIdentity(token, code);
     bindMirrorTurnActions(code, token);
+  }, [started, code, token]);
+
+  // Lien de test : réclame l'équipe (?claim=idx) une seule fois — l'hôte lie le
+  // jeton à l'équipe (claimTeam) et republie, rendant ce client propriétaire.
+  const claimedRef = useRef(false);
+  useEffect(() => {
+    if (!started || claimedRef.current) return;
+    const { claim } = readTestParams();
+    if (claim == null || !code || !token) return;
+    claimedRef.current = true;
+    sendIntent(code, token, 'claimTeam', { idx: claim }).catch(() => {});
   }, [started, code, token]);
 
   // Présence : l'hôte est-il là ? combien de joueurs/spectateurs ?

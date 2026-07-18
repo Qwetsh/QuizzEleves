@@ -270,6 +270,19 @@ Panneau OUTILS (déverrouillage triple-clic logo + code, dispo en prod) →
 mini-jeu du registre (MINIGAME_THEMES + duel générique), sans attendre de
 tomber dessus en partie. Sauvegarde intacte, sortie par ✕.
 
+Choix de SURFACE au clic (MinigameSurfacePicker) : tactile (écran partagé,
+défaut) / TV + téléphones (manette) / multi en ligne. Les surfaces distantes
+reproduisent les vrais flags (`devStartFight(subject, force, surface)` stashe
+connectionMode/phoneController/sessionCode dans `_devRestore`, restaurés au
+reset ✕) et affichent en jeu un panneau QR (SandboxSurfacePanel) : un QR par
+camp du duel, lien `?claim=idx&token=…` qui rend l'appareil propriétaire de
+son équipe sans lobby (manette : convention MobileApp existante ; en ligne :
+support ajouté à OnlineClient). La session est créée par le panneau (manette)
+ou par OnlineHost (en ligne) ; publication continue inchangée
+(MobileSessionPanel / OnlineHost). Fidèle au routage réel de fightBegin :
+manette → Curioscope au tel sinon mini-jeu à l'écran ; en ligne → Curioscope
+sur les appareils sinon duel éclair.
+
 ### P5 — Extension du catalogue + confort
 - [CC] Univers Terre du Milieu (tuiles GPL récupérables directement) puis GTA V (tuiles
   MIT) — quasi gratuit une fois le moteur en place.

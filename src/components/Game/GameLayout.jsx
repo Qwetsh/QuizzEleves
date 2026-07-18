@@ -18,6 +18,7 @@ import TradeConsumer from './TradeConsumer';
 import ForgeServiceOverlay from './ForgeServiceOverlay';
 import StatsArchiver from './StatsArchiver';
 import TestLinksPanel from './TestLinksPanel';
+import SandboxSurfacePanel from './SandboxSurfacePanel';
 import DevItemGiver from './DevItemGiver';
 import DevFaceGiver from './DevFaceGiver';
 import { OFFLINE } from '../../logic/offline';
@@ -344,6 +345,9 @@ export default function GameLayout() {
       {!OFFLINE && !mirror && <TradeConsumer />}
       {!OFFLINE && !mirror && <StatsArchiver />}
       {!OFFLINE && !mirror && <TestLinksPanel />}
+      {/* Testeur de mini-jeux, surfaces distantes : QR d'accès manette / client
+          en ligne du duel bac à sable (se masque tout seul hors sandbox). */}
+      {!OFFLINE && !mirror && <SandboxSurfacePanel />}
 
       {/* Animations (spectacles non interactifs) */}
       <FlyingCoins />
