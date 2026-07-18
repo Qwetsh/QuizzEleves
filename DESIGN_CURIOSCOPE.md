@@ -243,6 +243,21 @@ journalise directement la position sur la carte du CONTINENT (cx/cy 0..1) —
   (labels/difficulté) → `build-spots` (README étapes 3-4).
 - **[TOI]** Calibrer `score.k`/`freeDist` en jouant (README étape 5).
 
+### P3.5 — Duels MULTI-SURFACE — ✅ LIVRÉE 2026-07-18
+Demande utilisateur : 3 affichages selon la surface (cf. mémoire « surfaces »).
+1. **Tactile** (écran partagé) : moteur composant conservé — nouvelle mise en
+   page photo GRANDE au centre, carte verticale de chaque côté.
+2. **Écran + téléphones** : commit-reveal piloté par le STORE
+   (`curioFightHandlers`, routage dans fightBegin si `phoneController`) — la
+   TV n'affiche que la photo + statuts (CurioDuelStage), chaque duelliste
+   (défenseur compris) place son pin sur SON téléphone (CurioPlaceView monté
+   dans MobileApp, intents `turnCurioValidate {x,y}` / `turnCurioNext`).
+3. **En ligne** : même moteur store (fini le repli duel éclair pour les thèmes
+   curioscope) — clients via OnlineController, hôte-joueur via CurioDuelStage.
+Anti-triche : cible (x/y + label sauf « Place : X ») et marques strippées de
+`buildTurnPayload` et `serializeSnapshot` tant que `reveal` est null. Bots et
+boss restent en duel éclair. 1085 tests, vérifié en jeu (spectateur + reveal).
+
 ### P4 — Panoramas 360°
 - [CC] `render: 'pano'` + Photo Sphere Viewer intégré au moteur (flat et pano cohabitent).
 - **[TOI]** WoW : PanoShot + Hugin sur ~10-20 lieux emblématiques.
