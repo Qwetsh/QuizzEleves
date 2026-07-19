@@ -15,6 +15,12 @@ import {
   IRREGULAR_VERBS, REGULAR_VERBS, SVT_CHALLENGES, TIMELINE_EVENTS,
   RPG_CHALLENGE, MEMORY_VOCAB,
 } from '../../../data/fightData';
+import {
+  ERA_PREHISTOIRE_ANTIQUITE, ERA_MOYEN_AGE, ERA_EPOQUE_MODERNE,
+  ERA_REVOLUTIONS_XIXE, ERA_XXE_SIECLE, ERA_MONDE_CONTEMPORAIN,
+  HISTORY_ALL_ERAS, INVENTIONS_TIMELINE, SPACE_DISTANCES,
+  MEMORY_ES, MEMORY_LITT, MEMORY_SPORT, GERMAN_VERB_CHALLENGE, EXPRESSIONS,
+} from '../../../data/fightPacks';
 
 /**
  * Système de mini-jeux de duel — séparé en MOTEURS (theme-agnostiques) et THÈMES
@@ -48,6 +54,9 @@ const ENGINES = {
   // moteur = props supplémentaires passées au composant par MinigameStage.
   imgrace: { Component: DeblurGame, persistent: false, props: { sharp: true } },
   silhouette: { Component: WhosThatPokemon, persistent: false },
+  // Duel de rapidité à CONTENU EMBARQUÉ [{ q, a[], c }] — même jeu que le
+  // générique mais avec les questions du thème (ex. « Finis l'expression »).
+  quick: { Component: QuickDuel, persistent: false },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -140,6 +149,73 @@ const THEME_MINIGAMES = {
     engine: 'silhouette', content: { fromQuestions: 'pokemon_silhouette' },
     name: 'fight.mg.pokemon_silhouette.name', rules: 'fight.mg.wtp.rules',
     howto: { demo: 'silhouette', goal: 'fight.mg.wtp.goal', steps: ['fight.mg.wtp.step1', 'fight.mg.wtp.step2', 'fight.mg.wtp.step3', 'fight.mg.wtp.step4'] },
+  },
+
+  // ── QUICK WINS feuille de route (MINIJEUX_SOUHAITS.md) : moteurs existants
+  // + packs de contenu (src/data/fightPacks.js). Les libellés de frise/memory/
+  // verbes réutilisent les clés génériques existantes, seuls les noms changent.
+
+  // Frises d'histoire : le DOMAINE = dates célèbres toutes époques ; chaque
+  // époque = ses dates précises (réservées au sous-thème, souhait utilisateur).
+  histoire_g: {
+    engine: 'timeline', content: HISTORY_ALL_ERAS,
+    name: 'fight.mg.grandefrise.name', rules: 'fight.mg.histoire.rules',
+    howto: { demo: 'timeline', goal: 'fight.mg.histoire.goal', steps: ['fight.mg.histoire.step1', 'fight.mg.histoire.step2', 'fight.mg.histoire.step3', 'fight.mg.histoire.step4'] },
+  },
+  ...Object.fromEntries([
+    ['prehistoire_antiquite', ERA_PREHISTOIRE_ANTIQUITE],
+    ['moyen_age', ERA_MOYEN_AGE],
+    ['epoque_moderne', ERA_EPOQUE_MODERNE],
+    ['revolutions_xixe', ERA_REVOLUTIONS_XIXE],
+    ['xxe_siecle', ERA_XXE_SIECLE],
+    ['monde_contemporain', ERA_MONDE_CONTEMPORAIN],
+  ].map(([key, content]) => [key, {
+    engine: 'timeline', content,
+    name: 'fight.mg.frisepoque.name', rules: 'fight.mg.histoire.rules',
+    howto: { demo: 'timeline', goal: 'fight.mg.histoire.goal', steps: ['fight.mg.histoire.step1', 'fight.mg.histoire.step2', 'fight.mg.histoire.step3', 'fight.mg.histoire.step4'] },
+  }])),
+  inventions_technologies: {
+    engine: 'timeline', content: INVENTIONS_TIMELINE,
+    name: 'fight.mg.inventions.name', rules: 'fight.mg.histoire.rules',
+    howto: { demo: 'timeline', goal: 'fight.mg.histoire.goal', steps: ['fight.mg.histoire.step1', 'fight.mg.histoire.step2', 'fight.mg.histoire.step3', 'fight.mg.histoire.step4'] },
+  },
+  // Frise par DISTANCE au Soleil (le moteur ordonne par valeur, unité M km).
+  astronomie_espace: {
+    engine: 'timeline', content: SPACE_DISTANCES,
+    name: 'fight.mg.espace.name', rules: 'fight.mg.espace.rules',
+    howto: { demo: 'timeline', goal: 'fight.mg.espace.goal', steps: ['fight.mg.histoire.step1', 'fight.mg.espace.step2', 'fight.mg.histoire.step3', 'fight.mg.histoire.step4'] },
+  },
+
+  // Memory : espagnol (mot ↔ traduction), littérature (auteur ↔ œuvre),
+  // sport (athlète ↔ discipline, sur le DOMAINE → hérité par tous les sports).
+  espagnol: {
+    engine: 'memory', content: MEMORY_ES,
+    name: 'fight.mg.espagnol.name', rules: 'fight.mg.espagnol.rules',
+    howto: { demo: 'memory', goal: 'fight.mg.espagnol.goal', steps: ['fight.mg.vocabulaire.step1', 'fight.mg.mem.step2', 'fight.mg.vocabulaire.step3', 'fight.mg.vocabulaire.step4'] },
+  },
+  litterature_auteurs: {
+    engine: 'memory', content: MEMORY_LITT,
+    name: 'fight.mg.litterature.name', rules: 'fight.mg.litterature.rules',
+    howto: { demo: 'memory', goal: 'fight.mg.litterature.goal', steps: ['fight.mg.vocabulaire.step1', 'fight.mg.mem.step2', 'fight.mg.vocabulaire.step3', 'fight.mg.vocabulaire.step4'] },
+  },
+  sport_g: {
+    engine: 'memory', content: MEMORY_SPORT,
+    name: 'fight.mg.sport.name', rules: 'fight.mg.sport.rules',
+    howto: { demo: 'memory', goal: 'fight.mg.sport.goal', steps: ['fight.mg.vocabulaire.step1', 'fight.mg.mem.step2', 'fight.mg.vocabulaire.step3', 'fight.mg.vocabulaire.step4'] },
+  },
+
+  // Chasse aux verbes forts (bubble, libellés verbes = déjà génériques).
+  allemand: {
+    engine: 'bubble', content: [GERMAN_VERB_CHALLENGE],
+    name: 'fight.mg.allemand.name', rules: 'fight.mg.anglais.rules',
+    howto: { demo: 'tapBubbles', goal: 'fight.mg.anglais.goal', steps: ['fight.mg.anglais.step1', 'fight.mg.anglais.step2', 'fight.mg.anglais.step3', 'fight.mg.anglais.step4'] },
+  },
+
+  // Finis l'expression (duel de rapidité à contenu embarqué).
+  langues_expressions: {
+    engine: 'quick', content: EXPRESSIONS,
+    name: 'fight.mg.expressions.name', rules: 'fight.mg.expressions.rules',
+    howto: { demo: 'pickAnswer', goal: 'fight.mg.expressions.goal', steps: ['fight.mg.default.step1', 'fight.mg.default.step2', 'fight.mg.default.step3'] },
   },
 
   // ── Drapeau éclair : course d'images NETTES (moteur imgrace) ──

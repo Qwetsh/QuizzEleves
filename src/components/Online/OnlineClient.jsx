@@ -12,6 +12,7 @@ import { hydrateSnapshot } from '../../logic/onlineSnapshot';
 import { bindMirrorTurnActions } from '../../logic/onlineMirror';
 import OnlineController from './OnlineController';
 import OnlineLobby from './OnlineLobby';
+import OnlineThemeClient from './OnlineThemeClient';
 
 // Jeton local persistant (identité du joueur → possession de son équipe) :
 // helper partagé onlineToken (même clé que OnlineController / OnlineLobby).
@@ -106,8 +107,13 @@ export default function OnlineClient({ code }) {
   if (!started) {
     if (data === undefined) return <Splash code={code}>Connexion à la partie</Splash>;
     if (data === null) return <Splash code={code}>Partie introuvable — vérifie le code (l’hôte doit avoir ouvert le lobby) :</Splash>;
-    // Même écran lobby que l'hôte (variante client : pas de bouton thèmes /
-    // lancer / retrait), avec MA création d'équipe intégrée.
+    // L'hôte a lancé la phase de CHOIX DES THÈMES (partagée) : on l'affiche pour
+    // que le joueur propose des cassettes / voie le tirage surprise à venir.
+    if (data.status === 'compose') {
+      return <OnlineThemeClient code={code} token={token} compose={data.compose} />;
+    }
+    // Sinon lobby (variante client : pas de bouton thèmes / lancer / retrait),
+    // avec MA création d'équipe intégrée.
     return <OnlineLobby client code={code} token={token} lv2Mode={!!data.lv2Mode} englishMode={!!data.englishMode} />;
   }
 

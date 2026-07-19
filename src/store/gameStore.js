@@ -3125,6 +3125,10 @@ export const useGameStore = create((set, get) => ({
   // sellEquip {slot} / sellBag {key} — par CLÉ d'objet (les index de sac du
   // mobile ne correspondent pas au sac positionnel du TBI).
   applyTeamIntent: (token, type, payload = {}) => {
+    // « suggestCassette » = proposition de thème pendant la phase de choix des
+    // thèmes en ligne (traitée par l'écran de composition, PAS le moteur). Si un
+    // intent résiduel est rejoué une fois la partie lancée, on l'ignore.
+    if (type === 'suggestCassette') return;
     const st = get();
     const idx = st.teams.findIndex((t) => t.token && t.token === token);
     if (idx < 0) return; // jeton inconnu (équipe retirée ?)

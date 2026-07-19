@@ -13,8 +13,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGameStore } from '../../store/gameStore';
 import {
-  createSession, buildSessionPayload, onlineJoinUrl, onlineToken,
-  fetchLobbyTeams, subscribeLobby, removeLobbyTeam, assignLobbyIndices,
+  createSession, publishSession, buildSessionPayload, onlineJoinUrl, onlineToken,
+  fetchLobbyTeams, subscribeLobby, removeLobbyTeam,
   writeLobbyResume, clearLobbyResume, subscribePresence,
 } from '../../logic/sessionConfig';
 import { LobbyCreateScreen } from '../Mobile/MobileApp';
@@ -51,14 +51,12 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
   const sessionCode = useGameStore((s) => s.sessionCode);
   const setSessionCode = useGameStore((s) => s.setSessionCode);
   const setLobbyTeams = useGameStore((s) => s.setLobbyTeams);
-  const startOnlineGame = useGameStore((s) => s.startOnlineGame);
   const openConsole = useGameStore((s) => s.openConsole);
   const setPhase = useGameStore((s) => s.setPhase);
   const extensions = useGameStore((s) => s.extensions);
   const lv2ModeStore = useGameStore((s) => s.lv2Mode);
   const englishModeStore = useGameStore((s) => s.englishMode);
   const onlineCompose = useGameStore((s) => s.onlineCompose);
-  const perimeter = onlineCompose.perimeter;
 
   const code = client ? codeProp : sessionCode;
   const lv2Mode = client ? !!lv2Prop : !!lv2ModeStore;
@@ -67,7 +65,6 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
   const [rowsLoaded, setRowsLoaded] = useState(false); // 1er fetch fini (pré-remplissage fiable)
   const [hostOnline, setHostOnline] = useState(true); // présence (badge côté client)
   const [err, setErr] = useState(null);
-  const [launching, setLaunching] = useState(false);
   // Jeton du joueur local (l'hôte est un joueur comme les autres). Dérivé du
   // code : côté hôte, la session s'ouvre APRÈS le montage (async).
   const token = useMemo(() => tokenProp || (code ? onlineToken(code) : null), [tokenProp, code]);
@@ -90,6 +87,16 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
     if (client || !sessionCode) return;
     writeLobbyResume({ code: sessionCode, compose: onlineCompose });
   }, [client, sessionCode, onlineCompose]);
+
+  // Hôte : (re)publie le statut LOBBY à l'entrée. Indispensable au RETOUR depuis
+  // l'écran de thèmes (bouton ← LOBBY) : la ligne de session est alors en
+  // `status:'compose'` — sans ça, les clients resteraient bloqués sur l'écran de
+  // thèmes. Idempotent (les équipes se lisent dans quete_lobby_teams, pas ici).
+  useEffect(() => {
+    if (client || !sessionCode) return;
+    publishSession(sessionCode, buildSessionPayload({ teams: [], currentTeam: 0, status: 'lobby', shopStock: [], log: [], extensions, lv2Mode: lv2ModeStore })).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, sessionCode]);
 
   // Présence : l'hôte s'annonce dès le LOBBY ; les clients savent s'il est là
   // (un lobby sans hôte ne pourra pas lancer — autant le dire).
@@ -118,22 +125,15 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
 
   const teamsLive = (rows || []).filter((r) => !r.removed);
   const allReady = teamsLive.length > 0 && teamsLive.every((r) => r.ready);
-  const nbVoies = perimeter?.boardSubjects?.length || 0;
-  const canLaunch = !client && nbVoies > 0 && allReady && !launching;
+  const canLaunch = !client && allReady;
 
-  const launch = async () => {
-    if (!canLaunch) return;
-    setLaunching(true);
-    const byToken = {};
-    teamsLive.forEach((r, i) => { byToken[r.token] = i; });
-    try { await assignLobbyIndices(code, byToken); } catch { /* best effort */ }
-    if (startOnlineGame(perimeter)) clearLobbyResume(); // la partie a SA save
-    else setLaunching(false);
-  };
+  // Nouveau flux : le bouton du lobby ouvre l'écran de CHOIX DES THÈMES partagé
+  // (composer / surprise), qui lance ensuite réellement la partie. Le lobby ne
+  // gère plus que les équipes — les thèmes se choisissent APRÈS, à la vue de tous.
+  const goToThemes = () => { if (canLaunch) openConsole('play'); };
 
-  // Ce qui manque encore pour lancer (affiché sous le bouton, côté hôte).
+  // Ce qui manque encore pour continuer (affiché sous le bouton, côté hôte).
   const missing = client ? null
-    : nbVoies === 0 ? 'Insère au moins un thème (bouton 📼 THÈMES).'
     : teamsLive.length === 0 ? 'En attente d’au moins une équipe…'
     : !allReady ? 'En attente que toutes les équipes soient prêtes…'
     : null;
@@ -232,17 +232,13 @@ export default function OnlineLobby({ client = false, code: codeProp, token: tok
         ) : (
           <>
             <div className="olb-actions">
-              <button type="button" className="olb-btn" onClick={() => openConsole('play')}>
-                📼 THÈMES DE LA PARTIE
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: nbVoies ? '#9be88f' : '#e8a13a' }}>
-                  {nbVoies ? `${nbVoies} VOIE${nbVoies > 1 ? 'S' : ''} ✓` : 'AUCUNE VOIE'}
-                </span>
-              </button>
-              <button type="button" className="olb-btn olb-btn--launch" disabled={!canLaunch} onClick={launch}>
-                ▶ LANCER LA PARTIE
+              <button type="button" className="olb-btn olb-btn--launch" disabled={!canLaunch} onClick={goToThemes}>
+                ▶ LANCER — CHOIX DES THÈMES
               </button>
             </div>
-            {missing && <div className="olb-hint">{missing}</div>}
+            <div className="olb-hint">
+              {missing || 'Prochaine étape : choisir les thèmes (composés à plusieurs ou tirés au hasard).'}
+            </div>
           </>
         )}
       </div>

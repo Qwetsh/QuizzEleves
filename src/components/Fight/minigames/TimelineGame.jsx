@@ -4,7 +4,10 @@ import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
 import { useT } from '../../../i18n';
 
-function formatYear(y, T) {
+// `unit` (optionnelle, portée par la carte) : la frise ordonne par VALEUR, pas
+// forcément par année — ex. distances au Soleil en « M km » (astronomie).
+function formatYear(y, T, unit) {
+  if (unit) return `${y} ${unit}`;
   return y < 0 ? T('fight.timeline.bce', { n: -y }) : `${y}`;
 }
 
@@ -64,7 +67,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
     const newPlaced = [...placed];
     newPlaced.splice(correctIndex, 0, current);
     setPlaced(newPlaced);
-    setFeedback({ ok, year: current.year, index: correctIndex });
+    setFeedback({ ok, year: current.year, unit: current.unit, index: correctIndex });
 
     if (ok) soundCorrect(); else soundWrong();
 
@@ -147,7 +150,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
         }}
       >
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: '#6e4e10' }}>
-          {formatYear(card.year, T)}
+          {formatYear(card.year, T, card.unit)}
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--ink-700)', fontFamily: 'var(--font-ui)', lineHeight: 1.3, marginTop: 5 }}>
           {card.name}
@@ -235,7 +238,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
               textShadow: '0 2px 8px rgba(0,0,0,0.5)',
             }}
           >
-            {feedback.ok ? T('fight.timeline.correct', { year: formatYear(feedback.year, T) }) : T('fight.timeline.wrong', { year: formatYear(feedback.year, T) })}
+            {feedback.ok ? T('fight.timeline.correct', { year: formatYear(feedback.year, T, feedback.unit) }) : T('fight.timeline.wrong', { year: formatYear(feedback.year, T, feedback.unit) })}
           </div>
         )}
       </div>

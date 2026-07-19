@@ -1,4 +1,4 @@
-# Mini-jeux par thème — inventaire & souhaits
+﻿# Mini-jeux par thème — inventaire & souhaits
 
 > **Mode d'emploi** : ce doc liste TOUS les thèmes de la base (`quete_themes`,
 > extrait du 2026-07-19) avec le mini-jeu de duel qu'ils déclenchent
@@ -25,20 +25,20 @@
 | Géographie | `geographie` | Tour du monde (Curioscope) | |
 | SVT | `svt` | Le Grand Tri (bulles) | |
 | Anglais | `anglais` | Chasse aux verbes irréguliers (bulles) | |
-| Allemand | `allemand` | Duel de rapidité (générique) | |
-| Espagnol | `espagnol` | Duel de rapidité (générique) | |
+| Allemand | `allemand` | **Chasse aux verbes forts** (bulles) | |
+| Espagnol | `espagnol` | **Memory español** (~90 paires) | |
 
 ## 🏛️ Histoire (culture G)
 
 | Thème | Clé | Mini-jeu actuel | Mini-jeu souhaité |
 |---|---|---|---|
-| **Histoire (domaine)** | `histoire_g` | Duel de rapidité (générique) | |
-| Préhistoire & Antiquité | `prehistoire_antiquite` | Duel de rapidité (générique) | |
-| Moyen Âge | `moyen_age` | Duel de rapidité (générique) | |
-| Époque moderne | `epoque_moderne` | Duel de rapidité (générique) | |
-| Révolutions & XIXe | `revolutions_xixe` | Duel de rapidité (générique) | |
-| XXe siècle | `xxe_siecle` | Duel de rapidité (générique) | |
-| Monde contemporain | `monde_contemporain` | Duel de rapidité (générique) | |
+| **Histoire (domaine)** | `histoire_g` | **La Grande Frise** (dates célèbres toutes époques) | |
+| Préhistoire & Antiquité | `prehistoire_antiquite` | **Frise d'époque** (dates dédiées) | |
+| Moyen Âge | `moyen_age` | **Frise d'époque** (dates dédiées) | |
+| Époque moderne | `epoque_moderne` | **Frise d'époque** (dates dédiées) | |
+| Révolutions & XIXe | `revolutions_xixe` | **Frise d'époque** (dates dédiées) | |
+| XXe siècle | `xxe_siecle` | **Frise d'époque** (dates dédiées) | |
+| Monde contemporain | `monde_contemporain` | **Frise d'époque** (dates dédiées) | |
 | Éphéméride | `ephemeride` | Duel de rapidité (générique) | |
 
 *(note : la Frise du temps existe déjà — elle est branchée sur la matière
@@ -68,9 +68,9 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | Maths & logique | `maths_logique` | Duel de rapidité (générique) | |
 | Physique | `physique` | Duel de rapidité (générique) | |
 | Chimie | `chimie` | Duel de rapidité (générique) | |
-| Astronomie & espace | `astronomie_espace` | Duel de rapidité (générique) | |
+| Astronomie & espace | `astronomie_espace` | **Échelle du Système solaire** (frise par distance) | |
 | Informatique & numérique | `informatique_numerique` | Duel de rapidité (générique) | |
-| Inventions & technologies | `inventions_technologies` | Duel de rapidité (générique) | |
+| Inventions & technologies | `inventions_technologies` | **Frise des inventions** | |
 
 ## 🌿 Nature
 
@@ -89,9 +89,9 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | Thème | Clé | Mini-jeu actuel | Mini-jeu souhaité |
 |---|---|---|---|
 | **Arts & lettres (domaine)** | `arts_g` | Duel de rapidité (générique) | |
-| Littérature & auteurs | `litterature_auteurs` | Duel de rapidité (générique) | |
-| — Harry Potter (intégrale) | `harrypotter` | Duel de rapidité (générique) | |
-| —— Livre 1 | `hp_livre1` | Duel de rapidité (générique) | |
+| Littérature & auteurs | `litterature_auteurs` | **Memory des écrivains** (auteur ↔ œuvre) | |
+| — Harry Potter (intégrale) | `harrypotter` | Memory des écrivains *(hérité — futur duel de sorciers)* | |
+| —— Livre 1 | `hp_livre1` | Memory des écrivains *(hérité)* | |
 | Peinture & sculpture | `peinture_sculpture` | Duel de rapidité (générique) | |
 | Architecture & design | `architecture_design` | Duel de rapidité (générique) | |
 | Musique classique & opéra | `musique_classique_opera` | Duel de rapidité (générique) | |
@@ -123,13 +123,13 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 
 | Thème | Clé | Mini-jeu actuel | Mini-jeu souhaité |
 |---|---|---|---|
-| **Sport (domaine)** | `sport_g` | Duel de rapidité (générique) | |
-| Football | `football` | Duel de rapidité (générique) | |
-| Sports collectifs | `sports_collectifs` | Duel de rapidité (générique) | |
-| Tennis & raquettes | `tennis_raquettes` | Duel de rapidité (générique) | |
-| Athlétisme & JO | `athletisme_jo` | Duel de rapidité (générique) | |
-| Sports mécaniques | `sports_mecaniques` | Duel de rapidité (générique) | |
-| Cyclisme | `cyclisme` | Duel de rapidité (générique) | |
+| **Sport (domaine)** | `sport_g` | **Memory des champions** (athlète ↔ discipline) | |
+| Football | `football` | Memory des champions *(hérité)* | |
+| Sports collectifs | `sports_collectifs` | Memory des champions *(hérité)* | |
+| Tennis & raquettes | `tennis_raquettes` | Memory des champions *(hérité)* | |
+| Athlétisme & JO | `athletisme_jo` | Memory des champions *(hérité)* | |
+| Sports mécaniques | `sports_mecaniques` | Memory des champions *(hérité)* | |
+| Cyclisme | `cyclisme` | Memory des champions *(hérité)* | |
 
 ## 🌍 Société
 
@@ -140,7 +140,7 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | Économie, marques & logos | `economie_marques_logos` | Duel de rapidité (générique) | |
 | Religions & mythologies | `religions_mythologies` | Duel de rapidité (générique) | |
 | Gastronomie & cuisine | `gastronomie_cuisine` | Duel de rapidité (générique) | |
-| Langues & expressions | `langues_expressions` | Duel de rapidité (générique) | |
+| Langues & expressions | `langues_expressions` | **Finis l'expression !** (~60 expressions) | |
 | Fêtes & traditions | `fetes_traditions_symboles` | Duel de rapidité (générique) | |
 
 ## Boîte à moteurs disponibles (réutilisables tels quels avec un simple contenu)

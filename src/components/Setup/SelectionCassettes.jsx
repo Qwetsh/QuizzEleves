@@ -22,8 +22,13 @@ import cassetteTop from '../../assets/cassette-top.png';
 import separatorPlaque from '../../assets/separator-plaque.png';
 import { useGameStore } from '../../store/gameStore';
 import { useAudioStore } from '../../store/audioStore';
-import { themesToCassetteModel, buildPerimeter } from '../../logic/perimeter';
+import { themesToCassetteModel, buildPerimeter, randomThemeSelection, eligibleThemesByDomain } from '../../logic/perimeter';
 import { getQuestions } from '../../data/questions';
+import {
+  publishSession, subscribeIntents, fetchIntents,
+  fetchLobbyTeams, assignLobbyIndices, clearLobbyResume,
+} from '../../logic/sessionConfig';
+import { SurprisePanel, SuggestionTray } from './OnlineComposeExtras';
 // Composants Setup existants hébergés dans les panneaux de la console.
 import TeamCount from './TeamCount';
 import TeamCustomization from './TeamCustomization';
@@ -390,7 +395,6 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   const { DOMAINS, GROUPS } = model;
   // Actions store (toujours appelées ; utilisées seulement en live/main).
   const startGameFromPerimeter = useGameStore((s) => s.startGameFromPerimeter);
-  const setOnlineCompose = useGameStore((s) => s.setOnlineCompose);
   const setPhase = useGameStore((s) => s.setPhase);
   const useBrevet = useGameStore((s) => s.useBrevet);
   // Niveaux scolaires choisis au lancement — MULTI-sélection (ex. 6e + 5e).
@@ -462,6 +466,16 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   // Composition : en ligne, restaurée depuis le store (aller-retour lobby ↔
   // console sans perdre les cassettes insérées) ; sinon state local pur.
   const [slots, setSlots] = useState(() => (onlineMode ? (useGameStore.getState().onlineCompose.slots || []) : []));
+  // --- Choix des thèmes PARTAGÉ (jeu en ligne) : mode composer/surprise,
+  // suggestions des joueurs, exclusions du tirage aléatoire. Gate `onlineMode`. ---
+  const startOnlineGame = useGameStore((s) => s.startOnlineGame);
+  const setLobbyTeams = useGameStore((s) => s.setLobbyTeams);
+  const sessionCode = useGameStore((s) => s.sessionCode);
+  const lobbyTeams = useGameStore((s) => s.lobbyTeams);
+  const [composeMode, setComposeMode] = useState('composer'); // 'composer' | 'surprise'
+  const [suggestions, setSuggestions] = useState([]);         // [{uid, themeId, label, token}]
+  const [excluded, setExcluded] = useState(() => new Set());  // clés de thème bannies (surprise)
+  const [surpriseCount, setSurpriseCount] = useState(4);      // nb de voies tirées
   const [drag, setDrag] = useState(null);
   const [hoverSlot, setHoverSlot] = useState(-1);
   const [lastCard, setLastCard] = useState(null);
@@ -499,6 +513,24 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
   useEffect(() => { slotsRef.current = slots; }, [slots]);
   useEffect(() => () => { Object.values(timers.current).forEach(clearTimeout); }, []);
+
+  // Hôte en ligne : collecte les suggestions de cassettes déposées par les
+  // joueurs (« pourquoi pas celle-là ? ») via des intents `suggestCassette`.
+  useEffect(() => {
+    if (!onlineMode || !sessionCode) return undefined;
+    const seen = new Set();
+    const add = (row) => {
+      if (!row || row.type !== 'suggestCassette') return;
+      const p = row.payload || {};
+      const uid = p.uid || String(row.id);
+      if (seen.has(uid)) return;
+      seen.add(uid);
+      setSuggestions((cur) => (cur.some((s) => s.uid === uid) ? cur : [...cur, { uid, themeId: p.themeId, label: p.label, token: row.token }]));
+    };
+    fetchIntents(sessionCode).then((rows) => rows.forEach(add)).catch(() => {});
+    const unsub = subscribeIntents(sessionCode, add);
+    return unsub;
+  }, [onlineMode, sessionCode]);
 
   // ---------- fit : mise à l'échelle du "stage" 1600×900 ----------
   const fit = useCallback(() => {
@@ -690,6 +722,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   // UNIQUEMENT si une matière scolaire est chargée (choix des niveaux + nom de
   // classe). Sans matière scolaire (culture G…), lancement direct sans menu.
   const onLaunchClick = () => {
+    // En ligne, mode Surprise : pas de cassette à poser ni de menu scolaire —
+    // on tire les thèmes au lancement (tant qu'il reste des thèmes non exclus).
+    if (onlineMode && composeMode === 'surprise') { if (surprisePool > 0) doLaunch(); return; }
     if (!loaded.length) return;
     if (!liveData) {
       setLaunching(true);
@@ -701,20 +736,40 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     setShowLaunch(true);
   };
 
+  // En ligne, la console est la DERNIÈRE étape avant la partie : elle assigne les
+  // index d'équipes du lobby puis démarre (startOnlineGame). Hors ligne, flux normal.
+  const startOnlineNow = async (perimeter) => {
+    const code = sessionCode;
+    try {
+      if (code) {
+        const rows = (await fetchLobbyTeams(code)).filter((r) => !r.removed);
+        setLobbyTeams(rows);
+        const byToken = {};
+        rows.forEach((r, i) => { byToken[r.token] = i; });
+        await assignLobbyIndices(code, byToken);
+      }
+    } catch { /* best effort */ }
+    if (startOnlineGame(perimeter)) clearLobbyResume(); // la partie a SA save
+  };
+
   // Compose le périmètre pour les niveaux choisis et démarre (contourne FINE_MIX
   // via startGameFromPerimeter). Les voies non scolaires ignorent le niveau.
   const doLaunch = () => {
-    if (!loaded.length) return;
-    const perimeter = perimeterFor(levels);
+    let perimeter;
+    if (onlineMode && composeMode === 'surprise') {
+      const level = levelArg(levels);
+      const questions = getQuestions(level, { brevet: useBrevet });
+      const hasContent = (k) => !!questions[k]?.length;
+      const selection = randomThemeSelection({ count: surpriseCount, excluded: [...excluded], hasContent });
+      perimeter = buildPerimeter(selection, { level, hasContent });
+    } else {
+      if (!loaded.length) return;
+      perimeter = perimeterFor(levels);
+    }
     if (!perimeter.boardSubjects.length) return;
     setShowLaunch(false);
-    // En ligne : on ne lance PAS d'ici — on VALIDE la composition dans le store
-    // et on retourne au lobby (c'est son bouton LANCER qui démarre, avec les
-    // équipes du lobby). Sinon flux normal (lancement direct).
-    if (onlineMode) {
-      setOnlineCompose({ slots, levels, perimeter });
-      setPhase('onlineLobby');
-    } else startGameFromPerimeter(perimeter);
+    if (onlineMode) { startOnlineNow(perimeter); return; }
+    startGameFromPerimeter(perimeter);
   };
 
   // DÉMO (dev, données réelles) : insère les 3 premières cassettes du bac —
@@ -770,6 +825,55 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
     return `La Quête de ${joined}${uniq.length > 3 ? ' …' : ''}`;
   };
 
+  // --- Choix des thèmes partagé (en ligne) : dérivés + actions ---
+  // Thèmes éligibles au tirage « Surprise » (à contenu, au niveau choisi), par domaine.
+  const surpriseGroups = useMemo(() => {
+    if (!onlineMode) return [];
+    const level = levelArg(levels);
+    const questions = getQuestions(level, { brevet: useBrevet });
+    return eligibleThemesByDomain({ hasContent: (k) => !!questions[k]?.length });
+  }, [onlineMode, levels, useBrevet]);
+  const surprisePool = useMemo(
+    () => surpriseGroups.reduce((n, g) => n + g.items.filter((it) => !excluded.has(it.key)).length, 0),
+    [surpriseGroups, excluded],
+  );
+  const teamNameOf = (token) => (lobbyTeams.find((t) => t.token === token)?.name) || 'un joueur';
+  // Suggestions à afficher : hors thèmes déjà insérés, dédupliquées par thème.
+  const visibleSuggestions = useMemo(() => {
+    const inSlots = new Set(loaded.map((v) => v.themeId));
+    const seenTheme = new Set();
+    return suggestions.filter((s) => {
+      if (!s.themeId || inSlots.has(s.themeId) || seenTheme.has(s.themeId)) return false;
+      seenTheme.add(s.themeId); return true;
+    }).map((s) => ({ ...s, name: teamNameOf(s.token) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestions, slots, lobbyTeams]);
+  const takeSuggestion = (s) => {
+    const i = firstEmpty();
+    if (i < 0) { flashFull(); return; }
+    commit(s.themeId, i);
+    setSuggestions((cur) => cur.filter((x) => x.uid !== s.uid));
+  };
+  const dismissSuggestion = (uid) => setSuggestions((cur) => cur.filter((x) => x.uid !== uid));
+  const toggleExcluded = (key) => setExcluded((cur) => { const n = new Set(cur); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+
+  // Diffusion de l'état « compose » aux clients (voies choisies, mode, exclusions)
+  // sur la MÊME ligne de session que le lobby/jeu — pas de phase:'game' ni de `v`,
+  // donc OnlineClient reste sur l'écran de thèmes (pas en jeu).
+  useEffect(() => {
+    if (!onlineMode || !sessionCode) return undefined;
+    const voies = loaded.map((v) => ({ label: voieLabel(v), color: v.color }));
+    const excludedList = surpriseGroups.flatMap((g) => g.items).filter((it) => excluded.has(it.key)).map((it) => ({ key: it.key, name: it.name }));
+    const payload = {
+      status: 'compose',
+      compose: { mode: composeMode, voies, excluded: excludedList, count: surpriseCount },
+      lv2Mode: useGameStore.getState().lv2Mode, englishMode, publishedAt: Date.now(),
+    };
+    const t = setTimeout(() => { publishSession(sessionCode, payload).catch(() => {}); }, 180);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlineMode, sessionCode, composeMode, slots, excluded, surpriseCount, englishMode, surpriseGroups]);
+
   // ---------- vues dérivées ----------
   const loadedCount = loaded.length;
   const title = genTitle();
@@ -809,9 +913,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
   const statusText = loadedCount === 0 ? '0 VOIE · PRÊT' : `${loadedCount}/${voiesCount} VOIES`;
   // En ligne : on ne peut lancer que si ≥1 équipe a rejoint ET que toutes sont prêtes.
-  // En ligne, la console ne LANCE plus : elle VALIDE la composition (le
-  // lancement vit dans l'écran lobby). Le bouton n'attend donc que des voies.
-  const launchOn = loadedCount > 0;
+  // Bouton de lancement actif : ≥1 voie posée (composer), ou ≥1 thème non exclu
+  // dans le pool (surprise en ligne).
+  const launchOn = (onlineMode && composeMode === 'surprise') ? surprisePool > 0 : loadedCount > 0;
   const deckSpin = loadedCount > 0 ? 'running' : 'paused';
   const lcdText = lastCard ? lastCard.label.toUpperCase() : '— — — — —';
   const windowTint = lastCard ? lastCard.color : '#2c2419';
@@ -1060,8 +1164,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 « play » (exploration des thèmes / réglages seuls). */}
             {!(main && (phoneMode || homeIntent !== 'play')) && (
               <button onClick={onLaunchClick} style={{ display: 'flex', alignItems: 'center', gap: 9, fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 1, padding: '11px 24px', borderRadius: 9, border: '3px solid #150f08', cursor: launchOn ? 'pointer' : 'not-allowed', background: launchOn ? '#57c84d' : '#3a2e22', color: launchOn ? '#0c2a0a' : '#6b5f48', boxShadow: launchOn ? '0 0 18px rgba(87,200,77,.6),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.3)' : 'inset 0 -3px 0 rgba(0,0,0,.3)' }}>
-                <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>{onlineMode ? '✓' : '▶'}</span>
-                <span>{onlineMode ? 'VALIDER' : 'LANCER'}</span>
+                <span style={{ display: 'inline-block', fontSize: 20, animation: 'qm-arrow 1s ease-in-out infinite' }}>▶</span>
+                <span>LANCER</span>
               </button>
             )}
           </div>
@@ -1089,6 +1193,21 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                 );
               })}
             </div>
+            {/* Bascule COMPOSER / SURPRISE (jeu en ligne) : composer à plusieurs
+                (avec suggestions) ou laisser le hasard tirer les thèmes. */}
+            {onlineMode && homeIntent === 'play' && (
+              <div style={{ display: 'flex', gap: 6, marginLeft: 4 }}>
+                {[{ id: 'composer', label: '📼 COMPOSER' }, { id: 'surprise', label: '🎲 SURPRISE' }].map((m) => {
+                  const on = composeMode === m.id;
+                  return (
+                    <button key={m.id} onClick={() => setComposeMode(m.id)}
+                      style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 1, padding: '6px 13px', borderRadius: 6, cursor: 'pointer', border: '2px solid #150f08', display: 'flex', alignItems: 'center', gap: 6, background: on ? '#e8a13a' : '#3a2e22', color: on ? '#241a10' : '#cdbf9e', boxShadow: on ? '0 0 10px rgba(232,161,58,.5),inset 0 2px 0 rgba(255,255,255,.35)' : 'inset 0 -2px 0 rgba(0,0,0,.4)' }}>
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {/* Badge du mode en cours (choisi à l'accueil). */}
             {homeIntent === 'play' && (
               <span style={{ fontFamily: FONT_MONO, fontSize: 14, letterSpacing: 1, color: '#9be88f', border: '2px solid #2a4a22', borderRadius: 4, padding: '3px 10px', background: '#162412' }}>
@@ -1105,7 +1224,10 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
         {/* ============ MIDDLE : PANNEAU ACTIF ============ */}
         <main style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 20, padding: '20px 22px 14px', minHeight: 0 }}>
-          {(!main || tab === 'themes') ? (<>
+          {(!main || tab === 'themes') ? ((onlineMode && composeMode === 'surprise') ? (
+            <SurprisePanel groups={surpriseGroups} excluded={excluded} onToggle={toggleExcluded}
+              count={surpriseCount} setCount={setSurpriseCount} poolCount={surprisePool} />
+          ) : (<>
 
           {/* ---- SHELF ---- */}
           <section style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -1336,7 +1458,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
             </div>
           </section>
-          </>) : renderConsolePanel()}
+          </>)) : renderConsolePanel()}
         </main>
       </div>
 
@@ -1456,6 +1578,11 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, color: '#f4e7cc', textShadow: '0 2px 0 #000' }}>C'EST PARTI !</div>
           </div>
         </div>
+      )}
+
+      {/* Tiroir des suggestions des joueurs (hôte en ligne, mode COMPOSER). */}
+      {onlineMode && composeMode === 'composer' && (
+        <SuggestionTray suggestions={visibleSuggestions} onTake={takeSuggestion} onDismiss={dismissSuggestion} />
       )}
     </div>
   );

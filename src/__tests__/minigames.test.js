@@ -44,6 +44,64 @@ describe('mini-jeux — registre piloté par les données', () => {
   });
 });
 
+// Packs « quick wins » de la feuille de route (fightPacks.js) : chaque nouveau
+// thème résout le bon moteur, et le contenu respecte les invariants du moteur.
+describe('mini-jeux — packs quick wins (frises, memory, verbes, expressions)', () => {
+  it('frises : domaine histoire = dates célèbres, époques = pools dédiés', () => {
+    const domain = getMinigame('histoire_g');
+    expect(domain.persistent).toBe(true); // moteur timeline
+    expect(domain.content.length).toBeGreaterThanOrEqual(25);
+    expect(domain.content.every((e) => e.top)).toBe(true); // que des célèbres
+    for (const era of ['prehistoire_antiquite', 'moyen_age', 'epoque_moderne', 'revolutions_xixe', 'xxe_siecle', 'monde_contemporain']) {
+      const mg = getMinigame(era);
+      expect(mg.Component).toBe(domain.Component);
+      expect(mg.content.length).toBeGreaterThanOrEqual(15);
+      // les dates précises (non-top) restent RÉSERVÉES à l'époque
+      expect(mg.content.some((e) => !e.top)).toBe(true);
+      expect(mg.content.every((e) => typeof e.name === 'string' && Number.isFinite(e.year))).toBe(true);
+    }
+    expect(getMinigame('inventions_technologies').Component).toBe(domain.Component);
+  });
+
+  it('échelle du Système solaire : frise par distance avec unité', () => {
+    const mg = getMinigame('astronomie_espace');
+    expect(mg.content.every((e) => e.unit === 'M km' && e.year > 0)).toBe(true);
+    const years = mg.content.map((e) => e.year);
+    expect(new Set(years).size).toBe(years.length); // pas d'égalités ambiguës
+  });
+
+  it('memory : paires uniques des deux côtés (espagnol, littérature, sport)', () => {
+    for (const key of ['espagnol', 'litterature_auteurs', 'sport_g']) {
+      const mg = getMinigame(key);
+      expect(mg.Component).toBe(getMinigame('vocabulaire').Component);
+      expect(mg.content.length).toBeGreaterThanOrEqual(20);
+      const as = mg.content.map((p) => p.a), bs = mg.content.map((p) => p.b);
+      expect(new Set(as).size).toBe(as.length);
+      expect(new Set(bs).size).toBe(bs.length); // ex. UN athlète par sport
+    }
+  });
+
+  it('allemand : chasse aux verbes forts sur le moteur bubble', () => {
+    const mg = getMinigame('allemand');
+    expect(mg.Component).toBe(getMinigame('anglais').Component);
+    const { good, bad } = mg.content[0];
+    expect(good.length).toBeGreaterThanOrEqual(20);
+    expect(bad.length).toBeGreaterThanOrEqual(15);
+    expect(good.filter((v) => bad.includes(v))).toEqual([]);
+  });
+
+  it('finis l\'expression : duel de rapidité à contenu embarqué valide', () => {
+    const mg = getMinigame('langues_expressions');
+    expect(mg.Component).toBe(getDefaultMinigame().Component); // QuickDuel
+    expect(mg.content.length).toBeGreaterThanOrEqual(40);
+    for (const item of mg.content) {
+      expect(item.a.length).toBe(4);
+      expect(new Set(item.a).size).toBe(4); // réponses toutes distinctes
+      expect(item.a[item.c]).toBeTruthy(); // index de la bonne réponse valide
+    }
+  });
+});
+
 // Cascade thème → ancêtres → générique (DESIGN_MINIGAMES.md §3) : un thème sans
 // mini-jeu custom hérite de celui de sa catégorie via l'arbre quete_themes ; une
 // entrée non jouable (curioscope sans spots) est SAUTÉE, pas court-circuitée.

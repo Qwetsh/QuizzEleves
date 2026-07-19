@@ -135,3 +135,44 @@ export function themesToCassetteModel() {
   }
   return { DOMAINS, GROUPS };
 }
+
+// --- Sélection ALÉATOIRE de thèmes (mode « Surprise » du jeu en ligne) ---
+
+/**
+ * Feuilles-thèmes à contenu, regroupées par domaine (pour la checklist
+ * d'exclusion côté hôte + la résolution des noms côté client). `hasContent`
+ * (fourni via getQuestions au niveau choisi) filtre les thèmes sans question.
+ * @returns {Array<{domain:string, name:string, color:string, items:Array<{key:string, subjectKey:string, name:string}>}>}
+ */
+export function eligibleThemesByDomain({ hasContent = () => true } = {}) {
+  const out = [];
+  for (const rootKey of THEME_ROOTS) {
+    const root = THEMES[rootKey];
+    if (!root) continue;
+    const items = leafNodesUnder(rootKey)
+      .filter((n) => n.subjectKey && hasContent(n.subjectKey))
+      .map((n) => ({ key: n.key, subjectKey: n.subjectKey, name: n.name }));
+    if (!items.length) continue;
+    out.push({ domain: root.key, name: root.name, color: root.color || '#d9cda5', items });
+  }
+  return out;
+}
+
+/**
+ * Tire `count` thèmes-feuilles DISTINCTS au hasard parmi ceux à contenu, hors
+ * `excluded` (clés de thème bannies par l'hôte). Retourne une `selection` prête
+ * pour buildPerimeter. Repli : si le pool est plus petit que `count`, prend tout.
+ * @param {{ count?:number, excluded?:string[], hasContent?:(k:string)=>boolean }} opts
+ * @returns {Array<{themeKey:string}>}
+ */
+export function randomThemeSelection({ count = 4, excluded = [], hasContent = () => true } = {}) {
+  const ex = new Set(excluded);
+  const pool = eligibleThemesByDomain({ hasContent }).flatMap((d) => d.items).filter((t) => !ex.has(t.key));
+  // Fisher–Yates (Math.random : runtime navigateur/tests, hors scripts workflow).
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const n = Math.max(1, Math.min(count, pool.length));
+  return pool.slice(0, n).map((t) => ({ themeKey: t.key }));
+}

@@ -1,9 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { shuffle } from '../../../data/fightData';
+import { shuffleAnswers } from '../../../logic/questionPicker';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
 import { useT } from '../../../i18n';
+
+// Anti-répétition du mode CONTENU : indices déjà servis, par tableau de contenu
+// (module-level : survit aux remontages entre manches ; reset quand épuisé).
+const servedByContent = new WeakMap();
 
 /**
  * Duel de rapidité (toutes matières) — écran scindé tactile.
@@ -11,17 +16,29 @@ import { useT } from '../../../i18n';
  * indépendamment). Le premier à toucher la bonne réponse gagne la manche.
  * Une mauvaise réponse verrouille son côté ; deux côtés verrouillés =
  * nouvelle question.
+ *
+ * `content` (optionnel) = [{ q, a[], c }] : questions EMBARQUÉES du thème
+ * (ex. « Finis l'expression ») au lieu du pool de la matière.
  */
-export default function QuickDuel({ attacker, defender, subject, round, onRoundWin }) {
+export default function QuickDuel({ attacker, defender, subject, round, onRoundWin, content }) {
   const T = useT();
   const fightPickQuestion = useGameStore((s) => s.fightPickQuestion);
+
+  const pickFromContent = () => {
+    let served = servedByContent.get(content);
+    if (!served || served.size >= content.length) { served = new Set(); servedByContent.set(content, served); }
+    const free = content.map((_, i) => i).filter((i) => !served.has(i));
+    const idx = free[Math.floor(Math.random() * free.length)];
+    served.add(idx);
+    return shuffleAnswers(content[idx]);
+  };
 
   const [question, setQuestion] = useState(null);
   const [locked, setLocked] = useState({ attacker: false, defender: false });
   const [resolved, setResolved] = useState(false);
 
   const newQuestion = () => {
-    setQuestion(fightPickQuestion(subject));
+    setQuestion(Array.isArray(content) && content.length ? pickFromContent() : fightPickQuestion(subject));
     setLocked({ attacker: false, defender: false });
     setResolved(false);
   };

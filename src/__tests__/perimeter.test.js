@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setThemesData, resetThemesData, descendantLeaves, isPureLeaf } from '../data/themes';
-import { buildPerimeter, themesToCassetteModel } from '../logic/perimeter';
+import { buildPerimeter, themesToCassetteModel, eligibleThemesByDomain, randomThemeSelection } from '../logic/perimeter';
 import { repathSubtree, slugifyKey } from '../logic/themesConfig';
 
 // Petit arbre de test : scolaire (2 matières), divertissement > cinema (1 film),
@@ -166,6 +166,57 @@ describe('repathSubtree', () => {
   it('slugifyKey : accents retirés, séparateurs → underscore', () => {
     expect(slugifyKey('Épée à Feu !')).toBe('epee_a_feu');
     expect(slugifyKey('The Elder Scrolls V')).toBe('the_elder_scrolls_v');
+  });
+});
+
+// Sélection ALÉATOIRE (mode « Surprise » en ligne). Utilise l'arbre du
+// beforeEach top-level : scolaire (francais, maths), divertissement>cinema>film_scifi,
+// vide (sans contenu). Pool éligible = francais, maths, film_scifi.
+describe('eligibleThemesByDomain', () => {
+  it('feuilles à contenu, groupées par domaine (vide écarté)', () => {
+    const groups = eligibleThemesByDomain({ hasContent: () => true });
+    expect(groups.map((g) => g.domain)).toEqual(['scolaire', 'divertissement']);
+    expect(groups[0].items.map((i) => i.key)).toEqual(['francais', 'maths']);
+    expect(groups[0].items[0]).toMatchObject({ key: 'francais', subjectKey: 'francais', name: 'Français' });
+    expect(groups[1].items.map((i) => i.key)).toEqual(['film_scifi']);
+  });
+
+  it('filtre hasContent', () => {
+    const groups = eligibleThemesByDomain({ hasContent: (k) => k !== 'maths' });
+    expect(groups[0].items.map((i) => i.key)).toEqual(['francais']);
+  });
+});
+
+describe('randomThemeSelection', () => {
+  const POOL = ['francais', 'maths', 'film_scifi'];
+
+  it('tire `count` thèmes DISTINCTS du pool, au format buildPerimeter', () => {
+    const sel = randomThemeSelection({ count: 2, hasContent: () => true });
+    expect(sel.length).toBe(2);
+    const keys = sel.map((s) => s.themeKey);
+    expect(new Set(keys).size).toBe(2);
+    keys.forEach((k) => expect(POOL).toContain(k));
+  });
+
+  it('respecte les exclusions (clamp au pool restant)', () => {
+    const sel = randomThemeSelection({ count: 5, excluded: ['francais', 'maths'], hasContent: () => true });
+    expect(sel).toEqual([{ themeKey: 'film_scifi' }]);
+  });
+
+  it('pool plus petit que count → prend tout', () => {
+    const sel = randomThemeSelection({ count: 10, hasContent: () => true });
+    expect(sel.map((s) => s.themeKey).sort()).toEqual([...POOL].sort());
+  });
+
+  it('tout exclu → sélection vide', () => {
+    const sel = randomThemeSelection({ count: 3, excluded: POOL, hasContent: () => true });
+    expect(sel).toEqual([]);
+  });
+
+  it('sélection → buildPerimeter donne des voies valides', () => {
+    const sel = randomThemeSelection({ count: 3, hasContent: () => true });
+    const p = buildPerimeter(sel, { hasContent: () => true });
+    expect(p.boardSubjects.length).toBe(3);
   });
 });
 
