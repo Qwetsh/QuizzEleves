@@ -27,3 +27,6 @@ map-design/
 # Sprites de brouillon (essais intermédiaires _event_*, _chest_* …) — ~14 Mo,
 # non utilisés à l'exécution. Restent en local.
 tmp_sprites/
+
+# Captures de travail des sessions Claude
+.claude-screens/

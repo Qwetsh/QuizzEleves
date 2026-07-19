@@ -16,6 +16,7 @@
 //   target: { id, label, x, y, universe, image, showName } | null,
 //   marks: { attacker: {x,y}|null, defender }, validated: { attacker, defender },
 //   reveal: null | { dA, dB, pA, pB },
+//   nextReady: { attacker, defender },  // « Suivant » après révélation : il faut les DEUX
 // }
 import {
   getUniverse, universeMetric, universeScore, pickSpot, spotPhoto, CURIO_TARGET_SCORE,
@@ -37,6 +38,7 @@ export function startCurioDuel(set, get, universes) {
         marks: { attacker: null, defender: null },
         validated: { attacker: false, defender: false },
         reveal: null,
+        nextReady: { attacker: false, defender: false },
       },
     },
   });
@@ -70,6 +72,7 @@ function newTarget(set, get) {
         marks: { attacker: null, defender: null },
         validated: { attacker: false, defender: false },
         reveal: null,
+        nextReady: { attacker: false, defender: false },
       },
     },
   });
@@ -118,10 +121,21 @@ export function curioDuelValidate(set, get, side, pos = null) {
 }
 
 // Manche suivante (après révélation) — ou victoire directe à 10 000 pts.
-export function curioDuelNext(set, get) {
+// `side` : demandé par UN duelliste (téléphone / client en ligne) → on attend
+// que les DEUX camps aient appuyé « Suivant ». Sans side (bouton de l'écran
+// partagé / hôte non-duelliste = autorité prof), on avance directement.
+export function curioDuelNext(set, get, side = null) {
   const f = get().showFight;
   const c = f?.curio;
   if (!c || !c.reveal) return;
+  if (side) {
+    if (!SIDES.includes(side) || c.nextReady?.[side]) return;
+    const nextReady = { ...c.nextReady, [side]: true };
+    if (!nextReady.attacker || !nextReady.defender) {
+      set({ showFight: { ...f, curio: { ...c, nextReady } } });
+      return;
+    }
+  }
   const { attacker, defender } = c.scores;
   if ((attacker >= CURIO_TARGET_SCORE || defender >= CURIO_TARGET_SCORE) && attacker !== defender) {
     get().fightMatchWin(attacker > defender ? 'attacker' : 'defender');

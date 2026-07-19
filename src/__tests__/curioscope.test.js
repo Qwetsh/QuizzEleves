@@ -347,9 +347,27 @@ describe('duel Curioscope piloté par le store (surfaces téléphones / en ligne
       expect(S().showFight.curio.validated.defender).toBe(true);
       S().applyTeamIntent('TK0', 'turnCurioValidate', { x: 0.1, y: 0.1 });
       expect(S().showFight.curio.reveal).toBeTruthy();
+      // « Suivant » : UN camp ne suffit pas — il faut les DEUX (ou l'écran partagé).
       S().applyTeamIntent('TK1', 'turnCurioNext', {});
+      expect(S().showFight.curio.roundNo).toBe(1);
+      expect(S().showFight.curio.nextReady).toEqual({ attacker: false, defender: true });
+      S().applyTeamIntent('TK1', 'turnCurioNext', {}); // double-clic du même camp : no-op
+      expect(S().showFight.curio.roundNo).toBe(1);
+      S().applyTeamIntent('TK0', 'turnCurioNext', {});
       expect(S().showFight.curio.roundNo).toBe(2);
+      expect(S().showFight.curio.nextReady).toEqual({ attacker: false, defender: false }); // remis à zéro
     }
+    setCurioSpots({});
+  });
+
+  it('« Suivant » sans camp (bouton écran partagé = autorité) : avance directe', () => {
+    startVersus();
+    const t = S().showFight.curio.target;
+    S().curioDuelValidate('attacker', { x: t.x, y: t.y });
+    S().curioDuelValidate('defender', { x: 0.1, y: 0.9 });
+    expect(S().showFight.curio.reveal).toBeTruthy();
+    S().curioDuelNext();
+    expect(S().showFight.curio.roundNo).toBe(2);
     setCurioSpots({});
   });
 

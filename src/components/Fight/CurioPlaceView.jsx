@@ -28,9 +28,12 @@ export default function CurioPlaceView({ fight, teams, mySide, onValidate, onNex
   const c = fight?.curio;
   const [mark, setMark] = useState(null);
   const [sent, setSent] = useState(false);
+  // « Suivant » appuyé localement (optimiste) — la manche n'avance que quand
+  // les DEUX camps l'ont demandé (nextReady côté hôte).
+  const [nextSent, setNextSent] = useState(false);
   const roundNo = c?.roundNo || 1;
   // Nouvelle manche → repère local remis à zéro.
-  useEffect(() => { setMark(null); setSent(false); }, [roundNo]);
+  useEffect(() => { setMark(null); setSent(false); setNextSent(false); }, [roundNo]);
 
   if (!c) return null;
   const u = getUniverse(c.universe);
@@ -42,6 +45,7 @@ export default function CurioPlaceView({ fight, teams, mySide, onValidate, onNex
   const reveal = c.reveal;
   const iValidated = sent || !!c.validated?.[mySide];
   const otherValidated = !!c.validated?.[mySide === 'attacker' ? 'defender' : 'attacker'];
+  const iNextReady = nextSent || !!c.nextReady?.[mySide];
 
   const fmt = (d) => {
     if (d < 1) return T('fight.geo.pileDessus');
@@ -141,8 +145,13 @@ export default function CurioPlaceView({ fight, teams, mySide, onValidate, onNex
             {' — '}{att.emoji} {fmt(reveal.dA)} <strong style={{ color: '#f3c969' }}>+{pts(reveal.pA)}</strong>
             {' · '}{def.emoji} {fmt(reveal.dB)} <strong style={{ color: '#f3c969' }}>+{pts(reveal.pB)}</strong>
           </div>
-          <button className="btn btn--green" style={{ padding: '10px 0', fontSize: 15 }} onClick={onNext}>
-            {T('fight.placement.next')}
+          <button
+            className="btn btn--green"
+            disabled={iNextReady}
+            style={{ padding: '10px 0', fontSize: 15, opacity: iNextReady ? 0.45 : 1 }}
+            onClick={() => { if (!iNextReady) { setNextSent(true); onNext(); } }}
+          >
+            {iNextReady ? T('fight.placement.waitingOpponent') : T('fight.placement.next')}
           </button>
         </div>
       )}

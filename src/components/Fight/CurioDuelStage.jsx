@@ -1,4 +1,6 @@
 import { lazy, Suspense } from 'react';
+// Police « LCD » du bandeau TV rétro (auto-hébergée, comme l'écran cassettes).
+import '@fontsource/vt323/400.css';
 import { useGameStore } from '../../store/gameStore';
 import { getUniverse } from '../../data/universes';
 import { onlineToken } from '../../logic/sessionConfig';
@@ -34,6 +36,7 @@ function toViewFight(sf) {
       showName: !!c.target?.showName,
       label: c.target ? c.target.label : null,
       validated: c.validated,
+      nextReady: c.nextReady || null,
       reveal: c.reveal ? {
         ...c.reveal,
         target: { x: c.target.x, y: c.target.y, label: c.target.label },
@@ -72,12 +75,15 @@ export default function CurioDuelStage({ fight, attacker, defender }) {
         teams={teams}
         mySide={hostSide}
         onValidate={(pos) => curioDuelValidate(hostSide, pos)}
-        onNext={curioDuelNext}
+        onNext={() => curioDuelNext(hostSide)}
       />
     );
   }
 
-  // --- Vue spectateur (écran partagé / miroir) ---
+  // --- Vue spectateur (écran partagé / miroir) — habillage TV 90s plein cadre :
+  // bandeau plastique en haut (manche + consigne), photo mystère PLEIN ÉCRAN
+  // avec scanlines CRT, et deux « score bugs » compacts en surimpression bas
+  // gauche/droite (façon habillage de retransmission télé).
   const u = c.target?.universe ? getUniverse(c.target.universe) : null;
   const reveal = c.reveal;
   const fmt = (d) => {
@@ -88,52 +94,100 @@ export default function CurioDuelStage({ fight, attacker, defender }) {
   const showLabel = c.target && (c.target.showName || reveal) ? c.target.label : null;
   const mapFallback = <div style={{ width: '100%', height: '100%', background: '#101c26' }} />;
 
-  const status = (team, side) => (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-      padding: 14, borderRadius: 14,
-      background: `linear-gradient(180deg, ${team.color}22, ${team.color}0d)`,
-      borderTop: `4px solid ${team.color}`, color: '#fff', fontFamily: 'var(--font-display)',
-    }}>
-      <TeamAvatar team={team} size={44} />
-      <span style={{ fontSize: 15 }}>{team.name}</span>
-      <span style={{ fontSize: 16, color: '#f3c969' }}>{pts(c.scores?.[side])}</span>
-      <span style={{ fontSize: 22 }}>{c.validated?.[side] ? '✔' : '⏳'}</span>
-      <span style={{ fontSize: 12, fontFamily: 'var(--font-ui)', color: 'rgba(255,255,255,0.75)' }}>
-        {c.validated?.[side] ? T('fight.placement.validated') : T('curio.duel.placing')}
-      </span>
-    </div>
-  );
+  // Bandeau « plastique » commun haut/bas (bevel clair dessus, sombre dessous).
+  const plastic = {
+    background: 'linear-gradient(180deg, #463e30 0%, #2a2317 100%)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.4)',
+  };
+
+  // « Score bug » compact d'un camp, en surimpression sur la photo.
+  const chip = (team, side, corner) => {
+    const done = !!c.validated?.[side];
+    return (
+      <div style={{
+        position: 'absolute', bottom: 16, [corner]: 16, zIndex: 3, maxWidth: '36%',
+        display: 'flex', alignItems: 'stretch', gap: 9, padding: '6px 12px 6px 8px',
+        borderRadius: 9, border: '2px solid #0f0b06', ...plastic,
+        boxShadow: `${plastic.boxShadow}, 0 8px 20px rgba(0,0,0,0.55)`,
+      }}>
+        <span style={{ width: 5, borderRadius: 3, background: team.color, flexShrink: 0 }} />
+        <TeamAvatar team={team} size={30} />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+          <span style={{
+            fontFamily: 'var(--font-display)', fontSize: 12, color: '#fff', lineHeight: 1.15,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {team.name}
+          </span>
+          <span style={{
+            fontFamily: "'VT323', monospace", fontSize: 19, lineHeight: 1, color: '#f3c969',
+            textShadow: '0 0 6px rgba(243,201,105,0.4)',
+          }}>
+            {pts(c.scores?.[side])}
+          </span>
+        </div>
+        <span
+          title={done ? T('fight.placement.validated') : T('curio.duel.placing')}
+          style={{ alignSelf: 'center', fontSize: 17, color: done ? '#7dffa5' : 'rgba(255,255,255,0.7)' }}
+        >
+          {done ? '✔' : '⏳'}
+        </span>
+      </div>
+    );
+  };
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 14, gap: 10, minHeight: 0, color: '#fff' }}>
-      <div style={{ textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
-        {'\u{1F52D}'} {T('curio.duel.round', { n: c.roundNo })} — {T('curio.duel.phonesHint')}
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, color: '#fff' }}>
+      {/* Bandeau haut : manche (LCD vert) + consigne + rappel téléphones */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 16, padding: '7px 18px',
+        borderBottom: '3px solid #120d07', ...plastic,
+      }}>
+        <span style={{
+          fontFamily: "'VT323', monospace", fontSize: 22, letterSpacing: 1, whiteSpace: 'nowrap',
+          color: '#7dffa5', textShadow: '0 0 7px rgba(125,255,165,0.5)',
+        }}>
+          {'\u{1F52D}'} {T('curio.duel.round', { n: c.roundNo })}
+        </span>
+        <span style={{
+          flex: 1, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 21,
+          color: '#f3c969', textShadow: '0 2px 0 rgba(0,0,0,0.5)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {reveal
+            ? <>{'\u{1F3AF}'} {c.target.label}</>
+            : (showLabel ? T('fight.placement.place', { label: showLabel }) : T('fight.placement.whereIsThis'))}
+        </span>
+        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'rgba(255,255,255,0.65)', whiteSpace: 'nowrap' }}>
+          {'\u{1F4F1}'} {T('curio.duel.phonesHint')}
+        </span>
       </div>
 
       {!reveal ? (
-        <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-          {status(attacker, 'attacker')}
-          <div style={{
-            width: 'clamp(320px, 46vw, 900px)', display: 'flex', flexDirection: 'column', gap: 6,
-            borderRadius: 14, background: 'rgba(255,254,251,0.95)', color: 'var(--ink-900)',
-            padding: '12px 16px', textAlign: 'center', fontFamily: 'var(--font-display)', minHeight: 0,
-          }}>
-            {c.target?.image && (
-              <img
-                src={c.target.image} alt={T('fight.placement.mysteryAlt')} draggable={false}
-                style={{ flex: '1 1 auto', minHeight: 0, width: '100%', objectFit: 'contain', borderRadius: 10, userSelect: 'none' }}
-              />
-            )}
-            <strong style={{ fontSize: 19 }}>
-              {showLabel ? T('fight.placement.place', { label: showLabel }) : T('fight.placement.whereIsThis')}
-            </strong>
-          </div>
-          {status(defender, 'defender')}
+        /* Scène : photo mystère plein cadre + scanlines + score bugs */
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, background: '#07060a', overflow: 'hidden' }}>
+          {c.target?.image && (
+            <img
+              src={c.target.image} alt={T('fight.placement.mysteryAlt')} draggable={false}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', userSelect: 'none' }}
+            />
+          )}
+          {/* Scanlines + vignette CRT (au-dessus de la photo, sous les chips) */}
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.14) 0 1px, transparent 1px 3px)',
+          }} />
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            boxShadow: 'inset 0 0 130px 28px rgba(0,0,0,0.55)',
+          }} />
+          {chip(attacker, 'attacker', 'left')}
+          {chip(defender, 'defender', 'right')}
         </div>
       ) : (
         <>
-          <div style={{ flex: 1, minHeight: 0, borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          {/* Révélation : carte plein cadre + bandeau résultat rétro */}
+          <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
             <Suspense fallback={mapFallback}>
               <UniverseMap
                 key={`${u?.id}-reveal-stage`}
@@ -152,12 +206,22 @@ export default function CurioDuelStage({ fight, attacker, defender }) {
               />
             </Suspense>
           </div>
-          <div style={{ display: 'flex', gap: 18, alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-ui)', fontSize: 14, flexWrap: 'wrap' }}>
-            <span>{'\u{1F3AF}'} <strong>{c.target.label}</strong></span>
-            <span>{attacker.emoji} {fmt(reveal.dA)} <strong style={{ color: '#f3c969' }}>+{pts(reveal.pA)}</strong></span>
-            <span>{defender.emoji} {fmt(reveal.dB)} <strong style={{ color: '#f3c969' }}>+{pts(reveal.pB)}</strong></span>
+          <div style={{
+            display: 'flex', gap: 20, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap',
+            padding: '8px 16px', borderTop: '3px solid #120d07', ...plastic,
+            fontFamily: 'var(--font-ui)', fontSize: 14,
+          }}>
+            {[['attacker', attacker, reveal.dA, reveal.pA], ['defender', defender, reveal.dB, reveal.pB]].map(([side, team, d, p]) => (
+              <span key={side} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <TeamAvatar team={team} size={22} />
+                {fmt(d)}
+                <strong style={{ fontFamily: "'VT323', monospace", fontSize: 19, color: '#f3c969' }}>+{pts(p)}</strong>
+                {/* ✔ = ce camp a déjà demandé la manche suivante sur son écran */}
+                {c.nextReady?.[side] && <span style={{ color: '#7dffa5' }}>{'✔'}</span>}
+              </span>
+            ))}
             {!mirror && (
-              <button className="btn btn--green" onPointerDown={curioDuelNext} style={{ padding: '8px 22px' }}>
+              <button className="btn btn--green" onPointerDown={() => curioDuelNext()} style={{ padding: '8px 22px' }}>
                 {T('fight.placement.next')}
               </button>
             )}
