@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini-jeux par thème — La Quête des Matières</title>
+<style>
+  :root {
+    --bg: #1a1009; --panel: #241a10; --card: #2e2418;
+    --ink: #f4e7cc; --ink-dim: #b9a888; --gold: #f3c969; --green: #9be67f;
+    --line: rgba(243, 201, 105, 0.25);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 80px;
+    background: radial-gradient(ellipse at 50% 0%, #2a1d10, var(--bg) 70%);
+    color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 {
+    font-size: 28px; color: var(--gold); text-align: center; margin: 8px 0 4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6); letter-spacing: 0.02em;
+  }
+  .sub { text-align: center; color: var(--ink-dim); font-size: 14px; margin-bottom: 18px; }
+  .howto {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 18px; font-size: 14px; line-height: 1.55; margin-bottom: 22px;
+  }
+  .howto b { color: var(--gold); }
+  .toolbar {
+    position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; justify-content: center;
+    padding: 10px 0; background: linear-gradient(180deg, var(--bg) 75%, transparent);
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    padding: 10px 20px; border-radius: 10px; border: 2px solid #150f08;
+    background: linear-gradient(180deg, var(--gold), #c99b35); color: #3a2a14;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.4);
+  }
+  button.ghost { background: var(--card); color: var(--ink-dim); }
+  button:active { transform: translateY(1px); }
+  .saved-note { text-align: center; font-size: 12px; color: var(--ink-dim); margin-top: -4px; margin-bottom: 14px; }
+  details {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    margin-bottom: 14px; overflow: hidden;
+  }
+  summary {
+    cursor: pointer; padding: 14px 18px; font-size: 18px; font-weight: 800; color: var(--gold);
+    list-style: none; display: flex; align-items: center; gap: 10px; user-select: none;
+  }
+  summary::before { content: "▸"; transition: transform 0.15s; font-size: 14px; }
+  details[open] summary::before { transform: rotate(90deg); }
+  summary .count { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--ink-dim); }
+  .rows { padding: 4px 12px 14px; }
+  .row {
+    display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(160px, 1fr) minmax(240px, 1.6fr);
+    gap: 10px; padding: 10px 8px; border-top: 1px solid rgba(243,201,105,0.12); align-items: start;
+  }
+  .row:first-child { border-top: none; }
+  .row.domain { background: rgba(243,201,105,0.07); border-radius: 10px; }
+  .row.domain .tname { color: var(--gold); }
+  .tname { font-weight: 700; font-size: 15px; padding-top: 6px; }
+  .tname .indent { color: var(--ink-dim); font-weight: 400; }
+  .tname .key { display: block; font-size: 11px; color: var(--ink-dim); font-weight: 400; font-family: Consolas, monospace; }
+  .tname .hard { font-size: 11px; color: #e0a3a3; }
+  .current { font-size: 13.5px; color: var(--ink-dim); padding-top: 7px; line-height: 1.4; }
+  .current .custom { color: var(--green); font-weight: 700; }
+  .current .inherited { font-style: italic; }
+  textarea {
+    width: 100%; min-height: 40px; resize: vertical; border-radius: 9px;
+    border: 1.5px solid rgba(243,201,105,0.3); background: #fffdf5; color: #3a2c1a;
+    font-family: inherit; font-size: 13.5px; padding: 8px 10px; line-height: 1.4;
+  }
+  textarea:focus { outline: 2px solid var(--gold); border-color: transparent; }
+  textarea::placeholder { color: #b3a488; }
+  textarea.filled { border-color: var(--green); background: #f4fbe9; }
+  .notes-block { margin-top: 20px; }
+  .notes-block h2 { color: var(--gold); font-size: 18px; }
+  .notes-block textarea { min-height: 110px; }
+  .colheads {
+    display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(160px, 1fr) minmax(240px, 1.6fr);
+    gap: 10px; padding: 4px 20px 8px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-dim);
+  }
+  @media (max-width: 700px) {
+    .row, .colheads { grid-template-columns: 1fr; gap: 4px; }
+    .colheads { display: none; }
+    .current { padding-top: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎮 Mini-jeux par thème</h1>
+  <div class="sub">La Quête des Matières — inventaire &amp; souhaits · extrait de la base du 2026-07-19</div>
+
+  <div class="howto">
+    <b>Mode d'emploi :</b> pour chaque thème, écris dans la case <b>« Mini-jeu souhaité »</b> ce que tu imagines
+    (nom libre, description en une ligne, référence : « comme Motus », « combat Pokémon tour par tour »…).
+    Laisse vide si le jeu actuel te convient. Les lignes <b>dorées</b> sont les domaines : un mini-jeu défini là
+    profite à tous les sous-thèmes sans jeu propre (cascade). <i>(hérité)</i> = le sous-thème joue le jeu de sa
+    catégorie. 🔒 = cassette dure (opt-in). <b>Tes saisies sont sauvegardées automatiquement dans ce navigateur.</b>
+    Quand tu as fini : <b>Exporter</b> → envoie-moi le fichier téléchargé.
+  </div>
+
+  <div class="toolbar">
+    <button onclick="exportMd()">📥 Exporter mes souhaits (.md)</button>
+    <button class="ghost" onclick="clearAll()">Tout effacer</button>
+  </div>
+  <div class="saved-note" id="savedNote">💾 Sauvegarde automatique active</div>
+
+  <div id="app"></div>
+
+  <div class="notes-block">
+    <h2>🗒️ Notes générales</h2>
+    <textarea id="globalNotes" placeholder="Idées transverses, priorités, nouveaux moteurs à inventer, remarques…"></textarea>
+  </div>
+</div>
+
+<script>
+// [nom, clé, mini-jeu actuel, indent(0=thème,1=sous,2=sous-sous), flags]
+// flags : d=domaine, h=cassette dure, c=custom (jeu dédié), i=hérité
+const GENERIC = "Duel de rapidité (générique)";
+const DATA = [
+  ["🏫 Scolaire", [
+    ["Français", "francais", "Le Mot le Plus Long", 0, "c"],
+    ["Maths", "maths", "Le Compte est Bon", 0, "c"],
+    ["Histoire", "histoire", "Frise du temps", 0, "c"],
+    ["Géographie", "geographie", "Tour du monde (Curioscope)", 0, "c"],
+    ["SVT", "svt", "Le Grand Tri (bulles)", 0, "c"],
+    ["Anglais", "anglais", "Chasse aux verbes irréguliers (bulles)", 0, "c"],
+    ["Allemand", "allemand", GENERIC, 0, ""],
+    ["Espagnol", "espagnol", GENERIC, 0, ""],
+  ]],
+  ["🏛️ Histoire (culture G)", [
+    ["Histoire — domaine entier", "histoire_g", GENERIC, 0, "d"],
+    ["Préhistoire & Antiquité", "prehistoire_antiquite", GENERIC, 0, ""],
+    ["Moyen Âge", "moyen_age", GENERIC, 0, ""],
+    ["Époque moderne", "epoque_moderne", GENERIC, 0, ""],
+    ["Révolutions & XIXe", "revolutions_xixe", GENERIC, 0, ""],
+    ["XXe siècle", "xxe_siecle", GENERIC, 0, ""],
+    ["Monde contemporain", "monde_contemporain", GENERIC, 0, ""],
+    ["Éphéméride", "ephemeride", GENERIC, 0, ""],
+  ]],
+  ["🧭 Géographie (culture G)", [
+    ["Géographie — domaine entier", "geographie_g", GENERIC, 0, "d"],
+    ["Reliefs, fleuves & climats", "geographie_physique", GENERIC, 0, ""],
+    ["Pays & capitales", "pays_capitales", GENERIC, 0, ""],
+    ["Villes & monuments", "villes_monuments", GENERIC, 0, ""],
+    ["Drapeaux & symboles", "drapeaux_symboles", "Drapeau éclair (drapeau net, course au bon nom)", 0, "c"],
+    ["Mers, déserts & repères", "mers_deserts_reperes", GENERIC, 0, ""],
+    ["Hymnes nationaux", "hymnes_nationaux", GENERIC, 0, "h"],
+    ["Silhouettes de pays", "silhouettes_pays", GENERIC, 0, "h"],
+  ]],
+  ["✦ Sciences", [
+    ["Sciences — domaine entier", "sciences_g", GENERIC, 0, "d"],
+    ["Maths & logique", "maths_logique", GENERIC, 0, ""],
+    ["Physique", "physique", GENERIC, 0, ""],
+    ["Chimie", "chimie", GENERIC, 0, ""],
+    ["Astronomie & espace", "astronomie_espace", GENERIC, 0, ""],
+    ["Informatique & numérique", "informatique_numerique", GENERIC, 0, ""],
+    ["Inventions & technologies", "inventions_technologies", GENERIC, 0, ""],
+  ]],
+  ["🌿 Nature", [
+    ["Nature — domaine entier", "nature_g", GENERIC, 0, "d"],
+    ["Animaux", "animaux", GENERIC, 0, ""],
+    ["Plantes & botanique", "plantes_botanique", GENERIC, 0, ""],
+    ["Corps humain & santé", "corps_humain_sante", GENERIC, 0, ""],
+    ["Cris d'animaux", "cris_animaux", GENERIC, 0, "h"],
+    ["Écologie & environnement", "ecologie_environnement", GENERIC, 0, ""],
+    ["Géologie & minéraux", "geologie_mineraux", GENERIC, 0, ""],
+  ]],
+  ["🎨 Arts & lettres", [
+    ["Arts & lettres — domaine entier", "arts_g", GENERIC, 0, "d"],
+    ["Littérature & auteurs", "litterature_auteurs", GENERIC, 0, ""],
+    ["Harry Potter (intégrale)", "harrypotter", GENERIC, 1, ""],
+    ["Livre 1", "hp_livre1", GENERIC, 2, ""],
+    ["Peinture & sculpture", "peinture_sculpture", GENERIC, 0, ""],
+    ["Architecture & design", "architecture_design", GENERIC, 0, ""],
+    ["Musique classique & opéra", "musique_classique_opera", GENERIC, 0, ""],
+    ["Photographie & arts visuels", "photographie_arts_visuels", GENERIC, 0, ""],
+  ]],
+  ["★ Culture pop", [
+    ["Culture pop — domaine entier", "divertissement_g", GENERIC, 0, "d"],
+    ["Cinéma", "cinema", "L'Affiche mystère (affiche floutée qui se révèle, 200 films TMDB)", 0, "c"],
+    ["Horreur", "film_horreur", "L'Affiche mystère", 1, "i"],
+    ["Super-héros", "super_heros", "L'Affiche mystère", 1, "i"],
+    ["Le Seigneur des anneaux", "seigneur_des_anneaux", "L'Affiche mystère", 1, "i"],
+    ["Affiches de films", "cinema_affiches", "L'Affiche mystère", 1, "ih"],
+    ["Séries TV", "series_tv", "L'Affiche mystère : séries (100 séries TMDB)", 0, "c"],
+    ["Affiches de séries", "series_affiches", "L'Affiche mystère : séries", 1, "ih"],
+    ["Musique populaire", "musique_populaire", GENERIC, 0, ""],
+    ["Jeux vidéo", "jeux_video", "Chasse aux RPG (bulles)", 0, "c"],
+    ["Skyrim", "skyrim", "Chasse aux RPG", 1, "i"],
+    ["Pokémon", "pokemon", "Chasse aux RPG — prévu : vrai combat Pokémon ultra-custom", 1, "i"],
+    ["Qui est ce Pokémon ?", "pokemon_silhouette", "Qui est ce Pokémon ?! (plateau TV silhouette)", 2, "ch"],
+    ["World of Warcraft", "world_of_warcraft", "Explorateur d'Azeroth (Curioscope — sans spots : Chasse aux RPG)", 1, "c"],
+    ["Jeux de société", "jeux_de_societe", GENERIC, 0, ""],
+    ["BD, comics & manga", "bd_comics_manga", GENERIC, 0, ""],
+    ["Télé & célébrités", "tele_celebrites", GENERIC, 0, ""],
+  ]],
+  ["◈ Sport", [
+    ["Sport — domaine entier", "sport_g", GENERIC, 0, "d"],
+    ["Football", "football", GENERIC, 0, ""],
+    ["Sports collectifs", "sports_collectifs", GENERIC, 0, ""],
+    ["Tennis & raquettes", "tennis_raquettes", GENERIC, 0, ""],
+    ["Athlétisme & JO", "athletisme_jo", GENERIC, 0, ""],
+    ["Sports mécaniques", "sports_mecaniques", GENERIC, 0, ""],
+    ["Cyclisme", "cyclisme", GENERIC, 0, ""],
+  ]],
+  ["🌍 Société", [
+    ["Société — domaine entier", "societe_g", GENERIC, 0, "d"],
+    ["Politique & institutions", "politique_institutions", GENERIC, 0, ""],
+    ["Économie, marques & logos", "economie_marques_logos", GENERIC, 0, ""],
+    ["Religions & mythologies", "religions_mythologies", GENERIC, 0, ""],
+    ["Gastronomie & cuisine", "gastronomie_cuisine", GENERIC, 0, ""],
+    ["Langues & expressions", "langues_expressions", GENERIC, 0, ""],
+    ["Fêtes & traditions", "fetes_traditions_symboles", GENERIC, 0, ""],
+  ]],
+];
+
+const LS_KEY = "minijeux-souhaits-v1";
+const store = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+const save = () => { localStorage.setItem(LS_KEY, JSON.stringify(store)); flashSaved(); };
+let flashT = null;
+function flashSaved() {
+  const el = document.getElementById("savedNote");
+  el.textContent = "💾 Sauvegardé " + new Date().toLocaleTimeString("fr-FR");
+  clearTimeout(flashT);
+  flashT = setTimeout(() => { el.textContent = "💾 Sauvegarde automatique active"; }, 2500);
+}
+
+const app = document.getElementById("app");
+for (const [domain, rows] of DATA) {
+  const det = document.createElement("details");
+  det.open = true;
+  const filled = rows.filter(r => (store[r[1]] || "").trim()).length;
+  det.innerHTML = `<summary>${domain}<span class="count">${rows.length} thèmes</span></summary>
+    <div class="colheads"><span>Thème</span><span>Mini-jeu actuel</span><span>Mini-jeu souhaité — à toi !</span></div>
+    <div class="rows"></div>`;
+  const cont = det.querySelector(".rows");
+  for (const [name, key, current, indent, flags] of rows) {
+    const row = document.createElement("div");
+    row.className = "row" + (flags.includes("d") ? " domain" : "");
+    const pad = indent ? `<span class="indent">${"— ".repeat(indent)}</span>` : "";
+    const hard = flags.includes("h") ? ` <span class="hard">🔒</span>` : "";
+    const curClass = flags.includes("c") ? "custom" : flags.includes("i") ? "inherited" : "";
+    const curText = flags.includes("i") ? current + " (hérité)" : current;
+    row.innerHTML = `
+      <div class="tname">${pad}${name}${hard}<span class="key">${key}</span></div>
+      <div class="current"><span class="${curClass}">${curText}</span></div>
+      <div><textarea placeholder="Ton idée de mini-jeu…" data-key="${key}"></textarea></div>`;
+    const ta = row.querySelector("textarea");
+    ta.value = store[key] || "";
+    if (ta.value.trim()) ta.classList.add("filled");
+    ta.addEventListener("input", () => {
+      store[key] = ta.value;
+      ta.classList.toggle("filled", !!ta.value.trim());
+      save();
+    });
+    cont.appendChild(row);
+  }
+  app.appendChild(det);
+}
+const notes = document.getElementById("globalNotes");
+notes.value = store.__notes || "";
+notes.addEventListener("input", () => { store.__notes = notes.value; save(); });
+
+function exportMd() {
+  let md = "# Mini-jeux souhaités — réponses du prof\n\n";
+  md += "> Export du " + new Date().toLocaleString("fr-FR") + " (MINIJEUX_PAR_THEME.html)\n\n";
+  for (const [domain, rows] of DATA) {
+    const withWish = rows.filter(r => (store[r[1]] || "").trim());
+    if (!withWish.length) continue;
+    md += "## " + domain + "\n\n";
+    for (const [name, key, current] of withWish) {
+      md += "### " + name + " (`" + key + "`)\n";
+      md += "- Actuel : " + current + "\n";
+      md += "- **Souhaité : " + (store[key] || "").trim().replace(/\n/g, " — ") + "**\n\n";
+    }
+  }
+  if ((store.__notes || "").trim()) {
+    md += "## Notes générales\n\n" + store.__notes.trim() + "\n";
+  }
+  const filled = Object.keys(store).filter(k => k !== "__notes" && (store[k] || "").trim()).length;
+  if (!filled && !(store.__notes || "").trim()) {
+    alert("Rien à exporter pour l'instant — remplis au moins une case « Mini-jeu souhaité ».");
+    return;
+  }
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "MINIJEUX_SOUHAITS.md";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function clearAll() {
+  if (!confirm("Effacer toutes tes saisies ?")) return;
+  for (const k of Object.keys(store)) delete store[k];
+  localStorage.removeItem(LS_KEY);
+  document.querySelectorAll("textarea").forEach(t => { t.value = ""; t.classList.remove("filled"); });
+}
+</script>
+</body>
+</html>

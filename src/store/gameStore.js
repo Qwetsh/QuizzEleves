@@ -2757,7 +2757,9 @@ export const useGameStore = create((set, get) => ({
   // place/valide un pin pour un camp, passe à la manche suivante.
   curioDuelPlace: (side, pos) => curioFightH.curioDuelPlace(set, get, side, pos),
   curioDuelValidate: (side, pos) => curioFightH.curioDuelValidate(set, get, side, pos),
-  curioDuelNext: () => curioFightH.curioDuelNext(set, get),
+  // `side` fourni (duelliste) → manche suivante quand les DEUX ont appuyé ;
+  // sans side (écran partagé = autorité), avance directe.
+  curioDuelNext: (side = null) => curioFightH.curioDuelNext(set, get, side),
   // Défi Curioscope solo terminé : la modale rend le TOTAL de points, la file
   // d'actions reprend sur startMinigame (conversion en récompense par paliers).
   curioChallengeResolve: (points) => {
@@ -2799,7 +2801,10 @@ export const useGameStore = create((set, get) => ({
       get().curioDuelValidate(side, { x: Number(payload.x), y: Number(payload.y) });
       return;
     }
-    if (type === 'turnCurioNext') { get().curioDuelNext(); return; }
+    if (type === 'turnCurioNext') {
+      get().curioDuelNext(idx === f.attackerIndex ? 'attacker' : 'defender');
+      return;
+    }
     if (type === 'turnFightReward') {
       const winnerIdx = f.winnerSide === 'attacker' ? f.attackerIndex : f.winnerSide === 'defender' ? f.defenderIndex : -1;
       if (idx === winnerIdx) get().fightChooseReward(payload.choice);
@@ -2817,6 +2822,24 @@ export const useGameStore = create((set, get) => ({
     const result = pickQuestion(pool, asked);
     if (!result) return null;
     set({ askedQuestions: { ...askedQuestions, [subject]: result.newAsked } });
+    return result.question;
+  },
+
+  // Tire une question À IMAGE d'un pool précis (mini-jeux Deblur/Silhouette :
+  // l'image EST la question). Pas de resolveSubjectFor : la clé du pool est
+  // explicite (content.fromQuestions du registre des mini-jeux). Pool de la
+  // partie, sinon repli STORE global (comme askQuestion) — permet de jouer le
+  // duel même si la cassette n'est pas dans le périmètre (testeur, thème forcé).
+  // Anti-répétition sous un namespace dédié (`img:clé`) : les index du pool
+  // filtré ne correspondent pas à ceux du pool complet de askedQuestions[clé].
+  fightPickImageQuestion: (subjectKey) => {
+    const { questions, askedQuestions } = get();
+    const source = questions[subjectKey]?.length ? questions[subjectKey] : getSubjectPool(subjectKey);
+    const pool = source.filter((q) => q && q.img && Array.isArray(q.a));
+    const nsKey = `img:${subjectKey}`;
+    const result = pickQuestion(pool, askedQuestions[nsKey] || new Set());
+    if (!result) return null;
+    set({ askedQuestions: { ...askedQuestions, [nsKey]: result.newAsked } });
     return result.question;
   },
 
@@ -3115,14 +3138,16 @@ export const useGameStore = create((set, get) => ({
     // Duels à deux joueurs : les intents de combat peuvent venir de l'ATTAQUANT
     // ou du DÉFENSEUR (le défenseur n'est pas l'équipe active) → routage dédié,
     // hors du verrou « équipe active ». En ligne : duel éclair + Curioscope.
-    // En mode « écran + téléphones » : Curioscope uniquement (les autres
-    // mini-jeux se jouent au tableau, comportement historique conservé).
+    // En mode « écran + téléphones » : Curioscope + duel silhouette (« Qui est
+    // ce Pokémon ?! » — plateau TV à l'écran, réponses au téléphone) ; les
+    // autres mini-jeux se jouent au tableau, comportement historique conservé.
     if (st.showFight && typeof type === 'string'
       && (idx === st.showFight.attackerIndex || idx === st.showFight.defenderIndex)) {
       const raceTypes = type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin';
       const curioTypes = type === 'turnCurioValidate' || type === 'turnCurioNext';
       if ((st.connectionMode === 'online' && (raceTypes || curioTypes))
-        || (st.phoneController && curioTypes && st.showFight.curio)) {
+        || (st.phoneController && curioTypes && st.showFight.curio)
+        || (st.phoneController && raceTypes && st.showFight.wtp)) {
         get().applyFightIntent(idx, type, payload);
         return;
       }

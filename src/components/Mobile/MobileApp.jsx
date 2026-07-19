@@ -16,6 +16,7 @@ import SpellTableView from './SpellTableView';
 import CodexView from './CodexView';
 import ControllerView from './ControllerView';
 import CurioPlaceView from '../Fight/CurioPlaceView';
+import DuelRaceView from '../Online/DuelRaceView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2637,6 +2638,26 @@ export default function MobileApp() {
               mySide={session.turn.fight.attackerIndex === teamIdx ? 'attacker' : 'defender'}
               onValidate={(pos) => sendIntent(code, token, 'turnCurioValidate', { x: pos.x, y: pos.y }).catch(() => {})}
               onNext={() => sendIntent(code, token, 'turnCurioNext', {}).catch(() => {})}
+            />
+          )}
+        {/* Duel silhouette (« Qui est ce Pokémon ?! ») : le plateau TV s'affiche
+            sur l'écran partagé, les DEUX duellistes répondent ICI (le défenseur
+            n'est pas l'équipe active). Récompense et fermeture aussi au
+            téléphone — l'écran TV n'est pas forcément tactile. */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.wtp && session.turn.fight.race
+          && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <DuelRaceView
+              fight={session.turn.fight}
+              teams={session.teams}
+              myTeamIdx={teamIdx}
+              onBegin={() => sendIntent(code, token, 'turnFightBegin', {}).catch(() => {})}
+              onAnswer={(i) => sendIntent(code, token, 'turnFightAnswer', { index: i }).catch(() => {})}
+              onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+              onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />
           )}
       </>

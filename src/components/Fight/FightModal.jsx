@@ -7,6 +7,7 @@ import { FIGHT_ROUNDS_TO_WIN } from '../../store/fightHandlers';
 import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
 import CurioDuelStage from './CurioDuelStage';
+import WtpDuelStage from './WtpDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import DuelRaceView from '../Online/DuelRaceView';
 import { onlineToken } from '../../logic/sessionConfig';
@@ -23,6 +24,7 @@ const DICE_FACES = [null, '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 export default function FightModal() {
   const showFight = useGameStore((s) => s.showFight);
   const teams = useGameStore((s) => s.teams);
+  const connectionMode = useGameStore((s) => s.connectionMode);
 
   useEffect(() => {
     if (showFight) soundEvent();
@@ -54,7 +56,14 @@ export default function FightModal() {
         {showFight.phase === 'briefing' && (
           <FightBriefing fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && showFight.race && (
+        {/* Duel silhouette (« Qui est ce Pokémon ?! ») en mode « écran +
+            téléphones » : l'écran partagé n'affiche QUE le plateau TV, les
+            duellistes répondent au téléphone. En ligne, chacun joue sur son
+            navigateur → vue course classique (enrichie silhouette). */}
+        {showFight.phase === 'minigame' && showFight.race && showFight.wtp && connectionMode !== 'online' && (
+          <WtpDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && showFight.race && !(showFight.wtp && connectionMode !== 'online') && (
           <HostDuelRace fight={showFight} teams={teams} />
         )}
         {/* Duel Curioscope piloté par le store (téléphones / en ligne) : photo
@@ -246,6 +255,7 @@ function MinigameStage({ fight, attacker, defender }) {
           round={fight.round}
           onRoundWin={fightRoundWin}
           content={content}
+          {...(minigame.props || {})}
         />
       </div>
     </div>

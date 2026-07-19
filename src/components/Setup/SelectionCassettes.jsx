@@ -274,6 +274,10 @@ function ConsoleEditorTools() {
   const [showEventsEditor, setShowEventsEditor] = useState(false);
   // Mini-jeu cliqué, en attente du choix de surface : { key, forceDefault }.
   const [pendingTest, setPendingTest] = useState(null);
+  // Abonnement aux questions : les mini-jeux à images (deblur/silhouette) ne
+  // résolvent leur vrai nom qu'une fois le pool chargé (async) — sans ça, la
+  // liste du testeur afficherait « Duel de rapidité » jusqu'au prochain rendu.
+  useGameStore((s) => s.questions);
   const btn = {
     fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: 0.4, padding: '14px 14px',
     borderRadius: 9, cursor: 'pointer', border: '2px solid #150f08', background: '#3a2e22',

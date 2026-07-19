@@ -9,6 +9,9 @@ function getCtx() {
     // Precharge les echantillons audio des le 1er contexte (apres geste utilisateur).
     if (!samplesPreloaded) { samplesPreloaded = true; queueMicrotask(() => preloadSamples()); }
   }
+  // Contexte suspendu (créé avant tout geste utilisateur, ou page remise en
+  // avant-plan) : sans resume() TOUS les sons sont muets en silence.
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }
 
@@ -80,12 +83,12 @@ function playNoise(duration = 0.4, volume = 0.3, { type = 'lowpass', freq = 1000
   src.stop(c.currentTime + duration);
 }
 
-// --- Echantillons audio reels (Kenney, CC0) ---
+// --- Echantillons audio reels (Kenney, CC0 + jingles) ---
 // Charges via Vite (URL), decodes en AudioBuffer a la 1re utilisation.
-const SAMPLE_URLS = import.meta.glob('../assets/sounds/*.ogg', { eager: true, query: '?url', import: 'default' });
+const SAMPLE_URLS = import.meta.glob('../assets/sounds/*.{ogg,mp3}', { eager: true, query: '?url', import: 'default' });
 const sampleUrlByName = {};
 for (const path in SAMPLE_URLS) {
-  sampleUrlByName[path.split('/').pop().replace('.ogg', '')] = SAMPLE_URLS[path];
+  sampleUrlByName[path.split('/').pop().replace(/\.(ogg|mp3)$/, '')] = SAMPLE_URLS[path];
 }
 const sampleBuffers = {};
 const sampleLoading = {};
@@ -315,6 +318,94 @@ export function soundReveal() {
   setTimeout(() => playTone(784, 0.14, 'sine', 0.24), 300);   // sol
   setTimeout(() => playTone(1047, 0.28, 'triangle', 0.22), 400); // do aigu
   setTimeout(() => playNoise(0.3, 0.07, { type: 'highpass', freq: 5200, q: 0.5 }), 420);
+}
+
+// Lancer de pokéball (intro « Qui est ce Pokémon ?! ») : sifflement de vol
+// (bruit passe-bande balayé du grave vers l'aigu, façon projectile) puis « pop »
+// d'ouverture + scintillement, calés sur l'animation (vol ~0,85 s puis flash).
+export function soundWtpBall() {
+  const c = getCtx();
+  const master = getMaster();
+  if (!c || !master) return;
+  const dur = 0.8;
+  const frames = Math.floor(c.sampleRate * dur);
+  const buffer = c.createBuffer(1, frames, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const filter = c.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.Q.value = 1.4;
+  const t = c.currentTime;
+  filter.frequency.setValueAtTime(320, t);
+  filter.frequency.exponentialRampToValueAtTime(2600, t + dur);
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.55, t + dur * 0.7); // s'approche → enfle
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(filter);
+  filter.connect(gain);
+  gain.connect(master);
+  src.start(t);
+  src.stop(t + dur);
+  // Effet doppler léger : sinus grave qui monte avec le vol.
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(140, t);
+  osc.frequency.exponentialRampToValueAtTime(420, t + dur);
+  const og = c.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.exponentialRampToValueAtTime(0.18, t + dur * 0.7);
+  og.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(og);
+  og.connect(master);
+  osc.start(t);
+  osc.stop(t + dur);
+  // Impact : pop d'ouverture + note claire + scintillement du flash.
+  setTimeout(() => {
+    playNoise(0.14, 0.55, { type: 'bandpass', freq: 1600, q: 1.1 });
+    playTone(520, 0.14, 'triangle', 0.4);
+    playTone(180, 0.1, 'sine', 0.3);
+    setTimeout(() => playNoise(0.35, 0.14, { type: 'highpass', freq: 5000, q: 0.5 }), 60);
+  }, 830);
+}
+
+// Jingle TV « Qui est ce Pokémon ?! » (extrait original) : lancé au début de
+// chaque manche du mini-jeu silhouette, coupé net à la révélation (le sting
+// « C'est … ! » est alors joué par soundReveal). Une seule instance à la fois ;
+// passe par le bus maître → respecte volume/coupure des effets.
+let wtpSource = null;
+export function soundWtpJingle() {
+  stopWtpJingle();
+  const c = getCtx();
+  if (!c) return;
+  const buf = sampleBuffers['whos-that-pokemon'];
+  if (!buf) {
+    // Pas encore décodé (1er lancement) : charge puis retente brièvement.
+    loadSample('whos-that-pokemon');
+    let tries = 0;
+    const retry = setInterval(() => {
+      if (sampleBuffers['whos-that-pokemon']) { clearInterval(retry); soundWtpJingle(); }
+      else if (++tries > 8) clearInterval(retry);
+    }, 250);
+    return;
+  }
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const gain = c.createGain();
+  gain.gain.value = 0.75;
+  src.connect(gain);
+  gain.connect(getMaster());
+  src.start(c.currentTime);
+  src.onended = () => { if (wtpSource === src) wtpSource = null; };
+  wtpSource = src;
+}
+export function stopWtpJingle() {
+  if (wtpSource) {
+    try { wtpSource.stop(); } catch { /* déjà stoppé */ }
+    wtpSource = null;
+  }
 }
 
 export function soundVictory() {

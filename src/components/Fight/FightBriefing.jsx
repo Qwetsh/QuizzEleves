@@ -251,6 +251,151 @@ function DemoMemory() {
   );
 }
 
+// 8) Deblur (photo mystère) : l'image se défloute, on touche le bon nom
+function DemoDeblur() {
+  const chip = (label, x, correct) => (
+    <motion.div
+      style={{
+        position: 'absolute', left: x, top: 156, width: 120, height: 36, borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        background: 'linear-gradient(180deg, #fffaf0, #f0e3c6)', border: '2px solid #b89a5e',
+        fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: '#5a4424',
+      }}
+      animate={correct
+        ? { borderColor: ['#b89a5e', '#b89a5e', '#5b8c3a', '#5b8c3a', '#b89a5e'], background: ['linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)'] }
+        : {}}
+      transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.6, 0.7, 0.9, 1] }}
+    >
+      {label}
+      {correct && (
+        <motion.span style={{ color: '#5b8c3a', fontWeight: 900 }}
+          animate={{ opacity: [0, 0, 1, 1, 0] }}
+          transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.65, 0.72, 0.9, 1] }}>{'✓'}</motion.span>
+      )}
+    </motion.div>
+  );
+  return (
+    <>
+      {/* cadre photo au centre, l'emoji se défloute en boucle */}
+      <div style={{ position: 'absolute', left: '50%', top: 18, transform: 'translateX(-50%)', width: 130, height: 124, borderRadius: 12, background: '#0d0a06', border: '2px solid rgba(243,201,105,0.6)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+        <motion.span
+          style={{ fontSize: 72 }}
+          animate={{ filter: ['blur(14px)', 'blur(1px)', 'blur(0px)', 'blur(14px)'] }}
+          transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.6, 0.9, 1], ease: 'linear' }}
+        >
+          {'\u{1F98A}'}
+        </motion.span>
+      </div>
+      {/* jauge de netteté */}
+      <div style={{ position: 'absolute', left: '50%', top: 146, transform: 'translateX(-50%)', width: 130, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
+        <motion.div
+          style={{ height: '100%', background: 'linear-gradient(90deg, #f3c969, #9be67f)' }}
+          animate={{ width: ['0%', '100%', '100%', '0%'] }}
+          transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.6, 0.98, 1], ease: 'linear' }}
+        />
+      </div>
+      {chip('Renard', 46, true)}
+      {chip('Loup', 196, false)}
+      <TapCursor x={[240, 90, 90, 240]} y={[120, 168, 172, 120]} period={3.2} />
+    </>
+  );
+}
+
+// « Qui est ce Pokémon ?! » : mini plateau TV (rayons rouges + halo étoilé),
+// silhouette noire qui passe en couleur, « ? » jaune, chip du bon nom validée.
+function DemoSilhouette() {
+  const chip = (label, x, correct) => (
+    <motion.div
+      style={{
+        position: 'absolute', left: x, top: 156, width: 120, height: 36, borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        background: 'linear-gradient(180deg, #fffaf0, #f0e3c6)', border: '2px solid #b89a5e',
+        fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: '#5a4424',
+      }}
+      animate={correct
+        ? { borderColor: ['#b89a5e', '#b89a5e', '#5b8c3a', '#5b8c3a', '#b89a5e'], background: ['linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)'] }
+        : {}}
+      transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.55, 0.65, 0.9, 1] }}
+    >
+      {label}
+      {correct && (
+        <motion.span style={{ color: '#5b8c3a', fontWeight: 900 }}
+          animate={{ opacity: [0, 0, 1, 1, 0] }}
+          transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.6, 0.67, 0.9, 1] }}>{'✓'}</motion.span>
+      )}
+    </motion.div>
+  );
+  return (
+    <>
+      {/* plateau TV : rayons rouges + halo étoilé, silhouette révélée en boucle */}
+      <div style={{ position: 'absolute', left: '50%', top: 14, transform: 'translateX(-50%)', width: 170, height: 132, borderRadius: 12, overflow: 'hidden', border: '2px solid #16161a' }}>
+        <div style={{ position: 'absolute', inset: '-60%', background: 'repeating-conic-gradient(from 0deg at 50% 50%, #e8402c 0deg 12deg, #c92315 12deg 24deg)' }} />
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 96, height: 96, transform: 'translate(-50%, -50%)', borderRadius: '50%', background: 'radial-gradient(circle, #fff 32%, #cfe4ff 52%, transparent 70%)' }} />
+        <motion.span
+          style={{ position: 'absolute', left: '50%', top: '50%', x: '-50%', y: '-50%', fontSize: 58, lineHeight: 1 }}
+          animate={{ filter: ['brightness(0)', 'brightness(0)', 'brightness(1)', 'brightness(1)', 'brightness(0)'] }}
+          transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.6, 0.68, 0.95, 1] }}
+        >
+          {'\u{1F422}'}
+        </motion.span>
+        <motion.span
+          style={{ position: 'absolute', right: 8, top: 6, fontSize: 30, fontWeight: 900, color: '#ffcb05', WebkitTextStroke: '1.5px #3d7dca', fontFamily: 'var(--font-display)', transform: 'rotate(6deg)' }}
+          animate={{ opacity: [1, 1, 0, 0, 1] }}
+          transition={{ duration: 3.2, repeat: Infinity, times: [0, 0.6, 0.66, 0.95, 1] }}
+        >
+          ?
+        </motion.span>
+      </div>
+      {chip('Tortank', 46, true)}
+      {chip('Onix', 196, false)}
+      <TapCursor x={[240, 90, 90, 240]} y={[120, 168, 172, 120]} period={3.2} />
+    </>
+  );
+}
+
+// Course d'images NETTES (Drapeau éclair) : un drapeau s'affiche, le curseur
+// fonce sur le bon nom — pure rapidité, pas de flou.
+function DemoImgRace() {
+  const chip = (label, x, correct) => (
+    <motion.div
+      style={{
+        position: 'absolute', left: x, top: 156, width: 120, height: 36, borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        background: 'linear-gradient(180deg, #fffaf0, #f0e3c6)', border: '2px solid #b89a5e',
+        fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: '#5a4424',
+      }}
+      animate={correct
+        ? { borderColor: ['#b89a5e', '#b89a5e', '#5b8c3a', '#5b8c3a', '#b89a5e'], background: ['linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)'] }
+        : {}}
+      transition={{ duration: 2.4, repeat: Infinity, times: [0, 0.35, 0.45, 0.9, 1] }}
+    >
+      {label}
+      {correct && (
+        <motion.span style={{ color: '#5b8c3a', fontWeight: 900 }}
+          animate={{ opacity: [0, 0, 1, 1, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, times: [0, 0.4, 0.47, 0.9, 1] }}>{'✓'}</motion.span>
+      )}
+    </motion.div>
+  );
+  return (
+    <>
+      {/* drapeau tricolore stylisé, affiché NET, qui pop à chaque boucle */}
+      <motion.div
+        style={{ position: 'absolute', left: '50%', top: 22, transform: 'translateX(-50%)', width: 170, height: 116, borderRadius: 10, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.5)', display: 'flex', boxShadow: '0 6px 14px rgba(0,0,0,0.4)' }}
+        animate={{ scale: [0.7, 1, 1, 0.7], opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 2.4, repeat: Infinity, times: [0, 0.12, 0.94, 1] }}
+      >
+        <div style={{ flex: 1, background: '#0055a4' }} />
+        <div style={{ flex: 1, background: '#fff' }} />
+        <div style={{ flex: 1, background: '#ef4135' }} />
+      </motion.div>
+      {chip('France', 46, true)}
+      {chip('Pays-Bas', 196, false)}
+      <TapCursor x={[240, 90, 90, 240]} y={[120, 168, 172, 120]} period={2.4} />
+    </>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
   pickAnswer: DemoPickAnswer,
@@ -259,6 +404,9 @@ const DEMOS = {
   word: DemoWord,
   geo: DemoGeo,
   memory: DemoMemory,
+  deblur: DemoDeblur,
+  silhouette: DemoSilhouette,
+  imgrace: DemoImgRace,
 };
 
 function DemoScreen({ type }) {

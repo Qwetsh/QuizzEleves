@@ -191,6 +191,41 @@ export default {
   'fight.memory.tie': { fr: 'Égalité ! On rejoue.', en: 'Tie! Replaying.' },
   'fight.memory.hint': { fr: 'Retournez 2 cartes — une paire et vous rejouez !', en: 'Flip 2 cards — a pair and you play again!' },
 
+  // Moteur Deblur (photo mystère) : règles/étapes partagées par tous ses thèmes,
+  // seul le nom est propre au thème.
+  'fight.mg.deblur.rules': { fr: 'Une image floue se dévoile peu à peu au centre. Le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'A blurry picture slowly sharpens in the middle. The first to tap the right answer wins the round. A mistake locks your side!' },
+  'fight.mg.deblur.goal': { fr: 'Reconnaissez l\'image avant l\'adversaire', en: 'Recognize the picture before your opponent' },
+  'fight.mg.deblur.step1': { fr: 'La même image floue se dévoile pour les deux équipes', en: 'The same blurry picture sharpens for both teams' },
+  'fight.mg.deblur.step2': { fr: 'Touchez la bonne réponse de votre côté', en: 'Tap the right answer on your side' },
+  'fight.mg.deblur.step3': { fr: 'Répondre tôt = risqué mais plus rapide que l\'autre !', en: 'Answering early = risky but faster than the other side!' },
+  'fight.mg.deblur.step4': { fr: 'Une erreur verrouille votre côté jusqu\'à l\'image suivante', en: 'A mistake locks your side until the next picture' },
+  'fight.deblur.hint': { fr: 'Plus vous attendez, plus c\'est net… mais l\'adversaire peut vous griller !', en: 'The longer you wait, the sharper it gets… but your opponent may beat you to it!' },
+
+  // Duels « Affiche mystère » (moteur deblur sur les affiches TMDB seedées).
+  'fight.mg.cinema.name': { fr: 'L\'Affiche mystère', en: 'Mystery Poster' },
+  'fight.mg.series.name': { fr: 'L\'Affiche mystère : séries', en: 'Mystery Poster: TV Shows' },
+
+  // Moteur Imgrace (course d'images NETTES — même composant que deblur, sharp).
+  'fight.mg.drapeaux.name': { fr: 'Drapeau éclair', en: 'Flag Dash' },
+  'fight.mg.imgrace.rules': { fr: 'Une image s\'affiche au centre : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'A picture appears in the middle: the first to tap the right answer wins the round. A mistake locks your side!' },
+  'fight.mg.imgrace.goal': { fr: 'Reconnaissez l\'image avant l\'adversaire', en: 'Recognize the picture before your opponent' },
+  'fight.mg.imgrace.step1': { fr: 'La même image s\'affiche pour les deux équipes', en: 'The same picture appears for both teams' },
+  'fight.mg.imgrace.step2': { fr: 'Touchez la bonne réponse de votre côté, le premier gagne !', en: 'Tap the right answer on your side, first one wins!' },
+  'fight.mg.imgrace.step3': { fr: 'Une erreur verrouille votre côté jusqu\'à l\'image suivante', en: 'A mistake locks your side until the next picture' },
+  'fight.imgrace.hint': { fr: 'Le premier à toucher la bonne réponse gagne la manche !', en: 'The first to tap the right answer wins the round!' },
+
+  // Moteur Silhouette (« Qui est ce Pokémon ?! ») : plateau TV de l'anime.
+  'fight.mg.pokemon_silhouette.name': { fr: 'Qui est ce Pokémon ?!', en: 'Who\'s That Pokémon?!' },
+  'fight.mg.wtp.rules': { fr: 'La silhouette d\'un Pokémon apparaît sur le plateau TV. Le premier à toucher le bon nom gagne la manche. Une erreur verrouille votre côté !', en: 'A Pokémon\'s silhouette appears on the TV stage. The first to tap the right name wins the round. A mistake locks your side!' },
+  'fight.mg.wtp.goal': { fr: 'Reconnaissez le Pokémon à sa silhouette', en: 'Recognize the Pokémon from its silhouette' },
+  'fight.mg.wtp.step1': { fr: 'La même silhouette noire pour les deux équipes', en: 'The same black silhouette for both teams' },
+  'fight.mg.wtp.step2': { fr: 'Touchez le bon nom de votre côté', en: 'Tap the right name on your side' },
+  'fight.mg.wtp.step3': { fr: 'Le premier à trouver gagne la manche !', en: 'The first to find it wins the round!' },
+  'fight.mg.wtp.step4': { fr: 'Une erreur verrouille votre côté jusqu\'au Pokémon suivant', en: 'A mistake locks your side until the next Pokémon' },
+  'fight.wtp.its': { fr: 'C\'est…', en: 'It\'s…' },
+  'fight.wtp.hint': { fr: 'Le premier à toucher le bon nom gagne la manche !', en: 'The first to tap the right name wins the round!' },
+  'fight.wtp.phonesHint': { fr: 'Répondez sur vos téléphones — le premier bon nom gagne la manche !', en: 'Answer on your phones — the first right name wins the round!' },
+
   'fight.mg.default.name': { fr: 'Duel de rapidité', en: 'Speed Duel' },
   'fight.mg.default.rules': { fr: 'La même question des deux côtés : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'The same question on both sides: the first to tap the right answer wins the round. A mistake locks your side!' },
   'fight.mg.default.goal': { fr: 'Le plus rapide à trouver la bonne réponse gagne', en: 'The fastest to find the right answer wins' },

@@ -12,11 +12,15 @@ import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
-import { curioUniverses } from '../components/Fight/minigames/index.js';
+import { curioUniverses, silhouetteKey } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
+
+// Duel silhouette (« Qui est ce Pokémon ?! ») : durée d'affichage de la
+// révélation (image en couleur + « C'est … ! ») avant la silhouette suivante.
+export const WTP_REVEAL_MS = 2600;
 
 // Transfere un objet vers une equipe (cascade unique placeItem) et formate
 // la note de butin. Retourne { team: updatedTeam, note: string }.
@@ -138,6 +142,15 @@ export function fightBegin(set, get) {
   if (!soloBots && !f.bossFight && (get().connectionMode === 'online' || get().phoneController)) {
     const universes = curioUniverses(f.subject);
     if (universes) { startCurioDuel(set, get, universes); return; }
+    // Duel silhouette (« Qui est ce Pokémon ?! ») : le plateau TV s'affiche sur
+    // l'écran partagé, les duellistes répondent sur leur appareil — une course
+    // à la question d'IMAGE avec temps de révélation (flag `wtp` = clé du pool).
+    const wtpKey = silhouetteKey(f.subject);
+    if (wtpKey) {
+      set({ showFight: { ...f, wtp: wtpKey } });
+      serveRaceQuestion(set, get);
+      return;
+    }
   }
   if (get().connectionMode === 'online' || soloBots) { serveRaceQuestion(set, get); return; }
   set({ showFight: { ...f, phase: 'briefing' } });
@@ -151,11 +164,22 @@ export function serveRaceQuestion(set, get) {
   const f = get().showFight;
   if (!f) return;
   const subject = f.subject;
-  const { questions, askedQuestions } = get();
-  const pool = questions[subject] || [];
-  const asked = askedQuestions[subject] || new Set();
-  const result = pickQuestion(pool, asked);
-  if (!result) { // plus de question dispo → anti-blocage : l'attaquant marque la manche
+  // Duel silhouette : questions à IMAGE du pool dédié (fightPickImageQuestion
+  // gère son propre anti-répétition, namespace `img:`) ; sinon course normale.
+  let question = null;
+  if (f.wtp) {
+    question = get().fightPickImageQuestion(f.wtp);
+  } else {
+    const { questions, askedQuestions } = get();
+    const pool = questions[subject] || [];
+    const asked = askedQuestions[subject] || new Set();
+    const result = pickQuestion(pool, asked);
+    if (result) {
+      question = result.question;
+      set({ askedQuestions: { ...askedQuestions, [subject]: result.newAsked } });
+    }
+  }
+  if (!question) { // plus de question dispo → anti-blocage : l'attaquant marque la manche
     fightRoundWin(set, get, 'attacker');
     const nf = get().showFight;
     if (nf && nf.phase === 'minigame' && !nf.winnerSide) serveRaceQuestion(set, get);
@@ -163,11 +187,10 @@ export function serveRaceQuestion(set, get) {
   }
   const deadline = Date.now() + RACE_DURATION * 1000;
   set({
-    askedQuestions: { ...askedQuestions, [subject]: result.newAsked },
-    showFight: { ...f, phase: 'minigame', race: { q: result.question, answers: {}, deadline } },
+    showFight: { ...get().showFight, phase: 'minigame', race: { q: question, answers: {}, deadline } },
   });
   // Personne n'a répondu juste dans le temps imparti : boss → le Prof marque ;
-  // sinon → nouvelle question (personne ne marque).
+  // silhouette → révélation sans vainqueur ; sinon → nouvelle question.
   setTimeout(() => {
     const cur = get().showFight;
     if (!cur || cur.phase !== 'minigame' || !cur.race || cur.race.deadline !== deadline) return;
@@ -175,10 +198,33 @@ export function serveRaceQuestion(set, get) {
       fightRoundWin(set, get, 'defender');
       const nf = get().showFight;
       if (nf && nf.phase === 'minigame' && !nf.winnerSide) serveRaceQuestion(set, get);
+    } else if (cur.wtp) {
+      wtpReveal(set, get, null);
     } else {
       serveRaceQuestion(set, get);
     }
   }, RACE_DURATION * 1000);
+}
+
+// Révélation du duel silhouette : fige la manche (deadline coupée → le timeout
+// en vol s'annule), publie la bonne réponse (ANTI-TRICHE : `c` ne part vers les
+// appareils qu'à cet instant, via le payload), laisse « C'est … ! » à l'écran,
+// puis marque la manche (ou resert si personne n'a trouvé).
+function wtpReveal(set, get, winnerSide) {
+  const f = get().showFight;
+  if (!f?.race || f.race.reveal) return;
+  set({ showFight: { ...f, race: { ...f.race, deadline: null, reveal: { c: f.race.q.c, winner: winnerSide } } } });
+  setTimeout(() => {
+    const cur = get().showFight;
+    if (!cur || cur.phase !== 'minigame' || !cur.race?.reveal) return;
+    if (winnerSide) {
+      fightRoundWin(set, get, winnerSide);
+      const nf = get().showFight;
+      if (nf && nf.phase === 'minigame' && !nf.winnerSide) serveRaceQuestion(set, get);
+    } else {
+      serveRaceQuestion(set, get);
+    }
+  }, WTP_REVEAL_MS);
 }
 
 // Un duelliste répond (attaquant OU défenseur). Premier juste = manche gagnée ;
@@ -186,6 +232,7 @@ export function serveRaceQuestion(set, get) {
 export function submitFightAnswer(set, get, teamIdx, index) {
   const f = get().showFight;
   if (!f || f.phase !== 'minigame' || !f.race) return;
+  if (f.race.reveal) return; // révélation en cours : la manche est figée
   const side = teamIdx === f.attackerIndex ? 'attacker' : teamIdx === f.defenderIndex ? 'defender' : null;
   if (!side) return;
   const race = f.race;
@@ -194,6 +241,13 @@ export function submitFightAnswer(set, get, teamIdx, index) {
   const answers = { ...race.answers, [side]: { index, at: Date.now() } };
   set({ showFight: { ...f, race: { ...race, answers } } });
   const outcome = raceOutcomeOnAnswer({ index, correctIndex: race.q.c, otherAnswered });
+  // Duel silhouette : temps de révélation (« C'est … ! ») avant de marquer la
+  // manche ou de resservir — au lieu de l'enchaînement sec de la course.
+  if (f.wtp) {
+    if (outcome === 'win') wtpReveal(set, get, side);
+    else if (outcome === 'replay') wtpReveal(set, get, null);
+    return; // 'wait' : on attend l'autre camp
+  }
   if (outcome === 'win') {
     fightRoundWin(set, get, side);
     const nf = get().showFight;

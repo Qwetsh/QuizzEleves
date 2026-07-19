@@ -36,6 +36,10 @@ export default function DuelRaceView({ fight, teams = [], myTeamIdx, onBegin, on
   const mySide = myTeamIdx === fight.attackerIndex ? 'attacker' : myTeamIdx === fight.defenderIndex ? 'defender' : null;
   const answered = !!(mySide && race?.answered?.[mySide]);
   const isWinner = fight.winnerIndex != null && fight.winnerIndex === myTeamIdx;
+  // Duel silhouette (« Qui est ce Pokémon ?! ») : l'image est masquée en noir
+  // jusqu'à la révélation (fight.wtp = clé du pool, race.reveal = bonne réponse).
+  const wtp = !!fight.wtp;
+  const reveal = race?.reveal || null;
 
   const att = teams[fight.attackerIndex] || { emoji: '🅰️', name: 'Attaquant' };
   const def = fight.defenderIndex === -1 ? (fight.boss ? { emoji: '👨‍🏫', name: 'Le Prof' } : { emoji: '🅱️', name: '?' })
@@ -74,9 +78,39 @@ export default function DuelRaceView({ fight, teams = [], myTeamIdx, onBegin, on
               <div style={{ color: '#8b9096' }}>Préparation de la question…</div>
             ) : (
               <>
-                <div style={{ fontSize: 13, color: left <= 5 ? '#ff8a7a' : '#8b9096', marginBottom: 6 }}>⏱️ {left}s</div>
+                {!reveal && <div style={{ fontSize: 13, color: left <= 5 ? '#ff8a7a' : '#8b9096', marginBottom: 6 }}>⏱️ {left}s</div>}
                 <div style={{ fontSize: 20, fontWeight: 700, margin: '4px 0 14px' }}>{race.q?.q}</div>
-                {mySide && !answered ? (
+                {/* Image de la question (silhouette masquée en noir jusqu'à la
+                    révélation — mini plateau TV ; drapeau etc. affiché net). */}
+                {race.q?.img && (
+                  <div style={{
+                    position: 'relative', display: 'grid', placeItems: 'center', height: 170,
+                    borderRadius: 12, overflow: 'hidden', margin: '2px 0 12px',
+                    background: wtp
+                      ? 'repeating-conic-gradient(from 0deg at 50% 50%, #e8402c 0deg 12deg, #c92315 12deg 24deg)'
+                      : 'rgba(255,255,255,0.06)',
+                  }}>
+                    {wtp && (
+                      <div style={{ position: 'absolute', width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(circle, #fff 34%, #cfe4ff 55%, rgba(207,228,255,0) 72%)' }} />
+                    )}
+                    <img
+                      src={race.q.img} alt="" draggable={false}
+                      style={{
+                        position: 'relative', maxHeight: 140, maxWidth: '72%', objectFit: 'contain',
+                        filter: wtp && !reveal ? 'brightness(0)' : 'brightness(1)',
+                        transform: wtp && reveal ? 'scale(1.06)' : 'scale(1)',
+                        transition: 'filter 0.5s ease, transform 0.45s cubic-bezier(.2,1.4,.4,1)',
+                        userSelect: 'none', pointerEvents: 'none',
+                      }}
+                    />
+                  </div>
+                )}
+                {reveal && (
+                  <div style={{ fontSize: 19, fontWeight: 800, color: '#ffcb05', marginBottom: 12 }}>
+                    C'est… {race.q?.a?.[reveal.c]} !
+                  </div>
+                )}
+                {mySide && !answered && !reveal ? (
                   <div style={{ display: 'grid', gap: 8 }}>
                     {(race.q?.a || []).map((a, i) => (
                       <button key={i} onClick={() => onAnswer(i)} style={btn('#16351f', '#eafff0')}>{a}</button>
@@ -84,7 +118,8 @@ export default function DuelRaceView({ fight, teams = [], myTeamIdx, onBegin, on
                   </div>
                 ) : (
                   <div style={{ color: '#66ff8a' }}>
-                    {answered ? '✅ Réponse envoyée — en attente…' : '👁️ Duel en cours…'}
+                    {reveal ? (reveal.winner ? `🏆 ${(reveal.winner === 'attacker' ? att : def).name} remporte la manche !` : '❌ Personne n\'a trouvé…')
+                      : answered ? '✅ Réponse envoyée — en attente…' : '👁️ Duel en cours…'}
                   </div>
                 )}
               </>

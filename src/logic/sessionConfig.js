@@ -220,12 +220,17 @@ export function buildTurnPayload(s) {
       boss: !!(sf.boss || sf.bossFight),
       wins: sf.wins || null,
       round: sf.round || null,
+      // Duel silhouette (« Qui est ce Pokémon ?! ») : clé du pool si la course
+      // est en mode silhouette (le téléphone affiche l'image masquée + répond).
+      wtp: sf.wtp || null,
       // Duel éclair (en ligne) : question de course SANS la bonne réponse (l'hôte
       // arbitre) + qui a déjà répondu + deadline. null hors duel éclair.
+      // ANTI-TRICHE silhouette : la bonne réponse ne part QU'À la révélation.
       race: sf.race ? {
         q: (() => { const { c, e, e_en, ...safe } = sf.race.q || {}; return safe; })(),
         answered: { attacker: !!sf.race.answers?.attacker, defender: !!sf.race.answers?.defender },
         deadline: sf.race.deadline || null,
+        reveal: sf.race.reveal ? { c: sf.race.reveal.c, winner: sf.race.reveal.winner || null } : null,
       } : null,
       // Duel Curioscope (guessr, surfaces téléphone/en ligne) — ANTI-TRICHE :
       // la position de la cible (x/y), son label (sauf mode « Place : X ») et
@@ -240,6 +245,7 @@ export function buildTurnPayload(s) {
           showName: !!c.target?.showName,
           label: (c.target && (c.target.showName || c.reveal)) ? c.target.label : null,
           validated: c.validated,
+          nextReady: c.nextReady || null,
           reveal: c.reveal ? {
             ...c.reveal,
             target: { x: c.target.x, y: c.target.y, label: c.target.label },
