@@ -7,6 +7,7 @@ import Curioscope from './Curioscope.jsx';
 import DeblurGame from './DeblurGame.jsx';
 import WhosThatPokemon from './WhosThatPokemon.jsx';
 import MendeleievGame from './MendeleievGame.jsx';
+import AudioRaceGame from './AudioRaceGame.jsx';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -61,6 +62,9 @@ const ENGINES = {
   // Tableau de Mendeleïev cliquable (chimie) : auto-suffisant (data
   // periodicTable.js), nouvelle cible à chaque manche.
   mendeleiev: { Component: MendeleievGame, persistent: false },
+  // Blind test : extrait audio partagé (platine) + réponses par côté. Contenu
+  // fromQuestions sur les pools à AUDIO (seed-audio-tracks.mjs).
+  audiorace: { Component: AudioRaceGame, persistent: false },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -252,6 +256,20 @@ const THEME_MINIGAMES = {
     howto: { demo: 'deblur', goal: 'fight.mg.deblur.goal', steps: ['fight.mg.deblur.step1', 'fight.mg.deblur.step2', 'fight.mg.deblur.step3', 'fight.mg.deblur.step4'] },
   }])),
 
+  // ── Blind test (souhait : « quizz audio, avec Deezer ça doit être faisable »)
+  // Extraits 30 s seedés en base (colonne audio, bucket opaque — les URLs
+  // Deezer expirent, on rapatrie). Sans extraits chargés : cascade → générique.
+  musique_populaire: {
+    engine: 'audiorace', content: { fromQuestions: 'musique_populaire_extraits' },
+    name: 'fight.mg.blindtest.name', rules: 'fight.mg.audiorace.rules',
+    howto: { demo: 'audiorace', goal: 'fight.mg.audiorace.goal', steps: ['fight.mg.audiorace.step1', 'fight.mg.audiorace.step2', 'fight.mg.audiorace.step3'] },
+  },
+  musique_classique_opera: {
+    engine: 'audiorace', content: { fromQuestions: 'musique_classique_extraits' },
+    name: 'fight.mg.blindtestclassique.name', rules: 'fight.mg.audiorace.rules',
+    howto: { demo: 'audiorace', goal: 'fight.mg.audiorace.goal', steps: ['fight.mg.audiorace.step1', 'fight.mg.audiorace.step2', 'fight.mg.audiorace.step3'] },
+  },
+
   // ── Drapeau éclair : course d'images NETTES (moteur imgrace) ──
   // Décision utilisateur : pas de flou sur les drapeaux (ça n'apporte rien) —
   // le drapeau s'affiche net, pure rapidité de reconnaissance entre les deux
@@ -312,7 +330,9 @@ function isPlayable(theme) {
     const key = theme.content.fromQuestions;
     const inGame = useGameStore.getState()?.questions?.[key] || [];
     const pool = inGame.length ? inGame : getSubjectPool(key);
-    return pool.some((q) => q && q.img);
+    // Le média requis dépend du moteur : audio pour le Blind test, image sinon.
+    const media = theme.engine === 'audiorace' ? 'audio' : 'img';
+    return pool.some((q) => q && q[media]);
   }
   if (Array.isArray(theme.content)) return theme.content.length > 0;
   return true;

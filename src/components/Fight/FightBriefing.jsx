@@ -435,6 +435,61 @@ function DemoMendeleiev() {
   );
 }
 
+// Blind test : vinyle qui tourne + égaliseur, le curseur choisit la bonne réponse.
+function DemoAudioRace() {
+  const chip = (label, x, correct) => (
+    <motion.div
+      style={{
+        position: 'absolute', left: x, top: 156, width: 130, height: 36, borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        background: 'linear-gradient(180deg, #fffaf0, #f0e3c6)', border: '2px solid #b89a5e',
+        fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12, color: '#5a4424',
+      }}
+      animate={correct
+        ? { borderColor: ['#b89a5e', '#b89a5e', '#5b8c3a', '#5b8c3a', '#b89a5e'], background: ['linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#d6f3c2,#a9da88)', 'linear-gradient(180deg,#fffaf0,#f0e3c6)'] }
+        : {}}
+      transition={{ duration: 3, repeat: Infinity, times: [0, 0.55, 0.65, 0.9, 1] }}
+    >
+      {label}
+      {correct && (
+        <motion.span style={{ color: '#5b8c3a', fontWeight: 900 }}
+          animate={{ opacity: [0, 0, 1, 1, 0] }}
+          transition={{ duration: 3, repeat: Infinity, times: [0, 0.6, 0.67, 0.9, 1] }}>{'✓'}</motion.span>
+      )}
+    </motion.div>
+  );
+  return (
+    <>
+      {/* vinyle */}
+      <motion.div
+        style={{
+          position: 'absolute', left: 62, top: 34, width: 96, height: 96, borderRadius: '50%',
+          background: 'repeating-radial-gradient(circle at 50% 50%, #191919 0 3px, #2a2a2a 3px 6px)',
+          border: '3px solid #0a0a0a', display: 'grid', placeItems: 'center',
+        }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'linear' }}
+      >
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #f3c969, #b8862c)', display: 'grid', placeItems: 'center', fontSize: 15 }}>🎵</div>
+      </motion.div>
+      {/* égaliseur */}
+      <div style={{ position: 'absolute', left: 196, top: 56, display: 'flex', alignItems: 'flex-end', gap: 5, height: 52 }}>
+        {[0.9, 0.5, 0.75, 0.4, 1, 0.6].map((h, i) => (
+          <motion.div
+            key={i}
+            style={{ width: 9, height: 52 * h, borderRadius: 3, background: 'linear-gradient(180deg, #9be67f, #f3c969)', transformOrigin: 'bottom' }}
+            animate={{ scaleY: [0.3, 1, 0.3] }}
+            transition={{ duration: 0.5 + (i % 3) * 0.16, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+      {chip('♪ Titre A', 40, true)}
+      {chip('♪ Titre B', 196, false)}
+      <TapCursor x={[250, 90, 90, 250]} y={[120, 168, 172, 120]} period={3} />
+    </>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
   pickAnswer: DemoPickAnswer,
@@ -447,6 +502,7 @@ const DEMOS = {
   silhouette: DemoSilhouette,
   imgrace: DemoImgRace,
   mendeleiev: DemoMendeleiev,
+  audiorace: DemoAudioRace,
 };
 
 function DemoScreen({ type }) {

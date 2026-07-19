@@ -201,6 +201,17 @@ export default {
   'fight.mg.deblur.step4': { fr: 'Une erreur verrouille votre côté jusqu\'à l\'image suivante', en: 'A mistake locks your side until the next picture' },
   'fight.deblur.hint': { fr: 'Plus vous attendez, plus c\'est net… mais l\'adversaire peut vous griller !', en: 'The longer you wait, the sharper it gets… but your opponent may beat you to it!' },
 
+  // Blind test (moteur audiorace — extraits Deezer 30 s).
+  'fight.mg.blindtest.name': { fr: 'Le Blind test', en: 'Blind Test' },
+  'fight.mg.blindtestclassique.name': { fr: 'Le Blind test classique', en: 'Classical Blind Test' },
+  'fight.mg.audiorace.rules': { fr: 'Un extrait joue en boucle : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'A clip plays on loop: the first to tap the right answer wins the round. A mistake locks your side!' },
+  'fight.mg.audiorace.goal': { fr: 'Reconnaissez le morceau à l\'oreille', en: 'Recognize the track by ear' },
+  'fight.mg.audiorace.step1': { fr: 'Un extrait musical joue au centre (touchez le vinyle pour réécouter)', en: 'A music clip plays in the middle (tap the vinyl to replay)' },
+  'fight.mg.audiorace.step2': { fr: 'Touchez la bonne réponse de votre côté, le premier gagne !', en: 'Tap the right answer on your side, first one wins!' },
+  'fight.mg.audiorace.step3': { fr: 'Une erreur verrouille votre côté jusqu\'à l\'extrait suivant', en: 'A mistake locks your side until the next clip' },
+  'fight.audio.tap': { fr: 'touche la platine : lecture / pause', en: 'tap the turntable: play / pause' },
+  'fight.audio.hint': { fr: 'Ouvrez grand les oreilles — premier sur la bonne réponse !', en: 'Open your ears — first on the right answer!' },
+
   // Le Tableau de Mendeleïev (chimie).
   'fight.mg.mendeleiev.name': { fr: 'Le Tableau de Mendeleïev', en: 'The Periodic Table' },
   'fight.mg.mendeleiev.rules': { fr: 'Le nom d\'un élément s\'affiche : le premier à toucher son SYMBOLE dans son tableau périodique gagne la manche. Une erreur verrouille votre côté !', en: 'An element\'s name appears: the first to tap its SYMBOL on their periodic table wins the round. A mistake locks your side!' },

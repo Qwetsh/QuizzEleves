@@ -43,6 +43,11 @@ export function setSfxMuted(m) {
   sfxMuted = !!m;
   applyMaster();
 }
+// Niveau effectif (0 si muet) — pour les lecteurs HTMLAudio hors bus Web Audio
+// (ex. extraits du Blind test) qui doivent respecter le réglage global.
+export function getSfxLevel() {
+  return sfxMuted ? 0 : sfxVolume;
+}
 
 function playTone(freq, duration = 0.15, type = 'sine', volume = 0.3) {
   const c = getCtx();

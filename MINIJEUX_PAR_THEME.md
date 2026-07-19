@@ -94,7 +94,7 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | —— Livre 1 | `hp_livre1` | Memory des écrivains *(hérité)* | |
 | Peinture & sculpture | `peinture_sculpture` | Duel de rapidité (générique) | |
 | Architecture & design | `architecture_design` | Duel de rapidité (générique) | |
-| Musique classique & opéra | `musique_classique_opera` | Duel de rapidité (générique) | |
+| Musique classique & opéra | `musique_classique_opera` | **Le Blind test classique** (34 œuvres célèbres) | |
 | Photographie & arts visuels | `photographie_arts_visuels` | Duel de rapidité (générique) | |
 
 ## ★ Culture pop
@@ -109,7 +109,7 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | — Affiches de films 🔒 | `cinema_affiches` | L'Affiche mystère *(hérité)* | |
 | Séries TV | `series_tv` | **L'Affiche mystère : séries** (100 séries TMDB) | |
 | — Affiches de séries 🔒 | `series_affiches` | L'Affiche mystère : séries *(hérité)* | |
-| Musique populaire | `musique_populaire` | Duel de rapidité (générique) | |
+| Musique populaire | `musique_populaire` | **Le Blind test** (99 extraits Deezer du chart) | |
 | Jeux vidéo | `jeux_video` | **La Jaquette mystère** (RAWG ; Chasse aux RPG en réserve) | |
 | — Skyrim | `skyrim` | La Jaquette mystère *(hérité)* | |
 | — Pokémon | `pokemon` | La Jaquette mystère *(hérité)* | *(prévu : vrai combat Pokémon ultra-custom)* |

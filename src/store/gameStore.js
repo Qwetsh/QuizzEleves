@@ -2843,6 +2843,18 @@ export const useGameStore = create((set, get) => ({
     return result.question;
   },
 
+  // Idem pour les questions à AUDIO (Blind test : l'extrait EST la question).
+  fightPickAudioQuestion: (subjectKey) => {
+    const { questions, askedQuestions } = get();
+    const source = questions[subjectKey]?.length ? questions[subjectKey] : getSubjectPool(subjectKey);
+    const pool = source.filter((q) => q && q.audio && Array.isArray(q.a));
+    const nsKey = `audio:${subjectKey}`;
+    const result = pickQuestion(pool, askedQuestions[nsKey] || new Set());
+    if (!result) return null;
+    set({ askedQuestions: { ...askedQuestions, [nsKey]: result.newAsked } });
+    return result.question;
+  },
+
   // --- Powers (delegated) ---
   usePower: (pk) => powerH.usePower(set, get, pk),
   useIndice: () => powerH.useIndice(set, get),

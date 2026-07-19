@@ -256,6 +256,26 @@ describe('mini-jeux — moteur Deblur (photo mystère)', () => {
     expect(getMinigame('cinema').Component).toBe(getDefaultMinigame().Component);
   });
 
+  it('Blind test : moteur audiorace sur les pools à AUDIO (pas image)', async () => {
+    const { default: AudioRaceGame } = await import('../components/Fight/minigames/AudioRaceGame.jsx');
+    useGameStore.setState({
+      questions: {
+        musique_populaire_extraits: [{ q: 'Quel est ce morceau ?', a: ['A — X', 'B — Y', 'C — Z', 'D — W'], c: 0, audio: 'https://x/a.mp3' }],
+        // un pool à IMAGES seulement ne rend PAS un blind test jouable
+        musique_classique_extraits: [{ q: '?', a: ['a', 'b', 'c', 'd'], c: 0, img: 'https://x/i.jpg' }],
+      },
+      askedQuestions: {},
+    });
+    expect(getMinigame('musique_populaire').Component).toBe(AudioRaceGame);
+    expect(getMinigame('musique_populaire').content.fromQuestions).toBe('musique_populaire_extraits');
+    expect(getMinigame('musique_classique_opera').Component).toBe(getDefaultMinigame().Component);
+    // fightPickAudioQuestion : ne sert que l'audio, namespace dédié
+    const q = useGameStore.getState().fightPickAudioQuestion('musique_populaire_extraits');
+    expect(q.audio).toBe('https://x/a.mp3');
+    expect(useGameStore.getState().askedQuestions['audio:musique_populaire_extraits'].size).toBe(1);
+    expect(useGameStore.getState().fightPickAudioQuestion('musique_classique_extraits')).toBeNull();
+  });
+
   it('fightPickImageQuestion ne sert que des questions à image, hors namespace du pool complet', () => {
     useGameStore.setState({ questions: { drapeaux_symboles: QS }, askedQuestions: {} });
     const pick = useGameStore.getState().fightPickImageQuestion;
