@@ -77,12 +77,12 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | Thème | Clé | Mini-jeu actuel | Mini-jeu souhaité |
 |---|---|---|---|
 | **Nature (domaine)** | `nature_g` | Duel de rapidité (générique) | |
-| Animaux | `animaux` | Duel de rapidité (générique) | |
-| Plantes & botanique | `plantes_botanique` | Duel de rapidité (générique) | |
+| Animaux | `animaux` | **L'Animal mystère** (photo floutée, iNaturalist) | |
+| Plantes & botanique | `plantes_botanique` | **La Plante mystère** (photo floutée) | |
 | Corps humain & santé | `corps_humain_sante` | Duel de rapidité (générique) | |
 | Cris d'animaux 🔒 | `cris_animaux` | Duel de rapidité (générique) | |
 | Écologie & environnement | `ecologie_environnement` | Duel de rapidité (générique) | |
-| Géologie & minéraux | `geologie_mineraux` | Duel de rapidité (générique) | |
+| Géologie & minéraux | `geologie_mineraux` | **La Roche mystère** (photo floutée) | |
 
 ## 🎨 Arts & lettres
 
@@ -103,21 +103,21 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 |---|---|---|---|
 | **Culture pop (domaine)** | `divertissement_g` | Duel de rapidité (générique) | |
 | Cinéma | `cinema` | **L'Affiche mystère** (affiche floutée qui se révèle, 200 films TMDB) | |
-| — Horreur | `film_horreur` | L'Affiche mystère *(hérité)* | |
-| — Super-héros | `super_heros` | L'Affiche mystère *(hérité)* | |
+| — Horreur | `film_horreur` | **Affiche mystère : horreur** (pool dédié) | |
+| — Super-héros | `super_heros` | **Affiche mystère : super-héros** (pool dédié) | |
 | — Le Seigneur des anneaux | `seigneur_des_anneaux` | L'Affiche mystère *(hérité)* | |
 | — Affiches de films 🔒 | `cinema_affiches` | L'Affiche mystère *(hérité)* | |
 | Séries TV | `series_tv` | **L'Affiche mystère : séries** (100 séries TMDB) | |
 | — Affiches de séries 🔒 | `series_affiches` | L'Affiche mystère : séries *(hérité)* | |
 | Musique populaire | `musique_populaire` | Duel de rapidité (générique) | |
-| Jeux vidéo | `jeux_video` | Chasse aux RPG (bulles) | |
-| — Skyrim | `skyrim` | Chasse aux RPG *(hérité)* | |
-| — Pokémon | `pokemon` | Chasse aux RPG *(hérité)* | *(prévu : vrai combat Pokémon ultra-custom)* |
+| Jeux vidéo | `jeux_video` | **La Jaquette mystère** (RAWG ; Chasse aux RPG en réserve) | |
+| — Skyrim | `skyrim` | La Jaquette mystère *(hérité)* | |
+| — Pokémon | `pokemon` | La Jaquette mystère *(hérité)* | *(prévu : vrai combat Pokémon ultra-custom)* |
 | —— Qui est ce Pokémon ? 🔒 | `pokemon_silhouette` | **Qui est ce Pokémon ?!** (plateau TV silhouette) | |
-| — World of Warcraft | `world_of_warcraft` | **Explorateur d'Azeroth** (Curioscope ; sans spots → Chasse aux RPG) | |
+| — World of Warcraft | `world_of_warcraft` | **Explorateur d'Azeroth** (Curioscope ; sans spots → Jaquette mystère) | |
 | Jeux de société | `jeux_de_societe` | Duel de rapidité (générique) | |
-| BD, comics & manga | `bd_comics_manga` | Duel de rapidité (générique) | |
-| Télé & célébrités | `tele_celebrites` | Duel de rapidité (générique) | |
+| BD, comics & manga | `bd_comics_manga` | **Le Perso mystère** (BD + comics + top manga) | |
+| Télé & célébrités | `tele_celebrites` | **La Célébrité mystère** (photo floutée) | |
 
 ## ◈ Sport
 
@@ -137,7 +137,7 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 |---|---|---|---|
 | **Société (domaine)** | `societe_g` | Duel de rapidité (générique) | |
 | Politique & institutions | `politique_institutions` | Duel de rapidité (générique) | |
-| Économie, marques & logos | `economie_marques_logos` | Duel de rapidité (générique) | |
+| Économie, marques & logos | `economie_marques_logos` | **Le Logo mystère** (logo flouté) | |
 | Religions & mythologies | `religions_mythologies` | Duel de rapidité (générique) | |
 | Gastronomie & cuisine | `gastronomie_cuisine` | Duel de rapidité (générique) | |
 | Langues & expressions | `langues_expressions` | **Finis l'expression !** (~60 expressions) | |

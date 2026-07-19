@@ -13,7 +13,7 @@ import { getSubjectPool } from '../../../data/questions/index.js';
 import MemoryGame from './MemoryGame.jsx';
 import {
   IRREGULAR_VERBS, REGULAR_VERBS, SVT_CHALLENGES, TIMELINE_EVENTS,
-  RPG_CHALLENGE, MEMORY_VOCAB,
+  MEMORY_VOCAB,
 } from '../../../data/fightData';
 import {
   ERA_PREHISTOIRE_ANTIQUITE, ERA_MOYEN_AGE, ERA_EPOQUE_MODERNE,
@@ -121,10 +121,12 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.series.name', rules: 'fight.mg.deblur.rules',
     howto: { demo: 'deblur', goal: 'fight.mg.deblur.goal', steps: ['fight.mg.deblur.step1', 'fight.mg.deblur.step2', 'fight.mg.deblur.step3', 'fight.mg.deblur.step4'] },
   },
+  // Jeux vidéo : jaquette floutée (souhait) — la Chasse aux RPG (RPG_CHALLENGE)
+  // reste en réserve dans fightData. Skyrim/pokemon héritent par cascade.
   jeux_video: {
-    engine: 'bubble', content: [RPG_CHALLENGE],
-    name: 'fight.mg.jeuxvideo.name', rules: 'fight.mg.jeuxvideo.rules',
-    howto: { demo: 'tapBubbles', goal: 'fight.mg.jeuxvideo.goal', steps: ['fight.mg.jeuxvideo.step1', 'fight.mg.jeuxvideo.step2', 'fight.mg.jeuxvideo.step3', 'fight.mg.jeuxvideo.step4'] },
+    engine: 'deblur', content: { fromQuestions: 'jeux_video_affiches' },
+    name: 'fight.mg.jv.name', rules: 'fight.mg.deblur.rules',
+    howto: { demo: 'deblur', goal: 'fight.mg.deblur.goal', steps: ['fight.mg.deblur.step1', 'fight.mg.deblur.step2', 'fight.mg.deblur.step3', 'fight.mg.deblur.step4'] },
   },
   vocabulaire: {
     engine: 'memory', content: MEMORY_VOCAB,
@@ -217,6 +219,25 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.expressions.name', rules: 'fight.mg.expressions.rules',
     howto: { demo: 'pickAnswer', goal: 'fight.mg.expressions.goal', steps: ['fight.mg.default.step1', 'fight.mg.default.step2', 'fight.mg.default.step3'] },
   },
+
+  // ── « Mystères » phase 2 (deblur sur pools d'images seedés par API —
+  // scripts/seed-deblur-pack.mjs : iNaturalist, Wikipédia, Jikan, RAWG, TMDB).
+  // Libellés partagés fight.mg.deblur.*, seul le nom change. Sans images
+  // chargées : cascade → ancêtre/générique.
+  ...Object.fromEntries([
+    ['animaux', 'animaux_photos', 'fight.mg.animaux.name'],
+    ['plantes_botanique', 'plantes_photos', 'fight.mg.plantes.name'],
+    ['geologie_mineraux', 'geologie_photos', 'fight.mg.geologie.name'],
+    ['economie_marques_logos', 'logos_images', 'fight.mg.logos.name'],
+    ['bd_comics_manga', 'bd_persos', 'fight.mg.persos.name'],
+    ['tele_celebrites', 'celebrites_photos', 'fight.mg.celebrites.name'],
+    ['film_horreur', 'horreur_affiches', 'fight.mg.horreur.name'],
+    ['super_heros', 'superheros_affiches', 'fight.mg.superheros.name'],
+  ].map(([key, pool, name]) => [key, {
+    engine: 'deblur', content: { fromQuestions: pool },
+    name, rules: 'fight.mg.deblur.rules',
+    howto: { demo: 'deblur', goal: 'fight.mg.deblur.goal', steps: ['fight.mg.deblur.step1', 'fight.mg.deblur.step2', 'fight.mg.deblur.step3', 'fight.mg.deblur.step4'] },
+  }])),
 
   // ── Drapeau éclair : course d'images NETTES (moteur imgrace) ──
   // Décision utilisateur : pas de flou sur les drapeaux (ça n'apporte rien) —

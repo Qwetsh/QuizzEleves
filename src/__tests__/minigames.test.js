@@ -27,13 +27,13 @@ describe('mini-jeux — registre piloté par les données', () => {
   });
 
   it('les nouveaux thèmes réutilisent un moteur existant avec leur contenu', () => {
-    const jv = getMinigame('jeux_video');
-    expect(Array.isArray(jv.content)).toBe(true);
-    expect(jv.content[0].good.length).toBeGreaterThan(3);
-    expect(jv.content[0].bad.length).toBeGreaterThan(3);
+    const de = getMinigame('allemand');
+    expect(Array.isArray(de.content)).toBe(true);
+    expect(de.content[0].good.length).toBeGreaterThan(3);
+    expect(de.content[0].bad.length).toBeGreaterThan(3);
 
-    // Preuve de réutilisation : jeux_video partage le moteur (bubble) d'anglais.
-    expect(jv.Component).toBe(getMinigame('anglais').Component);
+    // Preuve de réutilisation : allemand partage le moteur (bubble) d'anglais.
+    expect(de.Component).toBe(getMinigame('anglais').Component);
   });
 
   it('le moteur Memory expose un contenu de paires { a, b }', () => {
@@ -117,19 +117,31 @@ describe('mini-jeux — cascade de repli par l\'arbre de thèmes', () => {
     world_of_warcraft: { key: 'world_of_warcraft', path: 'loisirs.jv.world_of_warcraft', parentKey: 'jv', subjectKey: 'world_of_warcraft' },
   };
 
+  // La catégorie jeux_video est désormais la Jaquette mystère (deblur sur
+  // questions à image) : on charge un pool factice pour la rendre jouable.
+  const loadJvImages = () => useGameStore.setState({
+    questions: { jeux_video_affiches: [{ q: 'Quel est ce jeu vidéo ?', a: ['Zelda', 'Mario', 'Metroid', 'Kirby'], c: 0, img: 'https://x/zelda.jpg' }] },
+    askedQuestions: {},
+  });
+  const unloadQuestions = () => useGameStore.setState({ questions: {}, askedQuestions: {} });
+
   it('un thème enfant sans mini-jeu hérite de celui de sa catégorie', () => {
+    loadJvImages();
     setThemesData({ themes: tree, roots: ['loisirs'] });
     const mg = getMinigame('pokemon');
-    expect(mg.Component).toBe(getMinigame('jeux_video').Component); // bubble
-    expect(mg.name).toBe('fight.mg.jeuxvideo.name'); // libellés de la catégorie
+    expect(mg.Component).toBe(getMinigame('jeux_video').Component); // deblur jaquettes
+    expect(mg.name).toBe('fight.mg.jv.name'); // libellés de la catégorie
+    unloadQuestions();
   });
 
   it('une entrée injouable (curioscope sans spots) est sautée au profit de l\'ancêtre', () => {
+    loadJvImages();
     setThemesData({ themes: tree, roots: ['loisirs'] });
     // Sans arbre : WoW sans spots → générique (test curioscope.test.js). Avec
-    // l'arbre : la cascade continue vers la catégorie jeux vidéo (bubble).
+    // l'arbre : la cascade continue vers la catégorie jeux vidéo (jaquettes).
     const mg = getMinigame('world_of_warcraft');
     expect(mg.Component).toBe(getMinigame('jeux_video').Component);
+    unloadQuestions();
   });
 
   it('aucun ancêtre câblé → duel générique (et subject inconnu sans arbre aussi)', () => {
@@ -179,12 +191,19 @@ describe('mini-jeux — moteur Deblur (photo mystère)', () => {
   });
 
   it('silhouette sans questions à image → cascade vers la catégorie jeux vidéo', () => {
-    useGameStore.setState({ questions: {}, askedQuestions: {} });
+    // Pas de silhouettes chargées, mais des jaquettes JV : la cascade saute
+    // l'entrée silhouette injouable et sert la Jaquette mystère (deblur).
+    useGameStore.setState({
+      questions: { jeux_video_affiches: [{ q: '?', a: ['Zelda', 'Mario', 'Metroid', 'Kirby'], c: 0, img: 'https://x/z.jpg' }] },
+      askedQuestions: {},
+    });
     setThemesData({ themes: {
       jeux_video: { key: 'jeux_video', path: 'pop.jeux_video', parentKey: null, subjectKey: 'jeux_video' },
       pokemon_silhouette: { key: 'pokemon_silhouette', path: 'pop.jeux_video.pokemon_silhouette', parentKey: 'jeux_video', subjectKey: 'pokemon_silhouette' },
     }, roots: [] });
-    expect(getMinigame('pokemon_silhouette').Component).toBe(getMinigame('jeux_video').Component);
+    const mg = getMinigame('pokemon_silhouette');
+    expect(mg.Component).toBe(DeblurGame);
+    expect(mg.content.fromQuestions).toBe('jeux_video_affiches');
     resetThemesData();
   });
 

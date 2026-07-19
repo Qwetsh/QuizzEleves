@@ -228,6 +228,17 @@ export default {
   'fight.mg.cinema.name': { fr: 'L\'Affiche mystère', en: 'Mystery Poster' },
   'fight.mg.series.name': { fr: 'L\'Affiche mystère : séries', en: 'Mystery Poster: TV Shows' },
 
+  // « Mystères » phase 2 (deblur sur pools d'images seedés par API).
+  'fight.mg.jv.name': { fr: 'La Jaquette mystère', en: 'Mystery Game Cover' },
+  'fight.mg.animaux.name': { fr: 'L\'Animal mystère', en: 'Mystery Animal' },
+  'fight.mg.plantes.name': { fr: 'La Plante mystère', en: 'Mystery Plant' },
+  'fight.mg.geologie.name': { fr: 'La Roche mystère', en: 'Mystery Rock' },
+  'fight.mg.logos.name': { fr: 'Le Logo mystère', en: 'Mystery Logo' },
+  'fight.mg.persos.name': { fr: 'Le Perso mystère', en: 'Mystery Character' },
+  'fight.mg.celebrites.name': { fr: 'La Célébrité mystère', en: 'Mystery Celebrity' },
+  'fight.mg.horreur.name': { fr: 'Affiche mystère : horreur', en: 'Mystery Poster: Horror' },
+  'fight.mg.superheros.name': { fr: 'Affiche mystère : super-héros', en: 'Mystery Poster: Superheroes' },
+
   // Moteur Imgrace (course d'images NETTES — même composant que deblur, sharp).
   'fight.mg.drapeaux.name': { fr: 'Drapeau éclair', en: 'Flag Dash' },
   'fight.mg.imgrace.rules': { fr: 'Une image s\'affiche au centre : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'A picture appears in the middle: the first to tap the right answer wins the round. A mistake locks your side!' },
