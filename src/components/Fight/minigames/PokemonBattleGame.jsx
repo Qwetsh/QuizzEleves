@@ -70,8 +70,15 @@ export default function PokemonBattleGame({ attacker, defender }) {
   const [validated, setValidated] = useState({ A: false, B: false });
 
   const battleRef = useRef(null);
+  // Garde de démontage pour les boucles async. ⚠️ Il faut REMETTRE false dans
+  // le corps de l'effet : en dev, le StrictMode monte → simule un démontage
+  // (cleanup → dead=true) → re-monte LA MÊME instance ; sans reset, toute la
+  // file d'événements se croyait morte et le tour ne se résolvait jamais.
   const dead = useRef(false);
-  useEffect(() => () => { dead.current = true; }, []);
+  useEffect(() => {
+    dead.current = false;
+    return () => { dead.current = true; };
+  }, []);
 
   const [view, setView] = useState(null);
   const [dialog, setDialog] = useState('');
