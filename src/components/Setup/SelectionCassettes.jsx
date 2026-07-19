@@ -46,6 +46,7 @@ import EventsEditor from './EventsEditor';
 import { OFFLINE } from '../../logic/offline';
 import { getMinigame, getDefaultMinigame, MINIGAME_THEMES } from '../Fight/minigames';
 import { SUBJECTS } from '../../data/subjects';
+import { THEMES } from '../../data/themes';
 import { tg } from '../../i18n';
 import { EXTENSIONS, extOn } from '../../extensions/registry';
 import { EVENTS } from '../../data/events';
@@ -323,12 +324,22 @@ function ConsoleEditorTools() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {MINIGAME_THEMES.map((key) => {
             const mg = getMinigame(key);
-            const s = SUBJECTS[key];
+            const node = THEMES[key];
+            // Libellé = nom du THÈME (distinct pour chaque entrée) ; le nom du
+            // MOTEUR (mg.name, partagé par plusieurs thèmes — 6 « Frise d'époque »,
+            // etc.) passe en sous-titre pour savoir à quoi s'attendre.
+            const icon = node?.icon || SUBJECTS[key]?.icon || '🎮';
+            const themeLabel = node?.name || SUBJECTS[key]?.name || key.replace(/_/g, ' ');
+            const mgName = tg(mg.name);
             return (
               <button key={key} style={{ ...btn, justifyContent: 'flex-start', textAlign: 'left' }}
                 onClick={() => setPendingTest({ key, forceDefault: false })}>
-                <span>{s?.icon || '🎮'}</span>
-                <span style={{ minWidth: 0 }}>{tg(mg.name)}</span>
+                <span style={{ fontSize: 18 }}>{icon}</span>
+                <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{themeLabel}</span>
+                  <span style={{ fontFamily: FONT_UI, fontSize: 10.5, fontWeight: 600, opacity: 0.65,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mgName}</span>
+                </span>
               </button>
             );
           })}
