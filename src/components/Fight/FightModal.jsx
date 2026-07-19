@@ -8,6 +8,7 @@ import { getMinigame, getDefaultMinigame } from './minigames';
 import FightBriefing from './FightBriefing';
 import CurioDuelStage from './CurioDuelStage';
 import WtpDuelStage from './WtpDuelStage';
+import MemoryDuelStage from './MemoryDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import DuelRaceView from '../Online/DuelRaceView';
 import { onlineToken } from '../../logic/sessionConfig';
@@ -71,7 +72,12 @@ export default function FightModal() {
         {showFight.phase === 'minigame' && showFight.curio && (
           <CurioDuelStage fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && (
+        {/* Duel Memory piloté par le store (téléphones) : plateau TV en lecture
+            seule, les duellistes retournent les cartes sur leur appareil. */}
+        {showFight.phase === 'minigame' && showFight.memory && (
+          <MemoryDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (

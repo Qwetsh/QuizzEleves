@@ -490,6 +490,46 @@ function DemoAudioRace() {
   );
 }
 
+// Combat Pokémon : deux sprites face à face, lunge + barre de PV qui fond.
+function DemoPkmn() {
+  const bar = (side, animate) => (
+    <div style={{ position: 'absolute', [side]: 14, top: side === 'right' ? 16 : 118, width: 130, borderRadius: 8, padding: '4px 8px', background: 'linear-gradient(180deg,#fdf6dd,#f0e3bc)', border: '2px solid #5a4a28' }}>
+      <div style={{ fontSize: 10, fontWeight: 800, color: '#3a2c14' }}>{side === 'right' ? 'Tortank' : 'Dracaufeu'} <span style={{ float: 'right', color: '#7a6236' }}>Nv.50</span></div>
+      <div style={{ marginTop: 3, height: 7, borderRadius: 4, background: '#4a3c20', padding: 1 }}>
+        {animate
+          ? <motion.div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(180deg,#7de060,#3fae42)' }} animate={{ width: ['86%', '86%', '38%', '38%', '86%'], background: ['linear-gradient(180deg,#7de060,#3fae42)', 'linear-gradient(180deg,#7de060,#3fae42)', 'linear-gradient(180deg,#f2d060,#d8a53f)', 'linear-gradient(180deg,#f2d060,#d8a53f)', 'linear-gradient(180deg,#7de060,#3fae42)'] }} transition={{ duration: 3.4, repeat: Infinity, times: [0, 0.42, 0.55, 0.92, 1] }} />
+          : <div style={{ height: '100%', width: '72%', borderRadius: 3, background: 'linear-gradient(180deg,#7de060,#3fae42)' }} />}
+      </div>
+    </div>
+  );
+  return (
+    <>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #8ecff2 0%, #b9e3f7 52%, #7cba6d 52%, #5f9e52 100%)' }} />
+      <motion.img
+        src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/6.gif"
+        style={{ position: 'absolute', left: 44, bottom: 26, height: 72, imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
+        animate={{ x: [0, 0, 34, 0, 0] }}
+        transition={{ duration: 3.4, repeat: Infinity, times: [0, 0.38, 0.48, 0.58, 1] }}
+      />
+      <motion.img
+        src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/9.gif"
+        style={{ position: 'absolute', right: 48, bottom: 78, height: 60, imageRendering: 'pixelated' }}
+        animate={{ filter: ['brightness(1)', 'brightness(1)', 'brightness(2.6)', 'brightness(1)'], x: [0, 0, 6, 0] }}
+        transition={{ duration: 3.4, repeat: Infinity, times: [0, 0.5, 0.56, 0.65] }}
+      />
+      {bar('right', true)}
+      {bar('left', false)}
+      <motion.div
+        style={{ position: 'absolute', left: '50%', bottom: 8, transform: 'translateX(-50%)', fontFamily: 'var(--font-display)', fontSize: 14, color: '#fff', textShadow: '0 2px 3px rgba(0,0,0,0.6)', whiteSpace: 'nowrap' }}
+        animate={{ opacity: [0, 0, 1, 1, 0] }}
+        transition={{ duration: 3.4, repeat: Infinity, times: [0, 0.55, 0.62, 0.92, 1] }}
+      >
+        C'est super efficace !
+      </motion.div>
+    </>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
   pickAnswer: DemoPickAnswer,
@@ -503,6 +543,7 @@ const DEMOS = {
   imgrace: DemoImgRace,
   mendeleiev: DemoMendeleiev,
   audiorace: DemoAudioRace,
+  pkmn: DemoPkmn,
 };
 
 function DemoScreen({ type }) {

@@ -28,6 +28,7 @@ import * as fightH from './fightHandlers.js';
 import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import * as curioFightH from './curioFightHandlers.js';
+import * as memoryFightH from './memoryFightHandlers.js';
 import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
@@ -2760,6 +2761,9 @@ export const useGameStore = create((set, get) => ({
   // `side` fourni (duelliste) → manche suivante quand les DEUX ont appuyé ;
   // sans side (écran partagé = autorité), avance directe.
   curioDuelNext: (side = null) => curioFightH.curioDuelNext(set, get, side),
+  // Duel Memory piloté par le store (surface « écran + téléphones ») : le camp
+  // ACTIF retourne une carte depuis son téléphone (intent turnMemoryFlip).
+  memoryDuelFlip: (side, index) => memoryFightH.memoryDuelFlip(set, get, side, index),
   // Défi Curioscope solo terminé : la modale rend le TOTAL de points, la file
   // d'actions reprend sur startMinigame (conversion en récompense par paliers).
   curioChallengeResolve: (points) => {
@@ -2803,6 +2807,12 @@ export const useGameStore = create((set, get) => ({
     }
     if (type === 'turnCurioNext') {
       get().curioDuelNext(idx === f.attackerIndex ? 'attacker' : 'defender');
+      return;
+    }
+    // Duel Memory : le camp actif retourne la carte d'index payload.index.
+    if (type === 'turnMemoryFlip') {
+      const side = idx === f.attackerIndex ? 'attacker' : 'defender';
+      get().memoryDuelFlip(side, Number(payload.index));
       return;
     }
     if (type === 'turnFightReward') {
@@ -3161,9 +3171,13 @@ export const useGameStore = create((set, get) => ({
       && (idx === st.showFight.attackerIndex || idx === st.showFight.defenderIndex)) {
       const raceTypes = type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin';
       const curioTypes = type === 'turnCurioValidate' || type === 'turnCurioNext';
+      const memoryTypes = type === 'turnMemoryFlip';
       if ((st.connectionMode === 'online' && (raceTypes || curioTypes))
         || (st.phoneController && curioTypes && st.showFight.curio)
-        || (st.phoneController && raceTypes && st.showFight.wtp)) {
+        || (st.phoneController && raceTypes && st.showFight.wtp)
+        // Duel Memory (surface téléphone) : retournements + choix de récompense /
+        // fermeture (raceTypes couvrent turnFightReward/Close) pilotés au téléphone.
+        || (st.phoneController && (raceTypes || memoryTypes) && st.showFight.memory)) {
         get().applyFightIntent(idx, type, payload);
         return;
       }

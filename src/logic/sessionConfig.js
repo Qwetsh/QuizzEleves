@@ -253,6 +253,26 @@ export function buildTurnPayload(s) {
           } : null,
         };
       })() : null,
+      // Duel Memory (paires, surface « écran + téléphones ») — ANTI-TRICHE : le
+      // texte d'une carte et son appariement (pairId) ne partent QUE lorsqu'elle
+      // est face visible (flipped) ou capturée (matched). Une carte au dos n'a
+      // ni texte ni propriétaire → impossible de deviner les paires en amont.
+      memory: sf.memory ? (() => {
+        const m = sf.memory;
+        return {
+          roundNo: m.roundNo,
+          scores: m.scores,
+          activeSide: m.activeSide,
+          busy: !!m.busy,
+          flipped: m.flipped,
+          reveal: m.reveal || null,
+          cards: m.cards.map((c, i) => {
+            const owner = m.matched[c.pairId] || null;   // 'attacker'|'defender'|null
+            const shown = owner != null || m.flipped.includes(i);
+            return { key: c.key, text: shown ? c.text : null, owner };
+          }),
+        };
+      })() : null,
     };
   } else if (phase === 'targetPicker' && s.showTargetPicker) {
     const stp = s.showTargetPicker;

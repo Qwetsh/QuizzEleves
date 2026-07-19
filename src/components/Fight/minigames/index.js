@@ -8,6 +8,7 @@ import DeblurGame from './DeblurGame.jsx';
 import WhosThatPokemon from './WhosThatPokemon.jsx';
 import MendeleievGame from './MendeleievGame.jsx';
 import AudioRaceGame from './AudioRaceGame.jsx';
+import PokemonBattleGame from './PokemonBattleGame.jsx';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -65,6 +66,9 @@ const ENGINES = {
   // Blind test : extrait audio partagé (platine) + réponses par côté. Contenu
   // fromQuestions sur les pools à AUDIO (seed-audio-tracks.mjs).
   audiorace: { Component: AudioRaceGame, persistent: false },
+  // Combat Pokémon (DESIGN_POKEMON.md) : UN combat = tout le duel — persistant,
+  // victoire déclarée par le moteur (fightMatchWin), pas de manches affichées.
+  pkmn: { Component: PokemonBattleGame, persistent: true, pointsBased: true },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -256,6 +260,15 @@ const THEME_MINIGAMES = {
     howto: { demo: 'deblur', goal: 'fight.mg.deblur.goal', steps: ['fight.mg.deblur.step1', 'fight.mg.deblur.step2', 'fight.mg.deblur.step3', 'fight.mg.deblur.step4'] },
   }])),
 
+  // ── COMBAT POKÉMON : l'ultra-custom promis — le thème pokemon quitte la
+  // Jaquette mystère héritée pour son vrai duel (la cascade fait le reste ;
+  // pokemon_silhouette GARDE son « Qui est ce Pokémon ?! »).
+  pokemon: {
+    engine: 'pkmn',
+    name: 'fight.mg.pkmn.name', rules: 'fight.mg.pkmn.rules', winLabel: 'fight.mg.pkmn.winLabel',
+    howto: { demo: 'pkmn', goal: 'fight.mg.pkmn.goal', steps: ['fight.mg.pkmn.step1', 'fight.mg.pkmn.step2', 'fight.mg.pkmn.step3', 'fight.mg.pkmn.step4'] },
+  },
+
   // ── Blind test (souhait : « quizz audio, avec Deezer ça doit être faisable »)
   // Extraits 30 s seedés en base (colonne audio, bucket opaque — les URLs
   // Deezer expirent, on rapatrie). Sans extraits chargés : cascade → générique.
@@ -396,4 +409,15 @@ export function silhouetteKey(subject) {
   const theme = resolveEntry(subject);
   if (!theme || theme.engine !== 'silhouette') return null;
   return theme.content?.fromQuestions || null;
+}
+
+// Le thème `subject` résout-il (même cascade) un duel MEMORY jouable (moteur
+// `memory`, contenu de paires non vide) ? Retourne le tableau de paires
+// [{ a, b, id? }], sinon null. Utilisé par fightBegin pour router la surface
+// « écran + téléphones » vers le duel Memory piloté par le store : plateau TV
+// sur l'écran partagé, retournements sur les appareils des duellistes.
+export function memoryPairs(subject) {
+  const theme = resolveEntry(subject);
+  if (!theme || theme.engine !== 'memory') return null;
+  return Array.isArray(theme.content) && theme.content.length ? theme.content : null;
 }

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong, soundClick } from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
 import { useT } from '../../../i18n';
+import MemoryBoard from './MemoryBoard';
 
 /**
  * Memory (paires) — moteur GÉNÉRIQUE de duel, plateau partagé tour-par-tour.
@@ -120,48 +120,19 @@ export default function MemoryGame({ attacker, defender, onRoundWin, content }) 
         {sideScore('defender', defender)}
       </div>
 
-      {/* Plateau 4×3 */}
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridAutoRows: '1fr', gap: 10, padding: 4 }}>
-        {cards.map((card, idx) => {
-          const isFlipped = flipped.includes(idx);
-          const owner = matched[card.pairId];
-          const revealed = isFlipped || owner != null;
-          const ownerTeam = owner === 'attacker' ? attacker : owner === 'defender' ? defender : null;
-          return (
-            <motion.button
-              key={card.key}
-              type="button"
-              onPointerDown={() => handleFlip(idx)}
-              animate={{ scale: isFlipped ? 1.04 : 1, opacity: owner != null ? 0.9 : 1 }}
-              transition={{ type: 'spring', damping: 18, stiffness: 320 }}
-              style={{
-                position: 'relative', minHeight: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '6px 8px', borderRadius: 12, cursor: revealed || busy || done ? 'default' : 'pointer',
-                border: revealed
-                  ? `3px solid ${ownerTeam ? ownerTeam.color : 'var(--gold-600, #b8862c)'}`
-                  : '2px solid rgba(122,94,58,0.4)',
-                background: revealed
-                  ? (ownerTeam ? `linear-gradient(180deg, ${ownerTeam.color}26, #fffdf7)` : 'linear-gradient(180deg,#fffefb,#f3e6c9)')
-                  : 'radial-gradient(circle at 50% 30%, #6a4f8a, #3a2a55)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 10px rgba(0,0,0,0.3)',
-                touchAction: 'manipulation', overflow: 'hidden',
-              }}
-            >
-              {revealed ? (
-                <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, lineHeight: 1.15, color: 'var(--ink-900)', textAlign: 'center', wordBreak: 'break-word' }}>
-                  {card.text}
-                </span>
-              ) : (
-                <span style={{ fontSize: 26, color: 'rgba(255,255,255,0.85)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}>{'❓'}</span>
-              )}
-              {owner != null && (
-                <span style={{ position: 'absolute', top: 3, right: 5 }}><TeamAvatar team={ownerTeam} size={18} /></span>
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
+      {/* Plateau 4×3 — cartes à retournement 3D (visuel partagé MemoryBoard) */}
+      <MemoryBoard
+        cards={cards.map((card, idx) => ({
+          key: card.key,
+          text: card.text,
+          owner: matched[card.pairId] || null,
+          faceUp: flipped.includes(idx),
+        }))}
+        attacker={attacker}
+        defender={defender}
+        onFlip={handleFlip}
+        locked={busy || !!done}
+      />
 
       <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-ui)' }}>
         {T('fight.memory.hint')}

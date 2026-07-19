@@ -112,7 +112,7 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | Musique populaire | `musique_populaire` | **Le Blind test** (99 extraits Deezer du chart) | |
 | Jeux vidéo | `jeux_video` | **La Jaquette mystère** (RAWG ; Chasse aux RPG en réserve) | |
 | — Skyrim | `skyrim` | La Jaquette mystère *(hérité)* | |
-| — Pokémon | `pokemon` | La Jaquette mystère *(hérité)* | *(prévu : vrai combat Pokémon ultra-custom)* |
+| — Pokémon | `pokemon` | **Combat Pokémon** (draft 6→3, tour par tour Gén. 1) | |
 | —— Qui est ce Pokémon ? 🔒 | `pokemon_silhouette` | **Qui est ce Pokémon ?!** (plateau TV silhouette) | |
 | — World of Warcraft | `world_of_warcraft` | **Explorateur d'Azeroth** (Curioscope ; sans spots → Jaquette mystère) | |
 | Jeux de société | `jeux_de_societe` | Duel de rapidité (générique) | |

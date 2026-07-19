@@ -17,6 +17,7 @@ import CodexView from './CodexView';
 import ControllerView from './ControllerView';
 import CurioPlaceView from '../Fight/CurioPlaceView';
 import DuelRaceView from '../Online/DuelRaceView';
+import MemoryDuelView from '../Fight/MemoryDuelView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2656,6 +2657,24 @@ export default function MobileApp() {
               myTeamIdx={teamIdx}
               onBegin={() => sendIntent(code, token, 'turnFightBegin', {}).catch(() => {})}
               onAnswer={(i) => sendIntent(code, token, 'turnFightAnswer', { index: i }).catch(() => {})}
+              onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+              onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+            />
+          )}
+        {/* Duel Memory (paires) : plateau TV en lecture seule sur l'écran
+            partagé, les DEUX duellistes retournent les cartes ICI quand c'est
+            leur tour. Récompense/fermeture aussi au téléphone. */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.memory
+          && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <MemoryDuelView
+              fight={session.turn.fight}
+              teams={session.teams}
+              myTeamIdx={teamIdx}
+              onFlip={(i) => sendIntent(code, token, 'turnMemoryFlip', { index: i }).catch(() => {})}
               onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
               onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />

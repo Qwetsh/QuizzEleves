@@ -143,6 +143,7 @@ describe('mini-jeux — cascade de repli par l\'arbre de thèmes', () => {
     // Nœud mixte : sa clé de thème diffère de son subjectKey câblé au registre.
     jv: { key: 'jv', path: 'loisirs.jv', parentKey: 'loisirs', subjectKey: 'jeux_video' },
     pokemon: { key: 'pokemon', path: 'loisirs.jv.pokemon', parentKey: 'jv', subjectKey: 'pokemon' },
+    skyrim: { key: 'skyrim', path: 'loisirs.jv.skyrim', parentKey: 'jv', subjectKey: 'skyrim' },
     // WoW : câblé au registre (curioscope) mais injouable sans spots en DB.
     world_of_warcraft: { key: 'world_of_warcraft', path: 'loisirs.jv.world_of_warcraft', parentKey: 'jv', subjectKey: 'world_of_warcraft' },
   };
@@ -158,10 +159,22 @@ describe('mini-jeux — cascade de repli par l\'arbre de thèmes', () => {
   it('un thème enfant sans mini-jeu hérite de celui de sa catégorie', () => {
     loadJvImages();
     setThemesData({ themes: tree, roots: ['loisirs'] });
-    const mg = getMinigame('pokemon');
+    // skyrim n'a pas d'entrée propre → hérite de la catégorie jeux vidéo.
+    // (pokemon, lui, a désormais son COMBAT dédié — testé plus bas.)
+    const mg = getMinigame('skyrim');
     expect(mg.Component).toBe(getMinigame('jeux_video').Component); // deblur jaquettes
     expect(mg.name).toBe('fight.mg.jv.name'); // libellés de la catégorie
     unloadQuestions();
+  });
+
+  it('pokemon : le combat ultra-custom prend la place (étage 1 de la cascade)', async () => {
+    const { default: PokemonBattleGame } = await import('../components/Fight/minigames/PokemonBattleGame.jsx');
+    setThemesData({ themes: tree, roots: ['loisirs'] });
+    const mg = getMinigame('pokemon');
+    expect(mg.Component).toBe(PokemonBattleGame);
+    expect(mg.persistent).toBe(true);   // un combat = tout le duel
+    expect(mg.pointsBased).toBe(true);  // pas de manches affichées
+    expect(mg.winLabel).toBe('fight.mg.pkmn.winLabel');
   });
 
   it('une entrée injouable (curioscope sans spots) est sautée au profit de l\'ancêtre', () => {

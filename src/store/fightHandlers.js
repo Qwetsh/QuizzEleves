@@ -12,8 +12,9 @@ import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
-import { curioUniverses, silhouetteKey } from '../components/Fight/minigames/index.js';
+import { curioUniverses, silhouetteKey, memoryPairs } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
+import { startMemoryDuel } from './memoryFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
@@ -150,6 +151,15 @@ export function fightBegin(set, get) {
       set({ showFight: { ...f, wtp: wtpKey } });
       serveRaceQuestion(set, get);
       return;
+    }
+    // Duel Memory (paires) piloté par le store — surface « écran + téléphones »
+    // UNIQUEMENT : plateau TV en lecture seule sur l'écran partagé, retournements
+    // depuis le téléphone du camp actif. En ligne, pas de plateau partagé → repli
+    // duel éclair (ci-dessous). Le plateau reste un jeu tour-par-tour à autorité
+    // hôte (minuteries de retournement dans memoryFightHandlers).
+    if (get().phoneController) {
+      const pairs = memoryPairs(f.subject);
+      if (pairs) { startMemoryDuel(set, get, pairs); return; }
     }
   }
   if (get().connectionMode === 'online' || soloBots) { serveRaceQuestion(set, get); return; }
