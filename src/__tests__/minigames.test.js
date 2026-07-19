@@ -44,6 +44,36 @@ describe('mini-jeux — registre piloté par les données', () => {
   });
 });
 
+// Le Tableau de Mendeleïev (chimie) : data des 118 éléments valide + résolution.
+describe('mini-jeux — Tableau de Mendeleïev', () => {
+  it('la data couvre les 118 éléments, positions et symboles cohérents', async () => {
+    const { ELEMENTS, KNOWN_ELEMENTS, ELEMENT_CATS } = await import('../data/periodicTable.js');
+    expect(ELEMENTS.length).toBe(118);
+    expect(new Set(ELEMENTS.map((e) => e.z)).size).toBe(118);
+    expect(new Set(ELEMENTS.map((e) => e.s)).size).toBe(118);
+    expect(new Set(ELEMENTS.map((e) => e.name)).size).toBe(118);
+    for (const e of ELEMENTS) {
+      expect(e.g).toBeGreaterThanOrEqual(1); expect(e.g).toBeLessThanOrEqual(18);
+      expect(e.p).toBeGreaterThanOrEqual(1); expect(e.p).toBeLessThanOrEqual(9);
+      expect(ELEMENT_CATS[e.cat]).toBeTruthy();
+    }
+    // pas deux éléments sur la même case de la grille
+    const pos = ELEMENTS.map((e) => `${e.g}-${e.p}`);
+    expect(new Set(pos).size).toBe(118);
+    // pool des cibles : les éléments connus au collège
+    expect(KNOWN_ELEMENTS.length).toBeGreaterThanOrEqual(35);
+    expect(KNOWN_ELEMENTS.every((e) => e.known)).toBe(true);
+  });
+
+  it('le thème chimie résout le moteur mendeleiev (auto-suffisant)', () => {
+    const mg = getMinigame('chimie');
+    expect(typeof mg.Component).toBe('function');
+    expect(mg.name).toBe('fight.mg.mendeleiev.name');
+    expect(mg.content).toBeUndefined(); // pas de contenu externe → toujours jouable
+    expect(mg.Component).not.toBe(getDefaultMinigame().Component);
+  });
+});
+
 // Packs « quick wins » de la feuille de route (fightPacks.js) : chaque nouveau
 // thème résout le bon moteur, et le contenu respecte les invariants du moteur.
 describe('mini-jeux — packs quick wins (frises, memory, verbes, expressions)', () => {

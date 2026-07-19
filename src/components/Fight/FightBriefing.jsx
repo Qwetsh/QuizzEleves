@@ -396,6 +396,45 @@ function DemoImgRace() {
   );
 }
 
+// Tableau de Mendeleïev : mini-grille d'éléments colorés, la cible s'affiche
+// (« Fer ») et le curseur clique la bonne case qui s'illumine.
+function DemoMendeleiev() {
+  const cells = [
+    ['H', '#6bc6f9'], ['Li', '#f97b6b'], ['Na', '#f97b6b'], ['Mg', '#f9a86b'], ['Al', '#a8d08d'], ['Si', '#6bd6a8'],
+    ['K', '#f97b6b'], ['Ca', '#f9a86b'], ['Fe', '#f9d66b'], ['Cu', '#f9d66b'], ['Zn', '#f9d66b'], ['Br', '#8f9bf9'],
+    ['Ag', '#f9d66b'], ['Sn', '#a8d08d'], ['I', '#8f9bf9'], ['Au', '#f9d66b'], ['Hg', '#f9d66b'], ['Pb', '#a8d08d'],
+  ];
+  return (
+    <>
+      <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', padding: '4px 16px', borderRadius: 9, background: 'rgba(255,254,251,0.95)', fontFamily: 'var(--font-display)', fontSize: 16, color: '#3a2c1a' }}>
+        Trouve : <b>Fer</b>
+      </div>
+      <div style={{ position: 'absolute', top: 58, left: '50%', transform: 'translateX(-50%)', display: 'grid', gridTemplateColumns: 'repeat(6, 42px)', gap: 4 }}>
+        {cells.map(([s, color], i) => {
+          const isFe = s === 'Fe';
+          return (
+            <motion.div
+              key={i}
+              style={{
+                height: 38, borderRadius: 5, display: 'grid', placeItems: 'center',
+                background: color, border: '1px solid rgba(0,0,0,0.25)',
+                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14, color: '#25303a',
+              }}
+              animate={isFe
+                ? { scale: [1, 1, 1.35, 1.35, 1], background: [color, color, '#9be67f', '#9be67f', color], boxShadow: ['0 0 0 rgba(0,0,0,0)', '0 0 0 rgba(0,0,0,0)', '0 0 16px rgba(155,230,127,0.9)', '0 0 16px rgba(155,230,127,0.9)', '0 0 0 rgba(0,0,0,0)'] }
+                : {}}
+              transition={{ duration: 2.8, repeat: Infinity, times: [0, 0.5, 0.6, 0.9, 1] }}
+            >
+              {s}
+            </motion.div>
+          );
+        })}
+      </div>
+      <TapCursor x={[260, 120, 120, 260]} y={[170, 108, 112, 170]} period={2.8} />
+    </>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
   pickAnswer: DemoPickAnswer,
@@ -407,6 +446,7 @@ const DEMOS = {
   deblur: DemoDeblur,
   silhouette: DemoSilhouette,
   imgrace: DemoImgRace,
+  mendeleiev: DemoMendeleiev,
 };
 
 function DemoScreen({ type }) {

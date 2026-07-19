@@ -201,6 +201,16 @@ export default {
   'fight.mg.deblur.step4': { fr: 'Une erreur verrouille votre côté jusqu\'à l\'image suivante', en: 'A mistake locks your side until the next picture' },
   'fight.deblur.hint': { fr: 'Plus vous attendez, plus c\'est net… mais l\'adversaire peut vous griller !', en: 'The longer you wait, the sharper it gets… but your opponent may beat you to it!' },
 
+  // Le Tableau de Mendeleïev (chimie).
+  'fight.mg.mendeleiev.name': { fr: 'Le Tableau de Mendeleïev', en: 'The Periodic Table' },
+  'fight.mg.mendeleiev.rules': { fr: 'Le nom d\'un élément s\'affiche : le premier à toucher son SYMBOLE dans son tableau périodique gagne la manche. Une erreur verrouille votre côté !', en: 'An element\'s name appears: the first to tap its SYMBOL on their periodic table wins the round. A mistake locks your side!' },
+  'fight.mg.mendeleiev.goal': { fr: 'Retrouvez le symbole de l\'élément dans le tableau', en: 'Find the element\'s symbol in the table' },
+  'fight.mg.mendeleiev.step1': { fr: 'Le nom d\'un élément chimique s\'affiche en haut', en: 'A chemical element\'s name appears at the top' },
+  'fight.mg.mendeleiev.step2': { fr: 'Touchez sa case dans VOTRE tableau périodique', en: 'Tap its cell in YOUR periodic table' },
+  'fight.mg.mendeleiev.step3': { fr: 'Une erreur verrouille votre côté jusqu\'à l\'élément suivant', en: 'A mistake locks your side until the next element' },
+  'fight.mendeleiev.find': { fr: 'Trouve :', en: 'Find:' },
+  'fight.mendeleiev.hint': { fr: 'Premier sur le bon symbole ! Les couleurs regroupent les familles d\'éléments.', en: 'First on the right symbol! Colors group element families.' },
+
   // Quick wins feuille de route : frises, memory, verbes DE, expressions.
   'fight.mg.grandefrise.name': { fr: 'La Grande Frise', en: 'The Great Timeline' },
   'fight.mg.frisepoque.name': { fr: 'Frise d\'époque', en: 'Era Timeline' },

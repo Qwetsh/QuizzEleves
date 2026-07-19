@@ -6,6 +6,7 @@ import MotLePlusLong from './MotLePlusLong.jsx';
 import Curioscope from './Curioscope.jsx';
 import DeblurGame from './DeblurGame.jsx';
 import WhosThatPokemon from './WhosThatPokemon.jsx';
+import MendeleievGame from './MendeleievGame.jsx';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -57,6 +58,9 @@ const ENGINES = {
   // Duel de rapidité à CONTENU EMBARQUÉ [{ q, a[], c }] — même jeu que le
   // générique mais avec les questions du thème (ex. « Finis l'expression »).
   quick: { Component: QuickDuel, persistent: false },
+  // Tableau de Mendeleïev cliquable (chimie) : auto-suffisant (data
+  // periodicTable.js), nouvelle cible à chaque manche.
+  mendeleiev: { Component: MendeleievGame, persistent: false },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -151,6 +155,15 @@ const THEME_MINIGAMES = {
     engine: 'silhouette', content: { fromQuestions: 'pokemon_silhouette' },
     name: 'fight.mg.pokemon_silhouette.name', rules: 'fight.mg.wtp.rules',
     howto: { demo: 'silhouette', goal: 'fight.mg.wtp.goal', steps: ['fight.mg.wtp.step1', 'fight.mg.wtp.step2', 'fight.mg.wtp.step3', 'fight.mg.wtp.step4'] },
+  },
+
+  // Le Tableau de Mendeleïev (souhait chimie : « afficher des noms d'atomes,
+  // cliquer leur symbole dans le tableau ! »). Cibles tirées parmi les ~40
+  // éléments connus au collège, tableau COMPLET affiché (118 cases colorées).
+  chimie: {
+    engine: 'mendeleiev',
+    name: 'fight.mg.mendeleiev.name', rules: 'fight.mg.mendeleiev.rules',
+    howto: { demo: 'mendeleiev', goal: 'fight.mg.mendeleiev.goal', steps: ['fight.mg.mendeleiev.step1', 'fight.mg.mendeleiev.step2', 'fight.mg.mendeleiev.step3'] },
   },
 
   // ── QUICK WINS feuille de route (MINIJEUX_SOUHAITS.md) : moteurs existants

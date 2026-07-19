@@ -67,7 +67,7 @@ scolaire `histoire`, pas sur ce domaine. Dis-moi si tu veux l'étendre ici.)*
 | **Sciences (domaine)** | `sciences_g` | Duel de rapidité (générique) | |
 | Maths & logique | `maths_logique` | Duel de rapidité (générique) | |
 | Physique | `physique` | Duel de rapidité (générique) | |
-| Chimie | `chimie` | Duel de rapidité (générique) | |
+| Chimie | `chimie` | **Le Tableau de Mendeleïev** (118 cases, clique le bon symbole) | |
 | Astronomie & espace | `astronomie_espace` | **Échelle du Système solaire** (frise par distance) | |
 | Informatique & numérique | `informatique_numerique` | Duel de rapidité (générique) | |
 | Inventions & technologies | `inventions_technologies` | **Frise des inventions** | |
