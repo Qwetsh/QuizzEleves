@@ -7,8 +7,10 @@
 //   wave        vague d'eau qui déferle du lanceur sur la cible (Surf…)
 //   beam        rayon continu d'orbes lumineuses lanceur → cible (Laser Glace…)
 //   projectile  projectile(s) en arc (dards, feuilles, bulles, œufs…)
-//   flames      boule de feu puis flammes qui montent sur la cible
-//   bolt        éclair qui tombe du ciel sur la cible + flash
+//   flames      lance-flammes : jet de feu du lanceur vers la cible + braises
+//   bolt        éclair qui tombe du ciel sur la cible + flash (attaque)
+//   paralyze    cage d'arcs électriques autour de la cible (STATUT, non-dégâts)
+//   hypno       anneaux hypnotiques + spirale sur la cible (STATUT, non-dégâts)
 //   quake       débris + poussière au sol, grosse secousse de l'arène
 //   slash       balafres tranchantes sur la cible (le lanceur charge)
 //   charge      ruée physique + étoile d'impact (le lanceur charge)
@@ -29,8 +31,9 @@ import MONS from '../data/pokemonBattle.json';
 const BY_ID = {
   // Eau / glace
   surf: 'wave', withdraw: 'buff', 'bubble-beam': 'projectile', 'ice-beam': 'beam',
-  // Électrique
-  thunderbolt: 'bolt', 'thunder-wave': 'bolt',
+  // Électrique — Cage Éclair est un STATUT (paralysie) : cage électrique, pas
+  // l'éclair foudroyant de Tonnerre (qui, lui, inflige des dégâts).
+  thunderbolt: 'bolt', 'thunder-wave': 'paralyze',
   // Feu
   'fire-blast': 'flames', 'fire-punch': 'charge',
   // Plante / insecte
@@ -43,7 +46,7 @@ const BY_ID = {
   // Sol / roche
   earthquake: 'quake',
   // Psy / spectre
-  psychic: 'psy', hypnosis: 'psy', lick: 'charge',
+  psychic: 'psy', hypnosis: 'hypno', lick: 'charge',
   agility: 'buff', amnesia: 'buff', barrier: 'buff', meditate: 'buff',
   // Combat / normal — contact
   'karate-chop': 'charge', 'rolling-kick': 'charge', 'mega-kick': 'charge',

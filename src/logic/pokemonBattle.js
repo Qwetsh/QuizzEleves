@@ -155,12 +155,18 @@ function doMove(battle, atkSide, defSide, moveIndex, events, rng) {
   const move = atk.mon.moves[moveIndex];
   if (!move) return;
 
-  // Sommeil : décompte, tour perdu (réveil annoncé, agit au tour suivant).
+  // Sommeil : décompte, le tour est TOUJOURS perdu (endormi OU réveil), si bien
+  // qu'un sommeil coûte au moins un tour d'action même sur un jet de 1 tour — et
+  // le Pokémon n'attaque pas le tour où il se réveille (fidèle Gén. 1).
   if (atk.status === 'slp') {
     atk.sleepTurns -= 1;
-    if (atk.sleepTurns > 0) { events.push({ kind: 'asleep', side: atkSide }); return; }
-    atk.status = null;
-    events.push({ kind: 'wake', side: atkSide });
+    if (atk.sleepTurns <= 0) {
+      atk.status = null;
+      events.push({ kind: 'wake', side: atkSide });
+    } else {
+      events.push({ kind: 'asleep', side: atkSide });
+    }
+    return;
   }
   // Paralysie : 25 % de tour perdu.
   if (atk.status === 'par' && rng() < 0.25) {

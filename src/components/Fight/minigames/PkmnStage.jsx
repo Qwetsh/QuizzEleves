@@ -395,34 +395,137 @@ const ARCH_RENDER = {
     );
   },
 
-  // Boule de feu puis colonnes de flammes qui montent sur la cible.
+  // Lance-flammes : un JET continu de bouffées ardentes crachées du lanceur vers
+  // la cible (grossissant en cône), des langues de flamme qui lèchent la cible,
+  // des braises qui s'envolent et une lueur de chaleur à l'impact.
   flames: ({ src, dst, dx, dy, seq }) => (
     <>
-      <div style={at(src)}>
-        <div style={{
-          position: 'absolute', left: -13, top: -13, width: 26, height: 26, borderRadius: '50%',
-          background: 'radial-gradient(circle at 40% 35%, #ffe89a 0 28%, #ff8a2f 62%, #d84020 100%)',
-          boxShadow: '0 0 18px #ff7a2f',
-          '--dx': `${dx}cqw`, '--dy': `${dy}cqh`, '--spin': '260deg',
-          animation: 'pkmnProjArc 500ms cubic-bezier(.45,.1,.8,.6) both',
-        }} />
-      </div>
-      {Array.from({ length: 7 }, (_, i) => {
-        const ox = jit(i, seq, 52) - 26;
+      {/* Le jet : chapelet de bouffées le long de la ligne src→cible, qui
+          enflent vers la cible (effet de cône) et vacillent légèrement. */}
+      {Array.from({ length: 17 }, (_, i) => {
+        const t = i / 16;
+        const s = 12 + t * 30 + jit(i, seq, 8);
+        const wob = jit(i, seq, 12) - 6;
         return (
-          <div key={i} style={at(dst)}>
+          <div key={i} style={at({ x: src.x + dx * t, y: src.y + dy * t })}>
             <div style={{
-              position: 'absolute', left: ox - 7, top: -8, width: 14, height: 24,
-              borderRadius: '50% 50% 50% 50% / 64% 64% 36% 36%',
-              background: 'linear-gradient(180deg, #ffe89a 0%, #ffab3d 45%, #ff5a2f 80%, #c92f1f 100%)',
-              boxShadow: '0 0 10px #ff7a2f',
-              '--dx': `${ox / 9}px`, '--dy': '-9cqh',
-              animation: `pkmnRise 560ms ease-out ${460 + (i % 5) * 70}ms both`,
+              position: 'absolute', left: -s / 2, top: -s / 2 + wob, width: s, height: s * 1.12,
+              borderRadius: '52% 48% 52% 48% / 64% 64% 40% 40%',
+              background: `radial-gradient(circle at 50% 62%, #fff2c8 0 ${10 + t * 4}%, #ffd24a ${26}%, #ff8a2f 54%, #f0451c 80%, rgba(200,40,20,0) 100%)`,
+              boxShadow: `0 0 ${8 + t * 12}px #ff7a2f`, filter: 'blur(0.4px)', mixBlendMode: 'screen',
+              animation: `pkmnBeamOrb 560ms ease-out ${i * 26}ms both`,
             }} />
           </div>
         );
       })}
-      <ImpactGlow p={dst} glow="#ff7a2f" delay={480} size={130} />
+      {/* Langues de flamme qui montent sur la cible. */}
+      {Array.from({ length: 7 }, (_, i) => {
+        const ox = jit(i, seq, 56) - 28;
+        return (
+          <div key={`f${i}`} style={at(dst)}>
+            <div style={{
+              position: 'absolute', left: ox - 8, top: -10, width: 16, height: 30,
+              borderRadius: '50% 50% 50% 50% / 66% 66% 34% 34%',
+              background: 'linear-gradient(180deg, #fff2b0 0%, #ffc23d 42%, #ff5a2f 78%, #c92f1f 100%)',
+              boxShadow: '0 0 12px #ff7a2f',
+              '--dx': `${ox / 10}px`, '--dy': '-11cqh',
+              animation: `pkmnRise 620ms ease-out ${430 + (i % 5) * 70}ms both`,
+            }} />
+          </div>
+        );
+      })}
+      {/* Braises qui s'envolent en gerbe. */}
+      {Array.from({ length: 10 }, (_, i) => {
+        const a = ((i * 97 + seq * 53) % 360) * (Math.PI / 180);
+        const d = 24 + jit(i, seq, 40);
+        return (
+          <div key={`e${i}`} style={at(dst)}>
+            <div style={{
+              position: 'absolute', left: -3, top: -3, width: 5 + jit(i, seq, 4), height: 5 + jit(i, seq, 4), borderRadius: '50%',
+              background: 'radial-gradient(circle, #ffe89a 0 40%, #ff7a2f 100%)', boxShadow: '0 0 6px #ff7a2f',
+              '--dx': `${Math.cos(a) * d}px`, '--dy': `${Math.sin(a) * d - 30}px`,
+              animation: `pkmnVfxPart 720ms ease-out ${480 + (i % 5) * 40}ms both`,
+            }} />
+          </div>
+        );
+      })}
+      <ImpactGlow p={dst} glow="#ff7a2f" delay={440} size={140} />
+    </>
+  ),
+
+  // Cage Éclair (paralysie) : arcs électriques qui ENSERRENT la cible + étincelles
+  // grésillantes + anneau statique. Volontairement SANS flash blanc ni éclats
+  // d'impact → se lit comme un STATUT, jamais comme une attaque qui blesse.
+  paralyze: ({ dst, seq }) => (
+    <>
+      {Array.from({ length: 7 }, (_, i) => {
+        const ang = (i / 7) * Math.PI * 2 + (seq % 6) * 0.2;
+        const cx = Math.cos(ang) * 30;
+        const cy = Math.sin(ang) * 24;
+        return (
+          <div key={i} style={at(dst)}>
+            <div style={{
+              position: 'absolute', left: cx - 2, top: cy - 12, width: 4, height: 22,
+              background: 'linear-gradient(180deg, #fff 0%, #ffe36b 45%, #ffd93b 100%)',
+              clipPath: 'polygon(45% 0,62% 0,50% 34%,72% 30%,42% 66%,60% 62%,30% 100%,46% 60%)',
+              filter: 'drop-shadow(0 0 5px #ffd93b)',
+              transform: `rotate(${(ang * 180) / Math.PI + 90}deg)`, transformOrigin: '50% 0',
+              animation: `pkmnBolt 460ms linear ${i * 65}ms both`,
+            }} />
+          </div>
+        );
+      })}
+      {Array.from({ length: 8 }, (_, i) => {
+        const a = ((i * 61 + seq * 41) % 360) * (Math.PI / 180);
+        const d = 14 + jit(i, seq, 26);
+        return (
+          <div key={`s${i}`} style={at(dst)}>
+            <div style={{
+              position: 'absolute', left: -2.5, top: -2.5, width: 5, height: 5, borderRadius: '50%',
+              background: 'radial-gradient(circle, #fff 0 30%, #ffd93b 70%)', boxShadow: '0 0 6px #ffd93b',
+              '--dx': `${Math.cos(a) * d}px`, '--dy': `${Math.sin(a) * d}px`,
+              animation: `pkmnVfxPart 440ms ease-out ${120 + (i % 4) * 60}ms both`,
+            }} />
+          </div>
+        );
+      })}
+      <div style={at(dst)}>
+        <div style={{
+          position: 'absolute', left: -40, top: -40, width: 80, height: 80, borderRadius: '50%',
+          border: '2px solid #ffe36b', boxShadow: '0 0 14px #ffd93b, inset 0 0 12px rgba(255,217,59,0.4)',
+          animation: 'pkmnRing 620ms ease-out 60ms both',
+        }} />
+      </div>
+    </>
+  ),
+
+  // Hypnose (sommeil) : anneaux hypnotiques concentriques + spirale de points
+  // sur la cible, en teinte psychique douce. Aucun éclat d'impact → statut.
+  hypno: ({ dst, seq }) => (
+    <>
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} style={at(dst)}>
+          <div style={{
+            position: 'absolute', left: -44, top: -44, width: 88, height: 88, borderRadius: '50%',
+            border: `3px solid ${i % 2 ? '#e0a8ff' : '#b06bff'}`, boxShadow: '0 0 12px #b06bff',
+            animation: `pkmnRing 720ms ease-out ${i * 140}ms both`,
+          }} />
+        </div>
+      ))}
+      {Array.from({ length: 10 }, (_, i) => {
+        const a = i * 0.9 + (seq % 4) * 0.3;
+        const r = 6 + i * 3;
+        return (
+          <div key={`p${i}`} style={at(dst)}>
+            <div style={{
+              position: 'absolute', left: Math.cos(a) * r - 3, top: Math.sin(a) * r - 3, width: 6, height: 6, borderRadius: '50%',
+              background: '#e8c0ff', boxShadow: '0 0 6px #c98ae0',
+              animation: `pkmnVfxGlow 760ms ease-out ${i * 42}ms both`,
+            }} />
+          </div>
+        );
+      })}
+      <ImpactGlow p={dst} glow="#b06bff" delay={120} size={110} />
     </>
   ),
 
@@ -757,7 +860,7 @@ function Trainer({ side, trainer, gesture }) {
 // `spriteScale` : facteur de taille des Pokémon actifs (la TV du mode
 // téléphones passe < 1 — l'écran CRT est petit, les sprites pleins étaient
 // disproportionnés par rapport aux dresseurs et aux boîtes de PV).
-export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', dialogSize = 17, trainers = null, spriteScale = 1, arena = 'meadow' }) {
+export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', dialogSize = 17, trainers = null, spriteScale = 1, hpScale = 1, arena = 'meadow' }) {
   if (!view) return null;
   const scene = arenaDef(arena);
   const a = anim || {};
@@ -771,33 +874,34 @@ export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', di
 
   const hpBox = (sideKey) => {
     const f = F(sideKey);
+    const hs = hpScale;
     const boosts = Object.entries(f.boosts || {}).filter(([, n]) => n !== 0);
     return (
       <div style={{
-        width: 'min(30%, 300px)', minWidth: 230, borderRadius: 12, padding: '7px 13px 9px',
+        width: `min(${30 * hs}%, ${300 * hs}px)`, minWidth: 230 * hs, borderRadius: 12 * hs, padding: `${7 * hs}px ${13 * hs}px ${9 * hs}px`,
         background: 'linear-gradient(180deg, #fdf6dd, #f0e3bc)', border: '3px solid #5a4a28',
         boxShadow: '0 4px 10px rgba(0,0,0,0.35)',
       }}>
-        <div style={{ fontWeight: 800, fontSize: 15.5, color: '#3a2c14', fontFamily: 'var(--font-ui)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontWeight: 800, fontSize: 15.5 * hs, color: '#3a2c14', fontFamily: 'var(--font-ui)', display: 'flex', alignItems: 'center', gap: 6 * hs }}>
           {f.name}
-          {f.status && <span style={{ fontSize: 10, fontWeight: 900, color: '#fff', background: '#b58a1e', borderRadius: 4, padding: '1px 6px' }}>{tg(`fight.pkmn.ailment.${f.status}`)}</span>}
-          <span style={{ marginLeft: 'auto', color: '#7a6236', fontSize: 12.5, fontWeight: 600 }}>Nv. 50</span>
+          {f.status && <span style={{ fontSize: 10 * hs, fontWeight: 900, color: '#fff', background: '#b58a1e', borderRadius: 4, padding: `${1 * hs}px ${6 * hs}px` }}>{tg(`fight.pkmn.ailment.${f.status}`)}</span>}
+          <span style={{ marginLeft: 'auto', color: '#7a6236', fontSize: 12.5 * hs, fontWeight: 600 }}>Nv. 50</span>
         </div>
-        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 10, fontWeight: 900, color: '#e8a020' }}>PV</span>
-          <div style={{ flex: 1, height: 10, borderRadius: 6, background: '#4a3c20', padding: 2 }}>
+        <div style={{ marginTop: 5 * hs, display: 'flex', alignItems: 'center', gap: 6 * hs }}>
+          <span style={{ fontSize: 10 * hs, fontWeight: 900, color: '#e8a020' }}>PV</span>
+          <div style={{ flex: 1, height: 10 * hs, borderRadius: 6, background: '#4a3c20', padding: 2 }}>
             <div style={{ height: '100%', width: `${(f.hp / f.maxHp) * 100}%`, borderRadius: 4, background: hpColor(f), transition: 'width 650ms ease' }} />
           </div>
         </div>
-        <div style={{ display: 'flex', marginTop: 3, alignItems: 'center' }}>
+        <div style={{ display: 'flex', marginTop: 3 * hs, alignItems: 'center' }}>
           <span style={{ display: 'flex', gap: 4 }}>
             {boosts.map(([stat, n]) => (
-              <span key={stat} style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: n > 0 ? '#3fae42' : '#c9472f', borderRadius: 4, padding: '1px 5px' }}>
+              <span key={stat} style={{ fontSize: 9 * hs, fontWeight: 800, color: '#fff', background: n > 0 ? '#3fae42' : '#c9472f', borderRadius: 4, padding: '1px 5px' }}>
                 {tg(`fight.pkmn.statAbbr.${stat}`)} {n > 0 ? `+${n}` : n}
               </span>
             ))}
           </span>
-          <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#5a4a28' }}>{f.hp} / {f.maxHp}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12 * hs, fontWeight: 700, color: '#5a4a28' }}>{f.hp} / {f.maxHp}</span>
         </div>
       </div>
     );

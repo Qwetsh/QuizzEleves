@@ -466,16 +466,20 @@ export default function PokemonBattleGame({ attacker, defender }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-      {/* Arène + dialogue (scène partagée avec la TV du mode téléphones) */}
+      {/* Arène + dialogue (scène partagée avec la TV du mode téléphones).
+          Zone de combat volontairement COMPACTE sur écran tactile : sprites,
+          boîtes de PV et dialogue réduits → toute la place gagnée va aux
+          attaques ci-dessous (spriteScale/hpScale n'affectent QUE cette vue). */}
       <PkmnStage
         view={view} anim={anim} vfx={vfx} dialog={dialog} arena={arena}
+        spriteScale={0.85} hpScale={0.8} dialogSize={14}
         trainers={{
           A: { character: attacker.character, color: attacker.color },
           B: { character: defender.character, color: defender.color },
         }}
       />
-      {/* Commandes */}
-      <div style={{ display: 'flex', gap: 10, height: 150 }}>
+      {/* Commandes — plus de hauteur pour aérer les attaques */}
+      <div style={{ display: 'flex', gap: 10, height: 222, flexShrink: 0 }}>
         {commandPanel('A')}
         {commandPanel('B')}
       </div>

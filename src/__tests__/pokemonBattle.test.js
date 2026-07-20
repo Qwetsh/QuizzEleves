@@ -97,6 +97,23 @@ describe('pokemonBattle — résolution de tour', () => {
     expect(ev2.some((e) => e.kind === 'wake' && e.side === 'B')).toBe(true);
   });
 
+  it('sommeil : coûte toujours ≥1 tour — le Pokémon N’attaque PAS le tour du réveil (jet de 1)', () => {
+    // Régression : avant, un sommeil de 1 tour réveillait ET laissait agir le
+    // même tour → le sommeil « ne restait jamais ». Désormais le tour est perdu.
+    const caster = mon({ name: 'Dormeur', moves: [{ id: 'spore', fr: 'Spore', type: 'grass', power: 0, accuracy: 100, effects: [{ kind: 'ailment', ailment: 'slp' }] }, ...mon().moves.slice(1)] });
+    const fast = mon({ name: 'Rapide', base: { ...mon().base, spe: 200 } }); // agit avant d’être endormi
+    const b = createBattle([caster], [fast]);
+    // Tour 1 : B (plus rapide) danse, puis A l’endort ; jet de sommeil = 1 tour.
+    resolveTurn(b, { A: { type: 'move', index: 0 }, B: { type: 'move', index: 3 } }, rngOf([0.5, 0.5, 0.1]));
+    expect(activeFighter(b, 'B').status).toBe('slp');
+    expect(activeFighter(b, 'B').sleepTurns).toBe(1);
+    // Tour 2 : B tente Charge mais se réveille → PERD son tour (aucun dégât sur A).
+    const ev2 = resolveTurn(b, { A: { type: 'move', index: 3 }, B: { type: 'move', index: 0 } }, rngOf([0.5]));
+    expect(ev2.some((e) => e.kind === 'wake' && e.side === 'B')).toBe(true);
+    expect(ev2.some((e) => e.kind === 'damage' && e.side === 'A')).toBe(false);
+    expect(activeFighter(b, 'B').status).toBe(null);
+  });
+
   it('boosts : Danse-Lames +2, plafond ±2, reset au switch', () => {
     const b = createBattle([mon(), mon({ name: 'Remplaçant' })], [mon({ base: { ...mon().base, spe: 10 } })]);
     resolveTurn(b, { A: { type: 'move', index: 3 }, B: { type: 'move', index: 3 } }, rngOf([]));
