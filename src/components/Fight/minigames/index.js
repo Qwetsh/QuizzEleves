@@ -191,6 +191,14 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.wow.name', rules: 'fight.mg.wow.rules', winLabel: 'fight.mg.geographie.winLabel',
     howto: { demo: 'geo', goal: 'fight.mg.wow.goal', steps: ['fight.mg.wow.step1', 'fight.mg.wow.step2', 'fight.mg.wow.step3', 'fight.mg.wow.step4'] },
   },
+  // Curioscope sur la carte parchemin de la Terre du Milieu (univers
+  // terre_du_milieu, 175 lieux Tolkien en DB). « Où se trouve ce lieu ? » :
+  // le nom s'affiche, on le pointe sur la carte. Clé = subject du thème LOTR.
+  seigneur_des_anneaux: {
+    engine: 'curioscope', content: { universes: ['terre_du_milieu'] },
+    name: 'fight.mg.lotr.name', rules: 'fight.mg.lotr.rules', winLabel: 'fight.mg.geographie.winLabel',
+    howto: { demo: 'geo', goal: 'fight.mg.lotr.goal', steps: ['fight.mg.lotr.step1', 'fight.mg.lotr.step2', 'fight.mg.lotr.step3', 'fight.mg.lotr.step4'] },
+  },
 
   // ── « Qui est ce Pokémon ?! » : reconstitution du plateau TV de l'anime ──
   // Moteur dédié (silhouette noire sur explosion étoilée, jingle original) —

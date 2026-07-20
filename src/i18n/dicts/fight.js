@@ -103,6 +103,14 @@ export default {
   'fight.mg.wow.step2': { fr: 'Zoome et pose ton repère sur la carte', en: 'Zoom in and place your marker on the map' },
   'fight.mg.wow.step3': { fr: 'Valide — révélation quand les deux équipes ont joué', en: 'Confirm — reveal once both teams have played' },
   'fight.mg.wow.step4': { fr: 'Points selon la distance : premier à 10 000 !', en: 'Points by distance: first to 10,000!' },
+  // Terre du Milieu (Curioscope, carte parchemin) — « où se trouve ce lieu ? ».
+  'fight.mg.lotr.name': { fr: 'Cartographe de la Terre du Milieu', en: 'Middle-earth Cartographer' },
+  'fight.mg.lotr.rules': { fr: "Un lieu de la Terre du Milieu est nommé : chaque équipe plante son repère à l'endroit qu'elle croit être le bon sur la carte. Le plus proche marque le plus de points !", en: 'A place in Middle-earth is named: each team plants its marker where they think it belongs on the map. Closest guess scores the most points!' },
+  'fight.mg.lotr.goal': { fr: 'Retrouve le lieu et place ton repère au plus près !', en: 'Find the place and pin it as close as you can!' },
+  'fight.mg.lotr.step1': { fr: 'Lis le nom du lieu à trouver', en: 'Read the name of the place to find' },
+  'fight.mg.lotr.step2': { fr: 'Explore la carte, zoome et pose ton repère', en: 'Explore the map, zoom in and place your marker' },
+  'fight.mg.lotr.step3': { fr: 'Valide — révélation quand les deux équipes ont joué', en: 'Confirm — reveal once both teams have played' },
+  'fight.mg.lotr.step4': { fr: 'Points selon la distance : le plus précis gagne !', en: 'Points by distance: the most precise wins!' },
 
   // --- MotLePlusLong (Le Mot le Plus Long) ---
   'fight.mot.wordValidated': { fr: 'Mot validé — {n} lettres ✔', en: 'Word confirmed — {n} letters ✔' },
