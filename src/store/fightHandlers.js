@@ -11,6 +11,7 @@ import { saveGame } from './persistence.js';
 import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
+import { getSubjectPool } from '../data/questions/index.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
 import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
@@ -198,7 +199,12 @@ export function serveRaceQuestion(set, get) {
     question = get().fightPickImageQuestion(f.wtp);
   } else {
     const { questions, askedQuestions } = get();
-    const pool = questions[subject] || [];
+    // Repli sur le pool TRANSVERSE (STORE global) si le thème n'est pas chargé
+    // dans la partie (ou vide au niveau courant) — comme fightPickImageQuestion.
+    // Sinon un thème tiré par le picker « aléatoire à N choix » (vivier =
+    // allSubjectsWithContent, plus large que get().questions) donnerait un pool
+    // vide → l'attaquant gagnerait la manche sans jouer.
+    const pool = questions[subject]?.length ? questions[subject] : getSubjectPool(subject);
     const asked = askedQuestions[subject] || new Set();
     const result = pickQuestion(pool, asked);
     if (result) {

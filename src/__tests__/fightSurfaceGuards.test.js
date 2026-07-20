@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { serializeSnapshot } from '../logic/onlineSnapshot.js';
+import { getQuestionStore, setQuestionData } from '../data/questions/index.js';
 
 const S = () => useGameStore.getState();
 
@@ -92,6 +93,24 @@ describe('fightBegin — routage par surface', () => {
     expect(S().showFight.race?.q?.q).toBe(RACE_Q.q);
     expect(S().showFight.wins).toEqual({ attacker: 0, defender: 0 });
     useGameStore.setState({ resolveSubjectFor: orig });
+    vi.clearAllTimers();
+  });
+
+  it('(e) thème hors partie mais présent dans le STORE : repli transverse sert la question (pas de victoire gratuite)', () => {
+    vi.useFakeTimers();
+    // Régression « startDuel + aléatoire à N choix » : le picker tire dans
+    // allSubjectsWithContent (STORE global), plus large que get().questions
+    // (pool de la partie). Un thème présent au STORE mais absent de la partie
+    // doit passer par le repli getSubjectPool — sinon pool vide → l'attaquant
+    // gagne la manche sans jouer.
+    const origCycle4 = getQuestionStore().cycle4;
+    setQuestionData({ cycle4: { ...origCycle4, themeHorsPartie: [RACE_Q] } });
+    setup({ questions: {}, showFight: FIGHT({ subject: 'themeHorsPartie' }) });
+    S().fightBegin();
+    const f = S().showFight;
+    expect(f.race?.q?.q).toBe(RACE_Q.q);                   // question bien servie…
+    expect(f.wins).toEqual({ attacker: 0, defender: 0 });  // …aucune manche offerte
+    setQuestionData({ cycle4: origCycle4 });               // restaure le STORE
     vi.clearAllTimers();
   });
 });

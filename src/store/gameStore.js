@@ -2865,7 +2865,11 @@ export const useGameStore = create((set, get) => ({
     // / identité). En duel, on résout pour l'équipe qui arrive (attaquant).
     subject = st.resolveSubjectFor(subject, st.showFight?.attackerIndex ?? st.currentTeam);
     const { questions, askedQuestions } = st;
-    const pool = questions[subject] || [];
+    // Repli sur le pool TRANSVERSE (STORE global) si le thème n'est pas chargé
+    // dans la partie (ou vide au niveau courant) — cf. serveRaceQuestion /
+    // fightPickImageQuestion : évite le pool vide → « pas d'autre question » →
+    // victoire gratuite pour un thème tiré par « aléatoire à N choix ».
+    const pool = questions[subject]?.length ? questions[subject] : getSubjectPool(subject);
     const asked = askedQuestions[subject] || new Set();
     const result = pickQuestion(pool, asked);
     if (!result) return null;
