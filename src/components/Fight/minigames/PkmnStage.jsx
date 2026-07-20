@@ -617,7 +617,10 @@ function Trainer({ side, trainer, gesture }) {
 }
 
 // ── Scène ───────────────────────────────────────────────────────────────────
-export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', dialogSize = 17, trainers = null }) {
+// `spriteScale` : facteur de taille des Pokémon actifs (la TV du mode
+// téléphones passe < 1 — l'écran CRT est petit, les sprites pleins étaient
+// disproportionnés par rapport aux dresseurs et aux boîtes de PV).
+export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', dialogSize = 17, trainers = null, spriteScale = 1 }) {
   if (!view) return null;
   const a = anim || {};
   const F = (sideKey) => view[sideKey].fighters[view[sideKey].active];
@@ -690,7 +693,7 @@ export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', di
         style={{
           position: 'absolute',
           ...(left ? { left: '13%', bottom: '16%' } : { right: '13%', bottom: '46%' }),
-          height: left ? '30%' : '25%', zIndex: 3, pointerEvents: 'none',
+          height: `${(left ? 30 : 25) * spriteScale}%`, zIndex: 3, pointerEvents: 'none',
         }}
       >
         <img

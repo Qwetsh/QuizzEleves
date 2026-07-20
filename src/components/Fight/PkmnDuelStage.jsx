@@ -85,7 +85,7 @@ export default function PkmnDuelStage({ fight, attacker, defender }) {
             <div className="rg-tv-screen">
               <div className="rg-tv-screen-inner" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 10 }}>
                 <PkmnStage
-                  view={p.view} anim={p.anim || {}} vfx={p.vfx} dialog={p.dialog} dialogSize={18}
+                  view={p.view} anim={p.anim || {}} vfx={p.vfx} dialog={p.dialog} dialogSize={18} spriteScale={0.7}
                   trainers={{
                     A: { character: attacker?.character, color: attacker?.color },
                     B: { character: defender?.character, color: defender?.color },

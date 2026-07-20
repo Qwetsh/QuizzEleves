@@ -37,6 +37,29 @@ function GbHpBar({ hp, maxHp }) {
   );
 }
 
+// Boîte d'info façon Gén. 1 : nom + statut, barre de PV, balls d'équipe
+// (et PV chiffrés pour mon camp, comme sur la vraie cartouche).
+function GbInfoBox({ f, balls, mine }) {
+  return (
+    <div style={{
+      border: `2px solid ${GB.darkest}`, borderRadius: 4, padding: '3px 5px 4px',
+      background: GB.lightest, boxShadow: `2px 2px 0 ${GB.dark}`,
+    }}>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'baseline' }}>
+        <span style={{ fontSize: 9.5, fontWeight: 900, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {f.name.toUpperCase()}
+        </span>
+        <span style={{ fontSize: 8, fontWeight: 900 }}>{f.ko ? 'K.O.' : f.status ? AILMENT[f.status] : ''}</span>
+      </div>
+      <GbHpBar hp={f.hp} maxHp={f.maxHp} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 7.5, fontWeight: 700, marginTop: 1 }}>
+        <span style={{ letterSpacing: 2 }}>{balls}</span>
+        {mine && <span>{f.hp}/{f.maxHp} PV</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onValidate, onChoose, onReplace, onReward, onClose }) {
   const T = useT();
   const p = fight.pkmn;
@@ -51,6 +74,7 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
   let title = '';
   let lines = [];        // [{ label, sub?, onA, marked?, disabled? }]
   let screenBody = null; // contenu au-dessus du menu
+  let movesGrid = false; // menu d'attaques en 2×2 façon Gén. 1 (D-pad 2D)
 
   const view = p?.view;
   const mine = view?.[mySide];
@@ -58,29 +82,31 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
   const myF = mine?.fighters?.[mine.active];
   const foeF = foe?.fighters?.[foe.active];
 
-  const recap = view && (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      {/* Adversaire en haut (comme sur GB), moi en bas avec mon sprite de dos simulé */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <img src={foeF.spriteStatic} alt="" style={{ height: 34, imageRendering: 'pixelated', filter: GB_IMG_FILTER }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 900 }}>
-            {foeF.name.toUpperCase()} {foeF.status ? `[${AILMENT[foeF.status]}]` : ''} {foeF.ko ? 'K.O.' : ''}
-          </div>
-          <GbHpBar hp={foeF.hp} maxHp={foeF.maxHp} />
-        </div>
-        <span style={{ fontSize: 9 }}>{foe.fighters.map((f) => (f.ko ? '○' : '●')).join('')}</span>
+  // Mini-scène de combat façon vraie cartouche : l'adversaire en haut à droite
+  // (boîte d'info en haut à gauche), mon Pokémon « de dos » en bas à gauche
+  // (boîte d'info en bas à droite). Un K.O. disparaît de la scène.
+  const ballsOf = (side) => side.fighters.map((f) => (f.ko ? '○' : '●')).join('');
+  const recap = view && myF && foeF && (
+    <div style={{ position: 'relative', height: 128 }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, width: '58%', zIndex: 1 }}>
+        <GbInfoBox f={foeF} balls={ballsOf(foe)} />
       </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <img src={myF.spriteStatic} alt="" style={{ height: 34, imageRendering: 'pixelated', filter: GB_IMG_FILTER, transform: 'scaleX(-1)' }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 900 }}>
-            {myF.name.toUpperCase()} {myF.status ? `[${AILMENT[myF.status]}]` : ''} {myF.ko ? 'K.O.' : ''}
-          </div>
-          <GbHpBar hp={myF.hp} maxHp={myF.maxHp} />
-          <div style={{ fontSize: 8.5, fontWeight: 700 }}>{myF.hp}/{myF.maxHp} PV</div>
-        </div>
-        <span style={{ fontSize: 9 }}>{mine.fighters.map((f) => (f.ko ? '○' : '●')).join('')}</span>
+      {!foeF.ko && (
+        <img
+          src={foeF.spriteStatic} alt=""
+          style={{ position: 'absolute', right: 4, top: 2, height: 52, imageRendering: 'pixelated', filter: GB_IMG_FILTER }}
+        />
+      )}
+      {/* Ligne de sol sous l'adversaire, clin d'œil GB */}
+      <div style={{ position: 'absolute', right: 0, top: 56, width: '34%', height: 2, background: GB.dark }} />
+      {!myF.ko && (
+        <img
+          src={myF.spriteStatic} alt=""
+          style={{ position: 'absolute', left: 2, bottom: 0, height: 66, imageRendering: 'pixelated', filter: GB_IMG_FILTER, transform: 'scaleX(-1)' }}
+        />
+      )}
+      <div style={{ position: 'absolute', right: 0, bottom: 0, width: '58%', zIndex: 1 }}>
+        <GbInfoBox f={myF} balls={ballsOf(mine)} mine />
       </div>
     </div>
   );
@@ -157,15 +183,29 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
         })),
         { label: '⇄ CHANGER DE POKEMON', onA: () => setBenchOpen(true) },
       ];
+      movesGrid = (myF?.moves || []).length === 4;
       screenBody = recap;
     }
   }
 
-  // Curseur borné + navigation D-pad.
+  // Curseur borné + navigation D-pad. En grille d'attaques (2×2 + CHANGER en
+  // pleine largeur, index 4) : ◀▶ change de colonne, ▲▼ change de rangée.
   const maxCursor = Math.max(0, lines.length - 1);
   const cur = Math.min(cursor, maxCursor);
   useEffect(() => { if (cursor > maxCursor) setCursor(maxCursor); }, [maxCursor]); // eslint-disable-line react-hooks/exhaustive-deps
-  const move = (d) => lines.length && setCursor((c) => (c + d + lines.length) % lines.length);
+  const nav = (dir) => {
+    if (!lines.length) return;
+    if (!movesGrid) {
+      const d = dir === 'up' || dir === 'left' ? -1 : 1;
+      setCursor((c) => (c + d + lines.length) % lines.length);
+      return;
+    }
+    setCursor((c) => {
+      if (dir === 'left' || dir === 'right') return c === 4 ? c : Math.floor(c / 2) * 2 + ((c + 1) % 2);
+      if (dir === 'down') return c <= 1 ? c + 2 : c <= 3 ? 4 : 0;
+      return c === 4 ? 2 : c >= 2 ? c - 2 : 4; // up
+    });
+  };
   const pressA = () => { const l = lines[cur]; if (l && !l.disabled) l.onA(); };
   const pressB = () => { if (benchOpen) setBenchOpen(false); };
 
@@ -242,7 +282,41 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
                 </div>
               )}
               {screenBody}
-              {lines.length > 0 && (
+              {movesGrid && (
+                /* Menu d'attaques façon Gén. 1 : cadre, 2 lignes × 2 colonnes,
+                   bandeau type/puissance de l'attaque pointée, CHANGER dessous. */
+                <div style={{ marginTop: 6, border: `2px solid ${GB.darkest}`, borderRadius: 4, padding: '4px 5px', background: GB.lightest, boxShadow: `2px 2px 0 ${GB.dark}` }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px' }}>
+                    {lines.slice(0, 4).map((l, i) => (
+                      <div
+                        key={i}
+                        onPointerDown={() => { setCursor(i); l.onA(); }}
+                        style={{
+                          display: 'flex', gap: 2, alignItems: 'center', padding: '4px 2px', borderRadius: 3,
+                          background: i === cur ? GB.light : 'transparent', cursor: 'pointer', minWidth: 0,
+                        }}
+                      >
+                        <span style={{ width: 9, fontSize: 9, flex: '0 0 auto' }}>{i === cur ? '▶' : ''}</span>
+                        <span style={{ fontSize: 9.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ borderTop: `2px solid ${GB.dark}`, marginTop: 4, paddingTop: 3, fontSize: 8.5, minHeight: 13, color: GB.dark, fontWeight: 900 }}>
+                    {cur < 4 ? lines[cur]?.sub : ''}
+                  </div>
+                  <div
+                    onPointerDown={() => { setCursor(4); lines[4].onA(); }}
+                    style={{
+                      marginTop: 2, padding: '3px 2px', display: 'flex', gap: 2, alignItems: 'center', borderRadius: 3,
+                      background: cur === 4 ? GB.light : 'transparent', cursor: 'pointer', fontSize: 9.5,
+                    }}
+                  >
+                    <span style={{ width: 9, fontSize: 9 }}>{cur === 4 ? '▶' : ''}</span>
+                    <span>{lines[4].label}</span>
+                  </div>
+                </div>
+              )}
+              {!movesGrid && lines.length > 0 && (
                 <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {lines.map((l, i) => (
                     <div
@@ -284,10 +358,10 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
                 gridTemplateColumns: `repeat(3, ${ARM})`, gridTemplateRows: `repeat(3, ${ARM})`,
                 filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.45))',
               }}>
-                {dpadArm('▲', () => move(-1), 'up', '7px 7px 0 0')}
-                {dpadArm('◀', () => move(-1), 'left', '7px 0 0 7px')}
-                {dpadArm('▶', () => move(1), 'right', '0 7px 7px 0')}
-                {dpadArm('▼', () => move(1), 'down', '0 0 7px 7px')}
+                {dpadArm('▲', () => nav('up'), 'up', '7px 7px 0 0')}
+                {dpadArm('◀', () => nav('left'), 'left', '7px 0 0 7px')}
+                {dpadArm('▶', () => nav('right'), 'right', '0 7px 7px 0')}
+                {dpadArm('▼', () => nav('down'), 'down', '0 0 7px 7px')}
                 {/* Creux central */}
                 <div style={{
                   gridArea: 'mid', background: '#2c2c30',
