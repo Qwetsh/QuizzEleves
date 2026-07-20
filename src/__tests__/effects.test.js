@@ -439,6 +439,51 @@ describe('forceSubject', () => {
   });
 });
 
+// --- startDuel (« débute un duel contre… ») ---------------------------
+
+describe('startDuel', () => {
+  it('lance un duel contre la cible sur un thème fixe (différé en sortie de file)', () => {
+    exec([{ action: 'startDuel', target: 'target', subject: 'maths' }], { source: 'item', targetTeam: 1 });
+    expect(S().pendingDuel).toBeNull();          // consommé par launchPendingDuel
+    expect(S().showFight).toBeTruthy();
+    expect(S().showFight.attackerIndex).toBe(0);
+    expect(S().showFight.defenderIndex).toBe(1);
+    expect(S().showFight.subject).toBe('maths');
+  });
+
+  it('un adversaire au hasard + thème au hasard (sans choix) → duel immédiat', () => {
+    exec([{ action: 'startDuel', target: 'randomOpponent', subject: { random: true } }], { source: 'item' });
+    expect(S().showFight).toBeTruthy();
+    expect(S().showFight.defenderIndex).toBe(1);   // seul adversaire
+    expect(typeof S().showFight.subject).toBe('string'); // thème concret tiré
+  });
+
+  it("l'immunité au duel protège la cible : pas de duel", () => {
+    useGameStore.setState({ teams: [mkTeam(0), mkTeam(1, { buffs: [{ type: 'duelImmune', turns: 3 }] })] });
+    expect(isDuelImmune(team(1))).toBe(true);
+    exec([{ action: 'startDuel', target: 'target', subject: 'maths' }], { source: 'item', targetTeam: 1 });
+    expect(S().showFight).toBeNull();
+    expect(S().pendingDuel).toBeNull();
+  });
+
+  it('neutralise un pendingLanding (objet utilisé après le lancer de dé) : un seul duel', () => {
+    useGameStore.setState({ pendingLanding: true });
+    exec([{ action: 'startDuel', target: 'target', subject: 'francais' }], { source: 'item', targetTeam: 1 });
+    expect(S().pendingLanding).toBe(false);        // la fin de tour normale est abandonnée
+    expect(S().showFight.subject).toBe('francais');
+  });
+
+  it('thème aléatoire à N choix : ouvre le picker, puis lance le duel au choix', () => {
+    exec([{ action: 'startDuel', target: 'target', subject: { random: true, choices: 2 } }], { source: 'item', targetTeam: 1 });
+    expect(S().showSubjectPicker).toBeTruthy();     // suspendu sur le sélecteur
+    expect(S().showFight).toBeNull();
+    S().selectSubject('maths');                     // le joueur choisit
+    expect(S().showFight).toBeTruthy();
+    expect(S().showFight.subject).toBe('maths');
+    expect(S().showFight.defenderIndex).toBe(1);
+  });
+});
+
 // --- déclencheurs de réponse conditionnés par le thème de la question ---
 
 describe('equipTriggerActions : condition de thème', () => {

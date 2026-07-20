@@ -18,6 +18,7 @@ const ACTIONS = [
   { key: 'teleportFurthest', label: '✨ Téléport. case la + avancée' },
   { key: 'swapPositions', label: '🔀 Échanger de place' },
   { key: 'challenge', label: '🎲 Défi (mon thème + pari)' },
+  { key: 'startDuel', label: '⚔️ Débute un duel contre une équipe' },
   { key: 'placeTrap', label: '🪤 Poser un piège' },
   { key: 'gainCharge', label: '⚡ Recharger un pouvoir' },
   { key: 'hideWrong', label: '💡 Éliminer une mauvaise réponse' },
@@ -90,6 +91,11 @@ const TRAP_TARGETS = [
   { key: 'randomOpponent', label: 'une autre équipe au hasard' }, { key: 'all', label: 'toutes les équipes' },
   { key: 'allOthers', label: 'toutes les autres équipes' },
 ];
+// Un duel est 1 contre 1 : seule une équipe adverse (choisie ou au hasard) est ciblable.
+const DUEL_TARGETS = [
+  { key: 'target', label: 'une équipe au choix' },
+  { key: 'randomOpponent', label: 'un adversaire au hasard' },
+];
 
 export const defaultAction = () => ({ action: 'money', mode: 'gain', target: 'self', n: 5, unit: 'flat' });
 
@@ -132,6 +138,14 @@ const subjLabel = (s) => (s && typeof s === 'object' && s.random)
   ? (s.choices >= 2 ? `au hasard (${s.choices} choix)` : 'au hasard')
   : (s === 'choose' ? 'thème au choix' : (s === 'same' || !s) ? 'même thème' : SUBJECTS[s]?.name || s);
 
+// Suffixe « pool » d'une spec de thème aléatoire (duel) : partie / liste choisie.
+const duelPoolLabel = (s) => {
+  if (!s || typeof s !== 'object' || !s.random) return '';
+  if (Array.isArray(s.pool)) return `, parmi ${s.pool.length} thème(s)`;
+  if (s.pool === 'game') return ', parmi les thèmes de la partie';
+  return '';
+};
+
 export function describeAction(a) {
   const who = TARGETS.find((t) => t.key === a.target)?.label || a.target;
   switch (a.action) {
@@ -167,6 +181,7 @@ export function describeAction(a) {
     case 'forceSubject': return `imposer ${subjLabel(a.subject)} à ${who}`;
     case 'askFlag': return `poser une question drapeau (image) à ${who}`;
     case 'challenge': return `défi (${subjLabel(a.subject)}) : ${(a.do || []).map(describeAction).join(', ') || 'rien'}`;
+    case 'startDuel': return `débute un duel contre ${who} (${subjLabel(a.subject)}${duelPoolLabel(a.subject)})`;
     case 'randomPathNext': return `voie aléatoire au prochain carrefour pour ${who}`;
     case 'teleportFurthest': return `téléporter ${who} sur la case la plus avancée atteinte`;
     case 'swapPositions': return `échanger ma place avec ${who}`;
@@ -297,6 +312,52 @@ function SubjectSelect({ value, onChange, extra, allowRandom = true, allowRandom
   );
 }
 
+// Sélecteur de thème d'un DUEL : thème fixe / aléatoire (sans choix ou à N choix)
+// + un « pool » quand c'est aléatoire — tous les thèmes, les thèmes de la partie
+// (plateau), ou une liste choisie ici. Écrit une spec { random, choices?, pool? }
+// lue par le moteur (resolveSubjectSpec / pickRandomSubjects).
+function DuelSubjectSelect({ value, onChange }) {
+  const isRandom = value && typeof value === 'object' && value.random;
+  const pool = isRandom ? value.pool : undefined;
+  const poolMode = !isRandom ? null : Array.isArray(pool) ? 'custom' : pool === 'game' ? 'game' : 'all';
+  const list = Array.isArray(pool) ? pool : [];
+  const setPoolMode = (m) => {
+    if (m === 'all') { const { pool: _p, ...rest } = value; onChange(rest); }
+    else if (m === 'game') onChange({ ...value, pool: 'game' });
+    else onChange({ ...value, pool: Array.isArray(pool) ? pool : [] });
+  };
+  const toggle = (k) => onChange({ ...value, pool: list.includes(k) ? list.filter((x) => x !== k) : [...list, k] });
+  return (
+    <>
+      <SubjectSelect value={value}
+        onChange={(v) => onChange((v && typeof v === 'object' && v.random && isRandom) ? { ...v, pool } : v)} />
+      {isRandom && (
+        <>
+          <W>parmi</W>
+          <select className="qed-select fx-blank" value={poolMode} onChange={(e) => setPoolMode(e.target.value)}>
+            <option value="all">tous les thèmes</option>
+            <option value="game">les thèmes de la partie</option>
+            <option value="custom">une liste que je choisis</option>
+          </select>
+          {poolMode === 'custom' && (
+            <div className="fx-sentence" style={{ flexWrap: 'wrap', marginTop: 4, flexBasis: '100%' }}>
+              {[...SUBJECT_KEYS, ...FORCED_SUBJECT_KEYS].map((k) => {
+                const on = list.includes(k);
+                return (
+                  <button key={k} type="button" onClick={() => toggle(k)}
+                    className={'fx-die' + (on ? ' is-on' : '')} style={{ width: 'auto', padding: '2px 8px', fontSize: 12 }}>
+                    {SUBJECTS[k]?.icon} {SUBJECTS[k]?.name || k}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 // Couche de probabilité optionnelle d'un reroll : chance% → thème principal,
 // sinon → thème de repli (ex. 50% thème choisi / 50% Hardcore). `a` = l'action
 // rerollQuestion, `onChange` reçoit l'action complète remplacée.
@@ -359,6 +420,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'startMinigame') Object.assign(base, { minigame: 'curioscope', universes: ['monde_reel'], rounds: 1, tiers: [{ min: 4000, kind: 'money', n: 25 }, { min: 2000, kind: 'move', n: 2 }] });
         if (k === 'setCheckpoint') base.consumeChance = 100;
         if (k === 'challenge') Object.assign(base, { subject: 'hardcore', do: [{ action: 'money', mode: 'gain', target: 'self', n: 20, unit: 'flat' }], else: [] });
+        if (k === 'startDuel') Object.assign(base, { target: 'target', subject: { random: true } });
         if (k === 'buff') Object.assign(base, { target: 'self', buff: { type: 'themeBonus', turns: 3, n: 5 } });
         if (k === 'loot') base.category = '';
         if (k === 'loseItem') Object.assign(base, { target: 'self', category: '', fallbackGold: 10 });
@@ -381,7 +443,7 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
         if (k === 'placeTrap') base.trap = { label: 'Piège', icon: '🪤', do: [{ action: 'move', target: 'self', dir: 'back', n: 2 }] };
         onChange(base);
       }}>
-        {ACTIONS.filter((opt) => allowTrap || (opt.key !== 'placeTrap' && opt.key !== 'challenge')).map((opt) => (
+        {ACTIONS.filter((opt) => allowTrap || !['placeTrap', 'challenge', 'startDuel'].includes(opt.key)).map((opt) => (
           <option key={opt.key} value={opt.key}>{opt.label}</option>
         ))}
       </select>
@@ -804,6 +866,15 @@ function ActionEditor({ action, onChange, allowTrap, inTrap }) {
           <div className="fx-nest-label">{'\u{1F480}'} Si ratée (optionnel) :</div>
           <ActionList actions={a.else || []} onChange={(d) => upd({ else: d })} allowTrap={false} />
         </div>
+      )}
+
+      {a.action === 'startDuel' && (
+        <>
+          <W>débute un duel contre</W>
+          <TargetSelect value={a.target || 'target'} onChange={(v) => upd({ target: v })} opts={DUEL_TARGETS} />
+          <W>, mini-jeu</W>
+          <DuelSubjectSelect value={a.subject ?? { random: true }} onChange={(v) => upd({ subject: v })} />
+        </>
       )}
 
       {a.action === 'placeTrap' && (

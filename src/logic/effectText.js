@@ -102,6 +102,15 @@ export function describeAction(a, lang = getLang()) {
         ? `challenge: your question forced in ${subjName(a.subject, lang)} — if right: ${win}${lose ? ` ; if wrong: ${lose}` : ''}`
         : `défi : ta question forcée en ${subjName(a.subject, lang)} — si juste : ${win}${lose ? ` ; si raté : ${lose}` : ''}`;
     }
+    case 'startDuel': {
+      const rnd = a.subject && typeof a.subject === 'object' && a.subject.random;
+      const poolTxt = !rnd ? ''
+        : Array.isArray(a.subject.pool) ? (en ? ` from ${a.subject.pool.length} theme(s)` : ` parmi ${a.subject.pool.length} thème(s)`)
+          : a.subject.pool === 'game' ? (en ? ' from the game themes' : ' parmi les thèmes de la partie') : '';
+      return en
+        ? `start a duel against ${who} (${subjName(a.subject, lang)}${poolTxt})`
+        : `débute un duel contre ${who} (${subjName(a.subject, lang)}${poolTxt})`;
+    }
     case 'placeTrap': {
       const inner = (a.trap?.do || []).map((x) => describeAction(x, lang)).join(', ');
       return en

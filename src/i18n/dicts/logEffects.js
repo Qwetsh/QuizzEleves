@@ -124,6 +124,14 @@ export default {
   'log.fx.challenge':       { fr: '🎲 Défi lancé ! Ta prochaine question sera en {subject}.', en: '🎲 Challenge issued! Your next question will be in {subject}.' },
   'log.fx.challenge.toast': { fr: 'Défi → {subject}', en: 'Challenge → {subject}' },
 
+  // --- startDuel (« débute un duel contre… ») ---
+  'log.fx.startDuel':              { fr: '⚔️ {emoji} {name} défie {target} en duel ({subject}) !', en: '⚔️ {emoji} {name} challenges {target} to a duel ({subject})!' },
+  'log.fx.startDuel.toast':        { fr: 'Duel contre {target} !', en: 'Duel against {target}!' },
+  'log.fx.startDuel.immune':       { fr: '🛡️ {emoji} {name} est immunisée : duel impossible.', en: '🛡️ {emoji} {name} is immune: duel impossible.' },
+  'log.fx.startDuel.immune.toast': { fr: '{name} est immunisée au duel', en: '{name} is immune to duels' },
+  'log.fx.startDuel.noTarget':     { fr: '⚔️ Aucune équipe à défier en duel.', en: '⚔️ No team to challenge.' },
+  'log.fx.startDuel.randomSubject': { fr: 'thème au hasard', en: 'random theme' },
+
   // --- buff ---
   'log.fx.buff': { fr: ['✨ Effet de durée posé pour {n} tour.', '✨ Effet de durée posé pour {n} tours.'],
                    en: ['✨ Timed effect applied for {n} turn.', '✨ Timed effect applied for {n} turns.'] },

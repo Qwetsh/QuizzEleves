@@ -7,7 +7,7 @@
 //  jonction). Voir plan : objets ultra-custom.
 // ============================================================
 import { moveForward } from '../logic/pathfinding.js';
-import { reducedSteal, applyStealProtection, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect, thornsPct, isAnchored, insurancePct } from '../logic/itemEffects.js';
+import { reducedSteal, applyStealProtection, resolveAmount, diceLabel, passesChance, activeSetEffects, mergedItem, isGoldStealImmune, rollsReflect, thornsPct, isAnchored, insurancePct, isDuelImmune } from '../logic/itemEffects.js';
 import { applyRecul, questionDuration } from '../logic/turnHelpers.js';
 import { extOn } from '../extensions/registry.js';
 import { soundShield } from '../logic/sounds.js';
@@ -860,6 +860,43 @@ function stepHead(set, get, action, ctx) {
       clearCtxResolution(set, get, '_subjChoices');
       return 'done';
     }
+    case 'startDuel': {
+      // « Débute un duel » : l'équipe SOURCE défie une équipe adverse sur un
+      // mini-jeu. Le thème suit la même spec que forceSubject/challenge (fixe /
+      // aléatoire sans choix / à N choix via picker, pool = tous / partie / liste).
+      // Le duel remplace la fin de tour : on le DIFFÈRE via `pendingDuel` et il
+      // est lancé par launchPendingDuel() en sortie de file (finishQueue) — ce
+      // qui neutralise proprement un éventuel pendingLanding (objet utilisé après
+      // le lancer de dé). L'immunité au duel (duelImmune) protège la cible.
+      const dt = resolveTargets(get, action.target || 'target', ctx);
+      if (dt.needPicker) { postTargetPicker(set, get, action); return 'suspend'; }
+      const dsrc = ctx.sourceTeam ?? get().currentTeam;
+      const defenderIndex = dt.indices.find((i) => i !== dsrc);
+      if (defenderIndex == null) {
+        get().addLog(tg('log.fx.startDuel.noTarget'));
+        clearCtxResolution(set, get, 'targetTeam');
+        return 'done';
+      }
+      const defender = get().teams[defenderIndex];
+      if (isDuelImmune(defender)) {
+        get().addLog(tg('log.fx.startDuel.immune', { emoji: defender.emoji, name: defender.name }));
+        announce(set, get, '🛡️', tg('log.fx.startDuel.immune.toast', { name: defender.name }), '#3b6cb3');
+        clearCtxResolution(set, get, 'targetTeam');
+        return 'done';
+      }
+      const rsD = resolveSubjectSpec(set, get, ctx, action.subject, 'startDuel');
+      if (rsD.suspend) return 'suspend';
+      const duelSubject = rsD.subject;
+      set({ pendingDuel: { attackerIndex: dsrc, defenderIndex, subject: duelSubject } });
+      const dname = duelSubject ? (loc(SUBJECTS[duelSubject], 'name') || duelSubject) : tg('log.fx.startDuel.randomSubject');
+      const atk = get().teams[dsrc];
+      get().addLog(tg('log.fx.startDuel', { emoji: atk.emoji, name: atk.name, target: `${defender.emoji} ${defender.name}`, subject: dname }));
+      announce(set, get, '⚔️', tg('log.fx.startDuel.toast', { target: defender.name }), '#8a1f2e');
+      clearCtxResolution(set, get, 'targetTeam');
+      clearCtxResolution(set, get, 'subject');
+      clearCtxResolution(set, get, '_subjChoices');
+      return 'done';
+    }
     case 'buff': {
       // Pose un effet de durée (X tours de l'équipe) sur la/les cible(s).
       const t = resolveTargets(get, action.target, ctx);
@@ -1302,7 +1339,13 @@ function stashCtx(set, get, patch) {
 // Ordre de repli : pool fourni → tous les thèmes chargés → thèmes en jeu → base.
 function pickRandomSubjects(get, pool, n) {
   const withContent = new Set(allSubjectsWithContent());
-  let src = (Array.isArray(pool) && pool.length) ? pool.filter((k) => withContent.has(k)) : [];
+  // pool : 'game' = thèmes de la partie (plateau) · liste = thèmes choisis dans
+  // l'éditeur · sinon (undefined/'all') = tous les thèmes chargés. On ne garde que
+  // les thèmes réellement jouables (sinon la question/duel « fizzle »).
+  let src;
+  if (pool === 'game') src = (get().boardSubjects || []).filter((k) => withContent.has(k));
+  else if (Array.isArray(pool) && pool.length) src = pool.filter((k) => withContent.has(k));
+  else src = [];
   if (!src.length) src = [...withContent];
   if (!src.length) src = (get().boardSubjects || []);
   if (!src.length) src = SUBJECT_KEYS;
@@ -1396,6 +1439,12 @@ export function finishQueue(set, get) {
   set({ pendingActions: null });
 
   if (get().finished) return;
+
+  // Duel différé (action startDuel) : il REMPLACE la fin de tour. On le lance en
+  // priorité — launchPendingDuel neutralise pendingLanding/deferredTurnEnd pour
+  // qu'un seul nextTurn (celui de closeFight) clôture le tour, même si l'objet a
+  // été utilisé après le lancer de dé.
+  if (get().pendingDuel) { get().launchPendingDuel?.(); return; }
 
   // Suite de tour différée (déclencheur on:correct/on:wrong qui a ouvert un
   // sélecteur) : on la reprend une fois la file vidée, AVANT tout le reste.

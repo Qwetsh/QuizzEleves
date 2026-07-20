@@ -193,6 +193,9 @@ const TURN_RESET = {
   pendingEventQuestion: null,
   forcedSubject: null,
   deferredTurnEnd: null,
+  // Duel différé posé par l'action d'effet `startDuel` (objet « débute un duel ») :
+  // lancé en sortie de file par launchPendingDuel().
+  pendingDuel: null,
 };
 
 // Retire une « spec » d'offre (or + objets sac + équipement) d'une équipe ; renvoie
@@ -550,6 +553,8 @@ export const useGameStore = create((set, get) => ({
   showFight: null,
   // Choix de duel (mode non forcé) : { defenders:[idx], subject } | null
   showDuelChoice: null,
+  // Duel différé (action startDuel) : { attackerIndex, defenderIndex, subject } | null
+  pendingDuel: null,
   eventApplied: false,
   showTargetPicker: null,
   // Investissement : modale de mise à l'activation { teamIndex, gold, rate } | null
@@ -1417,6 +1422,21 @@ export const useGameStore = create((set, get) => ({
     }
 
     get().nextTurn();
+  },
+
+  // Lance le duel DIFFÉRÉ posé par l'action d'effet `startDuel` (objet « débute
+  // un duel »), une fois la file d'effets vidée (appelé par finishQueue). Le duel
+  // REMPLACE la fin de tour : on efface pendingLanding + deferredTurnEnd pour
+  // qu'un seul nextTurn (celui de closeFight) clôture le tour — même si l'objet a
+  // été utilisé après le lancer de dé (pendingLanding en attente). L'immunité a
+  // déjà été vérifiée à la pose de pendingDuel.
+  launchPendingDuel: () => {
+    const pd = get().pendingDuel;
+    if (!pd) return;
+    set({ pendingDuel: null, pendingLanding: false, deferredTurnEnd: null });
+    // Garde-fou : ne pas empiler un duel sur une résolution déjà en cours.
+    if (get().finished || get().showFight || get().showQuestion || get().showEvent) return;
+    fightH.startFight(set, get, pd.defenderIndex, pd.subject);
   },
 
   // L'arrivant accepte le duel contre l'équipe choisie (mode non forcé).
