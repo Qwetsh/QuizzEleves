@@ -532,8 +532,63 @@ function DemoPkmn() {
   );
 }
 
+// Échecs « mat en N » : mini-échiquier 4x4, un Cavalier saute vers la case du
+// mat (flèche + halo vert), le Roi noir cerné. Démo LÉGÈRE, purement illustrative.
+function DemoChess() {
+  const light = '#e9d6b0';
+  const dark = '#a97e56';
+  const N = 4;
+  const cell = 46;
+  const board = N * cell;
+  // Pièces posées (col,row 0-indexé depuis le haut-gauche) : Roi noir cerné en
+  // haut-droite, notre Cavalier en bas-gauche qui vient mater.
+  const bK = { c: 3, r: 0, g: '♚', color: '#1c1a17' };
+  const wN = { c: 1, r: 3, g: '♘', color: '#fffdf7' };
+  const wQ = { c: 3, r: 3, g: '♕', color: '#fffdf7' };
+  const target = { c: 2, r: 1 }; // case du mat (Cf5#-like)
+  const pos = (c, r) => ({ left: c * cell, top: r * cell });
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+      <div style={{ position: 'relative', width: board, height: board, borderRadius: 6, overflow: 'hidden', border: '3px solid #5a4024', boxShadow: '0 6px 16px rgba(0,0,0,0.4)' }}>
+        {/* cases */}
+        {Array.from({ length: N * N }, (_, i) => {
+          const c = i % N; const r = Math.floor(i / N);
+          const isLight = (c + r) % 2 === 0;
+          const isTarget = c === target.c && r === target.r;
+          return (
+            <motion.div key={i}
+              style={{ position: 'absolute', left: c * cell, top: r * cell, width: cell, height: cell, background: isLight ? light : dark }}
+              animate={isTarget ? { boxShadow: ['inset 0 0 0 0 rgba(91,140,58,0)', 'inset 0 0 0 0 rgba(91,140,58,0)', 'inset 0 0 0 4px rgba(91,140,58,0.9)', 'inset 0 0 0 4px rgba(91,140,58,0.9)', 'inset 0 0 0 0 rgba(91,140,58,0)'] } : {}}
+              transition={{ duration: 3, repeat: Infinity, times: [0, 0.45, 0.55, 0.9, 1] }}
+            />
+          );
+        })}
+        {/* Roi noir + Dame blanche (statiques) */}
+        {[bK, wQ].map((p, i) => (
+          <span key={i} style={{ position: 'absolute', ...pos(p.c, p.r), width: cell, height: cell, display: 'grid', placeItems: 'center', fontSize: 30, color: p.color, textShadow: p.color === '#1c1a17' ? '0 1px 0 rgba(255,255,255,0.25)' : '0 1px 1px rgba(0,0,0,0.55)' }}>{p.g}</span>
+        ))}
+        {/* Cavalier qui saute vers la case du mat, en boucle */}
+        <motion.span
+          style={{ position: 'absolute', width: cell, height: cell, display: 'grid', placeItems: 'center', fontSize: 30, color: wN.color, textShadow: '0 1px 1px rgba(0,0,0,0.55)', zIndex: 3 }}
+          animate={{ left: [wN.c * cell, wN.c * cell, target.c * cell, target.c * cell, wN.c * cell], top: [wN.r * cell, wN.r * cell, target.r * cell, target.r * cell, wN.r * cell] }}
+          transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.55, 0.9, 1], ease: 'easeInOut' }}
+        >
+          {wN.g}
+        </motion.span>
+        {/* « # » (mat) qui apparaît sur le Roi */}
+        <motion.span
+          style={{ position: 'absolute', left: bK.c * cell + 8, top: bK.r * cell - 4, fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 900, color: '#c9472f', zIndex: 4, textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}
+          animate={{ opacity: [0, 0, 1, 1, 0], scale: [0.5, 0.5, 1.3, 1, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity, times: [0, 0.55, 0.65, 0.9, 1] }}
+        >#</motion.span>
+      </div>
+    </div>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
+  chess: DemoChess,
   pickAnswer: DemoPickAnswer,
   timeline: DemoTimeline,
   compute: DemoCompute,

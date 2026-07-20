@@ -9,6 +9,8 @@ import WhosThatPokemon from './WhosThatPokemon.jsx';
 import MendeleievGame from './MendeleievGame.jsx';
 import AudioRaceGame from './AudioRaceGame.jsx';
 import PokemonBattleGame from './PokemonBattleGame.jsx';
+import ChessDuel from './ChessDuel.jsx';
+import chessData from '../../../data/chessPuzzles.json';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -69,6 +71,10 @@ const ENGINES = {
   // Combat Pokémon (DESIGN_POKEMON.md) : UN combat = tout le duel — persistant,
   // victoire déclarée par le moteur (fightMatchWin), pas de manches affichées.
   pkmn: { Component: PokemonBattleGame, persistent: true, pointsBased: true },
+  // Échecs « mat en N » (maths & logique) : échiquier NU (aucune aide), les deux
+  // camps courent le MÊME puzzle. Auto-suffisant (chessPuzzles.json bundlé) :
+  // difficulté par manche (1-2 → mat en 1, 3+ → mat en 2). Remonté par manche.
+  chess: { Component: ChessDuel, persistent: false },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -101,6 +107,15 @@ const THEME_MINIGAMES = {
     engine: 'maths',
     name: 'fight.mg.maths.name', rules: 'fight.mg.maths.rules',
     howto: { demo: 'compute', goal: 'fight.mg.maths.goal', steps: ['fight.mg.maths.step1', 'fight.mg.maths.step2', 'fight.mg.maths.step3'] },
+  },
+  // Échecs « mat en N » (maths & logique) : décision utilisateur — mat en 1
+  // majoritaire + quelques mat en 2 (l'adversaire riposte au 1er coup correct),
+  // échiquier NU sans aucune aide. Auto-suffisant (données bundlées) : jouable
+  // dès que chessPuzzles.json contient au moins un puzzle.
+  maths_logique: {
+    engine: 'chess',
+    name: 'fight.mg.chess.name', rules: 'fight.mg.chess.rules',
+    howto: { demo: 'chess', goal: 'fight.mg.chess.goal', steps: ['fight.mg.chess.step1', 'fight.mg.chess.step2', 'fight.mg.chess.step3'] },
   },
   francais: {
     engine: 'french',
@@ -373,6 +388,9 @@ function isPlayable(theme) {
   // Moteur méta « mix » : jouable ssi AU MOINS un mini-jeu enfant l'est.
   if (theme.engine === 'mix') return mixCandidates(theme).length > 0;
   if (!ENGINES[theme.engine]?.Component) return false;
+  // Échecs : auto-suffisant (données bundlées, comme pkmn/mendeleiev) mais
+  // requiert au moins un puzzle chargé — sinon cascade vers l'ancêtre/générique.
+  if (theme.engine === 'chess') return (chessData?.puzzles || []).length > 0;
   if (theme.engine === 'curioscope') {
     return (theme.content?.universes || []).some((id) => (getUniverse(id)?.spots() || []).length > 0);
   }

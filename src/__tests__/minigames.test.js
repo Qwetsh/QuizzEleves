@@ -65,6 +65,16 @@ describe('mini-jeux — Tableau de Mendeleïev', () => {
     expect(KNOWN_ELEMENTS.every((e) => e.known)).toBe(true);
   });
 
+  it('le thème maths_logique résout le moteur chess (auto-suffisant, jouable)', async () => {
+    const { default: ChessDuel } = await import('../components/Fight/minigames/ChessDuel.jsx');
+    const mg = getMinigame('maths_logique');
+    expect(mg.Component).toBe(ChessDuel);
+    expect(mg.name).toBe('fight.mg.chess.name');
+    expect(mg.content).toBeUndefined(); // données bundlées → toujours jouable si le pool en a
+    expect(mg.persistent).toBe(false); // remonté à chaque manche
+    expect(mg.Component).not.toBe(getDefaultMinigame().Component);
+  });
+
   it('le thème chimie résout le moteur mendeleiev (auto-suffisant)', () => {
     const mg = getMinigame('chimie');
     expect(typeof mg.Component).toBe('function');
