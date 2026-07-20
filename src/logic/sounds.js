@@ -581,6 +581,189 @@ export function soundFizzle() {
   setTimeout(() => playTone(92, 0.22, 'triangle', 0.11), 460);
 }
 
+// ── Combat Pokémon (P5) — sons synthétisés par archétype d'attaque ──────────
+// Un son court (<900 ms) et typé par ARCHÉTYPE de VFX (cf. logic/pkmnAnimMap).
+// Joués UNIQUEMENT sur la surface qui fait office de sono : tactile =
+// PokemonBattleGame ; téléphones = la TV (PkmnDuelStage). Passent tous par le
+// bus maître → respectent volume/coupure des effets (getMaster / getSfxLevel).
+
+// Glissando : oscillateur qui balaie f0→f1 avec enveloppe simple (rampe expo).
+function glide(f0, f1, dur, type = 'sine', vol = 0.16) {
+  const c = getCtx();
+  const master = getMaster();
+  if (!c || !master) return;
+  const t0 = c.currentTime;
+  const osc = c.createOscillator();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f0, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t0 + dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + dur * 0.18);
+  g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+  osc.connect(g); g.connect(master);
+  osc.start(t0); osc.stop(t0 + dur + 0.02);
+}
+
+const PKMN_VFX_SOUND = {
+  // Vague : bruit passe-bas dont la fréquence descend (déferlante) + « splash ».
+  wave() {
+    const c = getCtx(); const master = getMaster(); if (!c || !master) return;
+    const t0 = c.currentTime; const dur = 0.6;
+    const frames = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, frames, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < frames; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const bp = c.createBiquadFilter(); bp.type = 'lowpass'; bp.Q.value = 0.8;
+    bp.frequency.setValueAtTime(2200, t0);
+    bp.frequency.exponentialRampToValueAtTime(360, t0 + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.3, t0 + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(t0); src.stop(t0 + dur);
+    setTimeout(() => playNoise(0.18, 0.16, { type: 'lowpass', freq: 700, q: 0.7 }), 480); // splash à l'impact
+  },
+  // Beam : ton pur montant, tenu, + fine surcouche aiguë (rayon d'énergie).
+  beam() {
+    glide(320, 1200, 0.62, 'sawtooth', 0.13);
+    setTimeout(() => playTone(1600, 0.16, 'sine', 0.08), 470);
+  },
+  // Projectile : petit « pew » descendant bref + tic d'impact.
+  projectile() {
+    glide(1300, 500, 0.16, 'square', 0.1);
+    setTimeout(() => playNoise(0.06, 0.14, { type: 'bandpass', freq: 1800, q: 1.4 }), 560);
+  },
+  // Flammes : rugissement de bruit passe-bande chaud + crépitement.
+  flames() {
+    const c = getCtx(); const master = getMaster(); if (!c || !master) return;
+    const t0 = c.currentTime; const dur = 0.55;
+    const frames = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, frames, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < frames; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9;
+    bp.frequency.setValueAtTime(500, t0);
+    bp.frequency.exponentialRampToValueAtTime(1400, t0 + 0.3);
+    const g = c.createGain(); g.gain.setValueAtTime(0.28, t0);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(t0); src.stop(t0 + dur);
+    setTimeout(() => playNoise(0.2, 0.12, { type: 'highpass', freq: 3000, q: 0.5 }), 460); // crépitement
+  },
+  // Bolt : crack sec aigu + rumble grave (calé sur le flash de l'éclair).
+  bolt() {
+    playNoise(0.14, 0.3, { type: 'highpass', freq: 2000, q: 0.6 });
+    setTimeout(() => { playNoise(0.5, 0.34, { type: 'lowpass', freq: 300, q: 0.8 }); playTone(64, 0.5, 'sawtooth', 0.16); }, 50);
+  },
+  // Quake : grondement très grave qui roule (secousse du sol).
+  quake() {
+    playNoise(1.0, 0.36, { type: 'lowpass', freq: 130, q: 0.9 });
+    playTone(46, 0.9, 'sawtooth', 0.2);
+    setTimeout(() => playTone(38, 0.7, 'sawtooth', 0.16), 260);
+  },
+  // Slash : swish bref (bruit passe-haut balayé) + shing tranchant.
+  slash() {
+    playNoise(0.13, 0.22, { type: 'highpass', freq: 3400, q: 0.5 });
+    setTimeout(() => playTone(2600, 0.1, 'triangle', 0.08), 60);
+  },
+  // Charge : impact sourd (thud grave) — ruée physique au contact.
+  charge() {
+    playTone(150, 0.14, 'square', 0.2);
+    playNoise(0.1, 0.2, { type: 'lowpass', freq: 500, q: 0.8 });
+    setTimeout(() => playTone(90, 0.16, 'sine', 0.14), 40);
+  },
+  // Spores : shimmer doux, nuage qui dérive (notes sinus voilées + souffle).
+  spores() {
+    [880, 990, 1100].forEach((f, i) => setTimeout(() => playTone(f, 0.3, 'sine', 0.07), i * 120));
+    playNoise(0.6, 0.05, { type: 'bandpass', freq: 2400, q: 0.6 });
+  },
+  // Psy : wobble sinusoïdal (fréquence modulée) — énergie psychique.
+  psy() {
+    const c = getCtx(); const master = getMaster(); if (!c || !master) return;
+    const t0 = c.currentTime; const dur = 0.6;
+    const osc = c.createOscillator(); osc.type = 'sine';
+    const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 14;
+    const lg = c.createGain(); lg.gain.value = 220;
+    osc.frequency.value = 620;
+    lfo.connect(lg); lg.connect(osc.frequency);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t0); lfo.start(t0); osc.stop(t0 + dur); lfo.stop(t0 + dur);
+  },
+  // Drain : glissando descendant (l'énergie est aspirée vers le lanceur).
+  drain() {
+    glide(900, 240, 0.6, 'triangle', 0.14);
+    setTimeout(() => playTone(330, 0.16, 'sine', 0.1), 560);
+  },
+  // Buff : arpège majeur MONTANT (renforcement).
+  buff() {
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.16, 'triangle', 0.14), i * 75));
+  },
+  // Debuff : arpège DESCENDANT (affaiblissement).
+  debuff() {
+    [784, 659, 523, 392].forEach((f, i) => setTimeout(() => playTone(f, 0.16, 'triangle', 0.13), i * 80));
+  },
+  // Notes : 3 notes de berceuse douces (chant apaisant).
+  notes() {
+    [659, 587, 494].forEach((f, i) => setTimeout(() => playTone(f, 0.3, 'sine', 0.13), i * 200));
+  },
+};
+
+// Joue le son d'un archétype de VFX Pokémon (repli silencieux si inconnu).
+export function soundPkmnVfx(archetype) {
+  const fn = PKMN_VFX_SOUND[archetype];
+  if (fn) fn();
+}
+
+// Lancer de pokéball d'un Pokémon en combat (entrée) : woosh de vol court +
+// « pop » d'ouverture (plus léger que soundWtpBall qui sert à l'intro « Qui… »).
+export function soundPkmnBall() {
+  const c = getCtx(); const master = getMaster(); if (!c || !master) return;
+  const dur = 0.45;
+  const frames = Math.floor(c.sampleRate * dur);
+  const buf = c.createBuffer(1, frames, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < frames; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource(); src.buffer = buf;
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
+  const t = c.currentTime;
+  bp.frequency.setValueAtTime(400, t);
+  bp.frequency.exponentialRampToValueAtTime(2200, t + dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.3, t + dur * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(bp); bp.connect(g); g.connect(master);
+  src.start(t); src.stop(t + dur);
+  // Pop d'ouverture calé sur la matérialisation.
+  setTimeout(() => { playTone(520, 0.12, 'triangle', 0.3); playNoise(0.1, 0.28, { type: 'bandpass', freq: 1600, q: 1.1 }); }, 430);
+}
+
+// Rappel dans la pokéball : zap descendant (le Pokémon est aspiré au rayon rouge).
+export function soundPkmnRecall() {
+  glide(1400, 300, 0.42, 'sawtooth', 0.14);
+  setTimeout(() => playTone(180, 0.1, 'sine', 0.12), 380);
+}
+
+// K.O. : chute (glissando grave descendant) + « plouf » sourd à l'atterrissage.
+export function soundPkmnFaint() {
+  glide(520, 90, 0.7, 'triangle', 0.18);
+  setTimeout(() => { playTone(70, 0.24, 'sine', 0.16); playNoise(0.12, 0.14, { type: 'lowpass', freq: 300, q: 0.8 }); }, 640);
+}
+
+// Victoire du combat Pokémon : petite fanfare montante enjouée (do majeur).
+export function soundPkmnVictory() {
+  [523, 659, 784, 659, 1047].forEach((f, i) => setTimeout(() => playTone(f, i === 4 ? 0.36 : 0.16, 'triangle', 0.2), i * 130));
+  setTimeout(() => playNoise(0.3, 0.06, { type: 'highpass', freq: 5200, q: 0.5 }), 620);
+}
+
 // Sort DÉCOUVERT : fanfare triomphale ascendante + shimmer aigu (style
 // soundReveal) — joué à l'apparition du bandeau doré « Nouveau sort découvert ».
 export function soundSpellDiscover() {

@@ -21,8 +21,8 @@
 // }
 import MONS from '../data/pokemonBattle.json';
 import { createBattle, resolveTurn, sendReplacement, draftOffers } from '../logic/pokemonBattle';
-import { archetypeForMove, SELF_ARCHETYPES, CONTACT_ARCHETYPES } from '../logic/pkmnAnimMap';
-import { soundEvent, soundPower, soundKatana, getSfxLevel } from '../logic/sounds';
+import { archetypeForMove, SELF_ARCHETYPES, CONTACT_ARCHETYPES, arenaForPicks } from '../logic/pkmnAnimMap';
+import { soundPower, soundKatana, getSfxLevel, soundPkmnVictory } from '../logic/sounds';
 import { tg } from '../i18n';
 
 // Moteur réel côté hôte (non sérialisé — la vue publiée suffit aux clients).
@@ -65,7 +65,7 @@ export function startPkmnDuel(set, get) {
       pkmn: {
         stage: 'draft', offers: draftOffers(MONS),
         picks: { A: [], B: [] }, validated: { A: false, B: false },
-        view: null, dialog: '', anim: null, vfx: null,
+        view: null, arena: null, dialog: '', anim: null, vfx: null,
         phaseB: 'choose', choice: { A: null, B: null },
         replaceSide: null, winner: null, seq: 0,
       },
@@ -92,9 +92,12 @@ export function pkmnDuelValidate(set, get, side) {
   const team = (k) => p.picks[k].map((id) => p.offers[k].find((m) => m.id === id));
   hostBattle = createBattle(team('A'), team('B'));
   const view = snapshotView(hostBattle);
+  // Arène DÉTERMINISTE dérivée du draft (mêmes picks → même arène que le tactile) ;
+  // publiée dans le bloc pkmn du payload → la TV et les téléphones la lisent.
+  const arena = arenaForPicks(p.picks);
   // Entrée en scène : les deux dresseurs lancent leur pokéball (arc + flash),
   // les Pokémon se matérialisent (~1,4 s), cris calés sur l'apparition.
-  patchPkmn(set, get, { validated, stage: 'battle', view, dialog: tg('fight.pkmn.begin'), anim: { enter: 'both' } });
+  patchPkmn(set, get, { validated, stage: 'battle', view, arena, dialog: tg('fight.pkmn.begin'), anim: { enter: 'both' } });
   setTimeout(() => playCry(view.A.fighters[0].cry), 650);
   setTimeout(() => playCry(view.B.fighters[0].cry), 1050);
   setTimeout(() => {
@@ -272,7 +275,7 @@ function afterHostTurn(set, get, seq) {
   if (hostBattle.winner) {
     const side = hostBattle.winner;
     patchPkmn(set, get, { phaseB: 'over', winner: side, anim: null, dialog: tg('fight.pkmn.win', { team: teamName(get, side) }) });
-    soundEvent();
+    soundPkmnVictory();
     setTimeout(() => {
       const cur = get().showFight?.pkmn;
       if (cur?.winner === side) get().fightMatchWin(side === 'A' ? 'attacker' : 'defender');

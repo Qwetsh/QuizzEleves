@@ -15,9 +15,11 @@ import DuelRaceView from '../Online/DuelRaceView';
 import { onlineToken } from '../../logic/sessionConfig';
 import { useT } from '../../i18n';
 
-// Le simulateur dev peut forcer le duel generique via fight.forceDefault
+// Le simulateur dev peut forcer le duel generique via fight.forceDefault.
+// `fight.round` est la graine du moteur « mix » (nature_g) : le mini-jeu tiré
+// change d'une manche à l'autre mais reste STABLE au sein d'une manche.
 function resolveMinigame(fight) {
-  return fight.forceDefault ? getDefaultMinigame() : getMinigame(fight.subject);
+  return fight.forceDefault ? getDefaultMinigame() : getMinigame(fight.subject, fight.round);
 }
 import { soundEvent } from '../../logic/sounds';
 

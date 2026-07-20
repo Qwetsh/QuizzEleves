@@ -1,8 +1,10 @@
 // Police « LCD » du bandeau TV rétro (auto-hébergée, comme l'écran cassettes).
 import '@fontsource/vt323/400.css';
+import { useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import TeamAvatar from '../TeamAvatar';
 import PkmnStage from './minigames/PkmnStage';
+import { soundPkmnVfx, soundPkmnBall, soundPkmnRecall, soundPkmnFaint } from '../../logic/sounds';
 import { useT } from '../../i18n';
 
 // Combat Pokémon — SCÈNE TV du mode « écran + téléphones » : uniquement le
@@ -15,6 +17,33 @@ export default function PkmnDuelStage({ fight, attacker, defender }) {
   const T = useT();
   const p = fight.pkmn;
   useGameStore((s) => s.showFight?.pkmn); // re-rendu sur chaque avancée du store
+
+  // La TV est la SONO du combat téléphones : elle joue les sons d'attaque
+  // (archétype du VFX) et les moments clés (ball / rappel / K.O.), calés sur les
+  // changements publiés par le store. Les téléphones (PkmnGameboyView) ne jouent
+  // PAS ces sons. Gardes anti-double-jeu : mémorise le dernier seq de VFX et la
+  // dernière signature d'anim ; ne rejoue jamais au 1er rendu (reprise/reconnexion).
+  const lastVfxSeq = useRef(null);
+  const lastAnimSig = useRef(null);
+  const vfxSeq = p?.vfx?.seq ?? null;
+  const vfxArch = p?.vfx?.archetype ?? null;
+  useEffect(() => {
+    if (vfxSeq == null) return;
+    if (lastVfxSeq.current === null) { lastVfxSeq.current = vfxSeq; return; } // 1er rendu : pas de rejeu
+    if (vfxSeq !== lastVfxSeq.current) { lastVfxSeq.current = vfxSeq; soundPkmnVfx(vfxArch); }
+  }, [vfxSeq, vfxArch]);
+  const anim = p?.anim || null;
+  const animSig = anim ? (anim.enter ? `enter:${anim.enter}` : anim.recall ? `recall:${anim.recall}` : anim.faint ? `faint:${anim.faint}` : null) : null;
+  useEffect(() => {
+    if (animSig == null) { lastAnimSig.current = null; return; }
+    if (lastAnimSig.current === null && lastVfxSeq.current === null) { lastAnimSig.current = animSig; return; } // 1er rendu
+    if (animSig === lastAnimSig.current) return;
+    lastAnimSig.current = animSig;
+    if (animSig.startsWith('enter')) soundPkmnBall();
+    else if (animSig.startsWith('recall')) soundPkmnRecall();
+    else if (animSig.startsWith('faint')) soundPkmnFaint();
+  }, [animSig]);
+
   if (!p) return null;
   const teams = { A: attacker, B: defender };
 
@@ -86,6 +115,7 @@ export default function PkmnDuelStage({ fight, attacker, defender }) {
               <div className="rg-tv-screen-inner" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 10 }}>
                 <PkmnStage
                   view={p.view} anim={p.anim || {}} vfx={p.vfx} dialog={p.dialog} dialogSize={18} spriteScale={0.7}
+                  arena={p.arena || 'meadow'}
                   trainers={{
                     A: { character: attacker?.character, color: attacker?.color },
                     B: { character: defender?.character, color: defender?.color },

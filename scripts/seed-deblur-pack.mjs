@@ -370,6 +370,58 @@ const PERSOS_BD = [
   ['Garfield', 'Garfield (personnage)', 'cartoon'],
 ].map(([name, wiki, cat]) => ({ name, wiki, cat }));
 
+// Persos manga/anime ICONIQUES (reconnaissables par un large public). Sourcés
+// AniList par ID (fiable, pas de faux positif de recherche) ; on garde nos
+// noms d'affichage FR/communs (AniList renvoie du romaji en ordre inversé).
+// cat 'manga' → distracteurs entre persos manga uniquement.
+const PERSOS_MANGA = [
+  ['Son Goku', 246], ['Naruto', 17], ['Sasuke', 13], ['Luffy', 40],
+  ['Zoro', 62], ['Nami', 723], ['Kakashi', 85], ['Vegeta', 913],
+  ['Sailor Moon', 2030], ['Totoro', 269], ['Astro Boy', 11686], ['Doraemon', 4304],
+  ['Pikachu', 3891], ['Ichigo', 5], ['Edward Elric', 11], ['Light Yagami', 80],
+  ['L', 71], ['Levi', 45627], ['Mikasa', 40881], ['Eren', 40882],
+  ['Tanjiro', 126071], ['Nezuko', 127518], ['Saitama', 73935], ['Gon', 30],
+  ['Killua', 27], ['Rukia', 6], ['Gojo Satoru', 127691], ['Anya Forger', 138100],
+  ['Kaneki', 87275], ['Yugi', 1374], ['Chihiro', 384], ['Spike Spiegel', 1],
+  ['Guts', 422], ['Inuyasha', 1353], ['Sakura', 2671], ['Nobita', 4303],
+  ['Kenshiro', 2511],
+].map(([name, id]) => ({ name, id, cat: 'manga' }));
+
+// Dédoublonne par id (sécurité si un id se répète).
+const _seenId = new Set();
+const PERSOS_MANGA_UNIQ = PERSOS_MANGA.filter((p) => {
+  if (_seenId.has(p.id)) return false;
+  _seenId.add(p.id); return true;
+});
+
+// Récupère les images AniList par LOT (id_in, jusqu'à 50/requête, 1 seule requête
+// pour toute la liste). Rate limit AniList = 90 req/min → on reste très en deçà.
+async function anilistImagesBatch(items) {
+  const byId = new Map();
+  const query = `query($ids:[Int]){Page(perPage:50){characters(id_in:$ids){id image{large medium}}}}`;
+  for (let i = 0; i < items.length; i += 50) {
+    const ids = items.slice(i, i + 50).map((x) => x.id);
+    try {
+      const r = await fetchT('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables: { ids } }),
+      });
+      if (!r.ok) { console.warn(`  ✗ AniList batch : HTTP ${r.status}`); continue; }
+      const j = await r.json();
+      for (const c of j.data?.Page?.characters || []) {
+        byId.set(c.id, c.image?.large || c.image?.medium || null);
+      }
+    } catch (e) { console.warn(`  ✗ AniList batch : ${e.name}`); }
+    await sleep(1500); // large marge sous les 90 req/min
+  }
+  return items.map((x) => {
+    const img = byId.get(x.id) || null;
+    if (!img) console.warn(`  ✗ pas d'image AniList : ${x.name}`);
+    return { ...x, img };
+  });
+}
+
 // ── Builders par pool ────────────────────────────────────────────────────────
 
 async function poolJv() {
@@ -434,30 +486,15 @@ async function tmdbPersonPhoto(key, name) {
 }
 
 async function poolPersos() {
-  // Persos manga (Jikan, top favoris) + BD/comics (Wikipédia par lot).
-  const manga = [];
-  for (let page = 1; page <= 2; page++) {
-    let ok = false;
-    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
-      try {
-        const r = await fetchT(`https://api.jikan.moe/v4/characters?order_by=favorites&sort=desc&page=${page}`, {
-          headers: { 'User-Agent': 'quete-matieres-seed/1.0' },
-        });
-        if (!r.ok) { console.warn(`  … Jikan p${page} : HTTP ${r.status}, retry`); await sleep(3000); continue; }
-        for (const c of (await r.json()).data || []) {
-          const img = c.images?.jpg?.image_url;
-          if (c.name && img) manga.push({ name: c.name, cat: 'manga', img });
-        }
-        ok = true;
-      } catch (e) { console.warn(`  … Jikan p${page} : ${e.name}, retry`); await sleep(3000); }
-    }
-    await sleep(1200); // rate limit Jikan
-  }
-  console.log(`→ Jikan : ${manga.length} persos manga.`);
+  // Persos BD/comics (Wikipédia par lot) + manga/anime iconiques (AniList par ID).
+  // Jikan (MyAnimeList) est tombé en 504 au seed initial → AniList GraphQL le
+  // remplace (sans clé, images CDN fiables, distracteurs entre persos manga).
   const bd = await wikiImagesBatch(PERSOS_BD);
+  const manga = (await anilistImagesBatch(PERSOS_MANGA_UNIQ)).filter((x) => x.img);
+  console.log(`→ AniList : ${manga.length} persos manga.`);
   await seedPool({
     subject: 'bd_persos', qFr: 'Quel est ce personnage ?', qEn: 'Who is this character?',
-    items: [...bd, ...manga.slice(0, 40)],
+    items: [...bd, ...manga],
   });
 }
 

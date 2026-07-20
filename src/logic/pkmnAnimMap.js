@@ -89,6 +89,33 @@ export function archetypeForMove(frName, type) {
   return BY_FR[frName] || FALLBACK_ATK[type] || 'charge';
 }
 
+// ── Choix d'arène de combat (DÉTERMINISTE) ──────────────────────────────────
+// L'arène thématique est dérivée UNE FOIS au début du combat depuis des données
+// stables (les ids des 6 Pokémon draftés) — surtout PAS de Math.random/Date.now
+// (leçon projet : casserait la reproductibilité entre surfaces/rejeux). Les deux
+// surfaces (tactile PokemonBattleGame, téléphones pokemonFightHandlers) appellent
+// arenaForPicks avec les MÊMES picks → la même arène des deux côtés.
+export const PKMN_ARENAS = [
+  'meadow',   // prairie ensoleillée
+  'forest',   // forêt sombre
+  'cave',     // grotte (stalactites)
+  'seaside',  // bord de mer / vagues
+  'volcano',  // volcan (lueur rouge)
+  'snow',     // montagne enneigée
+  'ruins',    // ruines mystiques
+  'night',    // nuit étoilée
+];
+
+// picks = { A: [id…], B: [id…] } (ids numériques du draft) → clé d'arène stable.
+export function arenaForPicks(picks) {
+  const ids = [...(picks?.A || []), ...(picks?.B || [])];
+  let sum = 0;
+  for (const id of ids) sum += Number(id) || 0;
+  // Repli si le draft est vide (ne devrait pas arriver en combat) : première arène.
+  if (!ids.length) return PKMN_ARENAS[0];
+  return PKMN_ARENAS[sum % PKMN_ARENAS.length];
+}
+
 // Archétypes joués sur le LANCEUR (la « cible » visuelle est soi-même).
 export const SELF_ARCHETYPES = new Set(['buff']);
 // Archétypes de contact : le lanceur garde sa ruée (lunge) ; les autres font

@@ -288,6 +288,7 @@ export function buildTurnPayload(s) {
           picks: p.picks,
           validated: p.validated,
           view: p.view,
+          arena: p.arena || null,
           dialog: p.dialog,
           anim: p.anim || null,
           vfx: p.vfx || null,

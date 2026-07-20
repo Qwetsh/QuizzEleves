@@ -287,6 +287,8 @@ export default {
   // Blind test (moteur audiorace — extraits Deezer 30 s).
   'fight.mg.blindtest.name': { fr: 'Le Blind test', en: 'Blind Test' },
   'fight.mg.blindtestclassique.name': { fr: 'Le Blind test classique', en: 'Classical Blind Test' },
+  'fight.mg.hymnes.name': { fr: 'Devine l\'hymne', en: 'Guess the Anthem' },
+  'fight.mg.cris.name': { fr: 'Cris d\'animaux', en: 'Animal Calls' },
   'fight.mg.audiorace.rules': { fr: 'Un extrait joue en boucle : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'A clip plays on loop: the first to tap the right answer wins the round. A mistake locks your side!' },
   'fight.mg.audiorace.goal': { fr: 'Reconnaissez le morceau à l\'oreille', en: 'Recognize the track by ear' },
   'fight.mg.audiorace.step1': { fr: 'Un extrait musical joue au centre (touchez le vinyle pour réécouter)', en: 'A music clip plays in the middle (tap the vinyl to replay)' },

@@ -132,6 +132,72 @@ describe('mini-jeux — packs quick wins (frises, memory, verbes, expressions)',
   });
 });
 
+// Moteur méta « mix » (nature_g) : « mix aléatoire des mini-jeux enfants entre
+// les manches ». À chaque manche, un mini-jeu enfant JOUABLE est tiré, graine par
+// le n° de manche (stable dans la manche, variable entre manches). Les enfants
+// injouables (pool média absent) sont exclus ; aucun jouable → cascade normale.
+describe('mini-jeux — moteur « mix » (nature_g : jeux enfants au hasard)', () => {
+  afterEach(() => useGameStore.setState({ questions: {}, askedQuestions: {} }));
+
+  // Enfants deblur de nature_g câblés au registre (fromQuestions → pool image).
+  const imgQ = (label) => [{ q: '?', a: [label, 'X', 'Y', 'Z'], c: 0, img: `https://x/${label}.jpg` }];
+  const loadAll = () => useGameStore.setState({
+    questions: {
+      animaux_photos: imgQ('Loup'),
+      plantes_photos: imgQ('Chene'),
+      geologie_photos: imgQ('Quartz'),
+    },
+    askedQuestions: {},
+  });
+
+  it('résout un mini-jeu parmi les enfants jouables (pas le générique)', () => {
+    loadAll();
+    const mg = getMinigame('nature_g', 1);
+    // Un des enfants deblur (photo mystère), donc DeblurGame et content ciblé.
+    expect(mg.Component).toBe(DeblurGame);
+    expect(['animaux_photos', 'plantes_photos', 'geologie_photos']).toContain(mg.content.fromQuestions);
+    expect(mg.Component).not.toBe(getDefaultMinigame().Component);
+  });
+
+  it('stable dans une manche (même graine → même jeu), variable entre manches', () => {
+    loadAll();
+    // Déterminisme : la même graine rend toujours exactement la même entrée.
+    const a1 = getMinigame('nature_g', 3);
+    const a2 = getMinigame('nature_g', 3);
+    expect(a2.content.fromQuestions).toBe(a1.content.fromQuestions);
+    expect(a2.name).toBe(a1.name);
+    // Variation possible : sur 3 candidats triés, les graines 0/1/2 balaient les
+    // trois → au moins deux jeux distincts apparaissent entre des manches.
+    const picks = new Set([0, 1, 2].map((r) => getMinigame('nature_g', r).content.fromQuestions));
+    expect(picks.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it('un enfant non jouable (pool absent) est exclu du tirage', () => {
+    // Seul animaux_photos est chargé → toutes les graines retombent sur lui.
+    useGameStore.setState({ questions: { animaux_photos: imgQ('Loup') }, askedQuestions: {} });
+    for (const r of [0, 1, 2, 3, 4, 5]) {
+      expect(getMinigame('nature_g', r).content.fromQuestions).toBe('animaux_photos');
+    }
+  });
+
+  it('aucun enfant jouable → cascade normale (repli duel générique)', () => {
+    useGameStore.setState({ questions: {}, askedQuestions: {} });
+    expect(getMinigame('nature_g', 1).Component).toBe(getDefaultMinigame().Component);
+    // Sans graine (aperçu Setup/cassettes) : même repli, pas de crash.
+    expect(getMinigame('nature_g').Component).toBe(getDefaultMinigame().Component);
+  });
+
+  it('les moteurs persistants sont exclus des candidats du mix', async () => {
+    // Un enfant fictif à moteur timeline (persistant) ne doit JAMAIS être tiré,
+    // même chargé : le mix ne sert que des jeux « une manche = une partie ».
+    // (nature_g ne câble que des enfants deblur ; on vérifie via la stabilité :
+    // aucun candidat persistant n'apparaît dans les tirages.)
+    loadAll();
+    const engines = new Set([0, 1, 2, 3].map((r) => getMinigame('nature_g', r).persistent));
+    expect(engines.has(true)).toBe(false); // aucun jeu persistant tiré
+  });
+});
+
 // Cascade thème → ancêtres → générique (DESIGN_MINIGAMES.md §3) : un thème sans
 // mini-jeu custom hérite de celui de sa catégorie via l'arbre quete_themes ; une
 // entrée non jouable (curioscope sans spots) est SAUTÉE, pas court-circuitée.

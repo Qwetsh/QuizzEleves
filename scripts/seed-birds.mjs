@@ -63,12 +63,17 @@ const shuffle = (arr) => {
 };
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+// Garde-fou : l'upload Supabase n'a pas d'AbortSignal → on borne via Promise.race
+// (leçon « fetch sans timeout a gelé un seed » — l'upload storage peut geler aussi).
+const withTimeout = (p, ms, label) => Promise.race([p, sleep(ms).then(() => { throw new Error(`${label} timeout ${ms}ms`); })]);
 
 // Télécharge depuis Commons avec retry sur 429 (rate-limit) : respecte Retry-After
 // et applique un backoff long (l'IP peut être en « pénalité » quelques dizaines de s).
 async function fetchWithRetry(url, tries = 6) {
   for (let i = 0; i < tries; i++) {
-    const r = await fetch(url, { headers: { 'User-Agent': UA } });
+    let r;
+    try { r = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(30000) }); }
+    catch (e) { if (i < tries - 1) { await sleep(3000 * (i + 1)); continue; } throw e; } // timeout/réseau → retry
     if (r.ok) return r;
     if (r.status === 429 && i < tries - 1) {
       const ra = Number(r.headers.get('retry-after')) || 0;
@@ -87,7 +92,7 @@ async function uploadAudio(fileUrl) {
   const decoded = decodeURIComponent(fileUrl);
   const ext = (decoded.match(/\.([a-z0-9]{2,4})(?:$|\?)/i)?.[1] || (ct.includes('mpeg') ? 'mp3' : 'ogg')).toLowerCase();
   const path = `q-${randomUUID()}.${ext}`; // NOM OPAQUE
-  const { error } = await sb.storage.from(BUCKET).upload(path, buf, { contentType: ct, upsert: true });
+  const { error } = await withTimeout(sb.storage.from(BUCKET).upload(path, buf, { contentType: ct, upsert: true }), 60000, 'upload');
   if (error) throw error;
   return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
@@ -133,7 +138,9 @@ for (const [fr, sci, en] of BIRDS) {
 }
 
 console.log(`→ ${rows.length} questions prêtes (${failed} échecs). Remplacement en base…`);
-{ const { error } = await sb.from('quete_questions').delete().eq('subject', SUBJECT); if (error) { console.error('delete:', error.message); process.exit(1); } }
+// Suppression CIBLÉE par tag (t='Oiseau') pour ne PAS écraser le volet mammifères
+// (t='Bête', seed-beasts.mjs) qui partage le même subject 'cris_animaux'.
+{ const { error } = await sb.from('quete_questions').delete().eq('subject', SUBJECT).eq('t', TAG); if (error) { console.error('delete:', error.message); process.exit(1); } }
 let inserted = 0;
 for (let i = 0; i < rows.length; i += 500) {
   const { error } = await sb.from('quete_questions').insert(rows.slice(i, i + 500));

@@ -282,6 +282,21 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.blindtestclassique.name', rules: 'fight.mg.audiorace.rules',
     howto: { demo: 'audiorace', goal: 'fight.mg.audiorace.goal', steps: ['fight.mg.audiorace.step1', 'fight.mg.audiorace.step2', 'fight.mg.audiorace.step3'] },
   },
+  // Blind test « géo » : reconnaître un pays à son hymne national (cassette
+  // DURE hymnes_nationaux, ~80 hymnes instrumentaux Wikidata, distracteurs
+  // par région). Enfant de geographie_g → héritée par le domaine en cascade.
+  hymnes_nationaux: {
+    engine: 'audiorace', content: { fromQuestions: 'hymnes_nationaux' },
+    name: 'fight.mg.hymnes.name', rules: 'fight.mg.audiorace.rules',
+    howto: { demo: 'audiorace', goal: 'fight.mg.audiorace.goal', steps: ['fight.mg.audiorace.step1', 'fight.mg.audiorace.step2', 'fight.mg.audiorace.step3'] },
+  },
+  // Blind test « nature » : reconnaître un animal à son cri (cassette DURE
+  // cris_animaux, ~60 cris Wikidata oiseaux + bêtes). Candidat du mix nature_g.
+  cris_animaux: {
+    engine: 'audiorace', content: { fromQuestions: 'cris_animaux' },
+    name: 'fight.mg.cris.name', rules: 'fight.mg.audiorace.rules',
+    howto: { demo: 'audiorace', goal: 'fight.mg.audiorace.goal', steps: ['fight.mg.audiorace.step1', 'fight.mg.audiorace.step2', 'fight.mg.audiorace.step3'] },
+  },
 
   // ── Drapeau éclair : course d'images NETTES (moteur imgrace) ──
   // Décision utilisateur : pas de flou sur les drapeaux (ça n'apporte rien) —
@@ -293,7 +308,27 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.drapeaux.name', rules: 'fight.mg.imgrace.rules',
     howto: { demo: 'imgrace', goal: 'fight.mg.imgrace.goal', steps: ['fight.mg.imgrace.step1', 'fight.mg.imgrace.step2', 'fight.mg.imgrace.step3'] },
   },
+
+  // ── Nature (domaine) : « mix aléatoire des mini-jeux enfants entre les
+  // manches » (souhait utilisateur). Moteur méta `mix` : à CHAQUE manche, un
+  // mini-jeu est tiré parmi les entrées ENFANTS jouables (photo-mystère animaux,
+  // plantes, roches…). Le tirage est graine par le n° de manche → STABLE dans la
+  // manche, varie d'une manche à l'autre. Les moteurs PERSISTANTS (qui gèrent
+  // leur propre continuité multi-manches) sont exclus des candidats. Sur les
+  // surfaces autres que TACTILE, fightHandlers replie déjà en duel éclair (le
+  // moteur mix ne s'y monte pas). Repli cascade normal si aucun enfant jouable.
+  nature_g: {
+    engine: 'mix',
+    mix: ['animaux', 'plantes_botanique', 'corps_humain_sante', 'cris_animaux', 'ecologie_environnement', 'geologie_mineraux'],
+    name: 'fight.mg.nature.name', rules: 'fight.mg.nature.rules',
+    howto: { demo: 'pickAnswer', goal: 'fight.mg.nature.goal', steps: ['fight.mg.default.step1', 'fight.mg.default.step2', 'fight.mg.default.step3'] },
+  },
 };
+
+// Moteurs à EXCLURE du mix : ils gèrent leur propre continuité multi-manches
+// (points cumulés, frise qui se remplit, combat unique) et remonteraient à mal
+// à chaque manche. Le mix ne tire que des mini-jeux « une manche = une partie ».
+const MIX_EXCLUDED_ENGINES = new Set(['curioscope', 'timeline', 'pkmn', 'mix']);
 
 const DEFAULT_MINIGAME = {
   Component: QuickDuel, persistent: false, content: undefined,
@@ -335,6 +370,8 @@ function candidateKeys(subject) {
 //     contenu non vide ;
 //   - moteurs auto-suffisants (maths/french) : toujours jouables.
 function isPlayable(theme) {
+  // Moteur méta « mix » : jouable ssi AU MOINS un mini-jeu enfant l'est.
+  if (theme.engine === 'mix') return mixCandidates(theme).length > 0;
   if (!ENGINES[theme.engine]?.Component) return false;
   if (theme.engine === 'curioscope') {
     return (theme.content?.universes || []).some((id) => (getUniverse(id)?.spots() || []).length > 0);
@@ -353,11 +390,41 @@ function isPlayable(theme) {
   return true;
 }
 
-// Première entrée jouable de la cascade, ou null (→ duel générique).
-function resolveEntry(subject) {
+// Candidats jouables d'un moteur « mix » : les entrées ENFANTS câblées, JOUABLES
+// (isPlayable — pools média chargés) et dont le moteur n'est PAS persistant
+// (MIX_EXCLUDED_ENGINES). Retourne la liste des entrées (pas les clés), triée par
+// clé pour un ordre STABLE et reproductible (déterminisme du tirage graine).
+function mixCandidates(theme) {
+  return (theme.mix || [])
+    .slice()
+    .sort()
+    .map((key) => THEME_MINIGAMES[key])
+    .filter((child) => child && !MIX_EXCLUDED_ENGINES.has(child.engine) && isPlayable(child));
+}
+
+// Tire une entrée parmi les candidats d'un mix, graine par `round` → STABLE au
+// sein d'une manche (le même round rend le même jeu, pas de Math.random au
+// rendu), variable d'une manche à l'autre. `round` absent (aperçus Setup /
+// cassettes / briefing statique) → première entrée (choix déterministe par
+// défaut). Retourne null si aucun candidat (→ repli cascade dans resolveEntry).
+function pickMixEntry(theme, round) {
+  const cands = mixCandidates(theme);
+  if (!cands.length) return null;
+  const r = Number.isFinite(round) ? Math.floor(Math.abs(round)) : 0;
+  return cands[r % cands.length];
+}
+
+// Première entrée jouable de la cascade, ou null (→ duel générique). `round` est
+// la graine du moteur « mix » (tirage stable par manche) ; ignoré par les autres
+// moteurs.
+function resolveEntry(subject, round) {
   for (const key of candidateKeys(subject)) {
     const theme = THEME_MINIGAMES[key];
-    if (theme && isPlayable(theme)) return theme;
+    if (!theme || !isPlayable(theme)) continue;
+    // Moteur méta « mix » : on ne renvoie pas l'entrée mix elle-même mais le
+    // mini-jeu enfant tiré pour cette manche (son moteur/contenu/libellés).
+    if (theme.engine === 'mix') return pickMixEntry(theme, round);
+    return theme;
   }
   return null;
 }
@@ -365,8 +432,8 @@ function resolveEntry(subject) {
 // Résout le mini-jeu d'un thème : cascade thème → ancêtres, puis fusionne le
 // MOTEUR (composant + technique) et le THÈME (contenu + libellés). Repli sur le
 // duel générique si aucune entrée jouable sur toute la chaîne.
-export function getMinigame(subject) {
-  const theme = resolveEntry(subject);
+export function getMinigame(subject, round) {
+  const theme = resolveEntry(subject, round);
   if (!theme) return DEFAULT_MINIGAME;
   const engine = ENGINES[theme.engine] || {};
   return {

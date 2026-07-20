@@ -29,6 +29,20 @@ const UA = 'QueteDesMatieres-seed/1.0 (quiz éducatif; contact: enseignant)';
 const DATA_URL = 'https://raw.githubusercontent.com/mledoze/countries/master/countries.json';
 const SPARQL = 'https://query.wikidata.org/sparql';
 
+// Pays « scolaires » bien connus (ISO3) — traités EN PRIORITÉ pour que, même si
+// le rate-limit Commons interrompt le run, on ait d'abord les hymnes reconnaissables.
+// (Le reste des pays disponibles suit ensuite.)
+const WELL_KNOWN = [
+  'FRA','USA','GBR','DEU','ITA','ESP','PRT','BEL','NLD','CHE','AUT','IRL','GRC',
+  'POL','SWE','NOR','DNK','FIN','ISL','RUS','UKR','TUR','ROU','HUN','CZE','SVK',
+  'HRV','SRB','BGR','CAN','MEX','BRA','ARG','CHL','COL','PER','VEN','CUB','URY',
+  'BOL','ECU','PRY','CHN','JPN','KOR','PRK','IND','PAK','IDN','THA','VNM','PHL',
+  'MYS','SGP','MMR','KHM','LKA','NPL','BGD','AUS','NZL','EGY','MAR','DZA','TUN',
+  'ZAF','NGA','KEN','ETH','GHA','SEN','CIV','CMR','COD','TZA','UGA','SAU','ISR',
+  'IRN','IRQ','SYR','JOR','LBN','ARE','QAT','KWT','YEM','AFG','KAZ','UZB','AZE',
+  'GEO','ARM','MNG',
+];
+
 const shuffle = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -80,11 +94,17 @@ for (const b of bindings) {
 console.log(`  ${Object.keys(audioByIso3).length} pays avec un hymne audio.`);
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+// Garde-fou générique : l'upload storage Supabase et le read du body n'ont pas de
+// timeout natif → on borne via Promise.race (leçon « un fetch/upload sans timeout
+// a gelé un seed »). En cas de dépassement on jette → le pays est simplement sauté.
+const withTimeout = (p, ms, label) => Promise.race([p, sleep(ms).then(() => { throw new Error(`${label} timeout ${ms}ms`); })]);
 
 // Télécharge depuis Commons avec retry sur 429 (respecte Retry-After, backoff long).
 async function fetchWithRetry(url, tries = 6) {
   for (let i = 0; i < tries; i++) {
-    const r = await fetch(url, { headers: { 'User-Agent': UA } });
+    let r;
+    try { r = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(30000) }); }
+    catch (e) { if (i < tries - 1) { await sleep(3000 * (i + 1)); continue; } throw e; } // timeout/réseau → retry
     if (r.ok) return r;
     if (r.status === 429 && i < tries - 1) {
       const ra = Number(r.headers.get('retry-after')) || 0;
@@ -99,7 +119,7 @@ async function uploadAudio(fileUrl) {
   const r = await fetchWithRetry(fileUrl);
   const len = Number(r.headers.get('content-length') || 0);
   if (len && len > MAX_BYTES) throw new Error(`trop lourd (${Math.round(len / 1e6)} Mo)`);
-  const buf = Buffer.from(await r.arrayBuffer());
+  const buf = Buffer.from(await withTimeout(r.arrayBuffer(), 45000, 'body'));
   if (buf.length > MAX_BYTES) throw new Error(`trop lourd (${Math.round(buf.length / 1e6)} Mo)`);
   const ct = r.headers.get('content-type') || 'audio/ogg';
   // Extension d'après le nom Commons (…/Special:FilePath/Nom.ogg), sinon content-type.
@@ -107,7 +127,7 @@ async function uploadAudio(fileUrl) {
   const m = decoded.match(/\.([a-z0-9]{2,4})(?:$|\?)/i);
   const ext = (m ? m[1] : (ct.includes('mpeg') ? 'mp3' : 'ogg')).toLowerCase();
   const path = `q-${randomUUID()}.${ext}`; // NOM OPAQUE
-  const { error } = await sb.storage.from(BUCKET).upload(path, buf, { contentType: ct, upsert: true });
+  const { error } = await withTimeout(sb.storage.from(BUCKET).upload(path, buf, { contentType: ct, upsert: true }), 60000, 'upload');
   if (error) throw error;
   return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
@@ -117,9 +137,24 @@ async function uploadAudio(fileUrl) {
 // Commons — même interrompu, ce qui est déjà téléchargé reste en base. Relancer
 // reprend à zéro (delete) mais on peut aussi passer --keep pour cumuler.
 const KEEP = process.argv.includes('--keep');
-const targets = countries.filter((c) => audioByIso3[c.cca3]).slice(0, LIMIT === Infinity ? undefined : LIMIT);
-console.log(`→ ${targets.length} pays cibles. Insert incrémental${KEEP ? ' (cumul --keep)' : ' (remplacement)'}…`);
+// Pays disponibles, TRIÉS : les bien connus d'abord (ordre WELL_KNOWN), puis le
+// reste. Ainsi une limite basse (ou une interruption 429) garde les hymnes utiles.
+const rank = new Map(WELL_KNOWN.map((iso, i) => [iso, i]));
+const available = countries.filter((c) => audioByIso3[c.cca3]);
+available.sort((a, b) => (rank.has(a.cca3) ? rank.get(a.cca3) : 1e6) - (rank.has(b.cca3) ? rank.get(b.cca3) : 1e6));
+let targets = available.slice(0, LIMIT === Infinity ? undefined : LIMIT);
 if (!KEEP) { const { error } = await sb.from('quete_questions').delete().eq('subject', SUBJECT); if (error) { console.error('delete:', error.message); process.exit(1); } }
+// Mode RESUME (--keep) : on SAUTE les pays déjà en base (repérés par le nom FR
+// présent dans l'explication `e`), pour ne pas ré-uploader de doublons. Ainsi une
+// relance --keep complète le pool là où un run précédent s'est arrêté.
+if (KEEP) {
+  const { data: existing } = await sb.from('quete_questions').select('e').eq('subject', SUBJECT).limit(500);
+  const done = new Set((existing || []).map((r) => (r.e || '').replace("C'est l'hymne de ", '').replace(/\.$/, '')));
+  const before = targets.length;
+  targets = targets.filter((c) => !done.has(frName(c)));
+  console.log(`  (resume) ${done.size} déjà en base, ${before - targets.length} sautés.`);
+}
+console.log(`→ ${targets.length} pays cibles. Insert incrémental${KEEP ? ' (cumul --keep)' : ' (remplacement)'}…`);
 
 let buffer = [];
 let ord = 0, failed = 0, inserted = 0;

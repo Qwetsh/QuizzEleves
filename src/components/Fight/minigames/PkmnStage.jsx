@@ -39,6 +39,143 @@ const TYPE_GLOW = {
   ghost: '#8a6fc0', dragon: '#7a5cf0', flying: '#a890f0',
 };
 
+// ── Arènes thématiques (fond + sol + décors, CSS/SVG pur, AUCUN asset) ───────
+// Chaque arène : `bg` = dégradé ciel→sol de la scène ; `plat` = radial-gradient
+// des deux plateformes ovales (teinte cohérente) ; `deco(seq)` = 3-5 silhouettes
+// décoratives (divs/clip-path/gradients) posées derrière les combattants.
+// Volontairement SOBRE : les zones de combat gardent un fond contrasté pour la
+// lisibilité des sprites et des VFX. `horizon` (%) = ligne ciel/sol (info seule).
+// Déterministe : le rendu ne dépend QUE de la clé d'arène (aucun aléa temporel).
+const abs = (s) => ({ position: 'absolute', ...s });
+const PKMN_ARENAS_DEF = {
+  // Prairie ensoleillée — l'arène « par défaut » d'origine, avec soleil et nuages.
+  meadow: {
+    bg: 'linear-gradient(180deg, #8ecff2 0%, #b9e3f7 46%, #7cba6d 46%, #5f9e52 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #cfe8b9, #9ec98a 70%, #86b573)',
+    deco: () => (
+      <>
+        <div style={abs({ left: '11%', top: '8%', width: 76, height: 76, borderRadius: '50%', background: 'radial-gradient(circle, #fff6c8 0 45%, #ffe89a 62%, transparent 74%)', boxShadow: '0 0 40px #ffe89a' })} />
+        <div style={abs({ left: '58%', top: '10%', width: 130, height: 34, borderRadius: 30, background: 'rgba(255,255,255,0.85)', filter: 'blur(1px)' })} />
+        <div style={abs({ left: '30%', top: '20%', width: 90, height: 26, borderRadius: 26, background: 'rgba(255,255,255,0.7)', filter: 'blur(1px)' })} />
+        <div style={abs({ left: '4%', bottom: '2%', width: '30%', height: '26%', borderRadius: '50% 50% 0 0', background: 'linear-gradient(180deg,#7fbf6a,#5f9e52)' })} />
+        <div style={abs({ right: '2%', bottom: '30%', width: '26%', height: '22%', borderRadius: '50% 50% 0 0', background: 'linear-gradient(180deg,#8ac774,#63a256)' })} />
+      </>
+    ),
+  },
+  // Forêt sombre — canopée verte tamisée, troncs et rais de lumière.
+  forest: {
+    bg: 'linear-gradient(180deg, #2f5a3e 0%, #3c6b48 40%, #2c4a30 46%, #24401f 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #6a8a50, #4a6a38 70%, #37522b)',
+    deco: () => (
+      <>
+        {[14, 40, 66, 88].map((x, i) => (
+          <div key={i} style={abs({ left: `${x}%`, top: '-4%', width: `${18 - i * 2}%`, height: '58%', background: 'linear-gradient(90deg, rgba(30,52,32,0.9), rgba(46,72,44,0.55))', clipPath: 'polygon(35% 0,65% 0,58% 100%,42% 100%)' })} />
+        ))}
+        <div style={abs({ left: '20%', top: '-6%', width: 44, height: '70%', background: 'linear-gradient(180deg, rgba(200,235,150,0.22), transparent)', transform: 'skewX(-14deg)' })} />
+        <div style={abs({ left: '62%', top: '-6%', width: 34, height: '62%', background: 'linear-gradient(180deg, rgba(200,235,150,0.16), transparent)', transform: 'skewX(-12deg)' })} />
+        <div style={abs({ left: 0, top: 0, width: '100%', height: '30%', background: 'radial-gradient(ellipse at 50% -20%, #4c7a52 0%, transparent 60%)' })} />
+      </>
+    ),
+  },
+  // Grotte — voûte sombre, stalactites au plafond et stalagmites au sol.
+  cave: {
+    bg: 'linear-gradient(180deg, #221b2c 0%, #2c2438 42%, #34302f 46%, #262019 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #5a5148, #423a30 70%, #2f2820)',
+    deco: () => (
+      <>
+        {[8, 22, 38, 55, 72, 90].map((x, i) => (
+          <div key={i} style={abs({ left: `${x}%`, top: 0, width: 22, height: `${14 + (i % 3) * 8}%`, background: 'linear-gradient(180deg,#3d3646,#241f2c)', clipPath: 'polygon(0 0,100% 0,50% 100%)' })} />
+        ))}
+        {[16, 46, 80].map((x, i) => (
+          <div key={`s${i}`} style={abs({ left: `${x}%`, bottom: 0, width: 26, height: `${10 + (i % 2) * 6}%`, background: 'linear-gradient(0deg,#332c22,#4a4033)', clipPath: 'polygon(50% 0,100% 100%,0 100%)' })} />
+        ))}
+        <div style={abs({ left: '58%', top: '6%', width: 34, height: 34, borderRadius: '50%', background: 'radial-gradient(circle,#8fd8ff55,transparent 70%)' })} />
+      </>
+    ),
+  },
+  // Bord de mer — océan et vagues, écume, soleil bas.
+  seaside: {
+    bg: 'linear-gradient(180deg, #bfe8ff 0%, #7fc4ec 40%, #2f7fb8 46%, #1b5b90 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #e8dcb0, #cdb87e 70%, #b39a5f)',
+    deco: () => (
+      <>
+        <div style={abs({ left: '68%', top: '9%', width: 60, height: 60, borderRadius: '50%', background: 'radial-gradient(circle,#fff2c0 0 50%,#ffcf7a 66%,transparent 78%)', boxShadow: '0 0 32px #ffcf7a99' })} />
+        {[52, 60, 68].map((y, i) => (
+          <div key={i} style={abs({ left: 0, top: `${y}%`, width: '100%', height: 8, background: `linear-gradient(90deg, transparent, rgba(255,255,255,${0.5 - i * 0.12}) 40%, transparent)`, borderRadius: 6, filter: 'blur(1px)' })} />
+        ))}
+        <div style={abs({ left: '3%', bottom: '2%', width: '18%', height: '20%', borderRadius: '50% 50% 40% 40%', background: 'linear-gradient(180deg,#d8c890,#b39a5f)' })} />
+      </>
+    ),
+  },
+  // Volcan — roche sombre, lueur rouge, coulées de lave et braises.
+  volcano: {
+    bg: 'linear-gradient(180deg, #3a1414 0%, #5a1e18 40%, #2a1410 46%, #1a0d0a 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #6a4038, #47281f 70%, #2f1a14)',
+    deco: () => (
+      <>
+        <div style={abs({ left: '30%', top: '-8%', width: '40%', height: '40%', background: 'radial-gradient(ellipse at 50% 100%, #ff6a2f 0%, #b8351a55 40%, transparent 72%)' })} />
+        <div style={abs({ left: '10%', bottom: '0%', width: '34%', height: '34%', background: 'linear-gradient(180deg,#3a201a,#1e100c)', clipPath: 'polygon(0 100%,45% 0,100% 100%)' })} />
+        <div style={abs({ left: '24%', bottom: '0%', width: 8, height: '30%', background: 'linear-gradient(180deg,#ffd66b,#ff5a2f)', boxShadow: '0 0 12px #ff5a2f', clipPath: 'polygon(30% 0,70% 0,100% 100%,0 100%)' })} />
+        <div style={abs({ right: '6%', bottom: '30%', width: '26%', height: '26%', background: 'linear-gradient(180deg,#40241c,#22110d)', clipPath: 'polygon(0 100%,55% 0,100% 100%)' })} />
+        {[38, 50, 62].map((x, i) => (
+          <div key={i} style={abs({ left: `${x}%`, top: `${18 + i * 6}%`, width: 5, height: 5, borderRadius: '50%', background: '#ffb040', boxShadow: '0 0 6px #ff7a2f' })} />
+        ))}
+      </>
+    ),
+  },
+  // Montagne enneigée — pics blancs, ciel froid, chute de neige stable.
+  snow: {
+    bg: 'linear-gradient(180deg, #cfe3f2 0%, #a9c7de 42%, #e8f0f6 46%, #cdd9e2 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #ffffff, #d6e2ec 70%, #b9c8d5)',
+    deco: () => (
+      <>
+        <div style={abs({ left: '2%', top: '4%', width: '44%', height: '46%', background: 'linear-gradient(180deg,#e9f1f8,#a9bfd2)', clipPath: 'polygon(0 100%,50% 0,100% 100%)' })} />
+        <div style={abs({ right: '4%', top: '10%', width: '40%', height: '40%', background: 'linear-gradient(180deg,#f4f9fd,#b6c9da)', clipPath: 'polygon(0 100%,55% 0,100% 100%)' })} />
+        <div style={abs({ left: '18%', top: '8%', width: '20%', height: '10%', background: '#fff', clipPath: 'polygon(30% 100%,50% 0,72% 100%)' })} />
+        {[10, 30, 50, 70, 90].map((x, i) => (
+          <div key={i} style={abs({ left: `${x}%`, top: `${8 + (i % 3) * 12}%`, width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', boxShadow: '0 0 4px rgba(255,255,255,0.7)' })} />
+        ))}
+      </>
+    ),
+  },
+  // Ruines mystiques — piliers brisés, arche antique, brume violacée.
+  ruins: {
+    bg: 'linear-gradient(180deg, #4a3f66 0%, #5b4f76 40%, #4a4258 46%, #362f42 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #9a8f78, #786e58 70%, #574f3f)',
+    deco: () => (
+      <>
+        <div style={abs({ left: '50%', top: '2%', width: 90, height: 90, marginLeft: -45, borderRadius: '50%', background: 'radial-gradient(circle, #e6d8ff88 0 40%, transparent 70%)' })} />
+        {[8, 26, 74, 90].map((x, i) => (
+          <div key={i} style={abs({ left: `${x}%`, top: `${-2 + (i % 2) * 6}%`, width: '9%', height: `${44 - (i % 2) * 12}%`, background: 'linear-gradient(90deg,#8a7f66,#5e5544)', clipPath: 'polygon(10% 0,90% 6%,100% 100%,0 100%)', boxShadow: 'inset -6px 0 0 rgba(0,0,0,0.2)' })} />
+        ))}
+        <div style={abs({ left: '38%', top: '4%', width: '24%', height: '20%', border: '10px solid #7a7058', borderBottom: 'none', borderRadius: '50% 50% 0 0', opacity: 0.85 })} />
+        {[20, 55, 82].map((x, i) => (
+          <div key={`g${i}`} style={abs({ left: `${x}%`, top: `${14 + i * 4}%`, width: 8, height: 8, borderRadius: '50%', background: '#c9b8ff', boxShadow: '0 0 8px #b49bff' })} />
+        ))}
+      </>
+    ),
+  },
+  // Nuit étoilée — ciel profond, lune, étoiles et collines sombres.
+  night: {
+    bg: 'linear-gradient(180deg, #0e1330 0%, #1a2350 40%, #182238 46%, #10182a 100%)',
+    plat: 'radial-gradient(ellipse at 50% 40%, #3a4a6a, #28344e 70%, #1c2438)',
+    deco: () => (
+      <>
+        <div style={abs({ right: '14%', top: '8%', width: 56, height: 56, borderRadius: '50%', background: 'radial-gradient(circle at 40% 40%, #fff8e0 0 60%, #e6dcc0 75%, transparent 82%)', boxShadow: '0 0 34px #fff8e099' })} />
+        {[[8, 12], [20, 26], [34, 8], [46, 20], [58, 30], [70, 14], [84, 24], [15, 34], [50, 6], [90, 40]].map(([x, y], i) => (
+          <div key={i} style={abs({ left: `${x}%`, top: `${y}%`, width: i % 3 === 0 ? 4 : 2.5, height: i % 3 === 0 ? 4 : 2.5, borderRadius: '50%', background: '#fff', boxShadow: '0 0 5px #fff' })} />
+        ))}
+        <div style={abs({ left: '-2%', bottom: '2%', width: '46%', height: '22%', borderRadius: '50% 50% 0 0', background: 'linear-gradient(180deg,#1c2440,#12182c)' })} />
+        <div style={abs({ right: '-2%', bottom: '30%', width: '40%', height: '20%', borderRadius: '50% 50% 0 0', background: 'linear-gradient(180deg,#222c4c,#151b30)' })} />
+      </>
+    ),
+  },
+};
+
+function arenaDef(key) {
+  return PKMN_ARENAS_DEF[key] || PKMN_ARENAS_DEF.meadow;
+}
+
 export const PKMN_STAGE_CSS = `
 @keyframes pkmnLungeL { 0% { translate: 0 0; } 40% { translate: 46px -14px; } 100% { translate: 0 0; } }
 @keyframes pkmnLungeR { 0% { translate: 0 0; } 40% { translate: -46px 14px; } 100% { translate: 0 0; } }
@@ -620,8 +757,9 @@ function Trainer({ side, trainer, gesture }) {
 // `spriteScale` : facteur de taille des Pokémon actifs (la TV du mode
 // téléphones passe < 1 — l'écran CRT est petit, les sprites pleins étaient
 // disproportionnés par rapport aux dresseurs et aux boîtes de PV).
-export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', dialogSize = 17, trainers = null, spriteScale = 1 }) {
+export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', dialogSize = 17, trainers = null, spriteScale = 1, arena = 'meadow' }) {
   if (!view) return null;
+  const scene = arenaDef(arena);
   const a = anim || {};
   const F = (sideKey) => view[sideKey].fighters[view[sideKey].active];
   const entering = (sideKey) => a.enter === sideKey || a.enter === 'both';
@@ -722,14 +860,18 @@ export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', di
         style={{
           flex: 1, minHeight: 0, position: 'relative', borderRadius: 18, overflow: 'hidden',
           containerType: 'size', // → unités cqw/cqh pour les trajets de VFX
-          background: 'linear-gradient(180deg, #8ecff2 0%, #b9e3f7 46%, #7cba6d 46%, #5f9e52 100%)',
+          background: scene.bg,
           border: '3px solid rgba(243,201,105,0.5)',
           boxShadow: 'inset 0 0 40px rgba(0,0,0,0.25)',
           animation: shaking ? 'pkmnShake 500ms linear 380ms' : 'none',
         }}
       >
-        <div style={{ position: 'absolute', left: '8%', bottom: '11%', width: '26%', height: '9%', borderRadius: '50%', background: 'radial-gradient(ellipse at 50% 40%, #cfe8b9, #9ec98a 70%, #86b573)' }} />
-        <div style={{ position: 'absolute', right: '8%', bottom: '41%', width: '22%', height: '8%', borderRadius: '50%', background: 'radial-gradient(ellipse at 50% 40%, #cfe8b9, #9ec98a 70%, #86b573)' }} />
+        {/* Décors d'arène (silhouettes derrière les combattants, zIndex 0). */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          {scene.deco()}
+        </div>
+        <div style={{ position: 'absolute', left: '8%', bottom: '11%', width: '26%', height: '9%', borderRadius: '50%', background: scene.plat, zIndex: 1 }} />
+        <div style={{ position: 'absolute', right: '8%', bottom: '41%', width: '22%', height: '8%', borderRadius: '50%', background: scene.plat, zIndex: 1 }} />
         {trainers?.A && <Trainer side="A" trainer={trainers.A} gesture={entering('A') || a.recall === 'A'} />}
         {trainers?.B && <Trainer side="B" trainer={trainers.B} gesture={entering('B') || a.recall === 'B'} />}
         {sprite('A')}

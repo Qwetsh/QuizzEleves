@@ -2,8 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import MONS from '../../../data/pokemonBattle.json';
 import { createBattle, resolveTurn, sendReplacement, draftOffers } from '../../../logic/pokemonBattle';
-import { archetypeForMove, SELF_ARCHETYPES, CONTACT_ARCHETYPES } from '../../../logic/pkmnAnimMap';
-import { soundEvent, soundPower, soundKatana, soundClick, getSfxLevel } from '../../../logic/sounds';
+import { archetypeForMove, SELF_ARCHETYPES, CONTACT_ARCHETYPES, arenaForPicks } from '../../../logic/pkmnAnimMap';
+import {
+  soundPower, soundKatana, soundClick, getSfxLevel,
+  soundPkmnVfx, soundPkmnBall, soundPkmnRecall, soundPkmnFaint, soundPkmnVictory,
+} from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
 import PkmnStage from './PkmnStage.jsx';
 import { useT } from '../../../i18n';
@@ -73,6 +76,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
   const [bench, setBench] = useState({ A: false, B: false }); // sélecteur de switch ouvert
   const [anim, setAnim] = useState({});                  // { lunge|hit|faint|cast|recall: side, enter: side|'both' }
   const [vfx, setVfx] = useState(null);                  // { archetype, type, from, side, seq }
+  const [arena, setArena] = useState('meadow');          // arène dérivée du draft (déterministe)
   const vfxSeq = useRef(0);
 
   const mutView = (fn) => setView((v) => { const c = structuredClone(v); fn(c); return c; });
@@ -98,6 +102,8 @@ export default function PokemonBattleGame({ attacker, defender }) {
 
   const startBattle = () => {
     const team = (k) => picks[k].map((id) => offers[k].find((m) => m.id === id));
+    // Arène DÉTERMINISTE dérivée du draft (mêmes picks → même arène qu'en ligne).
+    setArena(arenaForPicks(picks));
     battleRef.current = createBattle(team('A'), team('B'));
     const v = snapshot(battleRef.current);
     setView(v);
@@ -106,6 +112,8 @@ export default function PokemonBattleGame({ attacker, defender }) {
     // Entrée en scène : pokéballs lancées par les deux dresseurs, cris calés
     // sur la matérialisation (~650 ms après le lancer).
     setAnim({ enter: 'both' });
+    soundPkmnBall();
+    setTimeout(() => { if (!dead.current) soundPkmnBall(); }, 400);
     setTimeout(() => { if (!dead.current) playCry(v.A.fighters[0].cry); }, 650);
     setTimeout(() => { if (!dead.current) playCry(v.B.fighters[0].cry); }, 1050);
     setTimeout(() => { if (!dead.current) setAnim((a) => (a.enter === 'both' ? {} : a)); }, 1800);
@@ -133,6 +141,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
         if (!old.ko) {
           setDialog(T('fight.pkmn.comeBack', { name: old.name }));
           setAnim({ recall: e.side });
+          soundPkmnRecall();
           await sleep(900);
           if (dead.current) return;
         }
@@ -142,6 +151,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
         });
         setDialog(T('fight.pkmn.sendOut', { team: teams[e.side].name, name: e.name }));
         setAnim({ enter: e.side }); // pokéball + matérialisation
+        soundPkmnBall();
         await sleep(700);
         if (dead.current) return;
         playCry(viewRefLatest.current[e.side].fighters[e.index].cry);
@@ -158,6 +168,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
           archetype: arch, type: e.type || 'normal', from: e.side,
           side: SELF_ARCHETYPES.has(arch) ? e.side : target, seq: ++vfxSeq.current,
         });
+        soundPkmnVfx(arch); // son synthétisé calé sur l'apparition du VFX
         const contact = CONTACT_ARCHETYPES.has(arch);
         setAnim(contact ? { lunge: e.side } : { cast: e.side });
         await sleep(contact ? 750 : 900);
@@ -203,17 +214,20 @@ export default function PokemonBattleGame({ attacker, defender }) {
         mutView((v) => { const f = v[e.side].fighters[v[e.side].active]; f.hp = Math.max(0, f.hp - e.dmg); });
         setDialog(T('fight.pkmn.poisonHurt', { name: name(e.side) }));
         setVfx({ archetype: 'spores', type: 'poison', from: e.side, side: e.side, seq: ++vfxSeq.current });
+        soundPkmnVfx('spores');
         await sleep(900);
         break;
       case 'ko':
         mutView((v) => { const f = v[e.side].fighters[v[e.side].active]; f.hp = 0; f.ko = true; });
         setAnim({ faint: e.side });
+        soundPkmnFaint();
         playCry(viewRefLatest.current[e.side].fighters[viewRefLatest.current[e.side].active].cry);
         setDialog(T('fight.pkmn.ko', { name: e.name }));
         await sleep(1200);
         if (dead.current) return;
         // Rayon rouge de rappel — puis le K.O. reste caché (dresseur seul).
         setAnim({ recall: e.side });
+        soundPkmnRecall();
         await sleep(800);
         setAnim({});
         break;
@@ -241,7 +255,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
       setPhase('over');
       const side = b.winner;
       setDialog(T('fight.pkmn.win', { team: teams[side].name }));
-      soundEvent();
+      soundPkmnVictory();
       setTimeout(() => { if (!dead.current) fightMatchWin(side === 'A' ? 'attacker' : 'defender'); }, 2200);
     } else if (b.pendingSwitch) {
       setPhase('replace');
@@ -454,7 +468,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
       {/* Arène + dialogue (scène partagée avec la TV du mode téléphones) */}
       <PkmnStage
-        view={view} anim={anim} vfx={vfx} dialog={dialog}
+        view={view} anim={anim} vfx={vfx} dialog={dialog} arena={arena}
         trainers={{
           A: { character: attacker.character, color: attacker.color },
           B: { character: defender.character, color: defender.color },
