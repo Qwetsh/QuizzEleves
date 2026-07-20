@@ -16,13 +16,17 @@ export function rowsToSpots(rows) {
     const cx = Number(r.cx);
     const cy = Number(r.cy);
     if (!(cx >= 0 && cx <= 1 && cy >= 0 && cy <= 1)) continue;
+    // render='label' → spot « nom à placer » (pas de photo, comme les capitales
+    // du monde réel) : la carte-univers EST l'énoncé, on montre « Place : X ».
+    // Les autres spots sont des photos mystère (image_path résolu en URL).
+    const isLabel = r.render === 'label';
     (by[r.universe] ||= []).push({
       id: `s${r.id}`,
       label: r.label || r.zone || '?',
       zone: r.zone || '',
       x: cx, y: cy,
-      kind: 'photo',
-      image: spotImageUrl(r.image_path),
+      kind: isLabel ? 'label' : 'photo',
+      ...(isLabel ? { showName: true } : { image: spotImageUrl(r.image_path) }),
       render: r.render || 'flat',
       difficulte: r.difficulte ?? 3,
     });

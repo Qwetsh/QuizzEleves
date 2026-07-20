@@ -501,6 +501,32 @@ describe('P3 — tilelib (pyramide de tuiles « satellite »)', () => {
   });
 });
 
+describe('Terre du Milieu — univers carte parchemin (lieux nommés)', () => {
+  it('configuré en flat + tuiles, vide sans spots DB, avec attribution', () => {
+    setCurioSpots({});
+    const u = getUniverse('terre_du_milieu');
+    expect(u.crs).toBe('flat');
+    expect(u.unit).toBe('lieues');
+    expect(u.map.type).toBe('tiles');
+    expect(u.map.path).toBe('maps/terre_du_milieu');
+    expect(u.map.w / u.map.h).toBeCloseTo(1.4615, 1); // cadre POIs 1900×1300
+    expect(u.attribution).toMatch(/Jean-Tinland/);
+    expect(u.spots()).toEqual([]);
+    expect(universeHasSpots('terre_du_milieu')).toBe(false);
+  });
+
+  it('rowsToSpots : render=label → spot « nom à placer » (showName, pas de photo)', () => {
+    const by = rowsToSpots([
+      { id: 10, universe: 'terre_du_milieu', label: 'Hobbiton', zone: 'city', cx: '0.27160', cy: '0.24020', image_path: 'label:', render: 'label', difficulte: 3, actif: true },
+      { id: 11, universe: 'terre_du_milieu', label: 'Erebor', zone: 'common-place', cx: 0.6156, cy: 0.1555, image_path: 'label:', render: 'label', actif: true },
+    ]);
+    expect(by.terre_du_milieu).toHaveLength(2);
+    const s = by.terre_du_milieu[0];
+    expect(s).toMatchObject({ id: 's10', label: 'Hobbiton', x: 0.2716, y: 0.2402, kind: 'label', showName: true });
+    expect(s.image).toBeUndefined(); // spot label : jamais d'URL photo
+  });
+});
+
 describe('action startMinigame — défi Curioscope solo (P2)', () => {
   it('suspend la file et ouvre la modale de défi', () => {
     freshGame();

@@ -119,6 +119,26 @@ export const UNIVERSES = {
     unit: 'lieues',
     spots: () => CURIO_SPOTS.wow_royaumes_est || [],
   },
+
+  // --- Terre du Milieu (Le Seigneur des Anneaux) — carte parchemin navigable --
+  // Art de carte ORIGINAL de Jean-Tinland (dépôt GitHub « middle-earth »,
+  // GPL-3.0) — usage fan non commercial AVEC ATTRIBUTION (cf. attribution
+  // ci-dessous, à créditer dans l'UI/crédits). Les spots sont des LIEUX NOMMÉS
+  // (kind:'label', render:'label' en DB) : le duel affiche « Place : X » et
+  // demande de pointer le lieu sur la carte (pas de photo, comme les capitales
+  // du monde réel). Tuiles générées par make-tiles.mjs (image 22800×15600,
+  // ratio 1.4615 = cadre POIs 1900×1300, calage direct des % → x,y).
+  // score.k ≈ largeur/8 → À CALIBRER en jouant.
+  terre_du_milieu: {
+    id: 'terre_du_milieu',
+    crs: 'flat',
+    map: { type: 'tiles', path: 'maps/terre_du_milieu', w: 16384, h: 11210, maxNativeZoom: 6 },
+    mapUnits: 100,
+    score: { max: 5000, freeDist: 1.5, k: 18 },
+    unit: 'lieues',
+    attribution: 'Carte : Jean-Tinland (« middle-earth », GitHub, GPL-3.0)',
+    spots: () => CURIO_SPOTS.terre_du_milieu || [],
+  },
 };
 
 export function getUniverse(id) {
