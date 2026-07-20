@@ -27,6 +27,7 @@ export default function FightModal() {
   const showFight = useGameStore((s) => s.showFight);
   const teams = useGameStore((s) => s.teams);
   const connectionMode = useGameStore((s) => s.connectionMode);
+  const mirror = useGameStore((s) => !!s._mirror);
 
   useEffect(() => {
     if (showFight) soundEvent();
@@ -50,6 +51,12 @@ export default function FightModal() {
           position: 'fixed', inset: 0, zIndex: 200,
           background: 'radial-gradient(ellipse at 50% 40%, #3a2a14 0%, #1a1009 70%)',
           display: 'flex', flexDirection: 'column',
+          // En ligne, la fenêtre HÔTE rend le plateau inerte (rg-root
+          // pointerEvents:none) mais l'hôte est un JOUEUR : s'il est duelliste
+          // ou vainqueur, cet overlay doit rester cliquable (RewardScreen,
+          // « Retour au plateau », carte curio…). Les MIROIRS restent inertes
+          // (leurs vues interactives passent par OnlineController/intents).
+          pointerEvents: mirror ? 'none' : 'auto',
         }}
       >
         {showFight.phase === 'versus' && (
@@ -99,14 +106,18 @@ export default function FightModal() {
 function VersusScreen({ fight, attacker, defender }) {
   const T = useT();
   const fightBegin = useGameStore((s) => s.fightBegin);
+  const mirror = useGameStore((s) => !!s._mirror);
   const subjectInfo = SUBJECTS[fight.subject] || {};
   const minigame = resolveMinigame(fight);
 
-  // Avance automatiquement apres la presentation
+  // Avance automatiquement apres la presentation. JAMAIS sur un miroir : l'état
+  // du duel arrive par snapshot (l'hôte est l'autorité) — un fightBegin local
+  // ferait diverger le miroir (tirage de question fantôme, timers concurrents).
   useEffect(() => {
+    if (mirror) return undefined;
     const t = setTimeout(fightBegin, 4200);
     return () => clearTimeout(t);
-  }, [fightBegin]);
+  }, [fightBegin, mirror]);
 
   const panel = (team, side) => (
     <motion.div
@@ -393,19 +404,7 @@ function HostDuelRace({ fight, teams }) {
   const closeFight = useGameStore((s) => s.closeFight);
   const sessionCode = useGameStore((s) => s.sessionCode);
   const mirror = useGameStore((s) => !!s._mirror);
-
-  // Client miroir : ses actions de combat passent par les intents (DuelRaceView
-  // monté par OnlineController) — cette instance à actions DIRECTES est
-  // réservée à la fenêtre de l'hôte (autorité).
-  if (mirror) return null;
-
-  const hostToken = sessionCode ? onlineToken(sessionCode) : null;
-  const parts = [fight.attackerIndex, fight.defenderIndex].filter((i) => i >= 0);
-  // « Mon équipe » = l'équipe locale : sans jeton OU portant le jeton de
-  // l'hôte. Un BOT (solo) n'a pas de jeton mais n'est PAS l'équipe locale —
-  // sinon l'humain répondrait à la course à sa place.
-  const localIdx = parts.find((i) => teams[i] && !teams[i].isBot && (!teams[i].token || (hostToken && teams[i].token === hostToken)));
-  const myTeamIdx = localIdx == null ? -1 : localIdx;
+  const itemsOn = useGameStore((s) => s.itemsEnabled());
 
   const norm = {
     phase: fight.phase,
@@ -416,12 +415,40 @@ function HostDuelRace({ fight, teams }) {
     winnerIndex: fight.winnerSide === 'attacker' ? fight.attackerIndex : fight.winnerSide === 'defender' ? fight.defenderIndex : null,
     rewardChosen: !!fight.reward?.choice,
     resultMessage: fight.resultMessage,
+    // Duel silhouette : sans `wtp`, l'hôte-duelliste verrait l'image EN CLAIR
+    // (avantage déloyal) et sans `reveal` jamais la révélation — mêmes champs
+    // que le payload manette (sessionConfig, bloc race).
+    wtp: fight.wtp || null,
+    itemsOn,
     race: fight.race ? {
       q: fight.race.q,
       answered: { attacker: !!fight.race.answers?.attacker, defender: !!fight.race.answers?.defender },
       deadline: fight.race.deadline,
+      reveal: fight.race.reveal ? { c: fight.race.reveal.c, winner: fight.race.reveal.winner || null } : null,
     } : null,
   };
+
+  // Client miroir : les DUELLISTES ont leur vue interactive montée par
+  // OnlineController (intents), rendue PAR-DESSUS celle-ci. Les SPECTATEURS
+  // voient ici le duel en lecture seule (myTeamIdx = -1 → « Duel en cours… »)
+  // au lieu d'un écran vide.
+  if (mirror) {
+    const noop = () => {};
+    return (
+      <DuelRaceView
+        fight={norm} teams={teams} myTeamIdx={-1}
+        onBegin={noop} onAnswer={noop} onReward={noop} onClose={noop}
+      />
+    );
+  }
+
+  const hostToken = sessionCode ? onlineToken(sessionCode) : null;
+  const parts = [fight.attackerIndex, fight.defenderIndex].filter((i) => i >= 0);
+  // « Mon équipe » = l'équipe locale : sans jeton OU portant le jeton de
+  // l'hôte. Un BOT (solo) n'a pas de jeton mais n'est PAS l'équipe locale —
+  // sinon l'humain répondrait à la course à sa place.
+  const localIdx = parts.find((i) => teams[i] && !teams[i].isBot && (!teams[i].token || (hostToken && teams[i].token === hostToken)));
+  const myTeamIdx = localIdx == null ? -1 : localIdx;
 
   return (
     <DuelRaceView

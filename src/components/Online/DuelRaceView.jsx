@@ -134,7 +134,11 @@ export default function DuelRaceView({ fight, teams = [], myTeamIdx, onBegin, on
               <div style={{ display: 'grid', gap: 8 }}>
                 <button onClick={() => onReward('steal')} style={btn('#caa23a', '#1a1405')}>💰 Voler de l’or (2 dés)</button>
                 <button onClick={() => onReward('knockback')} style={btn('#c9472f')}>💥 Faire reculer (1 dé)</button>
-                <button onClick={() => onReward('loot')} style={btn('#5a2f8e')}>🎁 Voler un objet</button>
+                {/* Extension objets coupée : pas de butin d'objet (fight.itemsOn
+                    publié par l'hôte ; garde autorité dans fightChooseReward). */}
+                {fight.itemsOn !== false && (
+                  <button onClick={() => onReward('loot')} style={btn('#5a2f8e')}>🎁 Voler un objet</button>
+                )}
               </div>
             </>
           ) : (

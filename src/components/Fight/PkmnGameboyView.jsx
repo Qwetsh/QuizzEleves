@@ -117,7 +117,9 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
       lines = [
         { label: T('fight.reward.steal'), onA: () => onReward('steal') },
         { label: T('fight.reward.knockback'), onA: () => onReward('knockback') },
-        { label: T('fight.reward.loot'), onA: () => onReward('loot') },
+        // Extension objets coupée (payload `itemsOn: false`) → pas de « Voler
+        // un objet ». undefined = true (rétrocompat, même gate que le TBI).
+        ...(fight.itemsOn !== false ? [{ label: T('fight.reward.loot'), onA: () => onReward('loot') }] : []),
       ];
     } else if (fight.phase === 'result') {
       lines = [{ label: T('fight.reward.backToBoard'), onA: onClose }];

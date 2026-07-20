@@ -31,6 +31,9 @@ export default function MemoryDuelView({ fight, teams = [], myTeamIdx, onFlip, o
 
   // --- Récompense / résultat (mêmes intents que le duel éclair) ---
   if (fight.phase === 'reward') {
+    // Extension objets coupée (payload `itemsOn: false`) → pas de « Voler un
+    // objet ». undefined = true (rétrocompat, même gate que le TBI).
+    const itemsOn = fight.itemsOn !== false;
     return (
       <div style={{ ...wrap, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
         {isWinner && !fight.rewardChosen ? (
@@ -39,7 +42,7 @@ export default function MemoryDuelView({ fight, teams = [], myTeamIdx, onFlip, o
             <div style={{ display: 'grid', gap: 8, width: 'min(460px, 92vw)' }}>
               <button onClick={() => onReward('steal')} style={btn('#caa23a', '#1a1405')}>💰 {T('fight.reward.steal')}</button>
               <button onClick={() => onReward('knockback')} style={btn('#c9472f')}>💥 {T('fight.reward.knockback')}</button>
-              <button onClick={() => onReward('loot')} style={btn('#5a2f8e')}>🎁 {T('fight.reward.loot')}</button>
+              {itemsOn && <button onClick={() => onReward('loot')} style={btn('#5a2f8e')}>🎁 {T('fight.reward.loot')}</button>}
             </div>
           </>
         ) : (

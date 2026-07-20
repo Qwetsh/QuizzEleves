@@ -41,7 +41,10 @@ const RENDER_FIELDS = [
 // question courante via `showQuestion`, déjà nettoyée par l'anti-triche), et il
 // charge lui-même son catalogue au démarrage. `hydrateSnapshot` ignore les clés
 // absentes, donc ne pas l'envoyer n'écrase pas le pool local du client.
-const BROADCAST_EXCLUDE = new Set(['questions']);
+// `curioSeen`/`curioSeq` (anti-répétition Curioscope, persistés en sauvegarde) :
+// le spot COURANT du duel s'en déduit (dernier id vu) → jamais diffusés. Ils
+// restent dans SAVE_FIELDS (sauvegarde locale de l'hôte uniquement).
+const BROADCAST_EXCLUDE = new Set(['questions', 'curioSeen', 'curioSeq']);
 
 // Union des champs diffusés (socle de jeu + rendu transitoire), dédupliquée,
 // moins les champs exclus de diffusion.
@@ -91,15 +94,34 @@ function stripQuestionSecret(showQuestion) {
 function stripFightSecret(showFight) {
   if (!showFight) return showFight;
   let out = showFight;
+  // Défense en profondeur : les duels Memory / Pokémon ne tournent JAMAIS en
+  // ligne (fightBegin les exclut de cette surface) — leur état (texte/pairId
+  // des cartes, choix secrets A/B) ne doit donc jamais partir dans le snapshot.
+  if (out.memory || out.pkmn) {
+    const { memory, pkmn, ...rest } = out;
+    out = rest;
+  }
   if (out.race?.q) {
     const { c, e, e_en, ...safeQ } = out.race.q;
-    out = { ...out, race: { ...out.race, q: safeQ } };
-  }
-  if (out.curio && !out.curio.reveal) {
-    const c = out.curio;
     out = {
       ...out,
-      curio: {
+      race: {
+        ...out.race,
+        q: safeQ,
+        // Les réponses adverses ({index}) fuiraient avant la fin de manche →
+        // réduites aux booléens (même discipline que le payload manette).
+        answers: { attacker: !!out.race.answers?.attacker, defender: !!out.race.answers?.defender },
+      },
+    };
+  }
+  if (out.curio) {
+    // usedIds : le DERNIER id EST la réponse (monde réel : id = nom du lieu).
+    // Le miroir n'en a pas besoin (anti-répétition = affaire de l'hôte) → jamais
+    // diffusé, révélation comprise.
+    const { usedIds, ...c } = out.curio;
+    out = {
+      ...out,
+      curio: c.reveal ? c : {
         ...c,
         target: c.target ? {
           id: null,

@@ -24,12 +24,20 @@ const FLIP_BACK_MS = 1150;
 
 const pairKey = (p) => p.id || `${p.a}|${p.b}`;
 
-function dealBoard(content, usedRef) {
+// Anti-répétition entre MANCHES : paires déjà servies, par tableau de contenu.
+// Module-level (le moteur memory n'est PAS persistant : remonté à chaque
+// manche, un ref local repartait de zéro et resservait les paires de la manche
+// précédente). Même pattern que QuickDuel/Mendeleiev ; pool épuisé → reset.
+const usedByContent = new WeakMap();
+
+export function dealBoard(content) {
   const all = Array.isArray(content) ? content : [];
-  let pool = all.filter((p) => !usedRef.current.includes(pairKey(p)));
-  if (pool.length < PAIRS_PER_BOARD) { usedRef.current = []; pool = all; }
+  let used = usedByContent.get(all);
+  if (!used) { used = new Set(); usedByContent.set(all, used); }
+  let pool = all.filter((p) => !used.has(pairKey(p)));
+  if (pool.length < PAIRS_PER_BOARD) { used.clear(); pool = all; }
   const chosen = shuffle(pool).slice(0, PAIRS_PER_BOARD);
-  chosen.forEach((p) => usedRef.current.push(pairKey(p)));
+  chosen.forEach((p) => used.add(pairKey(p)));
   const cards = [];
   chosen.forEach((p, pi) => {
     cards.push({ key: `${pi}a`, pairId: pi, text: p.a });
@@ -40,8 +48,7 @@ function dealBoard(content, usedRef) {
 
 export default function MemoryGame({ attacker, defender, onRoundWin, content }) {
   const T = useT();
-  const usedRef = useRef([]);
-  const [cards, setCards] = useState(() => dealBoard(content, usedRef));
+  const [cards, setCards] = useState(() => dealBoard(content));
   const [flipped, setFlipped] = useState([]);   // indices face visible (en cours)
   const [matched, setMatched] = useState({});    // pairId -> 'attacker'|'defender'
   const [activeSide, setActiveSide] = useState('attacker');
@@ -53,7 +60,7 @@ export default function MemoryGame({ attacker, defender, onRoundWin, content }) 
   const team = activeSide === 'attacker' ? attacker : defender;
 
   const reset = () => {
-    setCards(dealBoard(content, usedRef));
+    setCards(dealBoard(content));
     setFlipped([]); setMatched({}); setScores({ attacker: 0, defender: 0 });
     setActiveSide('attacker'); setBusy(false); setDone(null);
     reported.current = false;

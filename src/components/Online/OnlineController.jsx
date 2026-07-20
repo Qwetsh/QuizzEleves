@@ -15,7 +15,10 @@ import CurioPlaceView from '../Fight/CurioPlaceView';
 // HostDuelRace.
 export default function OnlineController({ code, ctrl, host = false }) {
   const teams = useGameStore((s) => s.teams);
-  const [token] = useState(() => onlineToken(code));
+  // MÊME résolution de jeton qu'OnlineClient : un lien de test (?token=…&claim=…)
+  // a réclamé l'équipe avec le jeton d'URL — lire seulement onlineToken(code)
+  // donnerait ownedIdx = -1 (spectateur) et casserait le testeur online.
+  const [token] = useState(() => new URLSearchParams(window.location.search).get('token') || onlineToken(code));
 
   const ownedIdx = (teams || []).findIndex((t) => t && t.token === token);
   if (ownedIdx < 0) return null; // spectateur pur

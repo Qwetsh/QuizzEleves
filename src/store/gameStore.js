@@ -2804,7 +2804,9 @@ export const useGameStore = create((set, get) => ({
     if (!f || (idx !== f.attackerIndex && idx !== f.defenderIndex)) return;
     if (type === 'turnFightBegin') { get().fightBegin(); return; }
     if (type === 'turnFightAnswer') { get().submitFightAnswer(idx, payload.index); return; }
-    if (type === 'turnFightClose') { get().closeFight(); return; }
+    // Fermeture SEULEMENT en phase résultat : sinon un duelliste pourrait
+    // annuler un duel en cours (minigame) ou esquiver la récompense (reward).
+    if (type === 'turnFightClose') { if (f.phase === 'result') get().closeFight(); return; }
     // Duel Curioscope (guessr) : validation du pin (place+valide en un seul
     // intent, position dans le payload) et manche suivante.
     if (type === 'turnCurioValidate') {
@@ -3538,6 +3540,12 @@ export const useGameStore = create((set, get) => ({
     const idx = Number(payload.idx);
     const st = get();
     if (!token || !Number.isInteger(idx) || !st.teams[idx]) return;
+    // Garde anti-vol : en partie réelle, on ne lie qu'une équipe LIBRE (sans
+    // jeton — claim initial d'OnlineClient) ou déjà liée à CE jeton (re-claim
+    // idempotent après reload). Le bac à sable dev (liens de test du testeur
+    // de mini-jeux) reste ouvert : on y rejoue les équipes librement.
+    const cur = st.teams[idx].token;
+    if (!st.devSandbox && cur && cur !== token) return;
     const newTeams = [...st.teams];
     newTeams[idx] = { ...newTeams[idx], token };
     set({ teams: newTeams });
@@ -3755,6 +3763,18 @@ export const useGameStore = create((set, get) => ({
     if (type === 'adminWeather') {
       if (extOn(get().extensions, 'weather') && payload.id) {
         weatherH.triggerWeather(set, get, payload.id, { forced: true });
+        if (get().phase === 'game') saveGame(get());
+      }
+      return;
+    }
+    // Déblocage prof : abandonne proprement un duel coincé (surface distante
+    // muette, client parti…). Pas de vainqueur (winnerSide annulé → aucun
+    // trigger fightWin/Lose, aucune récompense), closeFight enchaîne le tour.
+    if (type === 'adminFightSkip') {
+      if (get().showFight) {
+        set({ showFight: { ...get().showFight, winnerSide: null } });
+        get().addLog('🛑 Duel interrompu par le professeur — aucun vainqueur.');
+        get().closeFight();
         if (get().phase === 'game') saveGame(get());
       }
       return;

@@ -22,14 +22,6 @@ const TYPE_COLORS = {
   ground: '#e0c068', flying: '#a890f0', psychic: '#f85888', bug: '#a8b820',
   rock: '#b8a038', ghost: '#705898', dragon: '#7038f8',
 };
-const TYPE_FR = {
-  normal: 'Normal', fire: 'Feu', water: 'Eau', grass: 'Plante', electric: 'Élec',
-  ice: 'Glace', fighting: 'Combat', poison: 'Poison', ground: 'Sol', rock: 'Roche',
-  flying: 'Vol', psychic: 'Psy', bug: 'Insecte', ghost: 'Spectre', dragon: 'Dragon',
-};
-const STAT_FR = { atk: 'Attaque', def: 'Défense', spc: 'Spécial', spe: 'Vitesse' };
-const AILMENT_TAG = { par: 'PAR', psn: 'PSN', slp: 'SOM' };
-
 function playCry(url) {
   if (!url) return;
   try { const a = new Audio(url); a.volume = getSfxLevel() * 0.45; a.play().catch(() => {}); } catch { /* silencieux */ }
@@ -200,7 +192,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
           f.boosts[e.stat] = Math.max(-2, Math.min(2, f.boosts[e.stat] + e.delta));
         });
         const key = e.delta > 0 ? 'fight.pkmn.boostUp' : 'fight.pkmn.boostDown';
-        setDialog(T(key, { name: name(e.side), stat: STAT_FR[e.stat], much: Math.abs(e.delta) >= 2 ? T('fight.pkmn.much') : '' }));
+        setDialog(T(key, { name: name(e.side), stat: T(`fight.pkmn.stat.${e.stat}`), much: Math.abs(e.delta) >= 2 ? T('fight.pkmn.much') : '' }));
         await sleep(900);
         break;
       }
@@ -326,11 +318,11 @@ export default function PokemonBattleGame({ attacker, defender }) {
                         <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(10px, 1vw, 15px)', color: '#3a2c14' }}>{m.name}</div>
                         <div style={{ display: 'flex', gap: 3 }}>
                           {m.types.map((t) => (
-                            <span key={t} style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: TYPE_COLORS[t], borderRadius: 4, padding: '1px 6px' }}>{TYPE_FR[t]}</span>
+                            <span key={t} style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: TYPE_COLORS[t], borderRadius: 4, padding: '1px 6px' }}>{T(`fight.pkmn.type.${t}`)}</span>
                           ))}
                         </div>
                         <div style={{ fontSize: 9.5, color: '#7a6236', fontFamily: 'var(--font-ui)' }}>
-                          PV {m.base.hp} · Atq {m.base.atk} · Déf {m.base.def} · Spé {m.base.spc} · Vit {m.base.spe}
+                          {T('fight.pkmn.draftStats', { hp: m.base.hp, atk: m.base.atk, def: m.base.def, spc: m.base.spc, spe: m.base.spe })}
                         </div>
                       </button>
                     );
@@ -384,7 +376,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
                 <div style={{ width: '80%', height: 6, borderRadius: 3, background: '#4a3c20', padding: 1 }}>
                   <div style={{ height: '100%', width: `${(f.hp / f.maxHp) * 100}%`, borderRadius: 2, background: hpColor(f) }} />
                 </div>
-                <div style={{ fontSize: 10, color: disabled ? '#9a8a68' : '#5a4a28', fontWeight: 700 }}>{f.ko ? 'K.O.' : `${f.hp}/${f.maxHp}`}</div>
+                <div style={{ fontSize: 10, color: disabled ? '#9a8a68' : '#5a4a28', fontWeight: 700 }}>{f.ko ? T('fight.pkmn.koShort') : `${f.hp}/${f.maxHp}`}</div>
               </button>
             );
           })}
@@ -439,7 +431,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
               }}>
               {mv.fr}
               <div style={{ fontWeight: 600, fontSize: 'clamp(8px, 0.75vw, 10.5px)', opacity: 0.92 }}>
-                {TYPE_FR[mv.type]} · {mv.power > 0 ? `${T('fight.pkmn.pow')} ${mv.power}` : T('fight.pkmn.statusMove')}
+                {T(`fight.pkmn.type.${mv.type}`)} · {mv.power > 0 ? `${T('fight.pkmn.pow')} ${mv.power}` : T('fight.pkmn.statusMove')}
               </div>
             </button>
           ))}

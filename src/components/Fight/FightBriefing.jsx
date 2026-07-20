@@ -399,6 +399,7 @@ function DemoImgRace() {
 // Tableau de Mendeleïev : mini-grille d'éléments colorés, la cible s'affiche
 // (« Fer ») et le curseur clique la bonne case qui s'illumine.
 function DemoMendeleiev() {
+  const T = useT();
   const cells = [
     ['H', '#6bc6f9'], ['Li', '#f97b6b'], ['Na', '#f97b6b'], ['Mg', '#f9a86b'], ['Al', '#a8d08d'], ['Si', '#6bd6a8'],
     ['K', '#f97b6b'], ['Ca', '#f9a86b'], ['Fe', '#f9d66b'], ['Cu', '#f9d66b'], ['Zn', '#f9d66b'], ['Br', '#8f9bf9'],
@@ -407,7 +408,7 @@ function DemoMendeleiev() {
   return (
     <>
       <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', padding: '4px 16px', borderRadius: 9, background: 'rgba(255,254,251,0.95)', fontFamily: 'var(--font-display)', fontSize: 16, color: '#3a2c1a' }}>
-        Trouve : <b>Fer</b>
+        {T('fight.mendeleiev.find')} <b>Fer</b>
       </div>
       <div style={{ position: 'absolute', top: 58, left: '50%', transform: 'translateX(-50%)', display: 'grid', gridTemplateColumns: 'repeat(6, 42px)', gap: 4 }}>
         {cells.map(([s, color], i) => {
@@ -492,6 +493,7 @@ function DemoAudioRace() {
 
 // Combat Pokémon : deux sprites face à face, lunge + barre de PV qui fond.
 function DemoPkmn() {
+  const T = useT();
   const bar = (side, animate) => (
     <div style={{ position: 'absolute', [side]: 14, top: side === 'right' ? 16 : 118, width: 130, borderRadius: 8, padding: '4px 8px', background: 'linear-gradient(180deg,#fdf6dd,#f0e3bc)', border: '2px solid #5a4a28' }}>
       <div style={{ fontSize: 10, fontWeight: 800, color: '#3a2c14' }}>{side === 'right' ? 'Tortank' : 'Dracaufeu'} <span style={{ float: 'right', color: '#7a6236' }}>Nv.50</span></div>
@@ -524,7 +526,7 @@ function DemoPkmn() {
         animate={{ opacity: [0, 0, 1, 1, 0] }}
         transition={{ duration: 3.4, repeat: Infinity, times: [0, 0.55, 0.62, 0.92, 1] }}
       >
-        C'est super efficace !
+        {T('fight.pkmn.superEff')}
       </motion.div>
     </>
   );

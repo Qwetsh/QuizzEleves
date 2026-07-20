@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
@@ -52,12 +52,31 @@ export default function DeblurGame({ attacker, defender, round, onRoundWin, cont
   const [locked, setLocked] = useState({ attacker: false, defender: false });
   const [resolved, setResolved] = useState(false);
   const [loaded, setLoaded] = useState(false); // image chargée → le défloutage démarre
+  // Échecs de chargement CONSÉCUTIFS (reset au premier onLoad) : image morte →
+  // on passe au défi suivant ; au-delà de MAX_IMG_FAILS on débloque le jeu
+  // (setLoaded) plutôt que de boucler — mieux vaut jouer à l'aveugle que figé.
+  const MAX_IMG_FAILS = 3;
+  const [imgFails, setImgFails] = useState(0);
+  // Garde de démontage pour le timer. ⚠️ Reset dans le CORPS de l'effet :
+  // le StrictMode dev simule démontage + re-montage de la même instance.
+  const dead = useRef(false);
+  useEffect(() => {
+    dead.current = false;
+    return () => { dead.current = true; };
+  }, []);
 
   const newChallenge = () => {
     setChallenge(pickChallenge());
     setLocked({ attacker: false, defender: false });
     setResolved(false);
     setLoaded(false);
+  };
+
+  const onImgError = () => {
+    const n = imgFails + 1;
+    setImgFails(n);
+    if (n >= MAX_IMG_FAILS) { setLoaded(true); return; }
+    setTimeout(() => { if (!dead.current) newChallenge(); }, 700);
   };
 
   // Nouvelle image à chaque manche (le composant est remonté, mais round/subject
@@ -179,13 +198,16 @@ export default function DeblurGame({ attacker, defender, round, onRoundWin, cont
           >
             <style>{DEBLUR_CSS}</style>
             <img
-              key={challenge.img}
+              // imgFails dans la clé : si le tirage ressert LA MÊME URL morte,
+              // l'élément est recréé → onError refeu → la garde peut escalader.
+              key={`${challenge.img}#${imgFails}`}
               src={challenge.img}
               alt=""
               draggable={false}
-              onLoad={() => setLoaded(true)}
+              onLoad={() => { setLoaded(true); setImgFails(0); }}
+              onError={onImgError}
               // image en cache : onLoad peut ne pas refeu → complete fait foi
-              ref={(el) => { if (el && el.complete) setLoaded(true); }}
+              ref={(el) => { if (el && el.complete && el.naturalWidth > 0) setLoaded(true); }}
               style={{
                 width: '100%', height: '100%', objectFit: 'contain',
                 // scale léger : masque le halo de bord du blur

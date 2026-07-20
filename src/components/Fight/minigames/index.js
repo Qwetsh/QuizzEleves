@@ -344,8 +344,10 @@ function isPlayable(theme) {
     const inGame = useGameStore.getState()?.questions?.[key] || [];
     const pool = inGame.length ? inGame : getSubjectPool(key);
     // Le média requis dépend du moteur : audio pour le Blind test, image sinon.
+    // Aligné sur les tireurs (fightPickImage/AudioQuestion) qui exigent AUSSI
+    // un tableau de réponses — sinon « jouable » mais aucune question servie.
     const media = theme.engine === 'audiorace' ? 'audio' : 'img';
-    return pool.some((q) => q && q[media]);
+    return pool.some((q) => q && q[media] && Array.isArray(q.a));
   }
   if (Array.isArray(theme.content)) return theme.content.length > 0;
   return true;

@@ -21,9 +21,9 @@
 // sprites reste composée avec les animations).
 
 import { characterById } from '../../../data/characters';
-
-const STAT_FR = { atk: 'Atq', def: 'Déf', spc: 'Spé', spe: 'Vit' };
-const AILMENT_TAG = { par: 'PAR', psn: 'PSN', slp: 'SOM' };
+// Composant présentationnel SANS hook i18n : libellés résolus par le helper
+// non-hook tg() (langue courante au rendu, même pattern que les handlers store).
+import { tg } from '../../../i18n';
 
 // Centres visuels (en % de la scène) : Pokémon actifs + poitrail des dresseurs.
 // Les distances de trajet des VFX sont exprimées en cqw/cqh (unités de
@@ -642,7 +642,7 @@ export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', di
       }}>
         <div style={{ fontWeight: 800, fontSize: 15.5, color: '#3a2c14', fontFamily: 'var(--font-ui)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {f.name}
-          {f.status && <span style={{ fontSize: 10, fontWeight: 900, color: '#fff', background: '#b58a1e', borderRadius: 4, padding: '1px 6px' }}>{AILMENT_TAG[f.status]}</span>}
+          {f.status && <span style={{ fontSize: 10, fontWeight: 900, color: '#fff', background: '#b58a1e', borderRadius: 4, padding: '1px 6px' }}>{tg(`fight.pkmn.ailment.${f.status}`)}</span>}
           <span style={{ marginLeft: 'auto', color: '#7a6236', fontSize: 12.5, fontWeight: 600 }}>Nv. 50</span>
         </div>
         <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -655,7 +655,7 @@ export default function PkmnStage({ view, anim = {}, vfx = null, dialog = '', di
           <span style={{ display: 'flex', gap: 4 }}>
             {boosts.map(([stat, n]) => (
               <span key={stat} style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: n > 0 ? '#3fae42' : '#c9472f', borderRadius: 4, padding: '1px 5px' }}>
-                {STAT_FR[stat]} {n > 0 ? `+${n}` : n}
+                {tg(`fight.pkmn.statAbbr.${stat}`)} {n > 0 ? `+${n}` : n}
               </span>
             ))}
           </span>

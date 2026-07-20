@@ -25,17 +25,27 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
   const T = useT();
   // Etat initialise une seule fois pour tout le combat (initialiseur pur).
   // `content` = [{ name, value }] du thème (dates d'histoire, sorties de films…).
+  // `uid` : clé React UNIQUE par carte tirée — indispensable depuis le
+  // re-brassage du paquet (une même carte peut revenir sur la frise).
   const [init] = useState(() => {
-    const deck = shuffle(content || []);
+    const deck = shuffle((content || []).map((c, i) => ({ ...c, uid: `c${i}` })));
     return { placed: [deck[0]], current: deck[1], rest: deck.slice(2) };
   });
   const deckRef = useRef(init.rest);
+  // Erreurs par camp depuis le début du paquet : départage « à la précision »
+  // quand le paquet s'épuise sans erreur finale (sinon → soft-lock, plus aucun
+  // bouton). Reset à chaque re-brassage.
+  const errsRef = useRef({ attacker: 0, defender: 0 });
+  const reshuffleGen = useRef(0);
 
   const [placed, setPlaced] = useState(init.placed);
   const [current, setCurrent] = useState(init.current);
   const [activeSide, setActiveSide] = useState('attacker');
   const [feedback, setFeedback] = useState(null); // { ok, year, index }
   const [busy, setBusy] = useState(false);
+  // Écran d'épuisement du paquet : { kind:'win', winner } (départage précision)
+  // ou { kind:'reshuffle' } (égalité parfaite → paquet neuf, frise conservée).
+  const [exhaust, setExhaust] = useState(null);
 
   // Drag de la carte courante
   const [drag, setDrag] = useState(null);          // { dx, dy, startX, startY }
@@ -52,6 +62,18 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
     return card;
   };
 
+  // Paquet neuf re-brassé depuis le contenu (la frise, elle, est conservée) ;
+  // le jeu reprend au camp `nextSide` avec les compteurs d'erreurs remis à zéro.
+  const resumeWithFreshDeck = (nextSide) => {
+    errsRef.current = { attacker: 0, defender: 0 };
+    const gen = ++reshuffleGen.current;
+    deckRef.current = shuffle((content || []).map((c, i) => ({ ...c, uid: `r${gen}-${i}` })));
+    setExhaust(null);
+    setCurrent(drawNext());
+    setActiveSide(nextSide);
+    setBusy(false);
+  };
+
   const handlePlace = (slotIndex) => {
     if (busy || !current) return;
     setBusy(true);
@@ -59,6 +81,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
     const okLeft = slotIndex === 0 || placed[slotIndex - 1].year <= current.year;
     const okRight = slotIndex === placed.length || current.year <= placed[slotIndex].year;
     const ok = okLeft && okRight;
+    if (!ok) errsRef.current[activeSide] += 1;
 
     // Position correcte reelle (premiere place valide)
     let correctIndex = placed.findIndex((c) => current.year <= c.year);
@@ -73,10 +96,29 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
 
     setTimeout(() => {
       setFeedback(null);
-      setCurrent(drawNext());
-      setActiveSide(otherSide);
-      setBusy(false);
-      if (!ok) onRoundWin(otherSide);
+      const next = drawNext();
+      if (next) {
+        setCurrent(next);
+        setActiveSide(otherSide);
+        setBusy(false);
+        if (!ok) onRoundWin(otherSide);
+        return;
+      }
+      // PAQUET ÉPUISÉ (sinon : écran mort sans bouton = partie bloquée).
+      const { attacker: ea, defender: ed } = errsRef.current;
+      if (ok && ea !== ed) {
+        // Personne n'a fauté sur cette carte mais un camp a été plus précis
+        // depuis le début du paquet : il emporte la manche.
+        const winner = ea < ed ? 'attacker' : 'defender';
+        setExhaust({ kind: 'win', winner });
+        setTimeout(() => { resumeWithFreshDeck(otherSide); onRoundWin(winner); }, 2000);
+      } else {
+        // Erreur sur la dernière carte (la manche vient d'être tranchée) ou
+        // égalité parfaite : on re-brasse un paquet neuf et la frise continue.
+        if (!ok) onRoundWin(otherSide);
+        setExhaust({ kind: 'reshuffle' });
+        setTimeout(() => resumeWithFreshDeck(otherSide), ok ? 1500 : 900);
+      }
     }, 1700);
   };
 
@@ -93,7 +135,7 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
     if (clientX < rect.left - 20 || clientX > rect.right + 20) return null;
     let idx = 0;
     for (const card of placed) {
-      const el = cardRefs.current[`${card.year}-${card.name}`];
+      const el = cardRefs.current[card.uid];
       if (!el) continue;
       const r = el.getBoundingClientRect();
       if (clientX > r.left + r.width / 2) idx++;
@@ -133,9 +175,9 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
     const isNew = feedback && feedback.index === i;
     return (
       <motion.div
-        key={`${card.year}-${card.name}`}
+        key={card.uid}
         layout
-        ref={(el) => { cardRefs.current[`${card.year}-${card.name}`] = el; }}
+        ref={(el) => { cardRefs.current[card.uid] = el; }}
         transition={{ type: 'spring', damping: 22, stiffness: 240 }}
         style={{
           width: CARD_W, padding: '14px 10px', borderRadius: 14, flexShrink: 0,
@@ -199,9 +241,25 @@ export default function TimelineGame({ attacker, defender, onRoundWin, content }
         {team.emoji} <strong style={{ color: team.color }}>{team.name}</strong> — {T('fight.timeline.consigneTail')}
       </div>
 
-      {/* Carte courante a glisser (cachee pendant le feedback) */}
+      {/* Carte courante a glisser (cachee pendant le feedback / l'épuisement) */}
       <div style={{ minHeight: 112, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        {!feedback ? (
+        {exhaust ? (
+          <div
+            style={{
+              fontFamily: 'var(--font-display)', fontSize: 22, textAlign: 'center',
+              padding: '10px 26px', borderRadius: 16,
+              color: exhaust.kind === 'win' ? '#f3c969' : '#9be36d',
+              background: 'rgba(0,0,0,0.35)',
+              textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+            }}
+          >
+            {exhaust.kind === 'win'
+              ? T('fight.timeline.exhaustWin', {
+                team: `${(exhaust.winner === 'attacker' ? attacker : defender).emoji} ${(exhaust.winner === 'attacker' ? attacker : defender).name}`,
+              })
+              : T('fight.timeline.reshuffled')}
+          </div>
+        ) : !feedback ? (
           <div
             onPointerDown={onCardPointerDown}
             onPointerMove={onCardPointerMove}

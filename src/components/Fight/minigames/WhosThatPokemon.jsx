@@ -104,9 +104,12 @@ export function useWtpIntro(img, revealed = false) {
  * (WhosThatPokemon) ET par la scène TV du duel multi-surface (WtpDuelStage).
  *
  * Props : img (URL) · intro (pokéball en vol, silhouette cachée) ·
- * revealed (image en couleur + pop) · revealLabel (bandeau, null = caché).
+ * revealed (image en couleur + pop) · revealLabel (bandeau, null = caché) ·
+ * onImgError (optionnel, image morte) · attempt (optionnel : incrémenté par
+ * l'appelant pour forcer le re-montage de l'img quand la MÊME URL est reservie
+ * après un échec — sinon onError ne refeu jamais).
  */
-export function WtpStage({ img, intro, revealed, revealLabel }) {
+export function WtpStage({ img, intro, revealed, revealLabel, onImgError = null, onImgLoad = null, attempt = 0 }) {
   // Étoile stable par image (seed dérivée de l'URL).
   const seed = useMemo(() => {
     let h = 0;
@@ -174,10 +177,12 @@ export function WtpStage({ img, intro, revealed, revealLabel }) {
       {!intro && (
         <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none' }}>
           <img
-            key={img}
+            key={`${img}#${attempt}`}
             src={img}
             alt=""
             draggable={false}
+            onError={onImgError || undefined}
+            onLoad={onImgLoad || undefined}
             style={{
               maxWidth: '52%', maxHeight: '58%', objectFit: 'contain',
               filter: revealed ? 'brightness(1) drop-shadow(0 4px 10px rgba(0,0,0,0.35))' : 'brightness(0)',
@@ -277,6 +282,18 @@ export default function WhosThatPokemon({ attacker, defender, round, onRoundWin,
   const [locked, setLocked] = useState({ attacker: false, defender: false });
   // null = en jeu · 'attacker'/'defender' = vainqueur · 'nobody' = double erreur
   const [resolved, setResolved] = useState(null);
+  // Échecs de chargement CONSÉCUTIFS de la silhouette (image morte = jeu à
+  // l'aveugle) : on passe au Pokémon suivant ; au-delà de MAX_IMG_FAILS on
+  // laisse jouer (la révélation affichera quand même le nom).
+  const MAX_IMG_FAILS = 3;
+  const [imgFails, setImgFails] = useState(0);
+  // Garde de démontage pour le timer. ⚠️ Reset dans le CORPS de l'effet
+  // (StrictMode dev : démontage simulé puis re-montage de la même instance).
+  const dead = useRef(false);
+  useEffect(() => {
+    dead.current = false;
+    return () => { dead.current = true; };
+  }, []);
   // Sons d'intro (lancer puis jingle) gérés par le hook, calés sur l'image.
   const intro = useWtpIntro(challenge?.img, !!resolved);
 
@@ -284,6 +301,13 @@ export default function WhosThatPokemon({ attacker, defender, round, onRoundWin,
     setChallenge(pickChallenge());
     setLocked({ attacker: false, defender: false });
     setResolved(null);
+  };
+
+  const onImgError = () => {
+    const n = imgFails + 1;
+    setImgFails(n);
+    if (n >= MAX_IMG_FAILS) return; // on laisse jouer sur ce défi
+    setTimeout(() => { if (!dead.current) newChallenge(); }, 700);
   };
 
   useEffect(() => { newChallenge(); }, [round]);
@@ -398,6 +422,9 @@ export default function WhosThatPokemon({ attacker, defender, round, onRoundWin,
             intro={intro}
             revealed={revealed}
             revealLabel={revealed ? `${T('fight.wtp.its')} ${challenge.a[challenge.c]} !` : null}
+            onImgError={onImgError}
+            onImgLoad={() => setImgFails(0)}
+            attempt={imgFails}
           />
         </div>
 

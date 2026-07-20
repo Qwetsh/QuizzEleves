@@ -220,6 +220,9 @@ export function buildTurnPayload(s) {
       boss: !!(sf.boss || sf.bossFight),
       wins: sf.wins || null,
       round: sf.round || null,
+      // Extension objets active ? Le client masque le bouton de récompense
+      // « Voler un objet » si false (garde autorité dans fightChooseReward).
+      itemsOn: extOn(s.extensions, 'equipment'),
       // Duel silhouette (« Qui est ce Pokémon ?! ») : clé du pool si la course
       // est en mode silhouette (le téléphone affiche l'image masquée + répond).
       wtp: sf.wtp || null,
@@ -398,7 +401,9 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
     // Manette téléphone : toggle (Setup) + bloc d'état du tour en cours. Le
     // mobile n'affiche la manette que si controller=true ET turn.team = lui.
     controller: !!phoneController,
-    turn: turnState ? buildTurnPayload(turnState) : null,
+    // `extensions` injecté : buildTurnPayload en dérive itemsOn (bloc fight) —
+    // les turnState construits par les appelants ne portent pas ce champ.
+    turn: turnState ? buildTurnPayload({ extensions, ...turnState }) : null,
     // Horodatage de publication : le mobile s'en sert pour détecter un état
     // périmé (bandeau « reconnexion » si > quelques secondes pendant son tour).
     publishedAt: Date.now(),

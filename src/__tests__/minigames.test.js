@@ -305,6 +305,57 @@ describe('mini-jeux — moteur Deblur (photo mystère)', () => {
   });
 });
 
+// isPlayable aligné sur les tireurs : une question à image SANS tableau de
+// réponses ne rend pas le thème jouable (fightPickImageQuestion la refuserait).
+describe('mini-jeux — isPlayable exige média + réponses (alignement tireurs)', () => {
+  afterEach(() => useGameStore.setState({ questions: {}, askedQuestions: {} }));
+
+  it('img sans tableau de réponses → repli générique ; avec réponses → jouable', () => {
+    useGameStore.setState({
+      questions: { drapeaux_symboles: [{ q: '?', c: 0, img: 'https://x/jp.png' }] }, // pas de `a`
+      askedQuestions: {},
+    });
+    expect(getMinigame('drapeaux_symboles').Component).toBe(getDefaultMinigame().Component);
+
+    useGameStore.setState({
+      questions: { drapeaux_symboles: [{ q: '?', a: ['Japon', 'Palaos', 'Bangladesh', 'Laos'], c: 0, img: 'https://x/jp.png' }] },
+      askedQuestions: {},
+    });
+    expect(getMinigame('drapeaux_symboles').Component).toBe(DeblurGame);
+  });
+
+  it('audio sans tableau de réponses → repli générique aussi', () => {
+    useGameStore.setState({
+      questions: { musique_populaire_extraits: [{ q: '?', c: 0, audio: 'https://x/a.mp3' }] },
+      askedQuestions: {},
+    });
+    expect(getMinigame('musique_populaire').Component).toBe(getDefaultMinigame().Component);
+  });
+});
+
+// Memory : l'anti-répétition survit aux remontages entre manches (WeakMap
+// module-level par contenu) — la manche 2 ne ressert pas les paires de la 1.
+describe('Memory — anti-répétition des paires entre manches', () => {
+  it('deux plateaux consécutifs sur le même contenu ne partagent aucune paire', async () => {
+    const { dealBoard } = await import('../components/Fight/minigames/MemoryGame.jsx');
+    const content = Array.from({ length: 12 }, (_, i) => ({ a: `mot${i}`, b: `trad${i}` }));
+    const pairsOf = (cards) => new Set(cards.map((c) => c.text.replace(/^(mot|trad)/, '')));
+
+    const b1 = dealBoard(content);
+    const b2 = dealBoard(content);
+    expect(b1.length).toBe(12); // 6 paires × 2 cartes
+    expect(b2.length).toBe(12);
+    const p1 = pairsOf(b1), p2 = pairsOf(b2);
+    expect(p1.size).toBe(6);
+    expect([...p2].filter((x) => p1.has(x))).toEqual([]); // aucune paire resservie
+
+    // Pool épuisé (12/12 servies) → on repart de zéro pour ce contenu.
+    const b3 = dealBoard(content);
+    expect(b3.length).toBe(12);
+    expect(pairsOf(b3).size).toBe(6);
+  });
+});
+
 describe('BubbleHunt — anti-triche (2 plannings)', () => {
   const challenge = {
     id: 'test', prompt: '?',

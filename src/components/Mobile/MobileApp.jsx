@@ -1938,6 +1938,20 @@ function AdminPanel({ code, session, onClose }) {
         </div>
       )}
 
+      {/* Secours prof : abandonner un duel coincé (téléphone muet, client
+          déconnecté…) — aucun vainqueur, la partie reprend au tour suivant. */}
+      {session.turn?.fight && (
+        <div style={{ border: '2px solid #8a1f2e', borderRadius: 14, padding: 12, marginBottom: 12, background: '#fffefb' }}>
+          <button
+            onClick={() => send('adminFightSkip', {})}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(138,31,46,0.45)', background: '#f7d7d2', color: '#7a1320', fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: 15 }}
+          >
+            {T('mobile.adminFightSkip')}
+          </button>
+          <div style={{ fontSize: 11.5, color: '#7a5e3a', marginTop: 6 }}>{T('mobile.adminFightSkipHint')}</div>
+        </div>
+      )}
+
       {teams.length === 0 && <div className="mob-empty">{T('mobile.noTeamYet')}</div>}
 
       {teams.map((t) => {

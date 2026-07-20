@@ -158,7 +158,10 @@ export function fightBegin(set, get) {
     // depuis le téléphone du camp actif. En ligne, pas de plateau partagé → repli
     // duel éclair (ci-dessous). Le plateau reste un jeu tour-par-tour à autorité
     // hôte (minuteries de retournement dans memoryFightHandlers).
-    if (get().phoneController) {
+    // ⚠️ En VRAI mode en ligne, phoneController est AUSSI true (HomeScreen pose
+    // les deux) : sans la garde connectionMode, memory/pkmn démarreraient en
+    // ligne alors qu'aucun client online ne rend ces vues → soft-lock.
+    if (get().phoneController && get().connectionMode !== 'online') {
       const pairs = memoryPairs(f.subject);
       if (pairs) { startMemoryDuel(set, get, pairs); return; }
       // Combat Pokémon piloté par le store — surface « écran + téléphones »
@@ -184,7 +187,10 @@ export function fightBegin(set, get) {
 export function serveRaceQuestion(set, get) {
   const f = get().showFight;
   if (!f) return;
-  const subject = f.subject;
+  // Le sujet d'une case peut être une CLÉ LARGE (thème multi 'scolaire', 'lv2'…)
+  // en mode cassettes : on le résout vers un sous-thème concret (clé de pool),
+  // comme fightPickQuestion — sinon pool vide et l'attaquant gagnerait sans jouer.
+  const subject = get().resolveSubjectFor(f.subject, f.attackerIndex ?? get().currentTeam);
   // Duel silhouette : questions à IMAGE du pool dédié (fightPickImageQuestion
   // gère son propre anti-répétition, namespace `img:`) ; sinon course normale.
   let question = null;
@@ -330,6 +336,9 @@ export function fightMatchWin(set, get, side) {
 export function fightChooseReward(set, get, choice) {
   const f = get().showFight;
   if (!f || f.phase !== 'reward' || f.reward) return;
+  // Extension objets coupée : pas de butin d'objet. Garde côté AUTORITÉ (le
+  // bouton est masqué dans les UI, mais un intent forgé pourrait le demander).
+  if (choice === 'loot' && !get().itemsEnabled()) return;
 
   // Le butin d'objet ne lance pas de des : application directe
   if (choice === 'loot') {

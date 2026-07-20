@@ -254,6 +254,8 @@ export default {
   'mobile.searchPlaceholder': { fr: 'Rechercher…', en: 'Search…' },
   'mobile.adminTitle': { fr: '🛠️ Admin — {code}', en: '🛠️ Admin — {code}' },
   'mobile.adminWeather': { fr: 'Déclencher une météo', en: 'Trigger weather' },
+  'mobile.adminFightSkip': { fr: '⚔️ Abandonner le duel en cours', en: '⚔️ Abort the current duel' },
+  'mobile.adminFightSkipHint': { fr: 'Débloque un duel coincé (téléphone muet…) : aucun vainqueur, le tour continue.', en: 'Unblocks a stuck duel (silent phone…): no winner, the turn moves on.' },
   'mobile.noTeamYet': { fr: "Aucune équipe pour l'instant.", en: 'No teams yet.' },
   'mobile.editGoldPrompt': { fr: "Modifier l'or (ex. 25 ou -15) :", en: 'Adjust gold (e.g. 25 or -15):' },
   'mobile.equipmentCaps': { fr: 'ÉQUIPEMENT', en: 'EQUIPMENT' },
