@@ -4,6 +4,7 @@
 // jeu. Utilisé côté client online (participant) et côté hôte (équipe locale).
 import { useEffect, useState } from 'react';
 import TeamAvatar from '../TeamAvatar';
+import { RewardCard } from '../Fight/RewardChoices';
 
 function useCountdown(deadline) {
   const calc = () => (deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0);
@@ -130,14 +131,16 @@ export default function DuelRaceView({ fight, teams = [], myTeamIdx, onBegin, on
         {fight.phase === 'reward' && (
           isWinner && !fight.rewardChosen ? (
             <>
-              <div style={{ fontSize: 20, margin: '6px 0 14px' }}>🏆 Tu as gagné le duel ! Choisis ta récompense :</div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <button onClick={() => onReward('steal')} style={btn('#caa23a', '#1a1405')}>💰 Voler de l’or (2 dés)</button>
-                <button onClick={() => onReward('knockback')} style={btn('#c9472f')}>💥 Faire reculer (1 dé)</button>
+              <div style={{ fontSize: 46, lineHeight: 1 }}>🏆</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, margin: '4px 0 2px', color: '#ffe08a' }}>Tu remportes le duel !</div>
+              <div style={{ color: '#8b9096', fontSize: 13, marginBottom: 14 }}>Choisis ta récompense</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <RewardCard dark rw="steal" name="Piller" tag="2 dés de pièces volées" onClick={() => onReward('steal')} delay={0} />
+                <RewardCard dark rw="knockback" name="Repousser" tag="1 dé de cases de recul" onClick={() => onReward('knockback')} delay={0.05} />
                 {/* Extension objets coupée : pas de butin d'objet (fight.itemsOn
                     publié par l'hôte ; garde autorité dans fightChooseReward). */}
                 {fight.itemsOn !== false && (
-                  <button onClick={() => onReward('loot')} style={btn('#5a2f8e')}>🎁 Voler un objet</button>
+                  <RewardCard dark rw="loot" name="Butin" tag="vole un objet au hasard" onClick={() => onReward('loot')} delay={0.1} />
                 )}
               </div>
             </>

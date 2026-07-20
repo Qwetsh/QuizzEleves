@@ -11,6 +11,7 @@ import WtpDuelStage from './WtpDuelStage';
 import MemoryDuelStage from './MemoryDuelStage';
 import PkmnDuelStage from './PkmnDuelStage';
 import TeamAvatar from '../TeamAvatar';
+import { RewardCard } from './RewardChoices';
 import DuelRaceView from '../Online/DuelRaceView';
 import { onlineToken } from '../../logic/sessionConfig';
 import { useT } from '../../i18n';
@@ -297,79 +298,115 @@ function RewardScreen({ fight, attacker, defender }) {
   const itemsOn = useGameStore((s) => s.itemsEnabled());
 
   const winner = fight.winnerSide === 'attacker' ? attacker : defender;
-  const loser = fight.winnerSide === 'attacker' ? defender : attacker;
   const reward = fight.reward;
+
+  // Cartes de butin (Piller / Repousser / Butin) — le butin d'objet n'apparaît
+  // que si l'extension objets est active.
+  const rewardOpts = [
+    { rw: 'steal', name: T('fight.reward.steal.name'), tag: T('fight.reward.steal.tag') },
+    { rw: 'knockback', name: T('fight.reward.knockback.name'), tag: T('fight.reward.knockback.tag') },
+    ...(itemsOn ? [{ rw: 'loot', name: T('fight.reward.loot.name'), tag: T('fight.reward.loot.tag') }] : []),
+  ];
 
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        initial={{ scale: 0.85, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 16 }}
         style={{
-          width: 'min(560px, 94vw)', borderRadius: 22, overflow: 'hidden',
-          background: 'linear-gradient(180deg, #fffefb, #f4ead5)',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.55)',
+          position: 'relative',
+          width: 'min(500px, 94vw)', borderRadius: 24, overflow: 'hidden',
+          background: 'linear-gradient(180deg, #fffdf7, #f1e2c2)',
+          boxShadow: '0 0 0 1px rgba(122,94,58,0.2), 0 28px 70px rgba(0,0,0,0.6)',
           textAlign: 'center',
         }}
       >
+        {/* Bandeau vainqueur : halo tournant teinté équipe + trophée qui flotte */}
         <div
           style={{
-            padding: '22px 26px 16px',
-            background: `linear-gradient(135deg, ${winner.color}33, transparent)`,
-            borderBottom: '1px solid rgba(122,94,58,0.18)',
+            position: 'relative', overflow: 'hidden',
+            padding: '26px 26px 20px',
+            background: `radial-gradient(ellipse at 50% -10%, ${winner.color}55, transparent 70%), linear-gradient(180deg, ${winner.color}22, transparent)`,
+            borderBottom: '1px solid rgba(122,94,58,0.16)',
           }}
         >
           <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ fontSize: 64 }}
-          >
-            {"\u{1F3C6}"}
-          </motion.div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: winner.color, marginTop: 4 }}>
-            {T('fight.reward.winsDuel', { emoji: winner.emoji, name: winner.name })}
+            aria-hidden
+            animate={{ rotate: 360 }}
+            transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
+            style={{
+              position: 'absolute', top: -40, left: '50%', width: 240, height: 240, marginLeft: -120,
+              background: `conic-gradient(from 0deg, transparent, ${winner.color}44, transparent, ${winner.color}44, transparent)`,
+              borderRadius: '50%', opacity: 0.55, pointerEvents: 'none',
+            }}
+          />
+          <div style={{ position: 'relative' }}>
+            <motion.div
+              animate={{ y: [0, -9, 0] }}
+              transition={{ duration: 1.7, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ fontSize: 68, filter: 'drop-shadow(0 6px 10px rgba(0,0,0,0.35))' }}
+            >
+              {"\u{1F3C6}"}
+            </motion.div>
+            <motion.span
+              aria-hidden
+              animate={{ scale: [0.8, 1.25, 0.8], opacity: [0.35, 1, 0.35] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'absolute', top: 4, left: 'calc(50% - 66px)', fontSize: 22 }}
+            >
+              {"✨"}
+            </motion.span>
+            <motion.span
+              aria-hidden
+              animate={{ scale: [1.2, 0.8, 1.2], opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ position: 'absolute', top: 12, left: 'calc(50% + 46px)', fontSize: 18 }}
+            >
+              {"✨"}
+            </motion.span>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.16em', textTransform: 'uppercase', color: winner.color, opacity: 0.85, marginTop: 6 }}>
+              {T('fight.reward.victory')}
+            </div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--ink-900)', marginTop: 2, lineHeight: 1.1 }}>
+              {T('fight.reward.winsDuel', { emoji: winner.emoji, name: winner.name })}
+            </div>
           </div>
         </div>
 
-        <div style={{ padding: '18px 26px 26px' }}>
+        <div style={{ padding: '18px 20px 22px' }}>
           {fight.phase === 'reward' && !reward && (
             <>
-              <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 14, fontFamily: 'var(--font-ui)', color: 'var(--ink-700)' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, marginBottom: 14, fontFamily: 'var(--font-ui)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-500)' }}>
                 {T('fight.reward.choose')}
               </p>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button className="btn btn--green btn--lg" onClick={() => fightChooseReward('steal')}>
-                  {T('fight.reward.steal')}
-                </button>
-                <button className="btn btn--purple btn--lg" onClick={() => fightChooseReward('knockback')}>
-                  {T('fight.reward.knockback')}
-                </button>
-                {itemsOn && (
-                  <button className="btn btn--lg" onClick={() => fightChooseReward('loot')}>
-                    {T('fight.reward.loot')}
-                  </button>
-                )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {rewardOpts.map((o, i) => (
+                  <RewardCard
+                    key={o.rw} rw={o.rw} name={o.name} tag={o.tag} delay={0.05 * i}
+                    onClick={() => fightChooseReward(o.rw)}
+                  />
+                ))}
               </div>
-              <p style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 12, fontFamily: 'var(--font-ui)' }}>
-                {T('fight.reward.stealDesc', { emoji: loser.emoji, name: loser.name })}<br />
-                {T('fight.reward.knockbackDesc', { emoji: loser.emoji, name: loser.name })}
-                {itemsOn && <><br />{T('fight.reward.lootDesc', { emoji: loser.emoji, name: loser.name })}</>}
-              </p>
             </>
           )}
 
           {fight.phase === 'reward' && reward && (
-            <div style={{ padding: '10px 0' }}>
+            <div style={{ padding: '14px 0' }}>
               {reward.choice === 'loot' ? (
-                <div className="anim-float" style={{ fontSize: 64 }}>{"\u{1F392}"}</div>
+                <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }} style={{ fontSize: 70 }}>
+                  {"\u{1F392}"}
+                </motion.div>
               ) : (
                 <>
-                  <div className={reward.rolling ? 'anim-float' : ''} style={{ fontSize: 64, letterSpacing: 8 }}>
+                  <div
+                    className={reward.rolling ? 'anim-float' : ''}
+                    style={{ fontSize: 66, letterSpacing: 8, color: reward.choice === 'steal' ? 'var(--gold-600)' : 'var(--rose-500)' }}
+                  >
                     {reward.dice.map((d, i) => <span key={i}>{DICE_FACES[d]}</span>)}
                   </div>
                   {!reward.rolling && (
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, marginTop: 8 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, marginTop: 8, color: 'var(--ink-900)' }}>
                       {reward.dice.reduce((a, b) => a + b, 0)} !
                     </div>
                   )}
@@ -380,10 +417,16 @@ function RewardScreen({ fight, attacker, defender }) {
 
           {fight.phase === 'result' && (
             <>
-              <p style={{ fontSize: 17, fontFamily: 'var(--font-display)', color: 'var(--ink-900)', marginBottom: 18 }}>
+              <div
+                style={{
+                  fontSize: 16, fontFamily: 'var(--font-ui)', color: 'var(--ink-800)', lineHeight: 1.45,
+                  background: '#fffdf7', border: '1px solid rgba(122,94,58,0.16)', borderRadius: 14,
+                  padding: '14px 16px', marginBottom: 18, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
+                }}
+              >
                 {fight.resultMessage}
-              </p>
-              <button className="btn btn--lg" onClick={closeFight} style={{ minWidth: 220 }}>
+              </div>
+              <button className="btn btn--green btn--lg" onClick={closeFight} style={{ minWidth: 220 }}>
                 {T('fight.reward.backToBoard')}
               </button>
             </>

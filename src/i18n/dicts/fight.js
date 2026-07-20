@@ -15,8 +15,16 @@ export default {
   'fight.versus.firstToRounds': { fr: 'Premier à {n} manches', en: 'First to {n} rounds' },
   'fight.versus.touchForRules': { fr: "touche l'écran pour voir les règles", en: 'touch the screen to see the rules' },
   'fight.round': { fr: 'Manche {n}', en: 'Round {n}' },
+  'fight.reward.victory': { fr: 'Victoire', en: 'Victory' },
   'fight.reward.winsDuel': { fr: '{emoji} {name} remporte le duel !', en: '{emoji} {name} wins the duel!' },
   'fight.reward.choose': { fr: 'Choisis ta récompense :', en: 'Choose your reward:' },
+  // Libellés courts pour les cartes de butin (nom + effet en une ligne).
+  'fight.reward.steal.name': { fr: 'Piller', en: 'Plunder' },
+  'fight.reward.steal.tag': { fr: '2 dés de pièces volées', en: '2 dice of stolen coins' },
+  'fight.reward.knockback.name': { fr: 'Repousser', en: 'Knock back' },
+  'fight.reward.knockback.tag': { fr: "1 dé de cases de recul", en: '1 die of retreat spaces' },
+  'fight.reward.loot.name': { fr: 'Butin', en: 'Loot' },
+  'fight.reward.loot.tag': { fr: 'vole un objet au hasard', en: 'steal a random item' },
   'fight.reward.steal': { fr: '\u{1F4B0} Piller — 2 dés de pièces', en: '\u{1F4B0} Plunder — 2 dice of coins' },
   'fight.reward.knockback': { fr: '⬅️ Repousser — 1 dé de cases', en: '⬅️ Knock back — 1 die of spaces' },
   'fight.reward.loot': { fr: '\u{1F392} Butin — vole un objet', en: '\u{1F392} Loot — steal an item' },
@@ -365,6 +373,25 @@ export default {
   'fight.wtp.its': { fr: 'C\'est…', en: 'It\'s…' },
   'fight.wtp.hint': { fr: 'Le premier à toucher le bon nom gagne la manche !', en: 'The first to tap the right name wins the round!' },
   'fight.wtp.phonesHint': { fr: 'Répondez sur vos téléphones — le premier bon nom gagne la manche !', en: 'Answer on your phones — the first right name wins the round!' },
+
+  // Échecs « mat en N » (maths & logique) : mat en 1 majoritaire + quelques mat
+  // en 2 (riposte adverse auto), échiquier NU sans aide.
+  'fight.mg.chess.name': { fr: 'Mat en un coup !', en: 'Checkmate!' },
+  'fight.mg.chess.rules': { fr: 'Un problème d\'échecs : trouvez le coup qui met le Roi adverse échec et mat. Les deux équipes ont le même problème — le premier à mater gagne la manche ! (Parfois mat en 2 coups : l\'adversaire riposte, puis achevez.)', en: 'A chess puzzle: find the move that checkmates the opponent\'s King. Both teams get the same puzzle — first to mate wins the round! (Sometimes mate in 2: the opponent replies, then you finish.)' },
+  'fight.mg.chess.goal': { fr: 'Trouvez le coup qui fait échec et mat', en: 'Find the move that delivers checkmate' },
+  'fight.mg.chess.step1': { fr: 'Touchez la pièce à déplacer, puis sa case d\'arrivée', en: 'Tap the piece to move, then its destination square' },
+  'fight.mg.chess.step2': { fr: 'Un coup faux verrouille brièvement votre côté', en: 'A wrong move briefly locks your side' },
+  'fight.mg.chess.step3': { fr: 'Mat en 1 : un coup ! Mat en 2 : l\'adversaire riposte, puis achevez', en: 'Mate in 1: one move! Mate in 2: the opponent replies, then finish' },
+  // Libellés runtime de l'échiquier.
+  'fight.chess.mateIn1': { fr: 'MAT EN 1', en: 'MATE IN 1' },
+  'fight.chess.mateIn2': { fr: 'MAT EN 2', en: 'MATE IN 2' },
+  'fight.chess.whiteToMove': { fr: 'Les Blancs jouent', en: 'White to move' },
+  'fight.chess.blackToMove': { fr: 'Les Noirs jouent', en: 'Black to move' },
+  'fight.chess.yourFinish': { fr: 'À toi de finir !', en: 'Finish it!' },
+  'fight.chess.wrong': { fr: 'Raté !', en: 'Missed!' },
+  'fight.chess.win': { fr: 'Échec et mat !', en: 'Checkmate!' },
+  'fight.chess.hint': { fr: 'Touche une pièce, puis sa destination. Le premier à mater gagne la manche !', en: 'Tap a piece, then its destination. First to checkmate wins the round!' },
+  'fight.chess.noPuzzle': { fr: 'Aucun problème d\'échecs disponible…', en: 'No chess puzzle available…' },
 
   'fight.mg.default.name': { fr: 'Duel de rapidité', en: 'Speed Duel' },
   'fight.mg.default.rules': { fr: 'La même question des deux côtés : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'The same question on both sides: the first to tap the right answer wins the round. A mistake locks your side!' },
