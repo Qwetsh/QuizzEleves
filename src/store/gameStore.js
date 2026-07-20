@@ -30,6 +30,7 @@ import * as effectH from './effectEngine.js';
 import * as curioFightH from './curioFightHandlers.js';
 import * as memoryFightH from './memoryFightHandlers.js';
 import * as pkmnFightH from './pokemonFightHandlers.js';
+import * as chessFightH from './chessFightHandlers.js';
 import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
@@ -2785,6 +2786,9 @@ export const useGameStore = create((set, get) => ({
   // Duel Memory piloté par le store (surface « écran + téléphones ») : le camp
   // ACTIF retourne une carte depuis son téléphone (intent turnMemoryFlip).
   memoryDuelFlip: (side, index) => memoryFightH.memoryDuelFlip(set, get, side, index),
+  // Duel d'ÉCHECS piloté par le store (surfaces téléphone ET en ligne) : chaque
+  // camp propose son coup { from, to, promotion? } depuis son appareil.
+  chessDuelMove: (side, move) => chessFightH.chessDuelMove(set, get, side, move),
   // Combat Pokémon piloté par le store (surface « écran + téléphones ») :
   // draft, choix secrets et remplaçants arrivent des téléphones (Game Boy).
   pkmnDuelPick: (side, monId) => pkmnFightH.pkmnDuelPick(set, get, side, monId),
@@ -2842,6 +2846,12 @@ export const useGameStore = create((set, get) => ({
     if (type === 'turnMemoryFlip') {
       const side = idx === f.attackerIndex ? 'attacker' : 'defender';
       get().memoryDuelFlip(side, Number(payload.index));
+      return;
+    }
+    // Duel d'échecs : le camp (mappé par idx) propose son coup { from, to, promotion? }.
+    if (type === 'turnChessMove') {
+      const side = idx === f.attackerIndex ? 'attacker' : 'defender';
+      get().chessDuelMove(side, { from: payload.from, to: payload.to, promotion: payload.promotion });
       return;
     }
     // Combat Pokémon (Game Boy au téléphone) : sides A = attaquant, B = défenseur.
@@ -3214,8 +3224,9 @@ export const useGameStore = create((set, get) => ({
       const raceTypes = type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin';
       const curioTypes = type === 'turnCurioValidate' || type === 'turnCurioNext';
       const memoryTypes = type === 'turnMemoryFlip';
+      const chessTypes = type === 'turnChessMove';
       const pkmnTypes = type === 'turnPkmnPick' || type === 'turnPkmnValidate' || type === 'turnPkmnChoose' || type === 'turnPkmnReplace';
-      if ((st.connectionMode === 'online' && (raceTypes || curioTypes))
+      if ((st.connectionMode === 'online' && (raceTypes || curioTypes || chessTypes))
         // Mode « écran + téléphones » : réponses de course, récompense et
         // fermeture TOUJOURS pilotables au téléphone (la TV n'est pas tactile) —
         // duel éclair de repli, wtp, curio (dont sa récompense), memory, pkmn.
@@ -3224,6 +3235,9 @@ export const useGameStore = create((set, get) => ({
         // Duel Memory (surface téléphone) : retournements + choix de récompense /
         // fermeture (raceTypes couvrent turnFightReward/Close) pilotés au téléphone.
         || (st.phoneController && (raceTypes || memoryTypes) && st.showFight.memory)
+        // Duel d'échecs : coups pilotés au téléphone (surface « écran + tél. »).
+        // Tourne aussi en ligne (couvert par la branche connectionMode ci-dessus).
+        || (st.phoneController && (raceTypes || chessTypes) && st.showFight.chess)
         // Combat Pokémon (Game Boy au téléphone) : draft/choix/remplaçants +
         // récompense/fermeture pilotés depuis les téléphones des duellistes.
         || (st.phoneController && (raceTypes || pkmnTypes) && st.showFight.pkmn)) {

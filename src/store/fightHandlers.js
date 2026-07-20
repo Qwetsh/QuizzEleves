@@ -13,10 +13,11 @@ import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { getSubjectPool } from '../data/questions/index.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
-import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor } from '../components/Fight/minigames/index.js';
+import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor, chessDuelFor } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
 import { startMemoryDuel } from './memoryFightHandlers.js';
 import { startPkmnDuel } from './pokemonFightHandlers.js';
+import { startChessDuel } from './chessFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
@@ -154,6 +155,11 @@ export function fightBegin(set, get) {
       serveRaceQuestion(set, get);
       return;
     }
+    // Duel d'ÉCHECS « mat en N » piloté par le store — surfaces téléphone ET
+    // en ligne (contrairement à memory/pkmn qui restent phone-only) : chaque
+    // camp voit SA position et propose son coup depuis son appareil, l'hôte
+    // arbitre (chessFightHandlers). Route AVANT le bloc phoneController-only.
+    if (chessDuelFor(f.subject)) { startChessDuel(set, get); return; }
     // Duel Memory (paires) piloté par le store — surface « écran + téléphones »
     // UNIQUEMENT : plateau TV en lecture seule sur l'écran partagé, retournements
     // depuis le téléphone du camp actif. En ligne, pas de plateau partagé → repli

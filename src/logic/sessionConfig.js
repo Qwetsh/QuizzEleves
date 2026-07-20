@@ -276,6 +276,17 @@ export function buildTurnPayload(s) {
           }),
         };
       })() : null,
+      // Duel d'ÉCHECS « mat en N » (surfaces téléphone ET en ligne) — AUCUN
+      // secret : la SOLUTION et l'instance chess.js vivent module-level dans
+      // chessFightHandlers, jamais dans showFight. Le `fen` publié = la position
+      // visible (il faut TROUVER le coup mat, aucun avantage). Chaque camp a son
+      // propre puzzle → un camp ne peut pas copier le coup de l'autre.
+      chess: sf.chess ? {
+        roundNo: sf.chess.roundNo,
+        mateIn: sf.chess.mateIn,
+        sides: sf.chess.sides,
+        reveal: sf.chess.reveal || null,
+      } : null,
       // Combat Pokémon (surface « écran + téléphones ») — ANTI-TRICHE : le
       // CONTENU des choix secrets d'un tour ne part jamais, seulement des
       // accusés `chosen` (le téléphone adverse voit juste « a choisi »). Le

@@ -10,6 +10,7 @@ import CurioDuelStage from './CurioDuelStage';
 import WtpDuelStage from './WtpDuelStage';
 import MemoryDuelStage from './MemoryDuelStage';
 import PkmnDuelStage from './PkmnDuelStage';
+import ChessDuelStage from './ChessDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import { RewardCard } from './RewardChoices';
 import DuelRaceView from '../Online/DuelRaceView';
@@ -93,7 +94,13 @@ export default function FightModal() {
         {showFight.phase === 'minigame' && showFight.pkmn && (
           <PkmnDuelStage fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && (
+        {/* Duel d'échecs piloté par le store (téléphones / en ligne) : les deux
+            échiquiers sur l'écran partagé en lecture seule, chaque duelliste
+            joue sur son appareil. */}
+        {showFight.phase === 'minigame' && showFight.chess && (
+          <ChessDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && !showFight.chess && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (

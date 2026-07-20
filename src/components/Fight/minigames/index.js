@@ -498,6 +498,14 @@ export function pkmnDuelFor(subject) {
   return resolveEntry(subject)?.engine === 'pkmn';
 }
 
+// Le thème `subject` résout-il (même cascade) le duel d'ÉCHECS « mat en N » ?
+// Utilisé par fightBegin pour router les surfaces téléphone ET en ligne vers le
+// duel piloté par le store (chessFightHandlers) — chaque camp voit sa position
+// et propose son coup sur son appareil, l'hôte arbitre.
+export function chessDuelFor(subject) {
+  return resolveEntry(subject)?.engine === 'chess';
+}
+
 // Exposé pour les tests / le simulateur : liste des thèmes câblés.
 export const MINIGAME_THEMES = Object.keys(THEME_MINIGAMES);
 

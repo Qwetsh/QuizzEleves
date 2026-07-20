@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { createPuzzleState, attempt, boardMatrix } from '../../../logic/chessPuzzle.js';
-import { soundCorrect, soundWrong, soundClick } from '../../../logic/sounds';
+import { createPuzzleState, attempt } from '../../../logic/chessPuzzle.js';
+import { soundCorrect, soundWrong } from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
+import ChessBoard from './ChessBoard';
 import { useT } from '../../../i18n';
 import chessData from '../../../data/chessPuzzles.json';
 
@@ -9,26 +10,6 @@ import chessData from '../../../data/chessPuzzles.json';
 // remontages, reset quand le pool d'une difficulté est épuisé). Une clé par
 // difficulté (mateIn 1 / 2) pour ne pas mélanger les compteurs. ────────────────
 const servedByMate = { 1: new Set(), 2: new Set() };
-
-// Glyphes Unicode des pièces (chess.js : color 'w'|'b', type 'p'|'n'|'b'|'r'|'q'|'k').
-const GLYPHS = {
-  w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
-  b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
-};
-const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-
-// Case algébrique depuis (rang, colonne) de la matrice board() (rang 0 = 8e).
-function squareOf(r, c) { return FILES[c] + (8 - r); }
-
-// Ordre d'affichage des rangs/colonnes selon l'orientation (le camp du solveur
-// EN BAS). Blancs : rang 8→1 (haut→bas), colonnes a→h. Noirs : miroir.
-function orderFor(orientation) {
-  const rows = [0, 1, 2, 3, 4, 5, 6, 7];
-  const cols = [0, 1, 2, 3, 4, 5, 6, 7];
-  return orientation === 'b'
-    ? { rows: rows.slice().reverse(), cols: cols.slice().reverse() }
-    : { rows, cols };
-}
 
 // Tire un puzzle de la difficulté voulue (mateIn), anti-répétition ; repli sur
 // l'autre difficulté si le pool ciblé est vide (souhait : manches 3+ → mat en 2,
@@ -83,7 +64,6 @@ export default function ChessDuel({ attacker, defender, round, onRoundWin }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
-      <style>{'@keyframes chess-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}'}</style>
       <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
         <ChessSide side="attacker" team={attacker} puzzle={puzzle} onWin={() => onRoundWin('attacker')} T={T} />
         <ChessSide side="defender" team={defender} puzzle={puzzle} onWin={() => onRoundWin('defender')} T={T} />
@@ -105,10 +85,12 @@ function ChessSide({ team, puzzle, onWin, T }) {
   }
   const state = stateRef.current;
 
-  const [board, setBoard] = useState(() => boardMatrix(state));
-  const [sel, setSel] = useState(null); // case sélectionnée (« e2 ») ou null
+  // La position visible = FEN de l'instance chess.js du camp. On la republie
+  // après chaque coup accepté (advanced/solved) pour rafraîchir le plateau.
+  const [fen, setFen] = useState(() => state.chess.fen());
   const [locked, setLocked] = useState(false); // verrou bref après coup faux
-  const [shake, setShake] = useState(null); // case qui « secoue » (coup illégal)
+  const [shakeSeq, setShakeSeq] = useState(0); // bump → ChessBoard secoue la case tapée
+  const [lastMove, setLastMove] = useState(null);
   const [banner, setBanner] = useState(null); // 'yourFinish' | 'wrong' | 'win'
   const [won, setWon] = useState(false);
 
@@ -120,33 +102,17 @@ function ChessSide({ team, puzzle, onWin, T }) {
   }, []);
   const after = (ms, fn) => { const t = setTimeout(() => { if (!dead.current) fn(); }, ms); timers.current.push(t); };
 
-  const { rows, cols } = orderFor(state.orientation);
   const myColor = state.orientation; // 'w' | 'b' : la couleur que ce camp joue
   const mateIn = puzzle.mateIn;
 
-  const tapSquare = (sq) => {
+  // Un coup proposé par ChessBoard (2e tap) : on arbitre via le moteur pur.
+  const handleMove = (move) => {
     if (won || locked) return;
-    const piece = state.chess.get(sq); // { type, color } | false
-
-    // 1er tap : sélectionner une pièce de SA couleur (halo autorisé — pas une aide).
-    if (!sel) {
-      if (piece && piece.color === myColor) { setSel(sq); soundClick(); }
-      return;
-    }
-    // Re-tap sur la même case ou sur une autre pièce à soi : change la sélection.
-    if (sq === sel) { setSel(null); return; }
-    if (piece && piece.color === myColor) { setSel(sq); soundClick(); return; }
-
-    // 2e tap = destination. Promotion en Dame par défaut (v1, pas de sélecteur).
-    const from = sel;
-    const dest = sq;
-    setSel(null);
-    const verdict = attempt(state, { from, to: dest, promotion: 'q' });
+    const verdict = attempt(state, { from: move.from, to: move.to, promotion: move.promotion || 'q' });
 
     if (verdict.illegal) {
-      // Coup illégal : petit shake, AUCUNE pénalité.
-      setShake(dest);
-      after(300, () => setShake(null));
+      // Coup illégal : petit shake, AUCUNE pénalité (ChessBoard secoue la case tapée).
+      setShakeSeq((s) => s + 1);
       return;
     }
     if (verdict.wrong) {
@@ -160,7 +126,8 @@ function ChessSide({ team, puzzle, onWin, T }) {
     if (verdict.solved) {
       // Mat → ce camp gagne la manche.
       soundCorrect();
-      setBoard(boardMatrix(state));
+      setFen(state.chess.fen());
+      setLastMove({ from: move.from, to: move.to });
       setWon(true);
       setBanner('win');
       after(700, () => { if (!dead.current) onWin(); });
@@ -170,14 +137,12 @@ function ChessSide({ team, puzzle, onWin, T }) {
       // Mat en 2 : 1er coup correct → riposte adverse jouée (dans le moteur) +
       // « À toi de finir ! ». On rafraîchit le plateau pour montrer les 2 coups.
       soundCorrect();
-      setBoard(boardMatrix(state));
+      setFen(state.chess.fen());
+      setLastMove({ from: move.from, to: move.to });
       setBanner('yourFinish');
       after(1400, () => { if (!dead.current) setBanner(null); });
     }
   };
-
-  const light = '#e9d6b0';
-  const dark = '#a97e56';
 
   return (
     <div
@@ -226,67 +191,18 @@ function ChessSide({ team, puzzle, onWin, T }) {
         </div>
       )}
 
-      {/* Échiquier NU */}
+      {/* Échiquier NU (composant présentationnel partagé) */}
       <div style={{ flex: 1, minHeight: 0, display: 'grid', placeItems: 'center' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(8, 1fr)',
-            gridTemplateRows: 'repeat(8, 1fr)',
-            width: 'min(100%, 60vh)', aspectRatio: '1 / 1',
-            border: '3px solid #5a4024', borderRadius: 6, overflow: 'hidden',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.4)',
-          }}
-        >
-          {rows.map((r) => cols.map((c) => {
-            const sq = squareOf(r, c);
-            const cell = board[r][c]; // { type, color } | null
-            const isLight = (r + c) % 2 === 0;
-            const isSel = sel === sq;
-            const isShake = shake === sq;
-            // Libellés discrets : colonne sur la dernière rangée, rang sur la 1re colonne.
-            const isBottomRow = rows[rows.length - 1] === r;
-            const isFirstCol = cols[0] === c;
-            return (
-              <div
-                key={sq}
-                onPointerDown={() => tapSquare(sq)}
-                style={{
-                  position: 'relative',
-                  background: isLight ? light : dark,
-                  display: 'grid', placeItems: 'center',
-                  cursor: won || locked ? 'default' : 'pointer',
-                  touchAction: 'manipulation',
-                  boxShadow: isSel ? 'inset 0 0 0 4px rgba(91,140,58,0.85)' : 'none',
-                  animation: isShake ? 'chess-shake 0.3s' : 'none',
-                }}
-              >
-                {cell && (
-                  <span style={{
-                    fontSize: 'clamp(18px, 6vh, 40px)', lineHeight: 1,
-                    color: cell.color === 'w' ? '#fffdf7' : '#1c1a17',
-                    textShadow: cell.color === 'w'
-                      ? '0 1px 1px rgba(0,0,0,0.55)'
-                      : '0 1px 0 rgba(255,255,255,0.25)',
-                    userSelect: 'none', pointerEvents: 'none',
-                  }}>
-                    {GLYPHS[cell.color][cell.type]}
-                  </span>
-                )}
-                {isBottomRow && (
-                  <span style={{ position: 'absolute', right: 2, bottom: 0, fontSize: 8, fontWeight: 700, color: isLight ? dark : light, opacity: 0.8 }}>
-                    {FILES[c]}
-                  </span>
-                )}
-                {isFirstCol && (
-                  <span style={{ position: 'absolute', left: 2, top: 0, fontSize: 8, fontWeight: 700, color: isLight ? dark : light, opacity: 0.8 }}>
-                    {8 - r}
-                  </span>
-                )}
-              </div>
-            );
-          }))}
-        </div>
+        <ChessBoard
+          fen={fen}
+          orientation={myColor}
+          myColor={myColor}
+          interactive={!won && !locked}
+          onMove={handleMove}
+          locked={won || locked}
+          shakeSeq={shakeSeq}
+          lastMove={lastMove}
+        />
       </div>
     </div>
   );

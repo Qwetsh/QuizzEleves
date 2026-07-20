@@ -392,6 +392,10 @@ export default {
   'fight.chess.win': { fr: 'Échec et mat !', en: 'Checkmate!' },
   'fight.chess.hint': { fr: 'Touche une pièce, puis sa destination. Le premier à mater gagne la manche !', en: 'Tap a piece, then its destination. First to checkmate wins the round!' },
   'fight.chess.noPuzzle': { fr: 'Aucun problème d\'échecs disponible…', en: 'No chess puzzle available…' },
+  'fight.chess.round': { fr: 'Manche {n}', en: 'Round {n}' },
+  'fight.chess.phonesHint': { fr: 'Chaque équipe résout le problème sur son téléphone — le premier à mater gagne la manche !', en: 'Each team solves the puzzle on their phone — first to checkmate wins the round!' },
+  'fight.chess.waitNext': { fr: 'Manche suivante…', en: 'Next round…' },
+  'fight.chess.solvedWait': { fr: 'Échec et mat ! En attente…', en: 'Checkmate! Waiting…' },
 
   // ── Cyber-duel (Hacking) : thème informatique_numerique, surface tactile ──
   // « Complète les trous » d'un exploit ; chaque camp choisit son langage.

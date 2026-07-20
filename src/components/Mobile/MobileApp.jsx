@@ -19,6 +19,7 @@ import CurioPlaceView from '../Fight/CurioPlaceView';
 import DuelRaceView from '../Online/DuelRaceView';
 import MemoryDuelView from '../Fight/MemoryDuelView';
 import PkmnGameboyView from '../Fight/PkmnGameboyView';
+import ChessDuelView from '../Fight/ChessDuelView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2668,7 +2669,7 @@ export default function MobileApp() {
             // vit dans CurioPlaceView) — zéro tap sur la TV.
             || (session.turn?.fight?.curio && ['reward', 'result'].includes(session.turn.fight.phase))
           )
-          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory
+          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory && !session.turn?.fight?.chess
           && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
           && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
           && !team.hacked
@@ -2697,6 +2698,24 @@ export default function MobileApp() {
               teams={session.teams}
               myTeamIdx={teamIdx}
               onFlip={(i) => sendIntent(code, token, 'turnMemoryFlip', { index: i }).catch(() => {})}
+              onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+              onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+            />
+          )}
+        {/* Duel d'échecs (mat en N) : les deux échiquiers en lecture seule sur
+            l'écran partagé, chaque duelliste joue SON problème ICI (le défenseur
+            n'est pas l'équipe active). Récompense/fermeture aussi au téléphone. */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.chess
+          && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <ChessDuelView
+              fight={session.turn.fight}
+              teams={session.teams}
+              myTeamIdx={teamIdx}
+              onMove={(mv) => sendIntent(code, token, 'turnChessMove', { from: mv.from, to: mv.to, promotion: mv.promotion }).catch(() => {})}
               onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
               onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />

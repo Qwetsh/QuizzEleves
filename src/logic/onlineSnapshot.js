@@ -97,6 +97,9 @@ function stripFightSecret(showFight) {
   // Défense en profondeur : les duels Memory / Pokémon ne tournent JAMAIS en
   // ligne (fightBegin les exclut de cette surface) — leur état (texte/pairId
   // des cartes, choix secrets A/B) ne doit donc jamais partir dans le snapshot.
+  // Le duel d'ÉCHECS, LUI, tourne en ligne : on NE le strippe PAS — showFight.chess
+  // ne contient aucun secret (solution + chess.js sont module-level dans
+  // chessFightHandlers), la `fen` publiée est la position visible à résoudre.
   if (out.memory || out.pkmn) {
     const { memory, pkmn, ...rest } = out;
     out = rest;

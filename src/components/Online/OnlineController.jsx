@@ -9,6 +9,7 @@ import { useGameStore } from '../../store/gameStore';
 import { sendIntent, onlineToken } from '../../logic/sessionConfig';
 import DuelRaceView from './DuelRaceView';
 import CurioPlaceView from '../Fight/CurioPlaceView';
+import ChessDuelView from '../Fight/ChessDuelView';
 
 // `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres).
 // La vue de duel y est sautée : FightModal (plein écran hôte) la rend déjà via
@@ -38,6 +39,20 @@ export default function OnlineController({ code, ctrl, host = false }) {
         mySide={ownedIdx === fight.attackerIndex ? 'attacker' : 'defender'}
         onValidate={(pos) => sendIntent(code, token, 'turnCurioValidate', { x: pos.x, y: pos.y }).catch(() => {})}
         onNext={() => sendIntent(code, token, 'turnCurioNext', {}).catch(() => {})}
+      />
+    );
+  }
+  // Duel d'échecs : mon échiquier interactif (mate-in-N). L'hôte arbitre chaque
+  // coup ; reward/result gérés par la vue elle-même (comme memory/pkmn).
+  if (fight.chess && ['minigame', 'reward', 'result'].includes(fight.phase)) {
+    return (
+      <ChessDuelView
+        fight={fight}
+        teams={ctrl.teams}
+        myTeamIdx={ownedIdx}
+        onMove={(mv) => sendIntent(code, token, 'turnChessMove', { from: mv.from, to: mv.to, promotion: mv.promotion }).catch(() => {})}
+        onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+        onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
       />
     );
   }
