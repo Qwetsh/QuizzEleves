@@ -86,6 +86,28 @@ describe('mini-jeux — Tableau de Mendeleïev', () => {
     expect(mg.Component).not.toBe(getDefaultMinigame().Component);
   });
 
+  it('le thème harrypotter résout le moteur wizard (duel de sorciers, pointsBased)', async () => {
+    const { default: WizardDuel } = await import('../components/Fight/minigames/WizardDuel.jsx');
+    const mg = getMinigame('harrypotter');
+    expect(mg.Component).toBe(WizardDuel);
+    expect(mg.name).toBe('fight.mg.wizard.name');
+    expect(mg.persistent).toBe(true);   // un duel à mort = tout le combat
+    expect(mg.pointsBased).toBe(true);   // victoire via fightMatchWin (pas de manches)
+    expect(mg.winLabel).toBe('fight.mg.wizard.winLabel');
+    expect(mg.howto.demo).toBe('wizard');
+    // jouable par défaut (contenu texte tiré par fightPickQuestion, repli propre
+    // dans le composant) → jamais le duel générique.
+    expect(mg.Component).not.toBe(getDefaultMinigame().Component);
+    // le sous-thème hp_livre1 hérite du duel de sorciers via la cascade
+    // (harrypotter est son ancêtre câblé au registre).
+    setThemesData({ themes: {
+      harrypotter: { key: 'harrypotter', path: 'hp', parentKey: null, subjectKey: 'harrypotter' },
+      hp_livre1: { key: 'hp_livre1', path: 'hp.hp_livre1', parentKey: 'harrypotter', subjectKey: 'hp_livre1' },
+    }, roots: ['harrypotter'] });
+    expect(getMinigame('hp_livre1').Component).toBe(WizardDuel);
+    resetThemesData();
+  });
+
   it('le thème chimie résout le moteur mendeleiev (auto-suffisant)', () => {
     const mg = getMinigame('chimie');
     expect(typeof mg.Component).toBe('function');

@@ -13,6 +13,7 @@ import ChessDuel from './ChessDuel.jsx';
 import chessData from '../../../data/chessPuzzles.json';
 import HackDuel from './HackDuel.jsx';
 import hackData from '../../../data/hackPuzzles.json';
+import WizardDuel from './WizardDuel.jsx';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -82,6 +83,11 @@ const ENGINES = {
   // normal (PAS pointsBased). Auto-suffisant (hackPuzzles.json bundlé) :
   // difficulté par manche gérée dans le composant. Jouable si le JSON a ≥1 énigme.
   hack: { Component: HackDuel, persistent: true },
+  // Duel de sorciers (Priori Incantatem, thème harrypotter) : UN duel à mort —
+  // persistant, pointsBased (le moteur déclare la victoire via fightMatchWin
+  // quand l'orbe touche un camp). Contenu = questions TEXTE du thème (le
+  // composant tire via fightPickQuestion, repli propre si le pool est vide).
+  wizard: { Component: WizardDuel, persistent: true, pointsBased: true },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -300,6 +306,18 @@ const THEME_MINIGAMES = {
     howto: { demo: 'pkmn', goal: 'fight.mg.pkmn.goal', steps: ['fight.mg.pkmn.step1', 'fight.mg.pkmn.step2', 'fight.mg.pkmn.step3', 'fight.mg.pkmn.step4'] },
   },
 
+  // ── DUEL DE SORCIERS (Priori Incantatem) — thème harrypotter, surface
+  // TACTILE. Deux sorciers face à face, un orbe au centre : une bonne réponse
+  // RAPIDE pousse ton sort vers l'adversaire ; quand l'orbe touche un camp,
+  // l'autre gagne. Contenu = questions TEXTE du thème (fightPickQuestion résout
+  // la catégorie ; harrypotter a 0 question directe mais son enfant hp_livre1
+  // en a → jouable via la cascade). Repli propre géré dans le composant.
+  harrypotter: {
+    engine: 'wizard', content: { fromQuestions: 'harrypotter' },
+    name: 'fight.mg.wizard.name', rules: 'fight.mg.wizard.rules', winLabel: 'fight.mg.wizard.winLabel',
+    howto: { demo: 'wizard', goal: 'fight.mg.wizard.goal', steps: ['fight.mg.wizard.step1', 'fight.mg.wizard.step2', 'fight.mg.wizard.step3'] },
+  },
+
   // ── Blind test (souhait : « quizz audio, avec Deezer ça doit être faisable »)
   // Extraits 30 s seedés en base (colonne audio, bucket opaque — les URLs
   // Deezer expirent, on rapatrie). Sans extraits chargés : cascade → générique.
@@ -413,6 +431,13 @@ function isPlayable(theme) {
   if (theme.engine === 'curioscope') {
     return (theme.content?.universes || []).some((id) => (getUniverse(id)?.spots() || []).length > 0);
   }
+  // Duel de sorciers : contenu TEXTE, tiré par fightPickQuestion (qui résout la
+  // catégorie — harrypotter → hp_livre1 — et a un repli STORE transverse). Le
+  // pool DIRECT du thème (getSubjectPool) N'AGRÈGE PAS les enfants : un thème
+  // parent « conteneur » (harrypotter, 0 question directe) apparaîtrait à tort
+  // injouable. On considère donc le wizard JOUABLE par défaut ; le composant
+  // gère proprement un pool vide (écran d'issue + bouton, jamais de soft-lock).
+  if (theme.engine === 'wizard') return true;
   if (theme.content?.fromQuestions) {
     const key = theme.content.fromQuestions;
     const inGame = useGameStore.getState()?.questions?.[key] || [];
