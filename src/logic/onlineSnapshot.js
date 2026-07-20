@@ -121,6 +121,13 @@ function stripFightSecret(showFight) {
       },
     };
   }
+  if (out.wizard?.q) {
+    // Duel de sorciers : la question du rai partagé porte la bonne réponse
+    // (wizard.q.c) — jamais diffusée (l'hôte arbitre). Le reste (pos/locked/
+    // push/hit/winner) est public. Même discipline que race.q.c.
+    const { c, e, e_en, ...safeQ } = out.wizard.q;
+    out = { ...out, wizard: { ...out.wizard, q: safeQ } };
+  }
   if (out.curio) {
     // usedIds : le DERNIER id EST la réponse (monde réel : id = nom du lieu).
     // Le miroir n'en a pas besoin (anti-répétition = affaire de l'hôte) → jamais

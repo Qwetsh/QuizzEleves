@@ -539,6 +539,15 @@ export function hackDuelFor(subject) {
   return resolveEntry(subject)?.engine === 'hack';
 }
 
+// Le thème `subject` résout-il (même cascade) le Duel de sorciers (Priori
+// Incantatem) ? Utilisé par fightBegin pour router les surfaces téléphone ET en
+// ligne vers le duel piloté par le store (wizardFightHandlers) — les DEUX camps
+// répondent à la MÊME question (course au rai partagé) depuis leur appareil,
+// l'hôte arbitre les poussées et la victoire.
+export function wizardDuelFor(subject) {
+  return resolveEntry(subject)?.engine === 'wizard';
+}
+
 // Exposé pour les tests / le simulateur : liste des thèmes câblés.
 export const MINIGAME_THEMES = Object.keys(THEME_MINIGAMES);
 

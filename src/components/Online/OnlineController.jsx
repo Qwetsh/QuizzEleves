@@ -11,6 +11,7 @@ import DuelRaceView from './DuelRaceView';
 import CurioPlaceView from '../Fight/CurioPlaceView';
 import ChessDuelView from '../Fight/ChessDuelView';
 import HackDuelView from '../Fight/HackDuelView';
+import WizardDuelView from '../Fight/WizardDuelView';
 
 // `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres).
 // La vue de duel y est sautée : FightModal (plein écran hôte) la rend déjà via
@@ -67,6 +68,21 @@ export default function OnlineController({ code, ctrl, host = false }) {
         myTeamIdx={ownedIdx}
         onPickLang={(lang) => sendIntent(code, token, 'turnHackLang', { lang }).catch(() => {})}
         onPick={(tok) => sendIntent(code, token, 'turnHackPick', { token: tok }).catch(() => {})}
+        onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+        onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+      />
+    );
+  }
+  // Duel de sorciers (« Priori Incantatem ») : les deux camps répondent à la
+  // MÊME question, rai partagé. L'hôte arbitre justesse/vitesse/poussée ;
+  // reward/result gérés par la vue (comme chess/hack).
+  if (fight.wizard && ['minigame', 'reward', 'result'].includes(fight.phase)) {
+    return (
+      <WizardDuelView
+        fight={fight}
+        teams={ctrl.teams}
+        myTeamIdx={ownedIdx}
+        onAnswer={(index) => sendIntent(code, token, 'turnWizardAnswer', { index }).catch(() => {})}
         onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
         onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
       />

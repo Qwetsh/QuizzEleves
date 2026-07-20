@@ -13,12 +13,13 @@ import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { getSubjectPool } from '../data/questions/index.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
-import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor, chessDuelFor, hackDuelFor } from '../components/Fight/minigames/index.js';
+import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor, chessDuelFor, hackDuelFor, wizardDuelFor } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
 import { startMemoryDuel } from './memoryFightHandlers.js';
 import { startPkmnDuel } from './pokemonFightHandlers.js';
 import { startChessDuel } from './chessFightHandlers.js';
 import { startHackDuel } from './hackFightHandlers.js';
+import { startWizardDuel } from './wizardFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
@@ -166,6 +167,12 @@ export function fightBegin(set, get) {
     // puis remplit SES trous depuis son appareil, l'hôte arbitre
     // (hackFightHandlers). Route AVANT le bloc phoneController-only memory/pkmn.
     if (hackDuelFor(f.subject)) { startHackDuel(set, get); return; }
+    // Duel de SORCIERS (Priori Incantatem, thème harrypotter) « course au rai
+    // partagé » piloté par le store — surfaces téléphone ET en ligne (comme les
+    // échecs / le hacking) : les DEUX camps répondent à la MÊME question depuis
+    // leur appareil, l'hôte arbitre les poussées et la victoire
+    // (wizardFightHandlers). Route AVANT le bloc phoneController-only memory/pkmn.
+    if (wizardDuelFor(f.subject)) { startWizardDuel(set, get); return; }
     // Duel Memory (paires) piloté par le store — surface « écran + téléphones »
     // UNIQUEMENT : plateau TV en lecture seule sur l'écran partagé, retournements
     // depuis le téléphone du camp actif. En ligne, pas de plateau partagé → repli

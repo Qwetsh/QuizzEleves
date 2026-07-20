@@ -299,6 +299,18 @@ export function buildTurnPayload(s) {
         sides: sf.hack.sides,
         reveal: sf.hack.reveal || null,
       } : null,
+      // Duel de SORCIERS (Priori Incantatem, surfaces téléphone ET en ligne) —
+      // ANTI-TRICHE : les DEUX camps répondent à la MÊME question ; la bonne
+      // réponse (q.c, + explications e/e_en) ne quitte JAMAIS l'hôte (strippée
+      // ici comme race.q.c). Tout le reste (rai partagé, verrous, anim) est public.
+      wizard: sf.wizard ? {
+        pos: sf.wizard.pos,
+        q: (() => { const { c, e, e_en, ...safe } = sf.wizard.q || {}; return safe; })(),
+        locked: sf.wizard.locked,
+        push: sf.wizard.push || null,
+        hit: sf.wizard.hit || null,
+        winner: sf.wizard.winner || null,
+      } : null,
       // Combat Pokémon (surface « écran + téléphones ») — ANTI-TRICHE : le
       // CONTENU des choix secrets d'un tour ne part jamais, seulement des
       // accusés `chosen` (le téléphone adverse voit juste « a choisi »). Le

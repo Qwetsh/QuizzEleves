@@ -12,6 +12,7 @@ import MemoryDuelStage from './MemoryDuelStage';
 import PkmnDuelStage from './PkmnDuelStage';
 import ChessDuelStage from './ChessDuelStage';
 import HackDuelStage from './HackDuelStage';
+import WizardDuelStage from './WizardDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import { RewardCard } from './RewardChoices';
 import DuelRaceView from '../Online/DuelRaceView';
@@ -107,7 +108,13 @@ export default function FightModal() {
         {showFight.phase === 'minigame' && showFight.hack && (
           <HackDuelStage fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && !showFight.chess && !showFight.hack && (
+        {/* Duel de sorciers (« Priori Incantatem ») piloté par le store
+            (téléphones / en ligne) : le rai partagé sur l'écran partagé, chaque
+            duelliste répond sur son appareil. */}
+        {showFight.phase === 'minigame' && showFight.wizard && (
+          <WizardDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && !showFight.chess && !showFight.hack && !showFight.wizard && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (

@@ -21,6 +21,7 @@ import MemoryDuelView from '../Fight/MemoryDuelView';
 import PkmnGameboyView from '../Fight/PkmnGameboyView';
 import ChessDuelView from '../Fight/ChessDuelView';
 import HackDuelView from '../Fight/HackDuelView';
+import WizardDuelView from '../Fight/WizardDuelView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2670,7 +2671,7 @@ export default function MobileApp() {
             // vit dans CurioPlaceView) — zéro tap sur la TV.
             || (session.turn?.fight?.curio && ['reward', 'result'].includes(session.turn.fight.phase))
           )
-          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory && !session.turn?.fight?.chess && !session.turn?.fight?.hack
+          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory && !session.turn?.fight?.chess && !session.turn?.fight?.hack && !session.turn?.fight?.wizard
           && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
           && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
           && !team.hacked
@@ -2736,6 +2737,24 @@ export default function MobileApp() {
               myTeamIdx={teamIdx}
               onPickLang={(lang) => sendIntent(code, token, 'turnHackLang', { lang }).catch(() => {})}
               onPick={(tok) => sendIntent(code, token, 'turnHackPick', { token: tok }).catch(() => {})}
+              onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+              onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+            />
+          )}
+        {/* Duel de sorciers (« Priori Incantatem ») : le rai partagé sur l'écran
+            partagé, les DEUX duellistes répondent à la MÊME question ICI (le
+            défenseur n'est pas l'équipe active). Reward/close au téléphone. */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.wizard
+          && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <WizardDuelView
+              fight={session.turn.fight}
+              teams={session.teams}
+              myTeamIdx={teamIdx}
+              onAnswer={(index) => sendIntent(code, token, 'turnWizardAnswer', { index }).catch(() => {})}
               onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
               onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />
