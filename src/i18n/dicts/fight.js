@@ -393,6 +393,24 @@ export default {
   'fight.chess.hint': { fr: 'Touche une pièce, puis sa destination. Le premier à mater gagne la manche !', en: 'Tap a piece, then its destination. First to checkmate wins the round!' },
   'fight.chess.noPuzzle': { fr: 'Aucun problème d\'échecs disponible…', en: 'No chess puzzle available…' },
 
+  // ── Cyber-duel (Hacking) : thème informatique_numerique, surface tactile ──
+  // « Complète les trous » d'un exploit ; chaque camp choisit son langage.
+  'fight.mg.hack.name': { fr: 'Cyber-duel', en: 'Hack Duel' },
+  'fight.mg.hack.rules': { fr: 'Chaque équipe choisit son langage (Python, JS, Bash, SQL, C, PHP), puis reçoit un extrait d\'exploit troué. À chaque trou, choisissez le bon token parmi 4 : chaque bonne réponse illumine la ligne et fait monter la barre de hack. Le premier à finir l\'exploit — « ACCÈS ACCORDÉ » — gagne la manche !', en: 'Each team picks its language (Python, JS, Bash, SQL, C, PHP), then gets an exploit snippet with gaps. At each gap, choose the right token out of 4: every correct answer lights up the line and fills the hack bar. First to finish the exploit — "ACCESS GRANTED" — wins the round!' },
+  'fight.mg.hack.goal': { fr: 'Complète l\'exploit avant l\'adversaire', en: 'Complete the exploit before your rival' },
+  'fight.mg.hack.step1': { fr: 'Choisissez votre langage de piratage au début du duel', en: 'Pick your hacking language at the start of the duel' },
+  'fight.mg.hack.step2': { fr: 'À chaque trou ▮, touchez le bon token parmi les 4', en: 'At each gap ▮, tap the right token out of 4' },
+  'fight.mg.hack.step3': { fr: 'Une erreur verrouille brièvement votre terminal (ACCÈS REFUSÉ)', en: 'A wrong token briefly locks your terminal (ACCESS DENIED)' },
+  // Libellés runtime des terminaux.
+  'fight.hack.chooseLang': { fr: 'Choisis ton langage', en: 'Choose your language' },
+  'fight.hack.waiting': { fr: 'En attente de l\'adversaire…', en: 'Waiting for opponent…' },
+  'fight.hack.access': { fr: 'ACCÈS ACCORDÉ', en: 'ACCESS GRANTED' },
+  'fight.hack.denied': { fr: 'ACCÈS REFUSÉ', en: 'ACCESS DENIED' },
+  'fight.hack.breach': { fr: 'Intrusion {n}%', en: 'Breach {n}%' },
+  'fight.hack.round': { fr: 'Manche {n}', en: 'Round {n}' },
+  'fight.hack.hint': { fr: 'Complète les trous ▮ dans l\'ordre. Premier à finir l\'exploit gagne la manche !', en: 'Fill the gaps ▮ in order. First to finish the exploit wins the round!' },
+  'fight.hack.noPuzzle': { fr: 'Aucun exploit disponible dans ce langage…', en: 'No exploit available in this language…' },
+
   'fight.mg.default.name': { fr: 'Duel de rapidité', en: 'Speed Duel' },
   'fight.mg.default.rules': { fr: 'La même question des deux côtés : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'The same question on both sides: the first to tap the right answer wins the round. A mistake locks your side!' },
   'fight.mg.default.goal': { fr: 'Le plus rapide à trouver la bonne réponse gagne', en: 'The fastest to find the right answer wins' },

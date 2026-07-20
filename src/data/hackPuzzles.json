@@ -1,0 +1,1468 @@
+{
+  "puzzles": [
+    {
+      "id": "py-brute-1",
+      "lang": "python",
+      "level": 1,
+      "title": "Brute-force du hash",
+      "titleEn": "Hash brute-force",
+      "lines": [
+        "def crack(target, wordlist):",
+        "    for word in wordlist:",
+        "        if sha1(word) §0 target:",
+        "            return §1",
+        "    return None"
+      ],
+      "blanks": [
+        { "answer": "==", "choices": ["==", "=", "!=", "in"] },
+        { "answer": "word", "choices": ["word", "target", "None", "sha1"] }
+      ]
+    },
+    {
+      "id": "py-rot13-1",
+      "lang": "python",
+      "level": 1,
+      "title": "Chiffre de César",
+      "titleEn": "Caesar cipher",
+      "lines": [
+        "def caesar(text, shift):",
+        "    out = §0",
+        "    for c in text:",
+        "        out += chr((ord(c) + shift) §1 256)",
+        "    return out"
+      ],
+      "blanks": [
+        { "answer": "\"\"", "choices": ["\"\"", "[]", "0", "None"] },
+        { "answer": "%", "choices": ["%", "//", "&", "*"] }
+      ]
+    },
+    {
+      "id": "py-b64-1",
+      "lang": "python",
+      "level": 1,
+      "title": "Décodage base64",
+      "titleEn": "Base64 decode",
+      "lines": [
+        "import base64",
+        "def decode(payload):",
+        "    raw = base64.§0(payload)",
+        "    return raw.§1(\"utf-8\")"
+      ],
+      "blanks": [
+        { "answer": "b64decode", "choices": ["b64decode", "b64encode", "decode", "b16decode"] },
+        { "answer": "decode", "choices": ["decode", "encode", "str", "bytes"] }
+      ]
+    },
+    {
+      "id": "py-portscan-1",
+      "lang": "python",
+      "level": 1,
+      "title": "Scan de ports",
+      "titleEn": "Port scan loop",
+      "lines": [
+        "open_ports = []",
+        "for port §0 range(1, 1025):",
+        "    if is_open(host, port):",
+        "        open_ports.§1(port)"
+      ],
+      "blanks": [
+        { "answer": "in", "choices": ["in", "of", "is", "="] },
+        { "answer": "append", "choices": ["append", "push", "add", "insert"] }
+      ]
+    },
+    {
+      "id": "py-count-1",
+      "lang": "python",
+      "level": 1,
+      "title": "Compteur de paquets",
+      "titleEn": "Packet counter",
+      "lines": [
+        "def count_syn(packets):",
+        "    total = 0",
+        "    for pkt in packets:",
+        "        if pkt.flag §0 \"SYN\":",
+        "            total §1 1",
+        "    return total"
+      ],
+      "blanks": [
+        { "answer": "==", "choices": ["==", "=", "in", "is not"] },
+        { "answer": "+=", "choices": ["+=", "=+", "++", "-="] }
+      ]
+    },
+    {
+      "id": "py-hashword-1",
+      "lang": "python",
+      "level": 1,
+      "title": "Empreinte d'un mot",
+      "titleEn": "Word fingerprint",
+      "lines": [
+        "import hashlib",
+        "def fingerprint(word):",
+        "    h = hashlib.§0()",
+        "    h.update(word.encode())",
+        "    return h.§1()"
+      ],
+      "blanks": [
+        { "answer": "sha256", "choices": ["sha256", "digest", "encode", "crc32"] },
+        { "answer": "hexdigest", "choices": ["hexdigest", "hexencode", "tostring", "read"] }
+      ]
+    },
+    {
+      "id": "py-sqli-detect-2",
+      "lang": "python",
+      "level": 2,
+      "title": "Détecteur d'injection SQL",
+      "titleEn": "SQL injection detector",
+      "lines": [
+        "PATTERNS = [\"' OR 1=1 --\", \"'; DROP\", \"UNION SELECT\"]",
+        "def looks_malicious(user_input):",
+        "    lowered = user_input.§0()",
+        "    for sig in PATTERNS:",
+        "        if sig.lower() §1 lowered:",
+        "            return §2",
+        "    return False"
+      ],
+      "blanks": [
+        { "answer": "lower", "choices": ["lower", "upper", "strip", "encode"] },
+        { "answer": "in", "choices": ["in", "==", "is", "not in"] },
+        { "answer": "True", "choices": ["True", "False", "None", "sig"] }
+      ]
+    },
+    {
+      "id": "py-xor-2",
+      "lang": "python",
+      "level": 2,
+      "title": "Décodage XOR",
+      "titleEn": "XOR decode",
+      "lines": [
+        "def xor_decrypt(data, key):",
+        "    out = bytearray()",
+        "    for i, b in §0(data):",
+        "        out.append(b §1 key[i §2 len(key)])",
+        "    return bytes(out)"
+      ],
+      "blanks": [
+        { "answer": "enumerate", "choices": ["enumerate", "range", "zip", "iter"] },
+        { "answer": "^", "choices": ["^", "&", "|", "+"] },
+        { "answer": "%", "choices": ["%", "//", "*", "-"] }
+      ]
+    },
+    {
+      "id": "py-wordlist-2",
+      "lang": "python",
+      "level": 2,
+      "title": "Lecture de wordlist",
+      "titleEn": "Wordlist reader",
+      "lines": [
+        "def load_words(path):",
+        "    with §0(path) as f:",
+        "        return [line.§1() for line in f]"
+      ],
+      "blanks": [
+        { "answer": "open", "choices": ["open", "read", "file", "load"] },
+        { "answer": "strip", "choices": ["strip", "split", "trim", "clean"] }
+      ]
+    },
+    {
+      "id": "py-regex-2",
+      "lang": "python",
+      "level": 2,
+      "title": "Extraction d'IP par regex",
+      "titleEn": "Regex IP extraction",
+      "lines": [
+        "import re",
+        "def find_ips(log):",
+        "    pattern = r\"\\d{1,3}(?:\\.\\d{1,3}){3}\"",
+        "    return re.§0(pattern, §1)"
+      ],
+      "blanks": [
+        { "answer": "findall", "choices": ["findall", "match", "compile", "sub"] },
+        { "answer": "log", "choices": ["log", "pattern", "re", "self"] }
+      ]
+    },
+    {
+      "id": "py-timing-2",
+      "lang": "python",
+      "level": 2,
+      "title": "Comparaison à temps constant",
+      "titleEn": "Constant-time compare",
+      "lines": [
+        "def safe_equal(a, b):",
+        "    if len(a) §0 len(b):",
+        "        return False",
+        "    result = 0",
+        "    for x, y in zip(a, b):",
+        "        result §1 x ^ y",
+        "    return result §2 0"
+      ],
+      "blanks": [
+        { "answer": "!=", "choices": ["!=", "==", ">", "is"] },
+        { "answer": "|=", "choices": ["|=", "&=", "+=", "^="] },
+        { "answer": "==", "choices": ["==", "!=", ">=", "is not"] }
+      ]
+    },
+    {
+      "id": "py-binsearch-3",
+      "lang": "python",
+      "level": 3,
+      "title": "Recherche dans la table de hash",
+      "titleEn": "Rainbow table binary search",
+      "lines": [
+        "def lookup(table, target):",
+        "    lo, hi = 0, len(table) - 1",
+        "    while lo §0 hi:",
+        "        mid = (lo + hi) §1 2",
+        "        if table[mid] == target:",
+        "            return mid",
+        "        elif table[mid] < target:",
+        "            lo = mid §2 1",
+        "        else:",
+        "            hi = mid §3 1",
+        "    return -1"
+      ],
+      "blanks": [
+        { "answer": "<=", "choices": ["<=", "<", ">=", "!="] },
+        { "answer": "//", "choices": ["//", "/", "%", "*"] },
+        { "answer": "+", "choices": ["+", "-", "*", "//"] },
+        { "answer": "-", "choices": ["-", "+", "*", "//"] }
+      ]
+    },
+    {
+      "id": "py-freq-3",
+      "lang": "python",
+      "level": 3,
+      "title": "Analyse de fréquence",
+      "titleEn": "Frequency analysis",
+      "lines": [
+        "def most_common(cipher):",
+        "    freq = {}",
+        "    for c in cipher:",
+        "        freq[c] = freq.§0(c, 0) + 1",
+        "    return §1(freq, key=freq.§2)"
+      ],
+      "blanks": [
+        { "answer": "get", "choices": ["get", "pop", "set", "add"] },
+        { "answer": "max", "choices": ["max", "min", "sorted", "sum"] },
+        { "answer": "get", "choices": ["get", "keys", "values", "items"] }
+      ]
+    },
+    {
+      "id": "py-crackloop-3",
+      "lang": "python",
+      "level": 3,
+      "title": "Cassage par dictionnaire salé",
+      "titleEn": "Salted dictionary attack",
+      "lines": [
+        "def attack(target, salt, words):",
+        "    for w in words:",
+        "        candidate = hashlib.sha256((salt + w).§0()).§1()",
+        "        if candidate §2 target:",
+        "            return w",
+        "    return None"
+      ],
+      "blanks": [
+        { "answer": "encode", "choices": ["encode", "decode", "bytes", "hash"] },
+        { "answer": "hexdigest", "choices": ["hexdigest", "digest", "hex", "read"] },
+        { "answer": "==", "choices": ["==", "!=", "in", "is"] }
+      ]
+    },
+    {
+      "id": "js-sqli-1",
+      "lang": "javascript",
+      "level": 1,
+      "title": "Détecteur de payload",
+      "titleEn": "Payload detector",
+      "lines": [
+        "function isInjection(input) {",
+        "  const sig = \"' OR 1=1 --\";",
+        "  return input.§0(sig) §1 -1;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "indexOf", "choices": ["indexOf", "charAt", "slice", "search"] },
+        { "answer": "!==", "choices": ["!==", "===", "<", ">="] }
+      ]
+    },
+    {
+      "id": "js-b64-1",
+      "lang": "javascript",
+      "level": 1,
+      "title": "Décodage base64",
+      "titleEn": "Base64 decode",
+      "lines": [
+        "function decodePayload(b64) {",
+        "  const raw = §0(b64);",
+        "  return raw.§1();",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "atob", "choices": ["atob", "btoa", "decode", "parse"] },
+        { "answer": "toUpperCase", "choices": ["toUpperCase", "toLowerCase", "trim", "reverse"] }
+      ]
+    },
+    {
+      "id": "js-rot-1",
+      "lang": "javascript",
+      "level": 1,
+      "title": "Décalage de caractère",
+      "titleEn": "Char shift",
+      "lines": [
+        "function shiftChar(c, n) {",
+        "  const code = c.§0(0);",
+        "  return String.§1(code + n);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "charCodeAt", "choices": ["charCodeAt", "codePointAt", "charAt", "indexOf"] },
+        { "answer": "fromCharCode", "choices": ["fromCharCode", "fromCodePoint", "raw", "valueOf"] }
+      ]
+    },
+    {
+      "id": "js-scan-1",
+      "lang": "javascript",
+      "level": 1,
+      "title": "Boucle de scan",
+      "titleEn": "Scan loop",
+      "lines": [
+        "const open = [];",
+        "for (let p = 1; p §0 1024; p++) {",
+        "  if (probe(host, p)) open.§1(p);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "<=", "choices": ["<=", "=<", "in", "of"] },
+        { "answer": "push", "choices": ["push", "append", "add", "pop"] }
+      ]
+    },
+    {
+      "id": "js-token-1",
+      "lang": "javascript",
+      "level": 1,
+      "title": "Génération de jeton",
+      "titleEn": "Token generation",
+      "lines": [
+        "function token(len) {",
+        "  let s = §0;",
+        "  while (s.length < len) {",
+        "    s §1 Math.random().toString(36)[2];",
+        "  }",
+        "  return s.slice(0, len);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "\"\"", "choices": ["\"\"", "[]", "0", "null"] },
+        { "answer": "+=", "choices": ["+=", "=+", "==", "-="] }
+      ]
+    },
+    {
+      "id": "js-count-1",
+      "lang": "javascript",
+      "level": 1,
+      "title": "Compteur d'échecs",
+      "titleEn": "Failure counter",
+      "lines": [
+        "let fails = 0;",
+        "logs.§0((entry) => {",
+        "  if (entry.status §1 401) fails++;",
+        "});"
+      ],
+      "blanks": [
+        { "answer": "forEach", "choices": ["forEach", "map", "filter", "reduce"] },
+        { "answer": "===", "choices": ["===", "=", "!==", "in"] }
+      ]
+    },
+    {
+      "id": "js-xor-2",
+      "lang": "javascript",
+      "level": 2,
+      "title": "Décodage XOR",
+      "titleEn": "XOR decode",
+      "lines": [
+        "function xorDecode(bytes, key) {",
+        "  return bytes.§0((b, i) => b §1 key.charCodeAt(i §2 key.length));",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "map", "choices": ["map", "forEach", "filter", "reduce"] },
+        { "answer": "^", "choices": ["^", "&", "|", "+"] },
+        { "answer": "%", "choices": ["%", "/", "*", "-"] }
+      ]
+    },
+    {
+      "id": "js-regex-2",
+      "lang": "javascript",
+      "level": 2,
+      "title": "Filtre d'e-mails",
+      "titleEn": "Email filter",
+      "lines": [
+        "function extractEmails(text) {",
+        "  const re = /[\\w.]+@[\\w.]+/§0;",
+        "  return text.§1(re) || [];",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "g", "choices": ["g", "i", "m", "s"] },
+        { "answer": "match", "choices": ["match", "replace", "search", "test"] }
+      ]
+    },
+    {
+      "id": "js-brute-2",
+      "lang": "javascript",
+      "level": 2,
+      "title": "Essai de mots de passe",
+      "titleEn": "Password guessing",
+      "lines": [
+        "function crack(hash, words) {",
+        "  for (const w §0 words) {",
+        "    if (sha1(w) §1 hash) {",
+        "      return w;",
+        "    }",
+        "  }",
+        "  return null;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "of", "choices": ["of", "in", "=", "at"] },
+        { "answer": "===", "choices": ["===", "=", "!==", "instanceof"] }
+      ]
+    },
+    {
+      "id": "js-sanitize-2",
+      "lang": "javascript",
+      "level": 2,
+      "title": "Nettoyage d'entrée",
+      "titleEn": "Input sanitizing",
+      "lines": [
+        "function sanitize(input) {",
+        "  return input.§0(/[<>\"']/g, §1);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "replace", "choices": ["replace", "match", "split", "trim"] },
+        { "answer": "\"\"", "choices": ["\"\"", "null", "0", "false"] }
+      ]
+    },
+    {
+      "id": "js-json-2",
+      "lang": "javascript",
+      "level": 2,
+      "title": "Décodage du jeton JWT",
+      "titleEn": "JWT payload decode",
+      "lines": [
+        "function readClaims(jwt) {",
+        "  const part = jwt.§0(\".\")[1];",
+        "  return JSON.§1(atob(part));",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "split", "choices": ["split", "slice", "join", "match"] },
+        { "answer": "parse", "choices": ["parse", "stringify", "decode", "eval"] }
+      ]
+    },
+    {
+      "id": "js-throttle-3",
+      "lang": "javascript",
+      "level": 3,
+      "title": "Limiteur de tentatives",
+      "titleEn": "Rate limiter",
+      "lines": [
+        "const seen = new §0();",
+        "function allow(ip) {",
+        "  const n = (seen.get(ip) §1 0) + 1;",
+        "  seen.§2(ip, n);",
+        "  return n §3 5;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "Map", "choices": ["Map", "Set", "Array", "Object"] },
+        { "answer": "||", "choices": ["||", "&&", "??=", "|"] },
+        { "answer": "set", "choices": ["set", "add", "put", "push"] },
+        { "answer": "<=", "choices": ["<=", ">=", "==", "!="] }
+      ]
+    },
+    {
+      "id": "js-hmac-3",
+      "lang": "javascript",
+      "level": 3,
+      "title": "Vérification de signature",
+      "titleEn": "Signature verification",
+      "lines": [
+        "function verify(body, sig, key) {",
+        "  const mac = hmacSha256(key, body);",
+        "  if (mac.length §0 sig.length) return false;",
+        "  let diff = 0;",
+        "  for (let i = 0; i < mac.length; i++) {",
+        "    diff §1 mac.charCodeAt(i) ^ sig.charCodeAt(i);",
+        "  }",
+        "  return diff §2 0;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "!==", "choices": ["!==", "===", "<", ">"] },
+        { "answer": "|=", "choices": ["|=", "&=", "+=", "^="] },
+        { "answer": "===", "choices": ["===", "!==", ">=", "<="] }
+      ]
+    },
+    {
+      "id": "js-async-3",
+      "lang": "javascript",
+      "level": 3,
+      "title": "Scan asynchrone",
+      "titleEn": "Async scan",
+      "lines": [
+        "async function scanAll(ports) {",
+        "  const jobs = ports.§0((p) => probe(p));",
+        "  const res = §1 Promise.§2(jobs);",
+        "  return res.filter(Boolean);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "map", "choices": ["map", "forEach", "filter", "reduce"] },
+        { "answer": "await", "choices": ["await", "async", "yield", "return"] },
+        { "answer": "all", "choices": ["all", "race", "any", "resolve"] }
+      ]
+    },
+    {
+      "id": "bash-scan-1",
+      "lang": "bash",
+      "level": 1,
+      "title": "Scan de ports",
+      "titleEn": "Port scan",
+      "lines": [
+        "for port §0 $(seq 1 1024); do",
+        "  nc -z $host $port && echo \"open: $port\"",
+        "§1"
+      ],
+      "blanks": [
+        { "answer": "in", "choices": ["in", "of", "on", "at"] },
+        { "answer": "done", "choices": ["done", "end", "fi", "esac"] }
+      ]
+    },
+    {
+      "id": "bash-hash-1",
+      "lang": "bash",
+      "level": 1,
+      "title": "Empreinte d'un fichier",
+      "titleEn": "File fingerprint",
+      "lines": [
+        "hash=$(sha256sum \"$file\" §0 cut -d' ' §1 1)",
+        "echo \"$hash\""
+      ],
+      "blanks": [
+        { "answer": "|", "choices": ["|", "||", ">", "&&"] },
+        { "answer": "-f", "choices": ["-f", "-d", "-c", "-s"] }
+      ]
+    },
+    {
+      "id": "bash-grep-1",
+      "lang": "bash",
+      "level": 1,
+      "title": "Recherche dans les logs",
+      "titleEn": "Log grep",
+      "lines": [
+        "grep §0 \"Failed password\" /var/log/auth.log \\",
+        "  §1 wc -l"
+      ],
+      "blanks": [
+        { "answer": "-c", "choices": ["-c", "-v", "-r", "-x"] },
+        { "answer": "|", "choices": ["|", "&&", ">", ";"] }
+      ]
+    },
+    {
+      "id": "bash-b64-1",
+      "lang": "bash",
+      "level": 1,
+      "title": "Décodage base64",
+      "titleEn": "Base64 decode",
+      "lines": [
+        "echo \"$payload\" §0 base64 §1"
+      ],
+      "blanks": [
+        { "answer": "|", "choices": ["|", "&&", ">", ";"] },
+        { "answer": "-d", "choices": ["-d", "-e", "-n", "-w"] }
+      ]
+    },
+    {
+      "id": "bash-test-1",
+      "lang": "bash",
+      "level": 1,
+      "title": "Vérification de fichier",
+      "titleEn": "File check",
+      "lines": [
+        "if §0 -f \"$target\" §1; then",
+        "  echo \"cible presente\"",
+        "fi"
+      ],
+      "blanks": [
+        { "answer": "[", "choices": ["[", "{", "(", "<"] },
+        { "answer": "]", "choices": ["]", "}", ")", ">"] }
+      ]
+    },
+    {
+      "id": "bash-var-1",
+      "lang": "bash",
+      "level": 1,
+      "title": "Longueur de mot de passe",
+      "titleEn": "Password length",
+      "lines": [
+        "pass=\"hunter2\"",
+        "if [ §0{#pass} §1 8 ]; then echo faible; fi"
+      ],
+      "blanks": [
+        { "answer": "$", "choices": ["$", "#", "@", "%"] },
+        { "answer": "-lt", "choices": ["-lt", "-gt", "<", "=="] }
+      ]
+    },
+    {
+      "id": "bash-loop-2",
+      "lang": "bash",
+      "level": 2,
+      "title": "Brute-force sur wordlist",
+      "titleEn": "Wordlist brute-force",
+      "lines": [
+        "while §0 -r word; do",
+        "  if [ \"$(md5 \"$word\")\" §1 \"$target\" ]; then",
+        "    echo \"trouve: $word\"",
+        "  fi",
+        "done §2 wordlist.txt"
+      ],
+      "blanks": [
+        { "answer": "read", "choices": ["read", "echo", "cat", "get"] },
+        { "answer": "=", "choices": ["=", "==", "-eq", "in"] },
+        { "answer": "<", "choices": ["<", ">", "|", "<<"] }
+      ]
+    },
+    {
+      "id": "bash-count-2",
+      "lang": "bash",
+      "level": 2,
+      "title": "Top des IP attaquantes",
+      "titleEn": "Top attacker IPs",
+      "lines": [
+        "awk '{print $1}' access.log \\",
+        "  | sort §0 uniq -c \\",
+        "  | sort §1 \\",
+        "  | head -n 10"
+      ],
+      "blanks": [
+        { "answer": "|", "choices": ["|", "&&", ";", ">"] },
+        { "answer": "-rn", "choices": ["-rn", "-u", "-c", "-b"] }
+      ]
+    },
+    {
+      "id": "bash-arith-2",
+      "lang": "bash",
+      "level": 2,
+      "title": "Compteur de tentatives",
+      "titleEn": "Attempt counter",
+      "lines": [
+        "tries=0",
+        "while [ $tries §0 3 ]; do",
+        "  probe && break",
+        "  tries=§1",
+        "done"
+      ],
+      "blanks": [
+        { "answer": "-lt", "choices": ["-lt", "-gt", "==", "<"] },
+        { "answer": "$((tries + 1))", "choices": ["$((tries + 1))", "$(tries + 1)", "${tries + 1}", "$[tries++]"] }
+      ]
+    },
+    {
+      "id": "bash-cut-2",
+      "lang": "bash",
+      "level": 2,
+      "title": "Extraction d'utilisateurs",
+      "titleEn": "User extraction",
+      "lines": [
+        "cut §0 : §1 1 /etc/passwd | sort"
+      ],
+      "blanks": [
+        { "answer": "-d", "choices": ["-d", "-f", "-c", "-s"] },
+        { "answer": "-f", "choices": ["-f", "-d", "-n", "-c"] }
+      ]
+    },
+    {
+      "id": "bash-subst-2",
+      "lang": "bash",
+      "level": 2,
+      "title": "Nettoyage de chaîne",
+      "titleEn": "String cleanup",
+      "lines": [
+        "raw=\"admin' OR 1=1\"",
+        "safe=§0raw//\\'/§1",
+        "echo \"$safe\""
+      ],
+      "blanks": [
+        { "answer": "${", "choices": ["${", "$(", "$[", "$<"] },
+        { "answer": "}", "choices": ["}", ")", "]", ">"] }
+      ]
+    },
+    {
+      "id": "bash-func-3",
+      "lang": "bash",
+      "level": 3,
+      "title": "Fonction de crackage",
+      "titleEn": "Cracking function",
+      "lines": [
+        "crack() {",
+        "  local target=$1",
+        "  for w §0 $(cat words.txt); do",
+        "    [ \"$(sha1 \"$w\")\" §1 \"$target\" ] §2 { echo \"$w\"; return 0; }",
+        "  done",
+        "  return 1",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "in", "choices": ["in", "of", "on", "="] },
+        { "answer": "=", "choices": ["=", "==", "-ne", "in"] },
+        { "answer": "&&", "choices": ["&&", "||", "|", ";"] }
+      ]
+    },
+    {
+      "id": "bash-trap-3",
+      "lang": "bash",
+      "level": 3,
+      "title": "Surveillance de connexions",
+      "titleEn": "Connection watch",
+      "lines": [
+        "watch_conns() {",
+        "  netstat -tn \\",
+        "    | awk 'NR §0 1 {print $5}' \\",
+        "    | cut -d: -f1 \\",
+        "    | sort | uniq -c \\",
+        "    | awk '$1 §1 20 {print $2}'",
+        "}"
+      ],
+      "blanks": [
+        { "answer": ">", "choices": [">", "<", "==", "!="] },
+        { "answer": ">", "choices": [">", "<", "-eq", "=="] }
+      ]
+    },
+    {
+      "id": "bash-case-3",
+      "lang": "bash",
+      "level": 3,
+      "title": "Routeur de commandes",
+      "titleEn": "Command router",
+      "lines": [
+        "§0 \"$cmd\" in",
+        "  scan) run_scan ;;",
+        "  crack) run_crack ;;",
+        "  *) echo \"inconnu\" ;;",
+        "§1"
+      ],
+      "blanks": [
+        { "answer": "case", "choices": ["case", "switch", "select", "if"] },
+        { "answer": "esac", "choices": ["esac", "done", "fi", "end"] }
+      ]
+    },
+    {
+      "id": "sql-inject-1",
+      "lang": "sql",
+      "level": 1,
+      "title": "Contournement d'authentification",
+      "titleEn": "Auth bypass pattern",
+      "lines": [
+        "SELECT * FROM users",
+        "§0 name = 'admin' §1 '1'='1';"
+      ],
+      "blanks": [
+        { "answer": "WHERE", "choices": ["WHERE", "HAVING", "WHEN", "FROM"] },
+        { "answer": "OR", "choices": ["OR", "AND", "NOT", "XOR"] }
+      ]
+    },
+    {
+      "id": "sql-count-1",
+      "lang": "sql",
+      "level": 1,
+      "title": "Compter les échecs",
+      "titleEn": "Count failures",
+      "lines": [
+        "SELECT §0(*) FROM login_log",
+        "§1 success = 0;"
+      ],
+      "blanks": [
+        { "answer": "COUNT", "choices": ["COUNT", "SUM", "MAX", "AVG"] },
+        { "answer": "WHERE", "choices": ["WHERE", "HAVING", "WHEN", "IF"] }
+      ]
+    },
+    {
+      "id": "sql-like-1",
+      "lang": "sql",
+      "level": 1,
+      "title": "Recherche de comptes admin",
+      "titleEn": "Admin account search",
+      "lines": [
+        "SELECT id FROM users",
+        "WHERE role §0 'admin%' §1 active = 1;"
+      ],
+      "blanks": [
+        { "answer": "LIKE", "choices": ["LIKE", "=", "IN", "AS"] },
+        { "answer": "AND", "choices": ["AND", "OR", "NOT", "ON"] }
+      ]
+    },
+    {
+      "id": "sql-order-1",
+      "lang": "sql",
+      "level": 1,
+      "title": "Dernières connexions",
+      "titleEn": "Latest logins",
+      "lines": [
+        "SELECT user, last_seen FROM sessions",
+        "§0 BY last_seen §1",
+        "LIMIT 5;"
+      ],
+      "blanks": [
+        { "answer": "ORDER", "choices": ["ORDER", "GROUP", "SORT", "PARTITION"] },
+        { "answer": "DESC", "choices": ["DESC", "ASC", "TOP", "REVERSE"] }
+      ]
+    },
+    {
+      "id": "sql-in-1",
+      "lang": "sql",
+      "level": 1,
+      "title": "Comptes ciblés",
+      "titleEn": "Targeted accounts",
+      "lines": [
+        "SELECT * FROM users",
+        "§0 id §1 (1, 2, 42);"
+      ],
+      "blanks": [
+        { "answer": "WHERE", "choices": ["WHERE", "HAVING", "WHEN", "FROM"] },
+        { "answer": "IN", "choices": ["IN", "ON", "AT", "OF"] }
+      ]
+    },
+    {
+      "id": "sql-null-1",
+      "lang": "sql",
+      "level": 1,
+      "title": "Comptes sans mot de passe",
+      "titleEn": "Passwordless accounts",
+      "lines": [
+        "SELECT name FROM users",
+        "WHERE password §0 §1;"
+      ],
+      "blanks": [
+        { "answer": "IS", "choices": ["IS", "=", "==", "AS"] },
+        { "answer": "NULL", "choices": ["NULL", "NIL", "NONE", "EMPTY"] }
+      ]
+    },
+    {
+      "id": "sql-union-2",
+      "lang": "sql",
+      "level": 2,
+      "title": "Fusion de tables",
+      "titleEn": "Table merge probe",
+      "lines": [
+        "SELECT name, NULL FROM users",
+        "§0 §1",
+        "SELECT title, secret FROM notes;"
+      ],
+      "blanks": [
+        { "answer": "UNION", "choices": ["UNION", "JOIN", "MERGE", "APPEND"] },
+        { "answer": "ALL", "choices": ["ALL", "ANY", "SOME", "DISTINCT"] }
+      ]
+    },
+    {
+      "id": "sql-join-2",
+      "lang": "sql",
+      "level": 2,
+      "title": "Jointure de privilèges",
+      "titleEn": "Privilege join",
+      "lines": [
+        "SELECT u.name, r.level",
+        "FROM users u §0 roles r",
+        "§1 u.role_id = r.id;"
+      ],
+      "blanks": [
+        { "answer": "JOIN", "choices": ["JOIN", "UNION", "WITH", "FROM"] },
+        { "answer": "ON", "choices": ["ON", "WHERE", "IN", "AS"] }
+      ]
+    },
+    {
+      "id": "sql-group-2",
+      "lang": "sql",
+      "level": 2,
+      "title": "IP les plus actives",
+      "titleEn": "Most active IPs",
+      "lines": [
+        "SELECT ip, COUNT(*) AS hits",
+        "FROM access",
+        "§0 BY ip",
+        "§1 COUNT(*) > 100;"
+      ],
+      "blanks": [
+        { "answer": "GROUP", "choices": ["GROUP", "ORDER", "SORT", "PARTITION"] },
+        { "answer": "HAVING", "choices": ["HAVING", "WHERE", "WITH", "FILTER"] }
+      ]
+    },
+    {
+      "id": "sql-sub-2",
+      "lang": "sql",
+      "level": 2,
+      "title": "Sessions à privilège élevé",
+      "titleEn": "High-privilege sessions",
+      "lines": [
+        "SELECT * FROM sessions",
+        "WHERE user_id §0 (",
+        "  SELECT id FROM users §1 role = 'admin'",
+        ");"
+      ],
+      "blanks": [
+        { "answer": "IN", "choices": ["IN", "ON", "LIKE", "AS"] },
+        { "answer": "WHERE", "choices": ["WHERE", "HAVING", "WHEN", "FROM"] }
+      ]
+    },
+    {
+      "id": "sql-comment-2",
+      "lang": "sql",
+      "level": 2,
+      "title": "Neutralisation du reste de la requête",
+      "titleEn": "Query tail neutralization",
+      "lines": [
+        "SELECT * FROM users",
+        "§0 name = 'admin'§1 AND active = 1;"
+      ],
+      "blanks": [
+        { "answer": "WHERE", "choices": ["WHERE", "HAVING", "WHEN", "FROM"] },
+        { "answer": "; --", "choices": ["; --", "; /*", "; #!", "; ()"] }
+      ]
+    },
+    {
+      "id": "sql-case-3",
+      "lang": "sql",
+      "level": 3,
+      "title": "Injection aveugle booléenne",
+      "titleEn": "Boolean blind probe",
+      "lines": [
+        "SELECT §0",
+        "  §1 (SELECT COUNT(*) FROM users) > 100 THEN 1",
+        "  ELSE 0",
+        "§2 AS leaked;"
+      ],
+      "blanks": [
+        { "answer": "CASE", "choices": ["CASE", "IF", "WHEN", "SWITCH"] },
+        { "answer": "WHEN", "choices": ["WHEN", "IF", "CASE", "THEN"] },
+        { "answer": "END", "choices": ["END", "DONE", "ESAC", "STOP"] }
+      ]
+    },
+    {
+      "id": "sql-agg-3",
+      "lang": "sql",
+      "level": 3,
+      "title": "Concaténation de secrets",
+      "titleEn": "Secret concatenation",
+      "lines": [
+        "SELECT §0(name, ':', token §1 ', ')",
+        "FROM api_keys",
+        "§2 team = 'red';"
+      ],
+      "blanks": [
+        { "answer": "GROUP_CONCAT", "choices": ["GROUP_CONCAT", "CONCAT", "STRING_AGG", "LISTAGG"] },
+        { "answer": "SEPARATOR", "choices": ["SEPARATOR", "DELIMITER", "SPLIT", "BY"] },
+        { "answer": "WHERE", "choices": ["WHERE", "HAVING", "ON", "IF"] }
+      ]
+    },
+    {
+      "id": "sql-window-3",
+      "lang": "sql",
+      "level": 3,
+      "title": "Classement des tentatives",
+      "titleEn": "Attempt ranking",
+      "lines": [
+        "SELECT ip, ts,",
+        "  §0() §1 (PARTITION BY ip ORDER BY ts) AS rn",
+        "FROM login_attempts;"
+      ],
+      "blanks": [
+        { "answer": "ROW_NUMBER", "choices": ["ROW_NUMBER", "RANK", "COUNT", "INDEX"] },
+        { "answer": "OVER", "choices": ["OVER", "WITHIN", "USING", "ON"] }
+      ]
+    },
+    {
+      "id": "c-brute-1",
+      "lang": "c",
+      "level": 1,
+      "title": "Comparaison de hash",
+      "titleEn": "Hash compare",
+      "lines": [
+        "int matches(const char *a, const char *b) {",
+        "    return §0(a, b) §1 0;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "strcmp", "choices": ["strcmp", "strncmp", "memcmp", "strcpy"] },
+        { "answer": "==", "choices": ["==", "=", "!=", ">"] }
+      ]
+    },
+    {
+      "id": "c-xor-1",
+      "lang": "c",
+      "level": 1,
+      "title": "Chiffrement XOR",
+      "titleEn": "XOR cipher",
+      "lines": [
+        "void xor_buf(char *buf, int len, char key) {",
+        "    for (int i = 0; i §0 len; i++) {",
+        "        buf[i] §1 key;",
+        "    }",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "<", "choices": ["<", "<=", ">", "=="] },
+        { "answer": "^=", "choices": ["^=", "&=", "|=", "+="] }
+      ]
+    },
+    {
+      "id": "c-len-1",
+      "lang": "c",
+      "level": 1,
+      "title": "Longueur du mot de passe",
+      "titleEn": "Password length",
+      "lines": [
+        "int pass_len(const char §0p) {",
+        "    return §1(p);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "*", "choices": ["*", "&", "#", "@"] },
+        { "answer": "strlen", "choices": ["strlen", "sizeof", "strcpy", "count"] }
+      ]
+    },
+    {
+      "id": "c-scan-1",
+      "lang": "c",
+      "level": 1,
+      "title": "Boucle de scan",
+      "titleEn": "Scan loop",
+      "lines": [
+        "for (int port = 1; port <= 1024; port§0) {",
+        "    if (probe(port)) printf(\"%d open§1\", port);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "++", "choices": ["++", "--", "+=2", "**"] },
+        { "answer": "\\n", "choices": ["\\n", "\\t", "\\0", "\\r"] }
+      ]
+    },
+    {
+      "id": "c-ptr-1",
+      "lang": "c",
+      "level": 1,
+      "title": "Lecture d'octet",
+      "titleEn": "Byte read",
+      "lines": [
+        "unsigned char byte_at(unsigned char *p, int i) {",
+        "    return §0(p §1 i);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "*", "choices": ["*", "&", "->", "#"] },
+        { "answer": "+", "choices": ["+", "-", ",", "->"] }
+      ]
+    },
+    {
+      "id": "c-hex-1",
+      "lang": "c",
+      "level": 1,
+      "title": "Affichage hexadécimal",
+      "titleEn": "Hex dump",
+      "lines": [
+        "void dump(unsigned char *b, int n) {",
+        "    for (int i = 0; i §0 n; i++)",
+        "        printf(\"%§1 \", b[i]);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "<", "choices": ["<", "<=", ">", "=="] },
+        { "answer": "02x", "choices": ["02x", "d", "s", "f"] }
+      ]
+    },
+    {
+      "id": "c-checksum-2",
+      "lang": "c",
+      "level": 2,
+      "title": "Somme de contrôle",
+      "titleEn": "Checksum",
+      "lines": [
+        "unsigned int checksum(unsigned char *d, int n) {",
+        "    unsigned int sum = 0;",
+        "    for (int i = 0; i < n; i§0)",
+        "        sum §1 d[i];",
+        "    return sum §2 0xFFFF;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "++", "choices": ["++", "--", "+=2", "=="] },
+        { "answer": "+=", "choices": ["+=", "^=", "|=", "=+"] },
+        { "answer": "&", "choices": ["&", "|", "^", "%"] }
+      ]
+    },
+    {
+      "id": "c-bufcheck-2",
+      "lang": "c",
+      "level": 2,
+      "title": "Contrôle de dépassement",
+      "titleEn": "Buffer size check",
+      "lines": [
+        "int safe_copy(char *dst, int cap, const char *src) {",
+        "    if (strlen(src) §0 cap)",
+        "        return -1;",
+        "    strncpy(dst, src, cap §1 1);",
+        "    return 0;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": ">=", "choices": [">=", "<=", "==", "<"] },
+        { "answer": "-", "choices": ["-", "+", "*", "/"] }
+      ]
+    },
+    {
+      "id": "c-alloc-2",
+      "lang": "c",
+      "level": 2,
+      "title": "Allocation du tampon",
+      "titleEn": "Buffer allocation",
+      "lines": [
+        "char *dup_input(const char *s) {",
+        "    char *buf = §0(strlen(s) + 1);",
+        "    if (buf §1 NULL) return NULL;",
+        "    strcpy(buf, s);",
+        "    return buf;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "malloc", "choices": ["malloc", "sizeof", "calloc", "free"] },
+        { "answer": "==", "choices": ["==", "=", "!=", ">"] }
+      ]
+    },
+    {
+      "id": "c-rot-2",
+      "lang": "c",
+      "level": 2,
+      "title": "Décalage ROT",
+      "titleEn": "ROT shift",
+      "lines": [
+        "char rot(char c, int n) {",
+        "    if (c §0 'a' && c <= 'z')",
+        "        return 'a' + (c - 'a' + n) §1 26;",
+        "    return c;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": ">=", "choices": [">=", ">", "==", "<="] },
+        { "answer": "%", "choices": ["%", "/", "&", "*"] }
+      ]
+    },
+    {
+      "id": "c-search-2",
+      "lang": "c",
+      "level": 2,
+      "title": "Recherche de motif",
+      "titleEn": "Pattern search",
+      "lines": [
+        "int contains(const char *hay, const char *needle) {",
+        "    return §0(hay, needle) §1 NULL;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "strstr", "choices": ["strstr", "strchr", "strcmp", "strcpy"] },
+        { "answer": "!=", "choices": ["!=", "==", "<", ">"] }
+      ]
+    },
+    {
+      "id": "c-crack-3",
+      "lang": "c",
+      "level": 3,
+      "title": "Cassage par dictionnaire",
+      "titleEn": "Dictionary crack",
+      "lines": [
+        "char *crack(const char *target, char **words, int n) {",
+        "    for (int i = 0; i < n; i++) {",
+        "        if (strcmp(md5(words[i]), target) §0 0)",
+        "            return words§1;",
+        "    }",
+        "    return §2;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "==", "choices": ["==", "=", "!=", ">"] },
+        { "answer": "[i]", "choices": ["[i]", "[0]", "+i", "->i"] },
+        { "answer": "NULL", "choices": ["NULL", "0", "-1", "\"\""] }
+      ]
+    },
+    {
+      "id": "c-bits-3",
+      "lang": "c",
+      "level": 3,
+      "title": "Masque de bits",
+      "titleEn": "Bitmask extraction",
+      "lines": [
+        "unsigned int nibble(unsigned int v, int i) {",
+        "    return (v §0 (4 * i)) §1 0xF;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": ">>", "choices": [">>", "<<", "&", "|"] },
+        { "answer": "&", "choices": ["&", "|", "^", "%"] }
+      ]
+    },
+    {
+      "id": "c-timing-3",
+      "lang": "c",
+      "level": 3,
+      "title": "Comparaison à temps constant",
+      "titleEn": "Constant-time compare",
+      "lines": [
+        "int ct_equal(const unsigned char *a, const unsigned char *b, int n) {",
+        "    unsigned char diff = 0;",
+        "    for (int i = 0; i < n; i++)",
+        "        diff §0 a[i] ^ b[i];",
+        "    return diff §1 0;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "|=", "choices": ["|=", "&=", "+=", "^="] },
+        { "answer": "==", "choices": ["==", "!=", ">", "<"] }
+      ]
+    },
+    {
+      "id": "php-inject-1",
+      "lang": "php",
+      "level": 1,
+      "title": "Détecteur de payload",
+      "titleEn": "Payload detector",
+      "lines": [
+        "function isInjection($input) {",
+        "    return §0($input, \"' OR 1=1\") §1 false;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "strpos", "choices": ["strpos", "substr", "strlen", "explode"] },
+        { "answer": "!==", "choices": ["!==", "===", "!=", "<>"] }
+      ]
+    },
+    {
+      "id": "php-b64-1",
+      "lang": "php",
+      "level": 1,
+      "title": "Décodage base64",
+      "titleEn": "Base64 decode",
+      "lines": [
+        "function decodePayload($p) {",
+        "    $raw = §0($p);",
+        "    return §1($raw);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "base64_decode", "choices": ["base64_decode", "base64_encode", "urldecode", "json_decode"] },
+        { "answer": "trim", "choices": ["trim", "chop", "strip", "clean"] }
+      ]
+    },
+    {
+      "id": "php-hash-1",
+      "lang": "php",
+      "level": 1,
+      "title": "Empreinte d'un mot",
+      "titleEn": "Word hash",
+      "lines": [
+        "function fingerprint($word) {",
+        "    return §0(\"sha256\", $word §1 \"pepper\");",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "hash", "choices": ["hash", "md5", "crypt", "encode"] },
+        { "answer": ".", "choices": [".", "+", "&", ","] }
+      ]
+    },
+    {
+      "id": "php-var-1",
+      "lang": "php",
+      "level": 1,
+      "title": "Longueur du mot de passe",
+      "titleEn": "Password length",
+      "lines": [
+        "$pass = \"hunter2\";",
+        "if (§0($pass) §1 8) echo \"faible\";"
+      ],
+      "blanks": [
+        { "answer": "strlen", "choices": ["strlen", "count", "sizeof", "length"] },
+        { "answer": "<", "choices": ["<", ">", "<=", "==="] }
+      ]
+    },
+    {
+      "id": "php-loop-1",
+      "lang": "php",
+      "level": 1,
+      "title": "Boucle de scan",
+      "titleEn": "Scan loop",
+      "lines": [
+        "$open = [];",
+        "§0 ($p = 1; $p <= 1024; $p++) {",
+        "    if (probe($p)) $open§1 = $p;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "for", "choices": ["for", "foreach", "while", "loop"] },
+        { "answer": "[]", "choices": ["[]", "{}", "()", "->"] }
+      ]
+    },
+    {
+      "id": "php-concat-1",
+      "lang": "php",
+      "level": 1,
+      "title": "Assemblage de jeton",
+      "titleEn": "Token assembly",
+      "lines": [
+        "$prefix = \"tok_\";",
+        "$token = $prefix §0 §1(random_bytes(8));"
+      ],
+      "blanks": [
+        { "answer": ".", "choices": [".", "+", "&", ","] },
+        { "answer": "bin2hex", "choices": ["bin2hex", "hex2bin", "dechex", "base64_encode"] }
+      ]
+    },
+    {
+      "id": "php-brute-2",
+      "lang": "php",
+      "level": 2,
+      "title": "Essai de mots de passe",
+      "titleEn": "Password guessing",
+      "lines": [
+        "function crack($target, $words) {",
+        "    §0 ($words as $w) {",
+        "        if (sha1($w) §1 $target) {",
+        "            return $w;",
+        "        }",
+        "    }",
+        "    return null;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "foreach", "choices": ["foreach", "for", "while", "each"] },
+        { "answer": "===", "choices": ["===", "=", "!==", "=="] }
+      ]
+    },
+    {
+      "id": "php-regex-2",
+      "lang": "php",
+      "level": 2,
+      "title": "Filtre d'e-mails",
+      "titleEn": "Email filter",
+      "lines": [
+        "function extractEmails($text) {",
+        "    §0('/[\\w.]+@[\\w.]+/', $text, $m);",
+        "    return $m§1;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "preg_match_all", "choices": ["preg_match_all", "preg_replace", "str_match", "ereg"] },
+        { "answer": "[0]", "choices": ["[0]", "[1]", "->0", "{0}"] }
+      ]
+    },
+    {
+      "id": "php-sanitize-2",
+      "lang": "php",
+      "level": 2,
+      "title": "Nettoyage d'entrée",
+      "titleEn": "Input sanitizing",
+      "lines": [
+        "function clean($input) {",
+        "    return §0($input, §1);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "htmlspecialchars", "choices": ["htmlspecialchars", "strip_tags", "addslashes", "trim"] },
+        { "answer": "ENT_QUOTES", "choices": ["ENT_QUOTES", "ENT_HTML5", "true", "0"] }
+      ]
+    },
+    {
+      "id": "php-count-2",
+      "lang": "php",
+      "level": 2,
+      "title": "Comptage d'échecs",
+      "titleEn": "Failure counting",
+      "lines": [
+        "$fails = 0;",
+        "foreach ($logs §0 $e) {",
+        "    if ($e[\"status\"] === 401) $fails§1;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "as", "choices": ["as", "in", "of", "=>"] },
+        { "answer": "++", "choices": ["++", "+=", "--", "=+"] }
+      ]
+    },
+    {
+      "id": "php-json-2",
+      "lang": "php",
+      "level": 2,
+      "title": "Décodage du jeton",
+      "titleEn": "Token decode",
+      "lines": [
+        "function claims($jwt) {",
+        "    $parts = §0($jwt, \".\");",
+        "    return json_decode(base64_decode($parts[1]), §1);",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "explode", "choices": ["explode", "split", "implode", "preg_split"] },
+        { "answer": "true", "choices": ["true", "false", "null", "1"] }
+      ]
+    },
+    {
+      "id": "php-prepared-3",
+      "lang": "php",
+      "level": 3,
+      "title": "Requête paramétrée",
+      "titleEn": "Prepared statement",
+      "lines": [
+        "$stmt = $db->§0(\"SELECT * FROM users WHERE name = ?\");",
+        "$stmt->§1([$name]);",
+        "$row = $stmt->§2();"
+      ],
+      "blanks": [
+        { "answer": "prepare", "choices": ["prepare", "query", "exec", "bind"] },
+        { "answer": "execute", "choices": ["execute", "run", "fetch", "bind"] },
+        { "answer": "fetch", "choices": ["fetch", "execute", "result", "next"] }
+      ]
+    },
+    {
+      "id": "php-xor-3",
+      "lang": "php",
+      "level": 3,
+      "title": "Décodage XOR",
+      "titleEn": "XOR decode",
+      "lines": [
+        "function xorDecode($data, $key) {",
+        "    $out = \"\";",
+        "    for ($i = 0; $i < strlen($data); $i++) {",
+        "        $out §0 chr(ord($data[$i]) §1 ord($key[$i §2 strlen($key)]));",
+        "    }",
+        "    return $out;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": ".=", "choices": [".=", "+=", "=.", "=+"] },
+        { "answer": "^", "choices": ["^", "&", "|", "+"] },
+        { "answer": "%", "choices": ["%", "/", "*", "-"] }
+      ]
+    },
+    {
+      "id": "php-timing-3",
+      "lang": "php",
+      "level": 3,
+      "title": "Comparaison sûre de hash",
+      "titleEn": "Safe hash compare",
+      "lines": [
+        "function verify($known, $given) {",
+        "    return §0($known, $given) §1 true;",
+        "}"
+      ],
+      "blanks": [
+        { "answer": "hash_equals", "choices": ["hash_equals", "strcmp", "sodium_compare", "in_array"] },
+        { "answer": "===", "choices": ["===", "==", "!==", "<=>"] }
+      ]
+    }
+  ]
+}

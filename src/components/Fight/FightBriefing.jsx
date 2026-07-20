@@ -586,9 +586,57 @@ function DemoChess() {
   );
 }
 
+// Cyber-duel (Hacking) : mini-terminal — une ligne de code trouée dont le trou
+// se remplit en vert, la barre de hack se remplit, puis « ACCÈS ACCORDÉ ».
+function DemoHack() {
+  const T = useT();
+  const mono = "'Consolas','SF Mono',ui-monospace,monospace";
+  return (
+    <div style={{ position: 'absolute', inset: 14, borderRadius: 10, background: '#04070a', border: '1px solid rgba(74,224,138,0.4)', overflow: 'hidden', backgroundImage: 'repeating-linear-gradient(0deg, rgba(74,224,138,0.05) 0 1px, transparent 1px 4px)', fontFamily: mono }}>
+      {/* barre de titre */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: 'linear-gradient(180deg,#12181a,#0a0e10)', borderBottom: '1px solid rgba(74,224,138,0.25)', fontSize: 11, color: '#7fe0a8' }}>
+        ██ EXPLOIT.py
+      </div>
+      {/* code */}
+      <div style={{ padding: '14px 12px', fontSize: 15, lineHeight: 1.8, color: '#3ddc84', textShadow: '0 0 6px rgba(61,220,132,0.4)' }}>
+        <div><span style={{ color: 'rgba(74,224,138,0.35)', marginRight: 8 }}>1</span><span style={{ color: '#7fe0a8' }}>shell = os.</span>
+          <motion.span
+            style={{ display: 'inline-block', minWidth: 40, padding: '0 4px', borderRadius: 3, fontWeight: 800 }}
+            animate={{
+              color: ['#04070a', '#04070a', '#9bff6d', '#9bff6d', '#04070a'],
+              background: ['#f3d64a', '#f3d64a', 'rgba(120,255,110,0.16)', 'rgba(120,255,110,0.16)', '#f3d64a'],
+              boxShadow: ['0 0 12px rgba(243,214,74,0.8)', '0 0 12px rgba(243,214,74,0.8)', '0 0 12px rgba(120,255,110,0.7)', '0 0 12px rgba(120,255,110,0.7)', '0 0 12px rgba(243,214,74,0.8)'],
+            }}
+            transition={{ duration: 3, repeat: Infinity, times: [0, 0.4, 0.5, 0.9, 1] }}
+          >
+            <motion.span animate={{ opacity: [1, 1, 0, 0, 1] }} transition={{ duration: 3, repeat: Infinity, times: [0, 0.45, 0.5, 0.9, 1] }}>▮</motion.span>
+            <motion.span animate={{ opacity: [0, 0, 1, 1, 0] }} transition={{ duration: 3, repeat: Infinity, times: [0, 0.45, 0.5, 0.9, 1] }}>system</motion.span>
+          </motion.span>
+          <span style={{ color: '#7fe0a8' }}>()</span>
+        </div>
+      </div>
+      {/* barre de hack */}
+      <div style={{ position: 'absolute', left: 12, right: 12, bottom: 40, height: 8, borderRadius: 5, background: 'rgba(74,224,138,0.12)', border: '1px solid rgba(74,224,138,0.3)', overflow: 'hidden' }}>
+        <motion.div style={{ height: '100%', background: 'linear-gradient(90deg,#2fae5f,#8effc0)' }}
+          animate={{ width: ['0%', '0%', '100%', '100%', '0%'] }}
+          transition={{ duration: 3, repeat: Infinity, times: [0, 0.45, 0.55, 0.9, 1] }} />
+      </div>
+      {/* ACCÈS ACCORDÉ */}
+      <motion.div
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 8, textAlign: 'center', fontFamily: mono, fontSize: 15, fontWeight: 800, letterSpacing: '0.08em', color: '#8effc0', textShadow: '0 0 12px rgba(120,255,180,0.9)' }}
+        animate={{ opacity: [0, 0, 1, 1, 0], scale: [0.7, 0.7, 1.1, 1, 0.7] }}
+        transition={{ duration: 3, repeat: Infinity, times: [0, 0.55, 0.62, 0.9, 1] }}
+      >
+        {T('fight.hack.access')}
+      </motion.div>
+    </div>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
   chess: DemoChess,
+  hack: DemoHack,
   pickAnswer: DemoPickAnswer,
   timeline: DemoTimeline,
   compute: DemoCompute,

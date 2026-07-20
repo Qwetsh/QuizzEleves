@@ -11,6 +11,8 @@ import AudioRaceGame from './AudioRaceGame.jsx';
 import PokemonBattleGame from './PokemonBattleGame.jsx';
 import ChessDuel from './ChessDuel.jsx';
 import chessData from '../../../data/chessPuzzles.json';
+import HackDuel from './HackDuel.jsx';
+import hackData from '../../../data/hackPuzzles.json';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -75,6 +77,11 @@ const ENGINES = {
   // camps courent le MÊME puzzle. Auto-suffisant (chessPuzzles.json bundlé) :
   // difficulté par manche (1-2 → mat en 1, 3+ → mat en 2). Remonté par manche.
   chess: { Component: ChessDuel, persistent: false },
+  // Cyber-duel (Hacking) « complète les trous » : chaque camp choisit SON langage
+  // UNE fois → persistant. Deux terminaux de hacker en parallèle, best-of-3
+  // normal (PAS pointsBased). Auto-suffisant (hackPuzzles.json bundlé) :
+  // difficulté par manche gérée dans le composant. Jouable si le JSON a ≥1 énigme.
+  hack: { Component: HackDuel, persistent: true },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -116,6 +123,15 @@ const THEME_MINIGAMES = {
     engine: 'chess',
     name: 'fight.mg.chess.name', rules: 'fight.mg.chess.rules',
     howto: { demo: 'chess', goal: 'fight.mg.chess.goal', steps: ['fight.mg.chess.step1', 'fight.mg.chess.step2', 'fight.mg.chess.step3'] },
+  },
+  // Cyber-duel (Hacking) — thème informatique_numerique, surface tactile.
+  // « Complète les trous » d'un extrait d'exploit ; chaque camp choisit son
+  // langage au début du duel. Auto-suffisant (hackPuzzles.json bundlé) : jouable
+  // dès que le JSON contient au moins une énigme.
+  informatique_numerique: {
+    engine: 'hack',
+    name: 'fight.mg.hack.name', rules: 'fight.mg.hack.rules',
+    howto: { demo: 'hack', goal: 'fight.mg.hack.goal', steps: ['fight.mg.hack.step1', 'fight.mg.hack.step2', 'fight.mg.hack.step3'] },
   },
   francais: {
     engine: 'french',
@@ -391,6 +407,9 @@ function isPlayable(theme) {
   // Échecs : auto-suffisant (données bundlées, comme pkmn/mendeleiev) mais
   // requiert au moins un puzzle chargé — sinon cascade vers l'ancêtre/générique.
   if (theme.engine === 'chess') return (chessData?.puzzles || []).length > 0;
+  // Cyber-duel : auto-suffisant (données bundlées), jouable s'il existe au moins
+  // une énigme (sinon cascade vers l'ancêtre/générique).
+  if (theme.engine === 'hack') return (hackData?.puzzles || []).length > 0;
   if (theme.engine === 'curioscope') {
     return (theme.content?.universes || []).some((id) => (getUniverse(id)?.spots() || []).length > 0);
   }

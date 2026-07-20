@@ -75,6 +75,17 @@ describe('mini-jeux — Tableau de Mendeleïev', () => {
     expect(mg.Component).not.toBe(getDefaultMinigame().Component);
   });
 
+  it('le thème informatique_numerique résout le moteur hack (auto-suffisant, persistant)', async () => {
+    const { default: HackDuel } = await import('../components/Fight/minigames/HackDuel.jsx');
+    const mg = getMinigame('informatique_numerique');
+    expect(mg.Component).toBe(HackDuel);
+    expect(mg.name).toBe('fight.mg.hack.name');
+    expect(mg.content).toBeUndefined(); // données bundlées (hackPuzzles.json)
+    expect(mg.persistent).toBe(true); // langage choisi UNE fois pour tout le duel
+    expect(mg.pointsBased).toBeFalsy(); // best-of-3 normal, pas de points cumulés
+    expect(mg.Component).not.toBe(getDefaultMinigame().Component);
+  });
+
   it('le thème chimie résout le moteur mendeleiev (auto-suffisant)', () => {
     const mg = getMinigame('chimie');
     expect(typeof mg.Component).toBe('function');
