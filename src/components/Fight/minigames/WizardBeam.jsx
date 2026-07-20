@@ -59,6 +59,8 @@ function hex(c) {
   return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
 }
 const rgba = (c, a) => { const [r, g, b] = hex(c); return `rgba(${r},${g},${b},${a})`; };
+// Assombrit (<1) ou éclaircit (>1) une couleur — volume du chapeau (ombre/lumière).
+const shade = (c, f) => { const p = hex(c); const q = (v) => Math.max(0, Math.min(255, Math.round(v * f))); return `rgb(${q(p[0])},${q(p[1])},${q(p[2])})`; };
 const colorSlug = (c) => (c || '').replace(/[^a-zA-Z0-9]/g, '');
 
 const prefersReducedMotion = () => {
@@ -318,16 +320,10 @@ function Wizard({ side, team, knocked, compact }) {
     ? `${left ? 'wzKnockL' : 'wzKnockR'} 700ms ease-out forwards`
     : `wzBob 3.4s ease-in-out infinite ${left ? '0s' : '-1.7s'}`;
   const h = compact ? '46%' : '58%';
-  // Chapeau de sorcier (teinté équipe) — dessiné APRÈS le sprite du corps pour
-  // passer DEVANT lui (l'ordre de peinture SVG = ordre du DOM ; auparavant tracé
-  // avant l'image, il disparaissait derrière la tête du personnage).
-  const hat = (
-    <g>
-      <polygon points="34,2 22,26 46,26" fill={color} opacity="0.95" />
-      <ellipse cx="34" cy="26" rx="18" ry="4.5" fill={color} opacity="0.95" />
-      <circle cx="34" cy="9" r="2.4" fill="#fff" opacity="0.85" />
-    </g>
-  );
+  // NB : plus de chapeau de sorcier sur les personnages — un chapeau vectoriel à
+  // coordonnées fixes ne « tombe » jamais bien sur la tête de sprites pixel-art
+  // tous différents (pas d'ancrage tête par personnage). La couleur d'équipe reste
+  // portée par l'écharpe teintée + le rai. (Le repli silhouette garde un capuchon.)
   return (
     <div
       style={abs({
@@ -355,14 +351,13 @@ function Wizard({ side, team, knocked, compact }) {
               <image href={char.scarf} x="0" y="16" width="68" height="76" preserveAspectRatio="xMidYMax meet" filter={`url(#${fid})`} />
             )}
           </g>
-          {/* chapeau au-dessus (non miroité : symétrique, coords fixes) */}
-          {hat}
         </svg>
       ) : (
-        // Repli sans personnage : une silhouette encapuchonnée simple.
+        // Repli sans personnage : une silhouette encapuchonnée simple (capuchon
+        // pointu conservé ici, car sans sprite la silhouette serait sans tête).
         <svg viewBox="0 0 68 92" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+          <polygon points="34,4 22,30 46,30" fill={shade(color, 0.85)} />
           <path d="M20 34 Q34 26 48 34 L52 90 L16 90 Z" fill={color} opacity="0.9" />
-          {hat}
         </svg>
       )}
       {/* Baguette tendue vers le centre (petit trait lumineux + pointe scintillante) */}
