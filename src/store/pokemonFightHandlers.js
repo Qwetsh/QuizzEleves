@@ -21,6 +21,7 @@
 // }
 import MONS from '../data/pokemonBattle.json';
 import { createBattle, resolveTurn, sendReplacement, draftOffers } from '../logic/pokemonBattle';
+import { archetypeForMove, SELF_ARCHETYPES, CONTACT_ARCHETYPES } from '../logic/pkmnAnimMap';
 import { soundEvent, soundPower, soundKatana, getSfxLevel } from '../logic/sounds';
 import { tg } from '../i18n';
 
@@ -91,13 +92,15 @@ export function pkmnDuelValidate(set, get, side) {
   const team = (k) => p.picks[k].map((id) => p.offers[k].find((m) => m.id === id));
   hostBattle = createBattle(team('A'), team('B'));
   const view = snapshotView(hostBattle);
-  patchPkmn(set, get, { validated, stage: 'battle', view, dialog: tg('fight.pkmn.begin') });
-  playCry(view.A.fighters[0].cry);
-  setTimeout(() => playCry(view.B.fighters[0].cry), 700);
+  // Entrée en scène : les deux dresseurs lancent leur pokéball (arc + flash),
+  // les Pokémon se matérialisent (~1,4 s), cris calés sur l'apparition.
+  patchPkmn(set, get, { validated, stage: 'battle', view, dialog: tg('fight.pkmn.begin'), anim: { enter: 'both' } });
+  setTimeout(() => playCry(view.A.fighters[0].cry), 650);
+  setTimeout(() => playCry(view.B.fighters[0].cry), 1050);
   setTimeout(() => {
     const cur = get().showFight?.pkmn;
-    if (cur?.stage === 'battle' && cur.phaseB === 'choose') patchPkmn(set, get, { dialog: tg('fight.pkmn.chooseAction') });
-  }, 1600);
+    if (cur?.stage === 'battle' && cur.phaseB === 'choose') patchPkmn(set, get, { dialog: tg('fight.pkmn.chooseAction'), anim: null });
+  }, 1800);
 }
 
 // ── Choix secrets d'un tour ──────────────────────────────────────────────────
@@ -130,11 +133,18 @@ export function pkmnDuelReplace(set, get, side, index) {
 }
 
 // ── Rejeu séquencé (minuteries hôte, jeton seq anti-périmé) ─────────────────
-let lastMoveType = 'normal';
 let vfxSeq = 0;
 
 function playHostEvents(set, get, seq, events) {
-  const queue = [...events];
+  // Couche présentation : on intercale les phases de RAPPEL dans la pokéball
+  // (événements synthétiques, le moteur pur ne bouge pas) — switch volontaire
+  // = rappel AVANT l'envoi ; K.O. = évanouissement PUIS rappel au rayon rouge.
+  const queue = [];
+  for (const e of events) {
+    if (e.kind === 'switch') queue.push({ kind: 'recall', side: e.side }, e);
+    else if (e.kind === 'ko') queue.push(e, { kind: 'recall', side: e.side, ko: true });
+    else queue.push(e);
+  }
   const step = () => {
     const p = get().showFight?.pkmn;
     if (!p || p.seq !== seq) return; // combat clos ou tour redémarré
@@ -158,26 +168,46 @@ function applyHostEvent(set, get, e) {
   let delay = 800;
 
   switch (e.kind) {
+    // Rappel dans la pokéball (événement synthétique de présentation).
+    case 'recall': {
+      const f = view[e.side].fighters[view[e.side].active];
+      // Remplaçant après K.O. : le rappel a déjà été joué juste après le K.O.
+      if (!e.ko && f.ko) { delay = 0; break; }
+      anim = { recall: e.side };
+      if (!e.ko) dialog = tg('fight.pkmn.comeBack', { name: f.name });
+      delay = e.ko ? 800 : 900;
+      break;
+    }
     case 'switch': {
       view[e.side].active = e.index;
       view[e.side].fighters[e.index].boosts = { atk: 0, def: 0, spc: 0, spe: 0 };
       dialog = tg('fight.pkmn.sendOut', { team: teamName(get, e.side), name: e.name });
-      playCry(view[e.side].fighters[e.index].cry);
-      delay = 1100;
+      anim = { enter: e.side }; // pokéball + matérialisation
+      const cry = view[e.side].fighters[e.index].cry;
+      setTimeout(() => playCry(cry), 700);
+      delay = 1550;
       break;
     }
-    case 'move':
-      lastMoveType = e.type || 'normal';
+    case 'move': {
       dialog = tg('fight.pkmn.uses', { name: nameOf(e.side), move: e.move });
-      anim = { lunge: e.side };
-      delay = 800;
+      // VFX directionnel : l'animation part du lanceur vers la cible (ou joue
+      // sur soi pour les buffs) — mêmes archétypes que la surface tactile.
+      const arch = archetypeForMove(e.move, e.type);
+      const target = e.side === 'A' ? 'B' : 'A';
+      vfx = {
+        archetype: arch, type: e.type || 'normal', from: e.side,
+        side: SELF_ARCHETYPES.has(arch) ? e.side : target, seq: ++vfxSeq,
+      };
+      // Contact → ruée ; à distance/statut → pulsation d'incantation.
+      anim = CONTACT_ARCHETYPES.has(arch) ? { lunge: e.side } : { cast: e.side };
+      delay = CONTACT_ARCHETYPES.has(arch) ? 800 : 900;
       break;
+    }
     case 'damage': {
       soundKatana();
       const f = view[e.side].fighters[view[e.side].active];
       f.hp = Math.max(0, f.hp - e.dmg);
-      anim = { hit: e.side };
-      vfx = { type: lastMoveType, side: e.side, seq: ++vfxSeq };
+      anim = { hit: e.side }; // le VFX d'attaque (posé au 'move') arrive à l'impact
       if (e.crit) { dialog = tg('fight.pkmn.crit'); delay = 1000; }
       else if (e.mult >= 2) { soundPower(); dialog = tg('fight.pkmn.superEff'); delay = 1050; }
       else if (e.mult > 0 && e.mult < 1) { dialog = tg('fight.pkmn.notEff'); delay = 1050; }
@@ -209,6 +239,7 @@ function applyHostEvent(set, get, e) {
       const f = view[e.side].fighters[view[e.side].active];
       f.hp = Math.max(0, f.hp - e.dmg);
       dialog = tg('fight.pkmn.poisonHurt', { name: nameOf(e.side) });
+      vfx = { archetype: 'spores', type: 'poison', from: e.side, side: e.side, seq: ++vfxSeq };
       delay = 900;
       break;
     }

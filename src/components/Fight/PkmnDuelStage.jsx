@@ -1,12 +1,16 @@
+// Police « LCD » du bandeau TV rétro (auto-hébergée, comme l'écran cassettes).
+import '@fontsource/vt323/400.css';
 import { useGameStore } from '../../store/gameStore';
 import TeamAvatar from '../TeamAvatar';
 import PkmnStage from './minigames/PkmnStage';
 import { useT } from '../../i18n';
 
 // Combat Pokémon — SCÈNE TV du mode « écran + téléphones » : uniquement le
-// spectacle (arène, sprites, PV, dialogue, VFX) piloté par le store
+// spectacle (arène, dresseurs, sprites, PV, dialogue, VFX) piloté par le store
 // (pokemonFightHandlers). AUCUNE commande ici : le draft et les choix se font
 // sur les téléphones (vue Game Boy). Pendant le draft, la TV affiche l'attente.
+// La scène est INCRUSTÉE dans la même TV CRT rétro que le plateau (classes
+// rg-tv de retro-game.css : coque, écran bombé, scanlines, bandeau marque).
 export default function PkmnDuelStage({ fight, attacker, defender }) {
   const T = useT();
   const p = fight.pkmn;
@@ -52,7 +56,7 @@ export default function PkmnDuelStage({ fight, attacker, defender }) {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, padding: 14, minHeight: 0 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 14px 8px', minHeight: 0 }}>
       {/* Bandeau équipes : pokéballs restantes + accusé de choix secret */}
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px' }}>
         {['A', 'B'].map((sideKey) => {
@@ -74,7 +78,39 @@ export default function PkmnDuelStage({ fight, attacker, defender }) {
           );
         })}
       </div>
-      <PkmnStage view={p.view} anim={p.anim || {}} vfx={p.vfx} dialog={p.dialog} dialogSize={20} />
+      {/* Scène réduite, incrustée dans la TV CRT rétro (même chrome que le plateau) */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', height: '100%', width: 'min(1150px, 96%)' }}>
+          <section className="rg-tv" style={{ position: 'absolute', inset: 0 }}>
+            <div className="rg-tv-screen">
+              <div className="rg-tv-screen-inner" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 10 }}>
+                <PkmnStage
+                  view={p.view} anim={p.anim || {}} vfx={p.vfx} dialog={p.dialog} dialogSize={18}
+                  trainers={{
+                    A: { character: attacker?.character, color: attacker?.color },
+                    B: { character: defender?.character, color: defender?.color },
+                  }}
+                />
+                <div className="rg-tv-fx rg-tv-fx--vignette" />
+                <div className="rg-tv-fx rg-tv-fx--glare" />
+                <div className="rg-tv-fx rg-tv-fx--flicker" />
+                <div className="rg-tv-fx rg-tv-fx--scan" />
+                <div className="rg-tv-badge">CH·3 PKMN</div>
+              </div>
+            </div>
+            <div className="rg-tv-strip">
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span className="rg-tv-brand">SONOVISION</span>
+                <span className="rg-tv-sub">TRINI-VISION™</span>
+              </div>
+              <div style={{ flex: 1 }} />
+              <div className="rg-tv-dial" />
+              <div className="rg-tv-dial" style={{ transform: 'rotate(120deg)' }} />
+              <div className="rg-tv-pwr"><span className="rg-tv-pwr-led" /><span className="rg-tv-pwr-txt">PWR</span></div>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

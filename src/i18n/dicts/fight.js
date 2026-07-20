@@ -221,6 +221,7 @@ export default {
   'fight.pkmn.chooseAction': { fr: 'Choisissez votre action…', en: 'Choose your action…' },
   'fight.pkmn.sendOut': { fr: '{team} envoie {name} !', en: '{team} sends out {name}!' },
   'fight.pkmn.sendNext': { fr: '{team}, envoyez un remplaçant !', en: '{team}, send a replacement!' },
+  'fight.pkmn.comeBack': { fr: '{name}, reviens !', en: '{name}, come back!' },
   'fight.pkmn.switchTo': { fr: 'Envoyer qui ?', en: 'Send out who?' },
   'fight.pkmn.switch': { fr: 'Changer', en: 'Switch' },
   'fight.pkmn.back': { fr: 'Retour', en: 'Back' },

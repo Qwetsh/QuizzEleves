@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../../../store/gameStore';
 import MONS from '../../../data/pokemonBattle.json';
 import { createBattle, resolveTurn, sendReplacement, draftOffers } from '../../../logic/pokemonBattle';
+import { archetypeForMove, SELF_ARCHETYPES, CONTACT_ARCHETYPES } from '../../../logic/pkmnAnimMap';
 import { soundEvent, soundPower, soundKatana, soundClick, getSfxLevel } from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
 import PkmnStage from './PkmnStage.jsx';
@@ -78,9 +79,8 @@ export default function PokemonBattleGame({ attacker, defender }) {
   const [phase, setPhase] = useState('choose');          // choose | anim | replace | over
   const [secret, setSecret] = useState({ A: null, B: null });
   const [bench, setBench] = useState({ A: false, B: false }); // sélecteur de switch ouvert
-  const [anim, setAnim] = useState({});                  // { lunge: side, hit: side }
-  const [vfx, setVfx] = useState(null);                  // { type, side, seq } — particules
-  const lastMoveType = useRef('normal');
+  const [anim, setAnim] = useState({});                  // { lunge|hit|faint|cast|recall: side, enter: side|'both' }
+  const [vfx, setVfx] = useState(null);                  // { archetype, type, from, side, seq }
   const vfxSeq = useRef(0);
 
   const mutView = (fn) => setView((v) => { const c = structuredClone(v); fn(c); return c; });
@@ -111,8 +111,12 @@ export default function PokemonBattleGame({ attacker, defender }) {
     setView(v);
     setStage('battle');
     setDialog(T('fight.pkmn.begin'));
-    playCry(v.A.fighters[0].cry);
-    setTimeout(() => playCry(v.B.fighters[0].cry), 700);
+    // Entrée en scène : pokéballs lancées par les deux dresseurs, cris calés
+    // sur la matérialisation (~650 ms après le lancer).
+    setAnim({ enter: 'both' });
+    setTimeout(() => { if (!dead.current) playCry(v.A.fighters[0].cry); }, 650);
+    setTimeout(() => { if (!dead.current) playCry(v.B.fighters[0].cry); }, 1050);
+    setTimeout(() => { if (!dead.current) setAnim((a) => (a.enter === 'both' ? {} : a)); }, 1800);
   };
 
   // ── Lecture séquencée des événements du moteur ────────────────────────────
@@ -129,26 +133,48 @@ export default function PokemonBattleGame({ attacker, defender }) {
       return s.fighters[s.active].name;
     };
     switch (e.kind) {
-      case 'switch':
+      case 'switch': {
+        // Rappel dans la pokéball AVANT l'envoi du suivant (sauf si l'actif
+        // est K.O. : son rappel a déjà été joué après l'évanouissement).
+        const cur = viewRefLatest.current[e.side];
+        const old = cur.fighters[cur.active];
+        if (!old.ko) {
+          setDialog(T('fight.pkmn.comeBack', { name: old.name }));
+          setAnim({ recall: e.side });
+          await sleep(900);
+          if (dead.current) return;
+        }
         mutView((v) => {
           v[e.side].active = e.index;
           v[e.side].fighters[e.index].boosts = { atk: 0, def: 0, spc: 0, spe: 0 };
         });
         setDialog(T('fight.pkmn.sendOut', { team: teams[e.side].name, name: e.name }));
+        setAnim({ enter: e.side }); // pokéball + matérialisation
+        await sleep(700);
+        if (dead.current) return;
         playCry(viewRefLatest.current[e.side].fighters[e.index].cry);
-        await sleep(1100);
-        break;
-      case 'move':
-        lastMoveType.current = e.type || 'normal';
-        setDialog(T('fight.pkmn.uses', { name: name(e.side), move: e.move }));
-        setAnim({ lunge: e.side });
-        await sleep(750);
+        await sleep(850);
         setAnim({});
         break;
+      }
+      case 'move': {
+        setDialog(T('fight.pkmn.uses', { name: name(e.side), move: e.move }));
+        // VFX directionnel : part du lanceur vers la cible (ou sur soi).
+        const arch = archetypeForMove(e.move, e.type);
+        const target = e.side === 'A' ? 'B' : 'A';
+        setVfx({
+          archetype: arch, type: e.type || 'normal', from: e.side,
+          side: SELF_ARCHETYPES.has(arch) ? e.side : target, seq: ++vfxSeq.current,
+        });
+        const contact = CONTACT_ARCHETYPES.has(arch);
+        setAnim(contact ? { lunge: e.side } : { cast: e.side });
+        await sleep(contact ? 750 : 900);
+        setAnim({});
+        break;
+      }
       case 'damage': {
         soundKatana();
-        setAnim({ hit: e.side });
-        setVfx({ type: lastMoveType.current, side: e.side, seq: ++vfxSeq.current });
+        setAnim({ hit: e.side }); // le VFX d'attaque (posé au 'move') arrive à l'impact
         mutView((v) => {
           const f = v[e.side].fighters[v[e.side].active];
           f.hp = Math.max(0, f.hp - e.dmg);
@@ -184,6 +210,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
       case 'poison':
         mutView((v) => { const f = v[e.side].fighters[v[e.side].active]; f.hp = Math.max(0, f.hp - e.dmg); });
         setDialog(T('fight.pkmn.poisonHurt', { name: name(e.side) }));
+        setVfx({ archetype: 'spores', type: 'poison', from: e.side, side: e.side, seq: ++vfxSeq.current });
         await sleep(900);
         break;
       case 'ko':
@@ -191,7 +218,11 @@ export default function PokemonBattleGame({ attacker, defender }) {
         setAnim({ faint: e.side });
         playCry(viewRefLatest.current[e.side].fighters[viewRefLatest.current[e.side].active].cry);
         setDialog(T('fight.pkmn.ko', { name: e.name }));
-        await sleep(1300);
+        await sleep(1200);
+        if (dead.current) return;
+        // Rayon rouge de rappel — puis le K.O. reste caché (dresseur seul).
+        setAnim({ recall: e.side });
+        await sleep(800);
         setAnim({});
         break;
       case 'win': break; // géré par afterTurn
@@ -430,7 +461,13 @@ export default function PokemonBattleGame({ attacker, defender }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
       {/* Arène + dialogue (scène partagée avec la TV du mode téléphones) */}
-      <PkmnStage view={view} anim={anim} vfx={vfx} dialog={dialog} />
+      <PkmnStage
+        view={view} anim={anim} vfx={vfx} dialog={dialog}
+        trainers={{
+          A: { character: attacker.character, color: attacker.color },
+          B: { character: defender.character, color: defender.color },
+        }}
+      />
       {/* Commandes */}
       <div style={{ display: 'flex', gap: 10, height: 150 }}>
         {commandPanel('A')}

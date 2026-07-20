@@ -170,13 +170,20 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
   const pressB = () => { if (benchOpen) setBenchOpen(false); };
 
   // ── Rendu : la console ──
-  const dpadBtn = (label, onTap, style) => (
+  // 100 % présentation : unités relatives (clamp/dvh/%) pour tenir en entier
+  // sur 320→430 px de large et ~640→930 px de haut, safe-areas iOS incluses.
+  const ARM = 'clamp(40px, 12vw, 46px)';   // bras du D-pad (cible pouce ≥ ~40px)
+  const AB = 'clamp(46px, 13vw, 54px)';    // boutons A/B
+  const dpadArm = (label, onTap, area, radius) => (
     <button
       onPointerDown={onTap}
+      aria-label={area}
       style={{
-        position: 'absolute', width: 34, height: 34, border: 'none', borderRadius: 6,
-        background: '#2c2c30', boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.15), 0 2px 3px rgba(0,0,0,0.5)',
-        color: '#555', fontSize: 12, cursor: 'pointer', touchAction: 'manipulation', ...style,
+        gridArea: area, width: '100%', height: '100%', padding: 0, border: 'none',
+        borderRadius: radius, background: 'linear-gradient(180deg, #33333a, #26262b)',
+        color: '#55565e', fontSize: 12, lineHeight: 1,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
+        cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
       }}
     >
       {label}
@@ -186,17 +193,20 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 340, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#17120c', padding: 10,
+      background: '#17120c', userSelect: 'none', WebkitUserSelect: 'none',
+      padding: 'calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left))',
     }}>
-      {/* Coque DMG */}
+      {/* Coque DMG — grand arrondi caractéristique en bas à droite */}
       <div style={{
-        width: 'min(96vw, 420px)', maxHeight: '98vh', borderRadius: '14px 14px 46px 14px',
+        width: 'min(100%, 420px)', maxHeight: '100%', overflow: 'hidden',
+        borderRadius: '14px 14px clamp(46px, 15vw, 62px) 14px',
         background: `linear-gradient(160deg, ${GB.shell}, ${GB.shellDark})`,
         boxShadow: 'inset 0 3px 0 rgba(255,255,255,0.5), inset 0 -4px 8px rgba(0,0,0,0.25), 0 18px 44px rgba(0,0,0,0.7)',
-        padding: '12px 16px 20px', display: 'flex', flexDirection: 'column', gap: 10,
+        padding: 'clamp(9px, 2.6vw, 12px) clamp(11px, 3.4vw, 16px) clamp(14px, 4vw, 20px)',
+        display: 'flex', flexDirection: 'column', gap: 'clamp(7px, 2.2vw, 10px)',
       }}>
         {/* Ligne du haut : rainures + logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
           <div style={{ flex: 1, height: 4, borderTop: '2px solid #8f8b82', borderBottom: '2px solid #d8d4cb' }} />
           <span style={{ fontSize: 8, fontWeight: 700, color: '#6b675e', letterSpacing: '0.1em' }}>QUÊTE BOY™</span>
           <div style={{ flex: 1, height: 4, borderTop: '2px solid #8f8b82', borderBottom: '2px solid #d8d4cb' }} />
@@ -204,20 +214,24 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
 
         {/* Bezel écran */}
         <div style={{
-          borderRadius: '10px 10px 32px 10px', background: `linear-gradient(180deg, #4a4c5a, ${GB.bezel})`,
-          padding: '14px 26px 16px', boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)',
+          flex: '0 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column',
+          borderRadius: '10px 10px clamp(24px, 8vw, 32px) 10px',
+          background: `linear-gradient(180deg, #4a4c5a, ${GB.bezel})`,
+          padding: 'clamp(10px, 3vw, 14px) clamp(14px, 5vw, 26px) clamp(9px, 2.6vw, 12px)',
+          boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 7 }}>
-            <span style={{ fontSize: 7.5, color: '#9aa', letterSpacing: '0.14em', fontWeight: 600 }}>DOT MATRIX WITH STEREO SOUND</span>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 7, flex: '0 0 auto' }}>
+            <span style={{ fontSize: 7.5, color: '#9aa', letterSpacing: '0.14em', fontWeight: 600, whiteSpace: 'nowrap' }}>DOT MATRIX WITH STEREO SOUND</span>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+          <div style={{ display: 'flex', gap: 'clamp(6px, 2vw, 10px)', alignItems: 'stretch', flex: '0 1 auto', minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, flex: '0 0 auto' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#e33', boxShadow: '0 0 6px #e33' }} />
               <span style={{ fontSize: 6.5, color: '#9aa' }}>BATTERY</span>
             </div>
             {/* ÉCRAN */}
             <div style={{
-              flex: 1, minHeight: 300, maxHeight: '46vh', overflowY: 'auto', background: GB.lightest,
+              flex: 1, minWidth: 0, minHeight: 'min(280px, 32dvh)', maxHeight: 'min(50dvh, 430px)',
+              overflowY: 'auto', scrollbarWidth: 'thin', background: GB.lightest,
               border: `3px solid ${GB.darkest}`, borderRadius: 4, padding: '8px 9px',
               color: GB.darkest, fontFamily: '"Courier New", monospace', fontWeight: 700,
               boxShadow: 'inset 0 0 18px rgba(15,56,15,0.25)',
@@ -251,50 +265,82 @@ export default function PkmnGameboyView({ fight, teams, myTeamIdx, onPick, onVal
               )}
             </div>
           </div>
-          <div style={{ textAlign: 'right', marginTop: 6 }}>
+          <div style={{ textAlign: 'right', marginTop: 5, flex: '0 0 auto' }}>
             <span style={{ fontSize: 9, fontStyle: 'italic', fontWeight: 800, color: '#8f95b5' }}>La Quête des Matières</span>
           </div>
         </div>
 
-        {/* Commandes physiques */}
-        <div style={{ position: 'relative', height: 128 }}>
-          {/* D-pad */}
-          <div style={{ position: 'absolute', left: 14, top: 8, width: 102, height: 102 }}>
-            {dpadBtn('▲', () => move(-1), { left: 34, top: 0 })}
-            {dpadBtn('▼', () => move(1), { left: 34, top: 68 })}
-            {dpadBtn('◀', () => move(-1), { left: 0, top: 34 })}
-            {dpadBtn('▶', () => move(1), { left: 68, top: 34 })}
-            <div style={{ position: 'absolute', left: 34, top: 34, width: 34, height: 34, background: '#2c2c30' }} />
+        {/* Commandes physiques — flux flex/grid (aucune position en px fixes) */}
+        <div style={{ position: 'relative', flex: '0 0 auto', paddingTop: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* D-pad : croix en relief dans sa cuvette circulaire */}
+            <div style={{
+              flex: '0 0 auto', borderRadius: '50%', padding: 'clamp(5px, 1.6vw, 8px)',
+              background: 'radial-gradient(circle, rgba(0,0,0,0.10) 62%, rgba(0,0,0,0) 70%)',
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateAreas: '". up ." "left mid right" ". down ."',
+                gridTemplateColumns: `repeat(3, ${ARM})`, gridTemplateRows: `repeat(3, ${ARM})`,
+                filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.45))',
+              }}>
+                {dpadArm('▲', () => move(-1), 'up', '7px 7px 0 0')}
+                {dpadArm('◀', () => move(-1), 'left', '7px 0 0 7px')}
+                {dpadArm('▶', () => move(1), 'right', '0 7px 7px 0')}
+                {dpadArm('▼', () => move(1), 'down', '0 0 7px 7px')}
+                {/* Creux central */}
+                <div style={{
+                  gridArea: 'mid', background: '#2c2c30',
+                  backgroundImage: 'radial-gradient(circle at 50% 46%, #1e1e22 0 34%, rgba(0,0,0,0) 43%)',
+                }} />
+              </div>
+            </div>
+            {/* A / B : magenta, en diagonale sur leur pilule inclinée, libellés gravés */}
+            <div style={{
+              flex: '0 0 auto', transform: 'rotate(-24deg)', display: 'flex',
+              gap: 'clamp(8px, 2.6vw, 14px)', alignItems: 'center',
+              padding: 'clamp(5px, 1.5vw, 8px)', borderRadius: 999,
+              background: 'rgba(0,0,0,0.08)', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.18)',
+              marginRight: 'clamp(3px, 1.4vw, 10px)',
+            }}>
+              {[{ l: 'B', fn: pressB }, { l: 'A', fn: pressA }].map((b) => (
+                <button
+                  key={b.l}
+                  onPointerDown={b.fn}
+                  style={{
+                    width: AB, height: AB, padding: 0, borderRadius: '50%', border: 'none',
+                    background: `radial-gradient(circle at 35% 30%, #c95b85, ${GB.btn} 75%)`,
+                    color: '#7a2246', fontWeight: 900, fontSize: 16,
+                    textShadow: '0 1px 0 rgba(255,255,255,0.25)',
+                    boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -3px 4px rgba(0,0,0,0.25), 0 3px 5px rgba(0,0,0,0.45)',
+                    cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  {b.l}
+                </button>
+              ))}
+            </div>
           </div>
-          {/* A / B */}
-          {[{ l: 'B', x: 250, y: 62, fn: pressB }, { l: 'A', x: 310, y: 34, fn: pressA }].map((b) => (
-            <button
-              key={b.l}
-              onPointerDown={b.fn}
-              style={{
-                position: 'absolute', left: b.x, top: b.y, width: 46, height: 46, borderRadius: '50%',
-                border: 'none', background: `radial-gradient(circle at 35% 30%, #c95b85, ${GB.btn})`,
-                color: '#7a2246', fontWeight: 900, fontSize: 15,
-                boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.3), 0 3px 5px rgba(0,0,0,0.45)',
-                cursor: 'pointer', touchAction: 'manipulation',
-              }}
-            >
-              {b.l}
-            </button>
-          ))}
-          {/* SELECT / START (décoratifs) */}
-          <div style={{ position: 'absolute', left: 130, top: 100, display: 'flex', gap: 16 }}>
+          {/* SELECT / START : pilules inclinées, libellés dessous (décoratifs) */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(14px, 5vw, 24px)', marginTop: 'clamp(4px, 1.4vw, 8px)' }}>
             {['SELECT', 'START'].map((s) => (
               <div key={s} style={{ textAlign: 'center' }}>
-                <div style={{ width: 34, height: 10, borderRadius: 6, background: '#8f8b82', transform: 'rotate(-22deg)', boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.4)' }} />
-                <div style={{ fontSize: 6.5, color: '#6b675e', fontWeight: 800, marginTop: 3 }}>{s}</div>
+                <div style={{
+                  width: 'clamp(34px, 10.5vw, 42px)', height: 11, borderRadius: 7, margin: '0 auto',
+                  background: '#8f8b82', transform: 'rotate(-24deg)',
+                  boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.4)',
+                }} />
+                <div style={{ fontSize: 6.5, color: '#6b675e', fontWeight: 800, marginTop: 3, letterSpacing: '0.06em' }}>{s}</div>
               </div>
             ))}
           </div>
-          {/* Grille haut-parleur */}
-          <div style={{ position: 'absolute', right: 2, top: 88, display: 'flex', gap: 5, transform: 'rotate(-22deg)' }}>
+          {/* Grille haut-parleur : lignes diagonales, bas droite */}
+          <div style={{
+            position: 'absolute', right: 'clamp(2px, 1vw, 8px)', bottom: 0, pointerEvents: 'none',
+            display: 'flex', gap: 'clamp(4px, 1.2vw, 5px)', transform: 'rotate(-24deg)',
+          }}>
             {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} style={{ width: 5, height: 34, borderRadius: 3, background: '#8f8b82', boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.35)' }} />
+              <div key={i} style={{ width: 'clamp(4px, 1.2vw, 5px)', height: 'clamp(24px, 7.5vw, 32px)', borderRadius: 3, background: '#8f8b82', boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.35)' }} />
             ))}
           </div>
         </div>
