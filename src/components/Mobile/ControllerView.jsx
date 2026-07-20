@@ -53,6 +53,10 @@ function useCountdown(deadline, frozen) {
 // hors contexte est simplement sans effet.
 function ActionRow({ team, context, busy, act, T }) {
   const [armed, setArmed] = useState(null);
+  // Malus « blocage » (météo maudite, effet adverse) : le TBI ignore silencieusement
+  // un tap sur un pouvoir/conso bloqué → on grise le bouton ET on affiche pourquoi.
+  const powersBlocked = (team?.powersBlockedTurns || 0) > 0;
+  const consoBlocked = (team?.consumablesBlockedTurns || 0) > 0;
   const powers = Object.entries(team?.powers || {})
     .filter(([k, p]) => POWERS[k] && (p?.charges || 0) > 0)
     .filter(([k]) => POWERS[k].category === 'off' || (context === 'landing' && k === 'relance'));
@@ -63,7 +67,8 @@ function ActionRow({ team, context, busy, act, T }) {
     .filter((k) => (seen.has(k) ? false : (seen.add(k), true)));
   if (!powers.length && !consoKeys.length) return null;
 
-  const fire = (id, type, payload) => {
+  const fire = (id, type, payload, blocked) => {
+    if (blocked) return; // garde-fou : le TBI re-vérifie de toute façon
     if (armed !== id) { setArmed(id); return; }
     setArmed(null);
     act(type, payload);
@@ -71,22 +76,33 @@ function ActionRow({ team, context, busy, act, T }) {
 
   return (
     <div className="mob-ctrl-actions">
+      {!!powers.length && powersBlocked && (
+        <div className="mob-ctrl-hint" style={{ color: '#e8896b', fontWeight: 700, width: '100%', textAlign: 'center' }}>
+          {T('mobile.ctrlPowersBlocked', { n: team.powersBlockedTurns })}
+        </div>
+      )}
       {powers.map(([k, p]) => (
-        <button key={`pw-${k}`} className={`mob-ctrl-action${armed === `pw-${k}` ? ' is-armed' : ''}`} disabled={busy}
-          style={{ '--opt-color': POWERS[k].color }}
-          onClick={() => fire(`pw-${k}`, 'turnUsePower', { key: k })}>
-          <span className="mob-ctrl-action-ic">{POWERS[k].icon}</span>
+        <button key={`pw-${k}`} className={`mob-ctrl-action${armed === `pw-${k}` ? ' is-armed' : ''}`} disabled={busy || powersBlocked}
+          style={{ '--opt-color': POWERS[k].color, opacity: powersBlocked ? 0.45 : 1 }}
+          onClick={() => fire(`pw-${k}`, 'turnUsePower', { key: k }, powersBlocked)}>
+          <span className="mob-ctrl-action-ic">{powersBlocked ? '🚫' : POWERS[k].icon}</span>
           <span>{armed === `pw-${k}` ? T('mobile.ctrlConfirm') : locName(POWERS[k])}</span>
           <span className="mob-ctrl-action-n">×{p.charges}</span>
         </button>
       ))}
+      {!!consoKeys.length && consoBlocked && (
+        <div className="mob-ctrl-hint" style={{ color: '#e8896b', fontWeight: 700, width: '100%', textAlign: 'center' }}>
+          {T('mobile.ctrlConsoBlocked', { n: team.consumablesBlockedTurns })}
+        </div>
+      )}
       {consoKeys.map((k) => {
         const it = ITEMS[k];
         return (
-          <button key={`it-${k}`} className={`mob-ctrl-action${armed === `it-${k}` ? ' is-armed' : ''}`} disabled={busy}
-            onClick={() => fire(`it-${k}`, 'turnUseConsumable', { key: k })}>
+          <button key={`it-${k}`} className={`mob-ctrl-action${armed === `it-${k}` ? ' is-armed' : ''}`} disabled={busy || consoBlocked}
+            style={{ opacity: consoBlocked ? 0.45 : 1 }}
+            onClick={() => fire(`it-${k}`, 'turnUseConsumable', { key: k }, consoBlocked)}>
             <span className="mob-ctrl-action-ic">
-              {itemImg(it) ? <img src={itemImg(it)} alt="" /> : (it.icon || '🎒')}
+              {consoBlocked ? '🚫' : (itemImg(it) ? <img src={itemImg(it)} alt="" /> : (it.icon || '🎒'))}
             </span>
             <span>{armed === `it-${k}` ? T('mobile.ctrlConfirm') : locName(it)}</span>
           </button>
@@ -508,9 +524,24 @@ function EventPanel({ evt, session, teamIdx, busy, act, T }) {
 }
 
 // Coffre de départ : or + choix multiple (garder `keep` objets parmi `choices`).
+// D'abord FERMÉ (bouton d'ouverture) : on ne dévoile le contenu qu'après le tap,
+// pour préserver l'effet de surprise (sinon le butin est visible d'emblée).
 function StarterChestPanel({ chest, busy, act, T }) {
+  const [opened, setOpened] = useState(false);
   const [picked, setPicked] = useState([]);
   const toggle = (k) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : (p.length < chest.keep ? [...p, k] : p)));
+  if (!opened) {
+    return (
+      <div className="mob-ctrl-qwrap" style={{ alignItems: 'center' }}>
+        <div style={{ fontSize: 64 }}>🎁</div>
+        <div className="mob-ctrl-subtitle" style={{ textAlign: 'center' }}>{T('mobile.ctrlChestClosed')}</div>
+        <button className="mob-btn mob-btn--gold" style={{ width: '100%', maxWidth: 320 }} disabled={busy}
+          onClick={() => setOpened(true)}>
+          {T('mobile.ctrlChestOpen')}
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="mob-ctrl-qwrap">
       <div className="mob-ctrl-subtitle" style={{ textAlign: 'center' }}>🎁 {T('mobile.ctrlChestTitle', { gold: chest.gold })}</div>

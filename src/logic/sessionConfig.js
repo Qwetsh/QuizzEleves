@@ -481,6 +481,11 @@ export function buildSessionPayload({ teams, currentTeam, status, shopStock, sho
       sablierActif: !!t.sablierActif,
       // Pluie maudite (météo) : achats bloqués pendant X tours (info mobile).
       shopBlockedTurns: t.shopBlockedTurns || 0,
+      // Malus « blocage » : pouvoirs / consommables neutralisés X tours. Publiés
+      // pour que la manette grise les boutons ET explique POURQUOI (sinon un tap
+      // sur un pouvoir bloqué est silencieusement ignoré par le TBI).
+      powersBlockedTurns: t.powersBlockedTurns || 0,
+      consumablesBlockedTurns: t.consumablesBlockedTurns || 0,
       wager: t.wager ? true : null,
       buffs: (t.buffs || []).map((b) => ({ type: b.type, turns: b.turns, n: b.n, subject: b.subject })),
       // Pactes de non-agression actifs (« Complots ») : promesses de NE PAS attaquer.
