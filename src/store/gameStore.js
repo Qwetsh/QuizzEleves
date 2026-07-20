@@ -17,6 +17,7 @@ import { craftEnabledFor, metierActive, metierPending, METIER_IDS, METIER_BY_ID,
 import { defaultDieFaces, getDieFaces, clampFaceValue, faceEffects, DIE_SLOTS, isForgeServiceTrade } from '../logic/forge.js';
 import { resolveFaceAtRoll, faceRollEngineActions, isRelanceFace, pickFaceStock, pickReplacementFace, faceShortLabel, FACE_STOCK_MAX } from '../logic/forgeEffects.js';
 import { getQuestions, getSubjectPool } from '../data/questions/index.js';
+import { descendantLeaves } from '../data/themes.js';
 import { calculateMoneyGain } from '../logic/moneyCalculator.js';
 import { saveGame, loadGame, clearSave } from './persistence.js';
 import { resolveWrongAnswer, resolveDoubleQuestion, BURST_RESET, applyRecul, questionDuration, QUESTION_TIME_FLOOR } from '../logic/turnHelpers.js';
@@ -2909,11 +2910,26 @@ export const useGameStore = create((set, get) => ({
     // dans la partie (ou vide au niveau courant) — cf. serveRaceQuestion /
     // fightPickImageQuestion : évite le pool vide → « pas d'autre question » →
     // victoire gratuite pour un thème tiré par « aléatoire à N choix ».
-    const pool = questions[subject]?.length ? questions[subject] : getSubjectPool(subject);
-    const asked = askedQuestions[subject] || new Set();
+    let pool = questions[subject]?.length ? questions[subject] : getSubjectPool(subject);
+    let askKey = subject;
+    // Cascade « conteneur » : un nœud PARENT (INTÉGRALE/domaine, ex. harrypotter)
+    // n'a AUCUNE question directe — ses questions vivent dans ses feuilles
+    // (hp_livre1…). Quand le pool direct est vide, on AGRÈGE les pools des
+    // feuilles descendantes de l'arbre THEMES. C'est ce qui rend le duel de
+    // sorciers (et tout duel sur un thème parent) jouable — testeur de mini-jeux
+    // comme vraie partie où la voie porte le thème large. Anti-répétition sous
+    // une clé agrégée dédiée (`agg:` — les index pointent dans le pool fusionné).
+    if (!pool.length) {
+      const leaves = descendantLeaves(subject).filter((k) => k !== subject);
+      if (leaves.length) {
+        pool = leaves.flatMap((k) => (questions[k]?.length ? questions[k] : getSubjectPool(k)));
+        askKey = `agg:${subject}`;
+      }
+    }
+    const asked = askedQuestions[askKey] || new Set();
     const result = pickQuestion(pool, asked);
     if (!result) return null;
-    set({ askedQuestions: { ...askedQuestions, [subject]: result.newAsked } });
+    set({ askedQuestions: { ...askedQuestions, [askKey]: result.newAsked } });
     return result.question;
   },
 

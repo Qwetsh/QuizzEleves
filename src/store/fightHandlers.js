@@ -10,8 +10,6 @@ import { LOOT } from '../logic/balanceConfig.js';
 import { saveGame } from './persistence.js';
 import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
-import { pickQuestion } from '../logic/questionPicker.js';
-import { getSubjectPool } from '../data/questions/index.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
 import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor, chessDuelFor, hackDuelFor, wizardDuelFor } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
@@ -207,29 +205,18 @@ export function fightBegin(set, get) {
 export function serveRaceQuestion(set, get) {
   const f = get().showFight;
   if (!f) return;
-  // Le sujet d'une case peut être une CLÉ LARGE (thème multi 'scolaire', 'lv2'…)
-  // en mode cassettes : on le résout vers un sous-thème concret (clé de pool),
-  // comme fightPickQuestion — sinon pool vide et l'attaquant gagnerait sans jouer.
-  const subject = get().resolveSubjectFor(f.subject, f.attackerIndex ?? get().currentTeam);
   // Duel silhouette : questions à IMAGE du pool dédié (fightPickImageQuestion
   // gère son propre anti-répétition, namespace `img:`) ; sinon course normale.
   let question = null;
   if (f.wtp) {
     question = get().fightPickImageQuestion(f.wtp);
   } else {
-    const { questions, askedQuestions } = get();
-    // Repli sur le pool TRANSVERSE (STORE global) si le thème n'est pas chargé
-    // dans la partie (ou vide au niveau courant) — comme fightPickImageQuestion.
-    // Sinon un thème tiré par le picker « aléatoire à N choix » (vivier =
-    // allSubjectsWithContent, plus large que get().questions) donnerait un pool
-    // vide → l'attaquant gagnerait la manche sans jouer.
-    const pool = questions[subject]?.length ? questions[subject] : getSubjectPool(subject);
-    const asked = askedQuestions[subject] || new Set();
-    const result = pickQuestion(pool, asked);
-    if (result) {
-      question = result.question;
-      set({ askedQuestions: { ...askedQuestions, [subject]: result.newAsked } });
-    }
+    // fightPickQuestion : résout la catégorie (thème multi / lv2), replie sur le
+    // pool TRANSVERSE (STORE global) ET cascade un nœud CONTENEUR (INTÉGRALE/
+    // domaine sans question directe, ex. harrypotter) vers ses feuilles enfants.
+    // Sinon un thème parent (ou tiré par « aléatoire à N choix ») donnerait un
+    // pool vide → l'attaquant gagnerait la manche sans jouer.
+    question = get().fightPickQuestion(f.subject);
   }
   if (!question) { // plus de question dispo → anti-blocage : l'attaquant marque la manche
     fightRoundWin(set, get, 'attacker');
