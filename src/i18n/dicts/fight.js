@@ -245,6 +245,10 @@ export default {
   'fight.pkmn.win': { fr: '{team} remporte le combat !', en: '{team} wins the battle!' },
   'fight.pkmn.pow': { fr: 'Puiss.', en: 'Pow.' },
   'fight.pkmn.statusMove': { fr: 'STATUT', en: 'STATUS' },
+  // Mode « écran + téléphones » (TV = scène seule, Game Boy dans les mains).
+  'fight.pkmn.draftOnPhone': { fr: 'draft en cours sur le téléphone…', en: 'drafting on their phone…' },
+  'fight.pkmn.tvHint': { fr: 'Chaque équipe compose son équipe de 3 Pokémon sur sa Game Boy !', en: 'Each team builds their 3-Pokémon squad on their Game Boy!' },
+  'fight.pkmn.thinking': { fr: 'réfléchit…', en: 'thinking…' },
 
   // Blind test (moteur audiorace — extraits Deezer 30 s).
   'fight.mg.blindtest.name': { fr: 'Le Blind test', en: 'Blind Test' },

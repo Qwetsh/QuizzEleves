@@ -4,6 +4,7 @@ import MONS from '../../../data/pokemonBattle.json';
 import { createBattle, resolveTurn, sendReplacement, draftOffers } from '../../../logic/pokemonBattle';
 import { soundEvent, soundPower, soundKatana, soundClick, getSfxLevel } from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
+import PkmnStage from './PkmnStage.jsx';
 import { useT } from '../../../i18n';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,14 +28,6 @@ const TYPE_FR = {
 };
 const STAT_FR = { atk: 'Attaque', def: 'Défense', spc: 'Spécial', spe: 'Vitesse' };
 const AILMENT_TAG = { par: 'PAR', psn: 'PSN', slp: 'SOM' };
-
-const PKMN_CSS = `
-@keyframes pkmnPop { from { transform: scale(0) translateY(20px); } to { transform: scale(1) translateY(0); } }
-@keyframes pkmnLungeL { 0% { translate: 0 0; } 40% { translate: 46px -14px; } 100% { translate: 0 0; } }
-@keyframes pkmnLungeR { 0% { translate: 0 0; } 40% { translate: -46px 14px; } 100% { translate: 0 0; } }
-@keyframes pkmnHit { 0%, 100% { filter: none; translate: 0 0; } 25% { filter: brightness(3); translate: -7px 0; } 50% { filter: brightness(0.6); translate: 7px 0; } 75% { filter: brightness(2); translate: -4px 0; } }
-@keyframes pkmnFaint { to { transform: translateY(40px); opacity: 0; } }
-`;
 
 function playCry(url) {
   if (!url) return;
@@ -86,6 +79,9 @@ export default function PokemonBattleGame({ attacker, defender }) {
   const [secret, setSecret] = useState({ A: null, B: null });
   const [bench, setBench] = useState({ A: false, B: false }); // sélecteur de switch ouvert
   const [anim, setAnim] = useState({});                  // { lunge: side, hit: side }
+  const [vfx, setVfx] = useState(null);                  // { type, side, seq } — particules
+  const lastMoveType = useRef('normal');
+  const vfxSeq = useRef(0);
 
   const mutView = (fn) => setView((v) => { const c = structuredClone(v); fn(c); return c; });
 
@@ -143,6 +139,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
         await sleep(1100);
         break;
       case 'move':
+        lastMoveType.current = e.type || 'normal';
         setDialog(T('fight.pkmn.uses', { name: name(e.side), move: e.move }));
         setAnim({ lunge: e.side });
         await sleep(750);
@@ -151,6 +148,7 @@ export default function PokemonBattleGame({ attacker, defender }) {
       case 'damage': {
         soundKatana();
         setAnim({ hit: e.side });
+        setVfx({ type: lastMoveType.current, side: e.side, seq: ++vfxSeq.current });
         mutView((v) => {
           const f = v[e.side].fighters[v[e.side].active];
           f.hp = Math.max(0, f.hp - e.dmg);
@@ -331,70 +329,6 @@ export default function PokemonBattleGame({ attacker, defender }) {
 
   const hpColor = (f) => (f.hp / f.maxHp > 0.5 ? 'linear-gradient(180deg,#7de060,#3fae42)' : f.hp / f.maxHp > 0.2 ? 'linear-gradient(180deg,#f2d060,#d8a53f)' : 'linear-gradient(180deg,#f28d60,#d84939)');
 
-  const hpBox = (sideKey) => {
-    const f = F(sideKey);
-    const boosts = Object.entries(f.boosts).filter(([, n]) => n !== 0);
-    return (
-      <div style={{
-        width: 'min(30%, 300px)', minWidth: 230, borderRadius: 12, padding: '7px 13px 9px',
-        background: 'linear-gradient(180deg, #fdf6dd, #f0e3bc)', border: '3px solid #5a4a28',
-        boxShadow: '0 4px 10px rgba(0,0,0,0.35)',
-      }}>
-        <div style={{ fontWeight: 800, fontSize: 15.5, color: '#3a2c14', fontFamily: 'var(--font-ui)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          {f.name}
-          {f.status && <span style={{ fontSize: 10, fontWeight: 900, color: '#fff', background: '#b58a1e', borderRadius: 4, padding: '1px 6px' }}>{AILMENT_TAG[f.status]}</span>}
-          <span style={{ marginLeft: 'auto', color: '#7a6236', fontSize: 12.5, fontWeight: 600 }}>Nv. 50</span>
-        </div>
-        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 10, fontWeight: 900, color: '#e8a020' }}>PV</span>
-          <div style={{ flex: 1, height: 10, borderRadius: 6, background: '#4a3c20', padding: 2 }}>
-            <div style={{ height: '100%', width: `${(f.hp / f.maxHp) * 100}%`, borderRadius: 4, background: hpColor(f), transition: 'width 650ms ease' }} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', marginTop: 3, alignItems: 'center' }}>
-          <span style={{ display: 'flex', gap: 4 }}>
-            {boosts.map(([stat, n]) => (
-              <span key={stat} style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: n > 0 ? '#3fae42' : '#c9472f', borderRadius: 4, padding: '1px 5px' }}>
-                {STAT_FR[stat].slice(0, 3)} {n > 0 ? `+${n}` : n}
-              </span>
-            ))}
-          </span>
-          <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#5a4a28' }}>{f.hp} / {f.maxHp}</span>
-        </div>
-      </div>
-    );
-  };
-
-  const sprite = (sideKey) => {
-    const f = F(sideKey);
-    const left = sideKey === 'A';
-    const animation = anim.faint === sideKey
-      ? 'pkmnFaint 900ms ease-in forwards'
-      : anim.hit === sideKey
-        ? 'pkmnHit 600ms linear'
-        : anim.lunge === sideKey
-          ? `${left ? 'pkmnLungeL' : 'pkmnLungeR'} 700ms ease`
-          : 'pkmnPop 400ms cubic-bezier(.2,1.4,.4,1)';
-    return (
-      <img
-        key={`${sideKey}-${view[sideKey].active}`}
-        src={f.sprite}
-        alt={f.name}
-        draggable={false}
-        style={{
-          position: 'absolute',
-          ...(left ? { left: '13%', bottom: '16%' } : { right: '13%', bottom: '46%' }),
-          height: left ? '30%' : '25%',
-          imageRendering: 'pixelated',
-          transform: left ? 'scaleX(-1)' : 'none',
-          filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.35))',
-          animation,
-          userSelect: 'none', pointerEvents: 'none',
-        }}
-      />
-    );
-  };
-
   const benchPicker = (sideKey, forced) => {
     const team = teams[sideKey];
     const s = view[sideKey];
@@ -495,29 +429,8 @@ export default function PokemonBattleGame({ attacker, defender }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
-      <style>{PKMN_CSS}</style>
-      {/* Arène */}
-      <div style={{
-        flex: 1, minHeight: 0, position: 'relative', borderRadius: 18, overflow: 'hidden',
-        background: 'linear-gradient(180deg, #8ecff2 0%, #b9e3f7 46%, #7cba6d 46%, #5f9e52 100%)',
-        border: '3px solid rgba(243,201,105,0.5)',
-        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.25)',
-      }}>
-        <div style={{ position: 'absolute', left: '8%', bottom: '11%', width: '26%', height: '9%', borderRadius: '50%', background: 'radial-gradient(ellipse at 50% 40%, #cfe8b9, #9ec98a 70%, #86b573)' }} />
-        <div style={{ position: 'absolute', right: '8%', bottom: '41%', width: '22%', height: '8%', borderRadius: '50%', background: 'radial-gradient(ellipse at 50% 40%, #cfe8b9, #9ec98a 70%, #86b573)' }} />
-        {sprite('A')}
-        {sprite('B')}
-        <div style={{ position: 'absolute', right: '3%', top: '6%' }}>{hpBox('B')}</div>
-        <div style={{ position: 'absolute', left: '3%', bottom: '7%' }}>{hpBox('A')}</div>
-      </div>
-      {/* Dialogue */}
-      <div style={{
-        height: 46, borderRadius: 12, display: 'flex', alignItems: 'center', padding: '0 20px',
-        background: 'linear-gradient(180deg, #2b3a5e, #1c2740)', border: '3px solid #f0e3bc',
-        color: '#fff', fontSize: 17, fontWeight: 600, fontFamily: 'var(--font-ui)', textShadow: '0 2px 0 rgba(0,0,0,0.4)',
-      }}>
-        {dialog}
-      </div>
+      {/* Arène + dialogue (scène partagée avec la TV du mode téléphones) */}
+      <PkmnStage view={view} anim={anim} vfx={vfx} dialog={dialog} />
       {/* Commandes */}
       <div style={{ display: 'flex', gap: 10, height: 150 }}>
         {commandPanel('A')}

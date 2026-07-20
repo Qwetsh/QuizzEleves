@@ -12,9 +12,10 @@ import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 import { pickQuestion } from '../logic/questionPicker.js';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
-import { curioUniverses, silhouetteKey, memoryPairs } from '../components/Fight/minigames/index.js';
+import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
 import { startMemoryDuel } from './memoryFightHandlers.js';
+import { startPkmnDuel } from './pokemonFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
@@ -160,6 +161,11 @@ export function fightBegin(set, get) {
     if (get().phoneController) {
       const pairs = memoryPairs(f.subject);
       if (pairs) { startMemoryDuel(set, get, pairs); return; }
+      // Combat Pokémon piloté par le store — surface « écran + téléphones »
+      // UNIQUEMENT : la TV n'affiche que la scène (PkmnDuelStage), chaque
+      // duelliste drafte et choisit ses actions sur sa « Game Boy » (téléphone).
+      // En ligne : repli duel éclair (pas encore porté).
+      if (pkmnDuelFor(f.subject)) { startPkmnDuel(set, get); return; }
     }
   }
   if (get().connectionMode === 'online' || soloBots) { serveRaceQuestion(set, get); return; }

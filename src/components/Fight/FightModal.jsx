@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/gameStore';
 import { SUBJECTS } from '../../data/subjects';
@@ -9,6 +9,7 @@ import FightBriefing from './FightBriefing';
 import CurioDuelStage from './CurioDuelStage';
 import WtpDuelStage from './WtpDuelStage';
 import MemoryDuelStage from './MemoryDuelStage';
+import PkmnDuelStage from './PkmnDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import DuelRaceView from '../Online/DuelRaceView';
 import { onlineToken } from '../../logic/sessionConfig';
@@ -77,7 +78,12 @@ export default function FightModal() {
         {showFight.phase === 'minigame' && showFight.memory && (
           <MemoryDuelStage fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && (
+        {/* Combat Pokémon piloté par le store (téléphones) : la TV n'affiche que
+            la scène — draft et choix se font sur les « Game Boy ». */}
+        {showFight.phase === 'minigame' && showFight.pkmn && (
+          <PkmnDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (

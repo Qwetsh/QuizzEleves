@@ -273,6 +273,27 @@ export function buildTurnPayload(s) {
           }),
         };
       })() : null,
+      // Combat Pokémon (surface « écran + téléphones ») — ANTI-TRICHE : le
+      // CONTENU des choix secrets d'un tour ne part jamais, seulement des
+      // accusés `chosen` (le téléphone adverse voit juste « a choisi »). Le
+      // reste (offres du draft, vue des PV, dialogue) est public.
+      pkmn: sf.pkmn ? (() => {
+        const p = sf.pkmn;
+        return {
+          stage: p.stage,
+          offers: p.offers,
+          picks: p.picks,
+          validated: p.validated,
+          view: p.view,
+          dialog: p.dialog,
+          anim: p.anim || null,
+          vfx: p.vfx || null,
+          phaseB: p.phaseB,
+          chosen: { A: !!p.choice?.A, B: !!p.choice?.B },
+          replaceSide: p.replaceSide || null,
+          winner: p.winner || null,
+        };
+      })() : null,
     };
   } else if (phase === 'targetPicker' && s.showTargetPicker) {
     const stp = s.showTargetPicker;

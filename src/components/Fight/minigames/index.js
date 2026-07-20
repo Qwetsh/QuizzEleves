@@ -385,6 +385,13 @@ export function getDefaultMinigame() {
   return DEFAULT_MINIGAME;
 }
 
+// Le thème `subject` résout-il (même cascade) le COMBAT POKÉMON ? Utilisé par
+// fightBegin pour router la surface téléphones vers le duel piloté par le
+// store (pokemonFightHandlers : TV = scène seule, Game Boy dans les mains).
+export function pkmnDuelFor(subject) {
+  return resolveEntry(subject)?.engine === 'pkmn';
+}
+
 // Exposé pour les tests / le simulateur : liste des thèmes câblés.
 export const MINIGAME_THEMES = Object.keys(THEME_MINIGAMES);
 

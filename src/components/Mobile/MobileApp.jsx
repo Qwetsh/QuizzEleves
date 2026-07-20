@@ -18,6 +18,7 @@ import ControllerView from './ControllerView';
 import CurioPlaceView from '../Fight/CurioPlaceView';
 import DuelRaceView from '../Online/DuelRaceView';
 import MemoryDuelView from '../Fight/MemoryDuelView';
+import PkmnGameboyView from '../Fight/PkmnGameboyView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2675,6 +2676,26 @@ export default function MobileApp() {
               teams={session.teams}
               myTeamIdx={teamIdx}
               onFlip={(i) => sendIntent(code, token, 'turnMemoryFlip', { index: i }).catch(() => {})}
+              onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+              onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+            />
+          )}
+        {/* Combat Pokémon : la TV n'affiche que la scène, le téléphone devient
+            une GAME BOY (draft, choix secrets, remplaçants, récompense). */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.pkmn
+          && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <PkmnGameboyView
+              fight={session.turn.fight}
+              teams={session.teams}
+              myTeamIdx={teamIdx}
+              onPick={(monId) => sendIntent(code, token, 'turnPkmnPick', { monId }).catch(() => {})}
+              onValidate={() => sendIntent(code, token, 'turnPkmnValidate', {}).catch(() => {})}
+              onChoose={(a) => sendIntent(code, token, 'turnPkmnChoose', a).catch(() => {})}
+              onReplace={(i) => sendIntent(code, token, 'turnPkmnReplace', { index: i }).catch(() => {})}
               onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
               onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />

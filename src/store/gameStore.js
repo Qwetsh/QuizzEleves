@@ -29,6 +29,7 @@ import * as itemH from './itemHandlers.js';
 import * as effectH from './effectEngine.js';
 import * as curioFightH from './curioFightHandlers.js';
 import * as memoryFightH from './memoryFightHandlers.js';
+import * as pkmnFightH from './pokemonFightHandlers.js';
 import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
@@ -2764,6 +2765,12 @@ export const useGameStore = create((set, get) => ({
   // Duel Memory piloté par le store (surface « écran + téléphones ») : le camp
   // ACTIF retourne une carte depuis son téléphone (intent turnMemoryFlip).
   memoryDuelFlip: (side, index) => memoryFightH.memoryDuelFlip(set, get, side, index),
+  // Combat Pokémon piloté par le store (surface « écran + téléphones ») :
+  // draft, choix secrets et remplaçants arrivent des téléphones (Game Boy).
+  pkmnDuelPick: (side, monId) => pkmnFightH.pkmnDuelPick(set, get, side, monId),
+  pkmnDuelValidate: (side) => pkmnFightH.pkmnDuelValidate(set, get, side),
+  pkmnDuelChoose: (side, action) => pkmnFightH.pkmnDuelChoose(set, get, side, action),
+  pkmnDuelReplace: (side, index) => pkmnFightH.pkmnDuelReplace(set, get, side, index),
   // Défi Curioscope solo terminé : la modale rend le TOTAL de points, la file
   // d'actions reprend sur startMinigame (conversion en récompense par paliers).
   curioChallengeResolve: (points) => {
@@ -2813,6 +2820,15 @@ export const useGameStore = create((set, get) => ({
     if (type === 'turnMemoryFlip') {
       const side = idx === f.attackerIndex ? 'attacker' : 'defender';
       get().memoryDuelFlip(side, Number(payload.index));
+      return;
+    }
+    // Combat Pokémon (Game Boy au téléphone) : sides A = attaquant, B = défenseur.
+    if (type === 'turnPkmnPick' || type === 'turnPkmnValidate' || type === 'turnPkmnChoose' || type === 'turnPkmnReplace') {
+      const side = idx === f.attackerIndex ? 'A' : 'B';
+      if (type === 'turnPkmnPick') get().pkmnDuelPick(side, Number(payload.monId));
+      else if (type === 'turnPkmnValidate') get().pkmnDuelValidate(side);
+      else if (type === 'turnPkmnChoose') get().pkmnDuelChoose(side, { type: payload.kind, index: payload.index });
+      else get().pkmnDuelReplace(side, Number(payload.index));
       return;
     }
     if (type === 'turnFightReward') {
@@ -3172,12 +3188,16 @@ export const useGameStore = create((set, get) => ({
       const raceTypes = type === 'turnFightAnswer' || type === 'turnFightReward' || type === 'turnFightClose' || type === 'turnFightBegin';
       const curioTypes = type === 'turnCurioValidate' || type === 'turnCurioNext';
       const memoryTypes = type === 'turnMemoryFlip';
+      const pkmnTypes = type === 'turnPkmnPick' || type === 'turnPkmnValidate' || type === 'turnPkmnChoose' || type === 'turnPkmnReplace';
       if ((st.connectionMode === 'online' && (raceTypes || curioTypes))
         || (st.phoneController && curioTypes && st.showFight.curio)
         || (st.phoneController && raceTypes && st.showFight.wtp)
         // Duel Memory (surface téléphone) : retournements + choix de récompense /
         // fermeture (raceTypes couvrent turnFightReward/Close) pilotés au téléphone.
-        || (st.phoneController && (raceTypes || memoryTypes) && st.showFight.memory)) {
+        || (st.phoneController && (raceTypes || memoryTypes) && st.showFight.memory)
+        // Combat Pokémon (Game Boy au téléphone) : draft/choix/remplaçants +
+        // récompense/fermeture pilotés depuis les téléphones des duellistes.
+        || (st.phoneController && (raceTypes || pkmnTypes) && st.showFight.pkmn)) {
         get().applyFightIntent(idx, type, payload);
         return;
       }
