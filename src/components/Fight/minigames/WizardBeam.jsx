@@ -35,6 +35,11 @@ const BEAM_RIGHT = 86;
 const BEAM_Y = 0.46; // hauteur de l'axe des rais (fraction de la scène)
 const orbLeft = (pos) => BEAM_LEFT + (BEAM_RIGHT - BEAM_LEFT) * (pos / 100);
 
+// Durée du voyage de la décharge (bonne réponse) : la baguette → l'orbe. Volontaire-
+// ment LENT pour qu'on VOIE le sort filer le long de l'arc puis exploser à l'arrivée.
+// Partagé entre le Canvas (voyage + explosion) et le socle (secousse/tonnerre synchros).
+const CAST_TRAVEL_MS = 700;
+
 // Mélange deux couleurs hex #rrggbb à ratio t (0 → a, 1 → b).
 function mix(a, b, t) {
   const pa = hex(a);
@@ -133,19 +138,17 @@ function WizardCanvas({ aColor, dColor, orbColor, pos, push, hit, compact }) {
     };
   };
 
-  // Gerbe radiale à l'orbe (poussée) — étincelles rapides + anneau de choc.
+  // Bonne réponse : une DÉCHARGE part de la baguette du camp et file le long de
+  // l'arc jusqu'à l'orbe (traînée de particules), où elle EXPLOSE en atteignant
+  // l'autre couleur (gérée dans la boucle, kind 'proj'). Lente et lisible.
   useEffect(() => {
     if (!push) return;
-    const { ox, y } = geo();
-    const col = push.side === 'attacker' ? stateRef.current.aColor : stateRef.current.dColor;
-    boostRef.current[push.side === 'attacker' ? 'a' : 'd'] = performance.now() + 220;
-    spawn({ kind: 'ring', x: ox, y, r: 8, vr: 340, life: 0.5, max: 0.5, color: col, w: 3 });
-    const n = Math.round(22 * density);
-    for (let i = 0; i < n; i++) {
-      const ang = (i / n) * Math.PI * 2 + Math.random() * 0.4;
-      const sp = 120 + Math.random() * 220;
-      spawn({ kind: 'spark', x: ox, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp * 0.7, life: 0.5 + Math.random() * 0.35, max: 0.85, size: 2 + Math.random() * 2.4, color: col, drag: 2.2 });
-    }
+    const { ax, dx, y } = geo();
+    const left = push.side === 'attacker';
+    const col = left ? stateRef.current.aColor : stateRef.current.dColor;
+    // Le rai du lanceur reste sur-intensifié pendant tout le voyage de la décharge.
+    boostRef.current[left ? 'a' : 'd'] = performance.now() + CAST_TRAVEL_MS + 140;
+    spawn({ kind: 'proj', from: left ? ax : dx, x: left ? ax : dx, y, color: col, t: 0, dur: CAST_TRAVEL_MS / 1000, life: 999, max: 999 });
   }, [push?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Explosion d'impact au camp frappé (K.O.).
@@ -228,13 +231,49 @@ function WizardCanvas({ aColor, dColor, orbColor, pos, push, hit, compact }) {
       em.d += 46 * density * dt; while (em.d >= 1) { em.d -= 1; emitBeam(dx, y, ox, st.dColor); }
       em.o += 30 * density * dt; while (em.o >= 1) { em.o -= 1; emitOrb(ox, y, st.orbColor); }
 
-      // 4) Mise à jour + rendu des particules.
+      // 4) Mise à jour + rendu des particules. `later` : particules ENGENDRÉES
+      //    pendant l'itération (traînée/explosion de la décharge) — ajoutées APRÈS
+      //    la boucle pour ne pas décaler les index (spawn peut rogner par l'avant).
       const parts = partsRef.current;
+      const later = [];
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         p.life -= dt;
         if (p.life <= 0) { parts.splice(i, 1); continue; }
         const k = p.life / p.max;
+        if (p.kind === 'proj') {
+          // Voyage baguette → orbe (ease-out), en visant l'orbe COURANT.
+          p.t += dt / p.dur;
+          const prog = p.t >= 1 ? 1 : 1 - (1 - p.t) * (1 - p.t);
+          const tx = ox;
+          p.x = p.from + (tx - p.from) * prog;
+          p.y = y;
+          // Traînée d'énergie derrière la tête.
+          for (let s = 0; s < 2; s++) {
+            later.push({ kind: 'spark', x: p.x, y: p.y + (Math.random() * 2 - 1) * 3, vx: (Math.random() * 2 - 1) * 45, vy: (Math.random() * 2 - 1) * 45, life: 0.28 + Math.random() * 0.24, max: 0.52, size: 1.6 + Math.random() * 2, color: Math.random() < 0.3 ? '#ffffff' : p.color, drag: 1.5 });
+          }
+          // Tête lumineuse (halo coloré + cœur blanc-chaud).
+          const hr = (compact ? 5 : 8) + Math.sin(now / 40) * 1;
+          ctx.shadowColor = p.color; ctx.shadowBlur = 16;
+          ctx.fillStyle = rgba(p.color, 0.95);
+          ctx.beginPath(); ctx.arc(p.x, p.y, hr, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = rgba('#ffffff', 0.95);
+          ctx.beginPath(); ctx.arc(p.x, p.y, hr * 0.5, 0, Math.PI * 2); ctx.fill();
+          if (p.t >= 1) {
+            // EXPLOSION : la décharge atteint l'autre couleur.
+            later.push({ kind: 'ring', x: tx, y, r: 8, vr: 440, life: 0.6, max: 0.6, color: '#ffffff', w: 4 });
+            later.push({ kind: 'ring', x: tx, y, r: 5, vr: 300, life: 0.75, max: 0.75, color: p.color, w: 3 });
+            const n = Math.round(30 * density);
+            for (let e = 0; e < n; e++) {
+              const ang = (e / n) * Math.PI * 2 + Math.random() * 0.5;
+              const sp = 150 + Math.random() * 280;
+              later.push({ kind: 'spark', x: tx, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp * 0.75, life: 0.55 + Math.random() * 0.45, max: 1, size: 2 + Math.random() * 2.8, color: Math.random() < 0.35 ? '#ffffff' : p.color, drag: 1.9 });
+            }
+            parts.splice(i, 1);
+          }
+          continue;
+        }
         if (p.kind === 'ring') {
           p.r += p.vr * dt;
           ctx.beginPath();
@@ -253,6 +292,7 @@ function WizardCanvas({ aColor, dColor, orbColor, pos, push, hit, compact }) {
           ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.45, 0, Math.PI * 2); ctx.fill();
         }
       }
+      for (let j = 0; j < later.length; j++) spawn(later[j]); // engendrées ce frame
       ctx.globalCompositeOperation = 'source-over';
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -371,12 +411,19 @@ export default function WizardBeam({ attacker, defender, pos = 50, push = null, 
   // Teinte de l'orbe vers le camp qui MÈNE (pos>50 → attaquant fonce à droite).
   const orbColor = mix(dColor, aColor, pos / 100);
 
-  // Secousse d'écran brève à chaque poussée (relancée par push.seq).
+  // Poussée : « fwoosh » du lancer immédiat, puis secousse d'écran + tonnerre
+  // SYNCHRONISÉS avec l'impact de la décharge (arrivée à l'orbe, CAST_TRAVEL_MS).
   const [shakeSeq, setShakeSeq] = useState(0);
+  const shakeTimer = useRef(0);
   useEffect(() => {
-    if (!push) return;
-    setShakeSeq((s) => s + 1);
-    try { if (!compact) soundThunder(); } catch { /* silencieux */ }
+    if (!push) return undefined;
+    try { if (!compact) soundSpell(); } catch { /* silencieux */ }
+    clearTimeout(shakeTimer.current);
+    shakeTimer.current = setTimeout(() => {
+      setShakeSeq((s) => s + 1);
+      try { if (!compact) soundThunder(); } catch { /* silencieux */ }
+    }, CAST_TRAVEL_MS);
+    return () => clearTimeout(shakeTimer.current);
   }, [push?.seq]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
