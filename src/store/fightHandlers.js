@@ -168,7 +168,12 @@ export function fightBegin(set, get) {
       if (pkmnDuelFor(f.subject)) { startPkmnDuel(set, get); return; }
     }
   }
-  if (get().connectionMode === 'online' || soloBots) { serveRaceQuestion(set, get); return; }
+  // En ligne, solo (bots) ET mode « écran + téléphones » : duel éclair (course
+  // à la question sur les appareils). En mode téléphones, la TV ne doit JAMAIS
+  // exiger un tap : les mini-jeux tactiles non portés (frise, bulles, Mendeleïev,
+  // deblur…) se replient sur la course — seuls les duels pilotés par le store
+  // (curio/wtp/memory/pkmn, routés ci-dessus) offrent leur vraie mécanique.
+  if (get().connectionMode === 'online' || soloBots || get().phoneController) { serveRaceQuestion(set, get); return; }
   set({ showFight: { ...f, phase: 'briefing' } });
 }
 

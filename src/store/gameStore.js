@@ -3190,8 +3190,11 @@ export const useGameStore = create((set, get) => ({
       const memoryTypes = type === 'turnMemoryFlip';
       const pkmnTypes = type === 'turnPkmnPick' || type === 'turnPkmnValidate' || type === 'turnPkmnChoose' || type === 'turnPkmnReplace';
       if ((st.connectionMode === 'online' && (raceTypes || curioTypes))
+        // Mode « écran + téléphones » : réponses de course, récompense et
+        // fermeture TOUJOURS pilotables au téléphone (la TV n'est pas tactile) —
+        // duel éclair de repli, wtp, curio (dont sa récompense), memory, pkmn.
+        || (st.phoneController && raceTypes)
         || (st.phoneController && curioTypes && st.showFight.curio)
-        || (st.phoneController && raceTypes && st.showFight.wtp)
         // Duel Memory (surface téléphone) : retournements + choix de récompense /
         // fermeture (raceTypes couvrent turnFightReward/Close) pilotés au téléphone.
         || (st.phoneController && (raceTypes || memoryTypes) && st.showFight.memory)

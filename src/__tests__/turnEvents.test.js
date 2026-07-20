@@ -136,10 +136,11 @@ describe('duel, loot, coffre, boutique', () => {
 });
 
 describe('combat — périphérie', () => {
-  it('turnFightBegin : versus → briefing', () => {
+  it('turnFightBegin (manette) : versus → duel de rapidité direct, sans briefing TBI', () => {
     setup({ showFight: { phase: 'versus', attackerIndex: 0, defenderIndex: 1, subject: 'maths', round: 1, wins: { attacker: 0, defender: 0 } } });
     S().applyTeamIntent('tA', 'turnFightBegin', { uid: uid() });
-    expect(S().showFight.phase).toBe('briefing');
+    expect(S().showFight.phase).toBe('minigame');
+    expect(S().showFight.race).toBeTruthy(); // question servie, jouable au téléphone
   });
 
   it('turnFightReward : refusé si l’équipe active n’est pas la gagnante', () => {

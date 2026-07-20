@@ -2647,7 +2647,14 @@ export default function MobileApp() {
             n'est pas l'équipe active). Récompense et fermeture aussi au
             téléphone — l'écran TV n'est pas forcément tactile. */}
         {owned && !!token && session.controller && session.status === 'playing'
-          && session.turn?.fight?.wtp && session.turn.fight.race
+          && (
+            // TOUTE course à la question (duel éclair de repli, silhouette WTP…)
+            session.turn?.fight?.race
+            // … et l'écran récompense/résultat du Curioscope (le placement, lui,
+            // vit dans CurioPlaceView) — zéro tap sur la TV.
+            || (session.turn?.fight?.curio && ['reward', 'result'].includes(session.turn.fight.phase))
+          )
+          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory
           && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
           && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
           && !team.hacked
