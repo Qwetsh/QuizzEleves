@@ -414,6 +414,11 @@ export default {
   'fight.hack.round': { fr: 'Manche {n}', en: 'Round {n}' },
   'fight.hack.hint': { fr: 'Complète les trous ▮ dans l\'ordre. Premier à finir l\'exploit gagne la manche !', en: 'Fill the gaps ▮ in order. First to finish the exploit wins the round!' },
   'fight.hack.noPuzzle': { fr: 'Aucun exploit disponible dans ce langage…', en: 'No exploit available in this language…' },
+  // Libellés multi-surface (scène TV spectateur + vue téléphone du duelliste).
+  'fight.hack.phonesHint': { fr: 'Chaque équipe choisit son langage puis complète l\'exploit sur son téléphone — le premier à finir gagne la manche !', en: 'Each team picks its language then completes the exploit on their phone — first to finish wins the round!' },
+  'fight.hack.choosingLang': { fr: 'choisit son langage…', en: 'choosing language…' },
+  'fight.hack.solvedWait': { fr: 'ACCÈS ACCORDÉ ! En attente…', en: 'ACCESS GRANTED! Waiting…' },
+  'fight.hack.waitNext': { fr: 'Manche suivante…', en: 'Next round…' },
 
   'fight.mg.default.name': { fr: 'Duel de rapidité', en: 'Speed Duel' },
   'fight.mg.default.rules': { fr: 'La même question des deux côtés : le premier à toucher la bonne réponse gagne la manche. Une erreur verrouille votre côté !', en: 'The same question on both sides: the first to tap the right answer wins the round. A mistake locks your side!' },

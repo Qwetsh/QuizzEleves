@@ -10,6 +10,7 @@ import { sendIntent, onlineToken } from '../../logic/sessionConfig';
 import DuelRaceView from './DuelRaceView';
 import CurioPlaceView from '../Fight/CurioPlaceView';
 import ChessDuelView from '../Fight/ChessDuelView';
+import HackDuelView from '../Fight/HackDuelView';
 
 // `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres).
 // La vue de duel y est sautée : FightModal (plein écran hôte) la rend déjà via
@@ -51,6 +52,21 @@ export default function OnlineController({ code, ctrl, host = false }) {
         teams={ctrl.teams}
         myTeamIdx={ownedIdx}
         onMove={(mv) => sendIntent(code, token, 'turnChessMove', { from: mv.from, to: mv.to, promotion: mv.promotion }).catch(() => {})}
+        onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+        onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+      />
+    );
+  }
+  // Cyber-duel (hacking) : choix du langage puis remplissage des trous. L'hôte
+  // arbitre chaque token ; reward/result gérés par la vue (comme chess/memory).
+  if (fight.hack && ['minigame', 'reward', 'result'].includes(fight.phase)) {
+    return (
+      <HackDuelView
+        fight={fight}
+        teams={ctrl.teams}
+        myTeamIdx={ownedIdx}
+        onPickLang={(lang) => sendIntent(code, token, 'turnHackLang', { lang }).catch(() => {})}
+        onPick={(tok) => sendIntent(code, token, 'turnHackPick', { token: tok }).catch(() => {})}
         onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
         onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
       />

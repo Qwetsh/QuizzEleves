@@ -506,6 +506,14 @@ export function chessDuelFor(subject) {
   return resolveEntry(subject)?.engine === 'chess';
 }
 
+// Le thème `subject` résout-il (même cascade) le Cyber-duel (Hacking) « complète
+// les trous » ? Utilisé par fightBegin pour router les surfaces téléphone ET en
+// ligne vers le duel piloté par le store (hackFightHandlers) — chaque camp
+// choisit son langage et remplit ses trous sur son appareil, l'hôte arbitre.
+export function hackDuelFor(subject) {
+  return resolveEntry(subject)?.engine === 'hack';
+}
+
 // Exposé pour les tests / le simulateur : liste des thèmes câblés.
 export const MINIGAME_THEMES = Object.keys(THEME_MINIGAMES);
 

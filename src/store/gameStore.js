@@ -31,6 +31,7 @@ import * as curioFightH from './curioFightHandlers.js';
 import * as memoryFightH from './memoryFightHandlers.js';
 import * as pkmnFightH from './pokemonFightHandlers.js';
 import * as chessFightH from './chessFightHandlers.js';
+import * as hackFightH from './hackFightHandlers.js';
 import * as weatherH from './weatherHandlers.js';
 import { ITEMS } from '../data/items.js';
 import { LOOT, FORGE } from '../logic/balanceConfig.js';
@@ -2789,6 +2790,11 @@ export const useGameStore = create((set, get) => ({
   // Duel d'ÉCHECS piloté par le store (surfaces téléphone ET en ligne) : chaque
   // camp propose son coup { from, to, promotion? } depuis son appareil.
   chessDuelMove: (side, move) => chessFightH.chessDuelMove(set, get, side, move),
+  // Cyber-duel (Hacking) piloté par le store (surfaces téléphone ET en ligne) :
+  // chaque camp choisit SON langage (une fois) puis remplit SES trous depuis son
+  // appareil (intents turnHackLang / turnHackPick).
+  hackDuelLang: (side, lang) => hackFightH.hackDuelLang(set, get, side, lang),
+  hackDuelPick: (side, token) => hackFightH.hackDuelPick(set, get, side, token),
   // Combat Pokémon piloté par le store (surface « écran + téléphones ») :
   // draft, choix secrets et remplaçants arrivent des téléphones (Game Boy).
   pkmnDuelPick: (side, monId) => pkmnFightH.pkmnDuelPick(set, get, side, monId),
@@ -2852,6 +2858,18 @@ export const useGameStore = create((set, get) => ({
     if (type === 'turnChessMove') {
       const side = idx === f.attackerIndex ? 'attacker' : 'defender';
       get().chessDuelMove(side, { from: payload.from, to: payload.to, promotion: payload.promotion });
+      return;
+    }
+    // Cyber-duel (Hacking) : le camp (mappé par idx) choisit son langage
+    // (turnHackLang) ou remplit le trou courant (turnHackPick).
+    if (type === 'turnHackLang') {
+      const side = idx === f.attackerIndex ? 'attacker' : 'defender';
+      get().hackDuelLang(side, payload.lang);
+      return;
+    }
+    if (type === 'turnHackPick') {
+      const side = idx === f.attackerIndex ? 'attacker' : 'defender';
+      get().hackDuelPick(side, payload.token);
       return;
     }
     // Combat Pokémon (Game Boy au téléphone) : sides A = attaquant, B = défenseur.
@@ -3225,8 +3243,9 @@ export const useGameStore = create((set, get) => ({
       const curioTypes = type === 'turnCurioValidate' || type === 'turnCurioNext';
       const memoryTypes = type === 'turnMemoryFlip';
       const chessTypes = type === 'turnChessMove';
+      const hackTypes = type === 'turnHackLang' || type === 'turnHackPick';
       const pkmnTypes = type === 'turnPkmnPick' || type === 'turnPkmnValidate' || type === 'turnPkmnChoose' || type === 'turnPkmnReplace';
-      if ((st.connectionMode === 'online' && (raceTypes || curioTypes || chessTypes))
+      if ((st.connectionMode === 'online' && (raceTypes || curioTypes || chessTypes || hackTypes))
         // Mode « écran + téléphones » : réponses de course, récompense et
         // fermeture TOUJOURS pilotables au téléphone (la TV n'est pas tactile) —
         // duel éclair de repli, wtp, curio (dont sa récompense), memory, pkmn.
@@ -3238,6 +3257,10 @@ export const useGameStore = create((set, get) => ({
         // Duel d'échecs : coups pilotés au téléphone (surface « écran + tél. »).
         // Tourne aussi en ligne (couvert par la branche connectionMode ci-dessus).
         || (st.phoneController && (raceTypes || chessTypes) && st.showFight.chess)
+        // Cyber-duel (Hacking) : choix de langage + remplissage des trous pilotés
+        // au téléphone (surface « écran + tél. »). Tourne aussi en ligne (couvert
+        // par la branche connectionMode ci-dessus).
+        || (st.phoneController && (raceTypes || hackTypes) && st.showFight.hack)
         // Combat Pokémon (Game Boy au téléphone) : draft/choix/remplaçants +
         // récompense/fermeture pilotés depuis les téléphones des duellistes.
         || (st.phoneController && (raceTypes || pkmnTypes) && st.showFight.pkmn)) {

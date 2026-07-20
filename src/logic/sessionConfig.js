@@ -287,6 +287,18 @@ export function buildTurnPayload(s) {
         sides: sf.chess.sides,
         reveal: sf.chess.reveal || null,
       } : null,
+      // Cyber-duel (Hacking, surfaces téléphone ET en ligne) — AUCUN secret : la
+      // RÉPONSE de chaque trou (blanks[i].answer) et l'état de remplissage vivent
+      // module-level dans hackFightHandlers, jamais dans showFight. `sides` ne
+      // publie que les `choices` (4 tokens visibles), les lignes de code et la
+      // progression — jamais `answer`. Chaque camp a SON langage + SES énigmes.
+      hack: sf.hack ? {
+        roundNo: sf.hack.roundNo,
+        langs: sf.hack.langs,
+        started: sf.hack.started,
+        sides: sf.hack.sides,
+        reveal: sf.hack.reveal || null,
+      } : null,
       // Combat Pokémon (surface « écran + téléphones ») — ANTI-TRICHE : le
       // CONTENU des choix secrets d'un tour ne part jamais, seulement des
       // accusés `chosen` (le téléphone adverse voit juste « a choisi »). Le

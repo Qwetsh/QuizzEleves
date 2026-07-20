@@ -100,6 +100,10 @@ function stripFightSecret(showFight) {
   // Le duel d'ÉCHECS, LUI, tourne en ligne : on NE le strippe PAS — showFight.chess
   // ne contient aucun secret (solution + chess.js sont module-level dans
   // chessFightHandlers), la `fen` publiée est la position visible à résoudre.
+  // De même le Cyber-duel (Hacking) tourne en ligne : on NE le strippe PAS —
+  // showFight.hack ne publie que les `choices` de chaque trou (les 4 tokens
+  // visibles), jamais les `answer` (la réponse + l'état de remplissage vivent
+  // module-level dans hackFightHandlers).
   if (out.memory || out.pkmn) {
     const { memory, pkmn, ...rest } = out;
     out = rest;
