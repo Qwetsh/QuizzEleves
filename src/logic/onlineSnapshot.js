@@ -126,13 +126,11 @@ function stripFightSecret(showFight) {
       },
     };
   }
-  if (out.wizard?.q) {
-    // Duel de sorciers : la question du rai partagé porte la bonne réponse
-    // (wizard.q.c) — jamais diffusée (l'hôte arbitre). Le reste (pos/locked/
-    // push/hit/winner) est public. Même discipline que race.q.c.
-    const { c, e, e_en, ...safeQ } = out.wizard.q;
-    out = { ...out, wizard: { ...out.wizard, q: safeQ } };
-  }
+  // Duel de SORTS (rythme) : rien à stripper — la partition publiée (vagues + notes
+  // + labels) EST l'énoncé, et la CLÉ de réponse (index correct par note) vit
+  // module-level dans wizardFightHandlers (auth.key), jamais dans showFight.wizard.
+  // Même discipline que le hacking (answer) / mapevent (correctId) : le miroir peut
+  // recevoir showFight.wizard tel quel.
   if (out.curio) {
     // usedIds : le DERNIER id EST la réponse (monde réel : id = nom du lieu).
     // Le miroir n'en a pas besoin (anti-répétition = affaire de l'hôte) → jamais

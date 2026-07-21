@@ -527,6 +527,35 @@ describe('Terre du Milieu — univers carte parchemin (lieux nommés)', () => {
   });
 });
 
+describe('Skyrim / Bordeciel — univers carte parchemin (lieux nommés)', () => {
+  it('configuré en flat + tuiles, vide sans spots DB, avec attribution', () => {
+    setCurioSpots({});
+    const u = getUniverse('skyrim');
+    expect(u.crs).toBe('flat');
+    expect(u.unit).toBe('lieues');
+    expect(u.map.type).toBe('tiles');
+    expect(u.map.path).toBe('maps/skyrim');
+    expect(u.map.w / u.map.h).toBeCloseTo(1.3333, 1); // carte parchemin propre 2560×1920
+    expect(u.attribution).toMatch(/Bethesda/);
+    expect(u.spots()).toEqual([]);
+    expect(universeHasSpots('skyrim')).toBe(false);
+  });
+
+  it('sans spots : le thème skyrim retombe sur le duel générique', () => {
+    setCurioSpots({});
+    expect(getMinigame('skyrim').Component).toBe(getDefaultMinigame().Component);
+  });
+
+  it('avec spots : le thème skyrim route vers le moteur curioscope (univers skyrim)', () => {
+    setCurioSpots({ skyrim: [{ id: 's1', label: 'Blancherive', x: 0.53, y: 0.55, kind: 'label', showName: true }] });
+    const mg = getMinigame('skyrim');
+    expect(mg.pointsBased).toBe(true);
+    expect(mg.persistent).toBe(true);
+    expect(mg.content.universes).toEqual(['skyrim']);
+    setCurioSpots({});
+  });
+});
+
 describe('action startMinigame — défi Curioscope solo (P2)', () => {
   it('suspend la file et ouvre la modale de défi', () => {
     freshGame();

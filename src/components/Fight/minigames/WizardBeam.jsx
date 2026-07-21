@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { characterById } from '../../../data/characters';
 import { soundThunder, soundSpell } from '../../../logic/sounds';
+import hallBg from '../../../assets/spell-duel-hall.png';
 
 // ════════════════════════════════════════════════════════════════════════════
 //  WizardBeam — le VISUEL du « Duel de sorciers » (Priori Incantatem). Deux
@@ -443,32 +444,16 @@ export default function WizardBeam({ attacker, defender, pos = 50, push = null, 
     >
       <style>{WIZARD_BEAM_CSS}</style>
 
-      {/* Décor : grande salle / cachot — colonnes + vitraux en silhouettes */}
+      {/* Décor : la grande salle de Poudlard (image), DERRIÈRE les duellistes */}
       <div style={abs({ inset: 0, pointerEvents: 'none' })}>
-        {/* halo central dramatique */}
+        <img src={hallBg} alt="" style={abs({ inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 42%' })} />
+        {/* vignette : assombrit les bords et fait ressortir le rai + les sorciers */}
+        <div style={abs({ inset: 0, background: 'radial-gradient(ellipse at 50% 46%, transparent 28%, rgba(5,3,12,0.5) 100%)' })} />
+        {/* halo central dramatique teinté par le meneur */}
         <div style={abs({
           left: '50%', top: '46%', width: '55%', height: '70%', transform: 'translate(-50%,-50%)',
-          background: `radial-gradient(ellipse, ${orbColor}33, transparent 70%)`,
+          background: `radial-gradient(ellipse, ${orbColor}3a, transparent 70%)`,
         })} />
-        {/* vitraux (arcs colorés en fond) */}
-        {[22, 50, 78].map((x, i) => (
-          <div key={i} style={abs({
-            left: `${x}%`, top: '4%', width: '13%', height: '46%', transform: 'translateX(-50%)',
-            borderRadius: '50% 50% 8% 8% / 60% 60% 8% 8%',
-            background: `linear-gradient(180deg, ${['#3a2d6a', '#2d4a6a', '#5a2d4a'][i]}66, transparent)`,
-            border: '1px solid rgba(180,160,220,0.12)',
-          })} />
-        ))}
-        {/* colonnes latérales en silhouette */}
-        {['8%', '92%'].map((x, i) => (
-          <div key={i} style={abs({
-            left: x, bottom: 0, width: '7%', height: '82%', transform: 'translateX(-50%)',
-            background: 'linear-gradient(180deg, rgba(20,14,34,0.2), rgba(30,22,50,0.85))',
-            borderRadius: '6px 6px 0 0',
-          })} />
-        ))}
-        {/* sol en dalles sombres */}
-        <div style={abs({ left: 0, right: 0, bottom: 0, height: '18%', background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.55))' })} />
       </div>
 
       {/* Socle DOM des deux rais (cœur lumineux) — le Canvas ajoute éclairs/étincelles */}

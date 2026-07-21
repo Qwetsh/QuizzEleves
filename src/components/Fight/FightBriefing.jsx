@@ -633,41 +633,39 @@ function DemoHack() {
   );
 }
 
-// Duel de sorciers (Priori Incantatem) : deux baguettes, deux rais qui se
-// heurtent en un orbe au centre qui oscille, puis un « toucher » côté droit.
+// Duel de sorts (rythme) : une scène du lore tombe vers la ligne de tir, le bon
+// sort de la main de 4 pulse pile au bon moment, « PARFAIT ! » s'affiche.
 function DemoWizard() {
-  const T = useT();
-  const A = '#c0392b'; // rai attaquant (gauche)
-  const D = '#2e86c1'; // rai défenseur (droite)
+  const line = 74; // % — position de la ligne de tir
+  const spells = ['Wingardium Leviosa', 'Stupéfix', 'Lumos', 'Expelliarmus'];
+  const beat = { duration: 2.6, repeat: Infinity };
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 35%, #1a1230, #0d0818 65%, #050308)' }}>
-      {/* baguettes */}
-      <div style={{ position: 'absolute', left: 40, top: '48%', width: 34, height: 4, borderRadius: 3, background: 'linear-gradient(90deg,#6a5636,#d8c39a)', transform: 'translateY(-50%) rotate(-8deg)' }} />
-      <div style={{ position: 'absolute', right: 40, top: '48%', width: 34, height: 4, borderRadius: 3, background: 'linear-gradient(270deg,#6a5636,#d8c39a)', transform: 'translateY(-50%) rotate(8deg)' }} />
-      {/* deux sorciers stylisés (chapeaux pointus) */}
-      {[{ x: 18, c: A }, { x: SCREEN_W - 46, c: D }].map((w, i) => (
-        <motion.div key={i} style={{ position: 'absolute', left: w.x, top: '42%', width: 28, height: 44 }}
-          animate={{ y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 1.5 }}>
-          <div style={{ position: 'absolute', left: 4, top: 0, width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderBottom: `16px solid ${w.c}` }} />
-          <div style={{ position: 'absolute', left: 2, top: 16, width: 24, height: 28, borderRadius: '10px 10px 4px 4px', background: `${w.c}cc` }} />
-        </motion.div>
-      ))}
-      {/* les deux rais : leur largeur suit l'orbe qui oscille */}
-      <motion.div style={{ position: 'absolute', left: 66, top: '48%', height: 7, transformOrigin: 'left center', borderRadius: 6, background: `linear-gradient(90deg, ${A}00, ${A} 40%, #fff)`, boxShadow: `0 0 14px ${A}`, translateY: '-50%' }}
-        animate={{ width: [120, 200, 60, 200, 120] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.35, 0.65, 0.85, 1], ease: 'easeInOut' }} />
-      <motion.div style={{ position: 'absolute', right: 66, top: '48%', height: 7, transformOrigin: 'right center', borderRadius: 6, background: `linear-gradient(270deg, ${D}00, ${D} 40%, #fff)`, boxShadow: `0 0 14px ${D}`, translateY: '-50%' }}
-        animate={{ width: [180, 100, 240, 100, 180] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.35, 0.65, 0.85, 1], ease: 'easeInOut' }} />
-      {/* l'orbe au point de rencontre, qui glisse vers la droite (le défenseur) */}
-      <motion.div style={{ position: 'absolute', top: '48%', width: 30, height: 30, borderRadius: '50%', translateX: '-50%', translateY: '-50%', background: 'radial-gradient(circle at 40% 35%, #fff, #b06bd0 60%)', boxShadow: '0 0 20px 6px #b06bd0' }}
-        animate={{ left: [186, 246, 126, 246, SCREEN_W - 70], scale: [1, 1.12, 1, 1.12, 1.5] }}
-        transition={{ duration: 4, repeat: Infinity, times: [0, 0.35, 0.65, 0.85, 1], ease: 'easeInOut' }} />
-      {/* flash d'impact côté droit + « Touché ! » */}
-      <motion.div style={{ position: 'absolute', right: 40, top: '48%', width: 60, height: 60, borderRadius: '50%', translateY: '-50%', background: `radial-gradient(circle, #fff, ${D} 55%, transparent 75%)` }}
-        animate={{ opacity: [0, 0, 0.95, 0], scale: [0.3, 0.3, 2.2, 0.3] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.9, 0.95, 1] }} />
-      <motion.div style={{ position: 'absolute', left: '50%', bottom: 14, transform: 'translateX(-50%)', fontFamily: 'var(--font-display)', fontSize: 20, color: '#f3c969', textShadow: '0 2px 4px rgba(0,0,0,0.6)', whiteSpace: 'nowrap' }}
-        animate={{ opacity: [0, 0, 1, 0], scale: [0.6, 0.6, 1.2, 0.6] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.88, 0.95, 1] }}>
-        {T('fight.wizard.hit')}
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 25%, #1a1230, #0d0818 65%, #050308)' }}>
+      {/* ligne de tir (pulse) */}
+      <motion.div style={{ position: 'absolute', left: 8, right: 8, top: `${line}%`, height: 3, borderRadius: 2, background: 'linear-gradient(90deg,transparent,#c9a5ff,transparent)', boxShadow: '0 0 12px #c9a5ff' }}
+        animate={{ opacity: [0.7, 1, 0.7] }} transition={{ duration: 1.4, repeat: Infinity }} />
+      {/* la note (événement) qui tombe vers la ligne */}
+      <motion.div style={{ position: 'absolute', left: '50%', translateX: '-50%', padding: '6px 12px', borderRadius: 10, fontFamily: 'var(--font-display)', fontSize: 14, whiteSpace: 'nowrap', color: '#23180c', background: 'linear-gradient(180deg,#f6ecd2,#e5d3ab)', border: '2px solid #b79a5e', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}
+        animate={{ top: ['-14%', `${line}%`], opacity: [0, 1, 1, 0] }}
+        transition={{ ...beat, ease: 'linear', times: [0, 0.82, 0.9, 1] }}>
+        Le troll des toilettes
       </motion.div>
+      {/* flash « PARFAIT ! » au passage de la ligne */}
+      <motion.div style={{ position: 'absolute', left: '50%', top: `${line - 14}%`, transform: 'translateX(-50%)', fontFamily: 'var(--font-display)', fontSize: 21, color: '#ffe06a', textShadow: '0 2px 8px rgba(0,0,0,0.6)', whiteSpace: 'nowrap' }}
+        animate={{ opacity: [0, 0, 1, 0], scale: [0.7, 0.7, 1.2, 0.9] }} transition={{ ...beat, times: [0, 0.82, 0.9, 1] }}>
+        PARFAIT !
+      </motion.div>
+      {/* la main de 4 sorts ; le bon (Wingardium Leviosa) s'illumine au bon moment */}
+      <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 5 }}>
+        {spells.map((s, i) => (
+          <motion.div key={i}
+            style={{ padding: '6px 3px', borderRadius: 9, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 10.5, lineHeight: 1.05, color: '#f4ecff', background: 'linear-gradient(180deg,#4a3478,#2c1e4a)', border: '2px solid rgba(150,120,200,0.5)' }}
+            animate={i === 0 ? { scale: [1, 1, 1.12, 1], filter: ['brightness(1)', 'brightness(1)', 'brightness(1.45)', 'brightness(1)'] } : {}}
+            transition={i === 0 ? { ...beat, times: [0, 0.84, 0.92, 1] } : {}}>
+            {s}
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -2798,10 +2798,10 @@ export const useGameStore = create((set, get) => ({
   // appareil (intents turnHackLang / turnHackPick).
   hackDuelLang: (side, lang) => hackFightH.hackDuelLang(set, get, side, lang),
   hackDuelPick: (side, token) => hackFightH.hackDuelPick(set, get, side, token),
-  // Duel de SORCIERS piloté par le store (surfaces téléphone ET en ligne) : les
-  // DEUX camps répondent à la MÊME question (course au rai partagé), l'hôte
-  // arbitre les poussées et la victoire (intent turnWizardAnswer).
-  wizardAnswer: (side, index) => wizardFightH.wizardAnswer(set, get, side, index),
+  // Duel de SORTS (rythme) piloté par le store (surfaces téléphone ET en ligne) :
+  // les DEUX camps jouent la MÊME partition, chaque tap { noteId, spellIndex, dt }
+  // est jugé en local puis converti en points par l'hôte (intent turnWizardHit).
+  wizardHit: (side, noteId, spellIndex, dt) => wizardFightH.wizardHit(set, get, side, noteId, spellIndex, dt),
   // Duel « LIEU → ÉVÉNEMENT » (Terre du Milieu) piloté par le store (surfaces
   // téléphone ET en ligne) : les DEUX camps voient la MÊME cible marquée sur la
   // carte et courent au bon événement (intent turnMapeventAnswer { choiceId }).
@@ -2883,11 +2883,12 @@ export const useGameStore = create((set, get) => ({
       get().hackDuelPick(side, payload.token);
       return;
     }
-    // Duel de sorciers (course au rai partagé) : le camp (mappé par jeton) répond
-    // à la question courante. Les DEUX camps peuvent répondre — c'est une course.
-    if (type === 'turnWizardAnswer') {
+    // Duel de sorts (rythme) : le camp (mappé par jeton) tape un sort pour une note.
+    // Le timing (dt) est jugé en local ; l'hôte valide le bon sort + tally. Les DEUX
+    // camps jouent en simultané.
+    if (type === 'turnWizardHit') {
       const side = idx === f.attackerIndex ? 'attacker' : 'defender';
-      get().wizardAnswer(side, Number(payload.index));
+      get().wizardHit(side, Number(payload.noteId), Number(payload.spellIndex), Number(payload.dt));
       return;
     }
     // Duel « LIEU → ÉVÉNEMENT » (course au bon événement) : le camp (mappé par
@@ -3284,7 +3285,7 @@ export const useGameStore = create((set, get) => ({
       const memoryTypes = type === 'turnMemoryFlip';
       const chessTypes = type === 'turnChessMove';
       const hackTypes = type === 'turnHackLang' || type === 'turnHackPick';
-      const wizardTypes = type === 'turnWizardAnswer';
+      const wizardTypes = type === 'turnWizardHit';
       const mapeventTypes = type === 'turnMapeventAnswer';
       const pkmnTypes = type === 'turnPkmnPick' || type === 'turnPkmnValidate' || type === 'turnPkmnChoose' || type === 'turnPkmnReplace';
       if ((st.connectionMode === 'online' && (raceTypes || curioTypes || chessTypes || hackTypes || wizardTypes || mapeventTypes))

@@ -3,27 +3,29 @@ import '@fontsource/vt323/400.css';
 import { useGameStore } from '../../store/gameStore';
 import { onlineToken } from '../../logic/sessionConfig';
 import WizardBeam from './minigames/WizardBeam';
+import WizardDuel from './minigames/WizardDuel';
 import WizardDuelView from './WizardDuelView';
 import { useT } from '../../i18n';
 
 /**
- * Duel de SORCIERS (« Priori Incantatem ») piloté par le STORE — rendu dans
- * FightModal (phase minigame, showFight.wizard). Comme les échecs / le hacking /
- * le Curioscope, ce duel tourne sur les 3 surfaces :
- * - fenêtre de l'HÔTE EN LIGNE dont l'équipe est duelliste → il joue son duel
- *   (WizardDuelView branché sur l'action store wizardAnswer) ;
- * - sinon (écran partagé du mode « écran + téléphones », hôte non-duelliste,
- *   miroir en ligne) → vue SPECTATEUR : le rai partagé en grand dans la TV CRT
- *   rétro + la question courante en lecture seule + « Répondez sur vos
- *   téléphones ! ». Les DEUX camps répondent à la MÊME question, rai PARTAGÉ.
+ * Duel de SORTS (rythme) piloté par le STORE — rendu dans FightModal (phase minigame,
+ * showFight.wizard) sur les TROIS surfaces :
+ * - ÉCRAN PARTAGÉ (tactile) → les DEUX équipes jouent côte-à-côte ici (WizardDuel,
+ *   deux pistes « Guitar Hero ») ;
+ * - HÔTE EN LIGNE dont l'équipe est duelliste → il joue SA piste (WizardDuelView
+ *   branché sur wizardHit) ;
+ * - sinon (TV du mode « écran + téléphones », miroir en ligne, hôte non-duelliste)
+ *   → vue SPECTATEUR : le rai partagé + le tableau des scores dans la TV CRT rétro,
+ *   « Jouez sur vos appareils ! ». Les DEUX camps jouent la MÊME partition, rai PARTAGÉ.
  */
 export default function WizardDuelStage({ fight, attacker, defender }) {
   const T = useT();
   const teams = useGameStore((s) => s.teams);
   const mirror = useGameStore((s) => !!s._mirror);
   const online = useGameStore((s) => s.connectionMode === 'online');
+  const phoneController = useGameStore((s) => s.phoneController);
   const sessionCode = useGameStore((s) => s.sessionCode);
-  const wizardAnswer = useGameStore((s) => s.wizardAnswer);
+  const wizardHit = useGameStore((s) => s.wizardHit);
 
   const wz = fight.wizard;
   if (!wz) return null;
@@ -45,23 +47,41 @@ export default function WizardDuelStage({ fight, attacker, defender }) {
         fight={{ ...fight, wizard: wz, winnerIndex: null }}
         teams={teams}
         myTeamIdx={myTeamIdx}
-        onAnswer={(index) => wizardAnswer && wizardAnswer(hostSide, index)}
+        onHit={(noteId, spellIndex, dt) => wizardHit && wizardHit(hostSide, noteId, spellIndex, dt)}
         onReward={() => {}}
         onClose={() => {}}
       />
     );
   }
 
-  // --- Vue spectateur (écran partagé / miroir) : le rai partagé en grand, la
-  // question courante en lecture seule, « Répondez sur vos téléphones ! ».
+  // Écran partagé (tactile) : les deux équipes jouent sur le même écran.
+  if (!online && !phoneController) {
+    return <WizardDuel attacker={attacker} defender={defender} />;
+  }
+
+  // --- Vue spectateur (TV « écran + téléphones » / miroir en ligne) : le rai partagé
+  // en grand + le tableau des scores, « Jouez sur vos appareils ! ».
   const pos = typeof wz.pos === 'number' ? wz.pos : 50;
-  const q = wz.q || null;
   const winner = wz.winner || null;
   const winTeam = winner === 'attacker' ? attacker : winner === 'defender' ? defender : null;
+  const sc = wz.scores || { attacker: 0, defender: 0 };
+
+  const scoreCard = (team, side) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderRadius: 12,
+      background: `linear-gradient(180deg, ${team.color}2e, ${team.color}12)`,
+      border: `1px solid ${team.color}55`,
+    }}>
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: team.color }}>{team.name}</span>
+      <span style={{ fontFamily: "'VT323', monospace", fontSize: 30, color: '#f4ecff', textShadow: '0 0 8px rgba(201,165,255,0.5)' }}>
+        {sc[side] || 0}
+      </span>
+    </div>
+  );
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, padding: 14, minHeight: 0 }}>
-      {/* Bandeau : titre (LCD violet) + rappel téléphones */}
+      {/* Bandeau : titre (LCD violet) + rappel appareils */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16, padding: '7px 18px', borderRadius: 12,
         background: 'linear-gradient(180deg, #2a1e46 0%, #170f2a 100%)',
@@ -92,14 +112,11 @@ export default function WizardDuelStage({ fight, attacker, defender }) {
         boxShadow: 'inset 0 0 60px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5)',
       }}>
         <WizardBeam attacker={attacker} defender={defender} pos={pos} push={wz.push || null} hit={wz.hit || null} />
-
-        {/* Bandeau de fin par-dessus la scène */}
         {winTeam && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
             <span style={{
               fontFamily: 'var(--font-display)', fontSize: 30, padding: '10px 28px', borderRadius: 999,
-              color: '#25301a', background: 'rgba(155,230,127,0.97)',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+              color: '#25301a', background: 'rgba(155,230,127,0.97)', boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
             }}>
               {winTeam.name} 🏆
             </span>
@@ -107,34 +124,16 @@ export default function WizardDuelStage({ fight, attacker, defender }) {
         )}
       </div>
 
-      {/* La question courante en LECTURE SEULE + « Répondez sur vos téléphones ! » */}
+      {/* Tableau des scores + « Jouez sur vos appareils ! » */}
       <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18,
         padding: '10px 14px', borderRadius: 12,
         background: 'linear-gradient(180deg, rgba(40,30,70,0.6), rgba(20,14,40,0.6))',
         border: '1px solid rgba(140,110,200,0.25)',
       }}>
-        {q ? (
-          <>
-            <div style={{ textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 20, color: '#f4ecff', lineHeight: 1.25 }}>
-              {q.question}
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {(q.a || []).map((ans, i) => (
-                <span key={i} style={{
-                  fontFamily: 'var(--font-ui)', fontSize: 14, color: 'rgba(255,255,255,0.8)',
-                  padding: '5px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                }}>{ans}</span>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-ui)', fontSize: 14 }}>…</div>
-        )}
-        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: '#c9a5ff' }}>
-          {'\u{1F4F1}'} {T('fight.wizard.phonesHint')}
-        </div>
+        {scoreCard(attacker, 'attacker')}
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: '#c9a5ff' }}>{'\u{1F4F1}'} {T('fight.wizard.phonesHint')}</span>
+        {scoreCard(defender, 'defender')}
       </div>
     </div>
   );

@@ -2755,7 +2755,7 @@ export default function MobileApp() {
               fight={session.turn.fight}
               teams={session.teams}
               myTeamIdx={teamIdx}
-              onAnswer={(index) => sendIntent(code, token, 'turnWizardAnswer', { index }).catch(() => {})}
+              onHit={(noteId, spellIndex, dt) => sendIntent(code, token, 'turnWizardHit', { noteId, spellIndex, dt }).catch(() => {})}
               onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
               onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />

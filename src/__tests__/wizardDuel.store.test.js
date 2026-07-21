@@ -1,177 +1,160 @@
-// Duel de SORCIERS (« Priori Incantatem ») multi-surface, PILOTÉ PAR LE STORE.
-// Comme les échecs / le hacking, il tourne AUSSI en ligne : les DEUX camps
-// répondent à la MÊME question (course au rai partagé) via l'intent
-// turnWizardAnswer (wizardAnswer). L'hôte est l'autorité : moteur pur
-// logic/wizardDuel, minuteries de verrou / coup au but, victoire UNIQUE
-// (fightMatchWin). Le SECRET (bonne réponse q.c) reste sur l'hôte → jamais publié.
+// Duel de SORTS (rythme, façon Guitar Hero) multi-surface, PILOTÉ PAR LE STORE.
+// Comme les échecs / le hacking, il tourne AUSSI en ligne : les DEUX camps jouent
+// la MÊME partition (vagues de 4 sorts + événements qui tombent) et tapent le bon
+// sort au bon moment via l'intent turnWizardHit (wizardHit). L'hôte est l'autorité :
+// moteur pur logic/spellHero, timer de fin de chanson, victoire UNIQUE (fightMatchWin).
+// Le SECRET (clé de réponse : index correct par note) vit module-level sur l'hôte —
+// jamais publié (la partition publique ne porte que les labels + les 4 sorts).
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useGameStore } from '../store/gameStore.js';
 import { buildTurnPayload } from '../logic/sessionConfig.js';
 import { serializeSnapshot } from '../logic/onlineSnapshot.js';
-import { WIZARD_WRONG_HOLD_MS, WIZARD_HIT_MS } from '../store/wizardFightHandlers.js';
-import { WIZARD_PUSH } from '../logic/wizardDuel.js';
+import {
+  WIZARD_HIT_MS, SONG_LEAD_MS, SONG_FINALIZE_BUFFER_MS, _peekAnswerKey,
+} from '../store/wizardFightHandlers.js';
+import { HERO } from '../logic/spellHero.js';
 
 const S = () => useGameStore.getState();
 
-// Pool de questions injecté pour `harrypotter` (le vrai pool vit dans Supabase,
-// non bundlé) : 10 questions à 4 réponses, bonne réponse index 0 avant mélange.
-function fakePool() {
-  return Array.from({ length: 10 }, (_, i) => ({
-    q: `Question ${i} ?`,
-    a: [`bonne-${i}`, `faux-${i}-1`, `faux-${i}-2`, `faux-${i}-3`],
-    c: 0,
-    e: `explication ${i}`,
-  }));
-}
-
-// Le thème `harrypotter` résout le moteur `wizard` (cf. THEME_MINIGAMES). On
-// injecte le pool APRÈS devStartFight (qui réécrit `questions`) et AVANT fightBegin.
-function startWizardDuel(surface = 'phone') {
+// Le thème `harrypotter` résout le moteur `wizard` (cf. THEME_MINIGAMES) et porte
+// un pack de sorts BUNDLÉ (spellPacks.js) → aucune injection de contenu requise.
+function beginDuel(surface = 'phone') {
   useGameStore.setState({
     phase: 'setup', devSandbox: false, _devRestore: null,
     connectionMode: 'board', phoneController: false, sessionCode: null,
     showFight: null, finished: false, log: [], askedQuestions: {},
   });
   S().devStartFight('harrypotter', false, surface);
-  useGameStore.setState({ questions: { harrypotter: fakePool() }, askedQuestions: {} });
   S().fightBegin();
 }
 
-// Répond CORRECTEMENT pour un camp (lit q.c dans le store — présent côté hôte,
-// strippé seulement à la publication).
-function answerCorrect(side) {
-  const w = S().showFight.wizard;
-  S().wizardAnswer(side, w.q.c);
+// Tape le BON sort (lit la clé côté hôte) pour la note `note`, timing parfait (dt=0).
+function hitPerfect(side, note) {
+  const key = _peekAnswerKey();
+  S().wizardHit(side, note.id, key[note.id], 0);
 }
-// Répond FAUX pour un camp (un index ≠ q.c parmi 0..3).
-function answerWrong(side) {
-  const w = S().showFight.wizard;
-  S().wizardAnswer(side, (w.q.c + 1) % 4);
+// Tape un MAUVAIS sort pour la note `note` (un index ≠ clé, timing parfait).
+function hitWrong(side, note) {
+  const key = _peekAnswerKey();
+  S().wizardHit(side, note.id, (key[note.id] + 1) % HERO.HAND, 0);
 }
 
-describe('duel de sorciers multi-surface (showFight.wizard)', () => {
+describe('duel de sorts (rythme) multi-surface (showFight.wizard)', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('surface téléphone : fightBegin distribue un duel piloté par le store, rai au centre', () => {
-    startWizardDuel('phone');
-    const f = S().showFight;
-    expect(f.phase).toBe('minigame');
-    expect(f.wizard).toBeTruthy();
-    expect(f.wizard.pos).toBe(50);
-    expect(f.wizard.q).toBeTruthy();
-    expect(Array.isArray(f.wizard.q.a)).toBe(true);
-    expect(f.wizard.winner).toBeNull();
-    expect(f.wizard.locked).toEqual({ attacker: false, defender: false });
-    expect(f.race).toBeFalsy(); // PAS le duel éclair de repli
-  });
-
-  it('surface en ligne : le duel de sorciers démarre AUSSI (pas de repli éclair)', () => {
-    startWizardDuel('online');
-    const f = S().showFight;
-    expect(f.phase).toBe('minigame');
-    expect(f.wizard).toBeTruthy();
-    expect(f.race).toBeFalsy();
-  });
-
-  it('réponse correcte de l\'attaquant : le rai monte vers 100, push posé, nouvelle question', () => {
-    startWizardDuel('phone');
-    const q0 = S().showFight.wizard.q;
-    answerCorrect('attacker');
+  it('surface téléphone : fightBegin distribue la partition, rai au centre, scores à 0', () => {
+    beginDuel('phone');
     const w = S().showFight.wizard;
-    expect(w.pos).toBe(50 + WIZARD_PUSH);     // poussée vers le défenseur (100)
-    expect(w.push).toBeTruthy();
-    expect(w.push.side).toBe('attacker');
+    expect(S().showFight.phase).toBe('minigame');
+    expect(w).toBeTruthy();
+    expect(w.mode).toBe('rhythm');
+    expect(w.pos).toBe(50);
+    expect(w.chart.waves).toHaveLength(HERO.WAVES);
+    expect(w.chart.notes).toHaveLength(HERO.WAVES * HERO.NOTES_PER_WAVE);
+    expect(w.chart.waves[0].spells).toHaveLength(HERO.HAND);
+    expect(w.scores).toEqual({ attacker: 0, defender: 0 });
     expect(w.winner).toBeNull();
-    expect(w.q).not.toBe(q0);                 // nouvelle question servie
-    expect(w.locked).toEqual({ attacker: false, defender: false });
+    expect(typeof w.songStartAt).toBe('number');
+    expect(S().showFight.race).toBeFalsy(); // PAS le duel éclair de repli
   });
 
-  it('réponse fausse : le camp est verrouillé puis relevé après la minuterie', () => {
-    startWizardDuel('phone');
-    const pos0 = S().showFight.wizard.pos;
-    answerWrong('attacker');
-    expect(S().showFight.wizard.locked.attacker).toBe(true);
-    expect(S().showFight.wizard.pos).toBe(pos0); // rai inchangé sur une faute
-    // Un camp verrouillé ne peut plus répondre tant que le verrou tient.
-    answerCorrect('attacker');
-    expect(S().showFight.wizard.pos).toBe(pos0);
-    vi.advanceTimersByTime(WIZARD_WRONG_HOLD_MS);
-    expect(S().showFight.wizard.locked.attacker).toBe(false); // verrou relevé
+  it('surface en ligne : le duel de sorts démarre AUSSI (pas de repli éclair)', () => {
+    beginDuel('online');
+    expect(S().showFight.wizard?.mode).toBe('rhythm');
+    expect(S().showFight.race).toBeFalsy();
   });
 
-  it('pousser jusqu\'à la victoire : winner + coup au but, puis fightMatchWin (reward)', () => {
-    startWizardDuel('phone');
-    // 3 bonnes réponses de l'attaquant : 50→68→86→100 (clamp) → victoire.
-    answerCorrect('attacker'); // 68
-    answerCorrect('attacker'); // 86
-    answerCorrect('attacker'); // 100 → winner
+  it('bon sort au bon timing : le score du camp monte, le rai penche vers lui', () => {
+    beginDuel('phone');
+    const note = S().showFight.wizard.chart.notes[0];
+    hitPerfect('attacker', note);
+    const w = S().showFight.wizard;
+    expect(w.scores.attacker).toBe(HERO.PERFECT_PTS);
+    expect(w.combos.attacker).toBe(1);
+    expect(w.last.attacker.verdict).toBe('perfect');
+    expect(w.pos).toBeGreaterThan(50);        // penche vers le défenseur (l'attaquant mène)
+    expect(w.push.side).toBe('attacker');
+  });
+
+  it('mauvais sort : aucun point, combo cassé, rai inchangé', () => {
+    beginDuel('phone');
+    const notes = S().showFight.wizard.chart.notes;
+    hitPerfect('attacker', notes[0]);          // combo 1
+    hitWrong('attacker', notes[1]);            // casse
+    const w = S().showFight.wizard;
+    expect(w.scores.attacker).toBe(HERO.PERFECT_PTS); // pas de point ajouté
+    expect(w.combos.attacker).toBe(0);
+    expect(w.last.attacker.verdict).toBe('wrong');
+  });
+
+  it('anti double-compte : la même note ne peut être marquée deux fois par un camp', () => {
+    beginDuel('phone');
+    const note = S().showFight.wizard.chart.notes[0];
+    hitPerfect('attacker', note);
+    const after1 = S().showFight.wizard.scores.attacker;
+    hitPerfect('attacker', note);              // rejoué : ignoré
+    expect(S().showFight.wizard.scores.attacker).toBe(after1);
+  });
+
+  it('K.O. avant la fin : écart de score plein → winner + coup au but, puis fightMatchWin', () => {
+    beginDuel('phone');
+    const notes = S().showFight.wizard.chart.notes;
+    // 6 parfaits d'affilée : 100×4 (×1) + 200×2 (×2) = 800 = KO_DIFF → K.O.
+    for (let i = 0; i < 6; i++) hitPerfect('attacker', notes[i]);
     const w = S().showFight.wizard;
     expect(w.pos).toBe(100);
     expect(w.winner).toBe('attacker');
-    expect(w.hit).toBeTruthy();
-    expect(w.hit.side).toBe('defender'); // le perdant est frappé
-    // La victoire de combat n'est marquée qu'après le coup au but.
+    expect(w.hit.side).toBe('defender');       // le perdant est frappé
     expect(S().showFight.winnerSide).toBeFalsy();
     vi.advanceTimersByTime(WIZARD_HIT_MS);
     expect(S().showFight.winnerSide).toBe('attacker');
     expect(S().showFight.phase).toBe('reward'); // duel unique → récompense
   });
 
-  it('le défenseur peut aussi pousser (course) : bonne réponse → rai vers 0', () => {
-    startWizardDuel('phone');
-    answerCorrect('defender');
-    expect(S().showFight.wizard.pos).toBe(50 - WIZARD_PUSH);
-    expect(S().showFight.wizard.push.side).toBe('defender');
+  it('fin de chanson (timer d\'autorité) : meilleur score gagne', () => {
+    beginDuel('phone');
+    const w0 = S().showFight.wizard;
+    hitPerfect('attacker', w0.chart.notes[0]); // 100 pts, sous le seuil K.O.
+    // Laisse filer toute la chanson + la marge + le coup au but.
+    vi.advanceTimersByTime(SONG_LEAD_MS + w0.chart.duration + SONG_FINALIZE_BUFFER_MS);
+    expect(S().showFight.wizard.winner).toBe('attacker');
+    vi.advanceTimersByTime(WIZARD_HIT_MS);
+    expect(S().showFight.winnerSide).toBe('attacker');
+    expect(S().showFight.phase).toBe('reward');
   });
 
-  it('anti-triche : le payload publie la question du rai SANS la bonne réponse', () => {
-    startWizardDuel('phone');
+  it('un intent turnWizardHit est mappé au bon camp par jeton', () => {
+    beginDuel('phone');
+    const f = S().showFight;
+    const note = f.wizard.chart.notes[0];
+    const key = _peekAnswerKey();
+    // Le DÉFENSEUR (idx = defenderIndex) tape le bon sort : mappé sur SON camp.
+    S().applyFightIntent(f.defenderIndex, 'turnWizardHit', {
+      noteId: note.id, spellIndex: key[note.id], dt: 0,
+    });
+    const w = S().showFight.wizard;
+    expect(w.scores.defender).toBe(HERO.PERFECT_PTS);
+    expect(w.pos).toBeLessThan(50);            // penche vers l'attaquant (le défenseur mène)
+    expect(w.push.side).toBe('defender');
+  });
+
+  it('anti-triche : le payload publie la partition SANS la clé de réponse', () => {
+    beginDuel('phone');
     const wizard = buildTurnPayload(S()).fight.wizard;
     expect(wizard).toBeTruthy();
-    expect(wizard.q).toBeTruthy();
-    expect(Array.isArray(wizard.q.a)).toBe(true); // les réponses visibles : OK
-    expect(wizard.q.c).toBeUndefined();           // la bonne réponse : JAMAIS
-    expect(wizard.q.e).toBeUndefined();           // l'explication non plus
-    expect(JSON.stringify(wizard)).not.toContain('"c":');
+    expect(wizard.chart).toBeTruthy();
+    expect(Array.isArray(wizard.chart.notes)).toBe(true); // les notes visibles : OK
+    expect(wizard.key).toBeUndefined();                   // la clé : JAMAIS
+    expect(wizard.scores).toBeTruthy();
+    expect(JSON.stringify(wizard)).not.toContain('"key"');
   });
 
-  it('anti-triche : le snapshot en ligne strippe aussi wizard.q.c', () => {
-    startWizardDuel('online');
-    const snap = serializeSnapshot(S());
-    const wq = snap.showFight.wizard.q;
-    expect(wq).toBeTruthy();
-    expect(Array.isArray(wq.a)).toBe(true);
-    expect(wq.c).toBeUndefined();
-    expect(wq.e).toBeUndefined();
-  });
-
-  it('un intent turnWizardAnswer est mappé au bon camp par jeton', () => {
-    startWizardDuel('phone');
-    const f = S().showFight;
-    const correct = f.wizard.q.c;
-    // Le DÉFENSEUR (idx = defenderIndex) envoie l'index correct : mappé sur SON
-    // camp → pousse le rai vers 0 (côté défenseur), pas vers l'attaquant.
-    S().applyFightIntent(f.defenderIndex, 'turnWizardAnswer', { index: correct });
-    expect(S().showFight.wizard.pos).toBe(50 - WIZARD_PUSH);
-    expect(S().showFight.wizard.push.side).toBe('defender');
-  });
-
-  it('repli propre : sans pool de questions, bascule en duel éclair (pas de soft-lock)', () => {
-    useGameStore.setState({
-      phase: 'setup', devSandbox: false, _devRestore: null,
-      connectionMode: 'board', phoneController: false, sessionCode: null,
-      showFight: null, finished: false, log: [], askedQuestions: {},
-    });
-    S().devStartFight('harrypotter', false, 'phone');
-    // Pas de pool harrypotter injecté (et non bundlé) → fightPickQuestion = null.
-    useGameStore.setState({ questions: {}, askedQuestions: {} });
-    S().fightBegin();
-    const f = S().showFight;
-    // Ni blocage ni wizard sans question : repli course (race) OU manche marquée.
-    expect(f.wizard).toBeFalsy();
-    // Le combat n'est jamais coincé en minigame sans mécanique (race servie, ou
-    // déjà résolu vers reward si le repli course n'a pas de pool non plus).
-    expect(['minigame', 'reward', 'result']).toContain(f.phase);
+  it('anti-triche : le snapshot en ligne ne porte pas non plus la clé', () => {
+    beginDuel('online');
+    const wizard = serializeSnapshot(S()).showFight.wizard;
+    expect(wizard).toBeTruthy();
+    expect(wizard.chart).toBeTruthy();
+    expect(wizard.key).toBeUndefined();
   });
 });

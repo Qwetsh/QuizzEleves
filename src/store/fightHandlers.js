@@ -140,6 +140,13 @@ export function fightBegin(set, get) {
   const f = get().showFight;
   if (!f || f.phase !== 'versus') return;
   const soloBots = (get().teams || []).some((t) => t?.isBot);
+  // Duel de SORTS (rythme, thème harrypotter) piloté par le store sur les TROIS
+  // surfaces (contrairement aux autres duels store-driven réservés au distant) :
+  // tactile = 2 pistes « Guitar Hero » sur l'écran partagé ; téléphones / en ligne
+  // = 1 piste par appareil. L'hôte génère la partition + arbitre (wizardFightHandlers).
+  // Route AVANT tout : la partition remplit showFight.wizard, FightModal rend alors
+  // WizardDuelStage sur toutes les surfaces.
+  if (wizardDuelFor(f.subject)) { startWizardDuel(set, get); return; }
   // Duel Curioscope (guessr) piloté par le STORE sur les surfaces distantes :
   // en ligne, et « écran + téléphones » (le pin se place sur le téléphone).
   // Bots exclus (ils ne devinent pas) et boss exclu (adversaire virtuel) →
@@ -166,12 +173,6 @@ export function fightBegin(set, get) {
     // puis remplit SES trous depuis son appareil, l'hôte arbitre
     // (hackFightHandlers). Route AVANT le bloc phoneController-only memory/pkmn.
     if (hackDuelFor(f.subject)) { startHackDuel(set, get); return; }
-    // Duel de SORCIERS (Priori Incantatem, thème harrypotter) « course au rai
-    // partagé » piloté par le store — surfaces téléphone ET en ligne (comme les
-    // échecs / le hacking) : les DEUX camps répondent à la MÊME question depuis
-    // leur appareil, l'hôte arbitre les poussées et la victoire
-    // (wizardFightHandlers). Route AVANT le bloc phoneController-only memory/pkmn.
-    if (wizardDuelFor(f.subject)) { startWizardDuel(set, get); return; }
     // Duel « LIEU → ÉVÉNEMENT » (Chroniques de la Terre du Milieu, thème
     // seigneur_des_anneaux) « course au bon événement » piloté par le store —
     // surfaces téléphone ET en ligne (comme les échecs / le hacking / les

@@ -299,14 +299,19 @@ export function buildTurnPayload(s) {
         sides: sf.hack.sides,
         reveal: sf.hack.reveal || null,
       } : null,
-      // Duel de SORCIERS (Priori Incantatem, surfaces téléphone ET en ligne) —
-      // ANTI-TRICHE : les DEUX camps répondent à la MÊME question ; la bonne
-      // réponse (q.c, + explications e/e_en) ne quitte JAMAIS l'hôte (strippée
-      // ici comme race.q.c). Tout le reste (rai partagé, verrous, anim) est public.
+      // Duel de SORTS (rythme, surfaces téléphone ET en ligne) — ANTI-TRICHE : la
+      // partition (vagues + notes + labels + timings) EST l'énoncé → publique (on
+      // voit les notes arriver, c'est le jeu). La CLÉ de réponse (index correct par
+      // note) NE quitte JAMAIS l'hôte : elle vit module-level (auth.key), jamais dans
+      // showFight.wizard → rien à stripper ici. Scores/combos/rai sont publics.
       wizard: sf.wizard ? {
+        mode: sf.wizard.mode,
+        songStartAt: sf.wizard.songStartAt,
+        chart: sf.wizard.chart,
+        scores: sf.wizard.scores,
+        combos: sf.wizard.combos,
         pos: sf.wizard.pos,
-        q: (() => { const { c, e, e_en, ...safe } = sf.wizard.q || {}; return safe; })(),
-        locked: sf.wizard.locked,
+        last: sf.wizard.last || null,
         push: sf.wizard.push || null,
         hit: sf.wizard.hit || null,
         winner: sf.wizard.winner || null,

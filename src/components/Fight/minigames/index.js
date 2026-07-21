@@ -16,6 +16,7 @@ import hackData from '../../../data/hackPuzzles.json';
 import WizardDuel from './WizardDuel.jsx';
 import LotrEventDuel from './LotrEventDuel.jsx';
 import { LOTR_EVENTS } from '../../../data/lotrEvents.js';
+import { getSpellPack } from '../../../data/spellPacks.js';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -198,6 +199,16 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.wow.name', rules: 'fight.mg.wow.rules', winLabel: 'fight.mg.geographie.winLabel',
     howto: { demo: 'geo', goal: 'fight.mg.wow.goal', steps: ['fight.mg.wow.step1', 'fight.mg.wow.step2', 'fight.mg.wow.step3', 'fight.mg.wow.step4'] },
   },
+  // Skyrim / Bordeciel (thème skyrim, parent jeux_video) sur le moteur curioscope :
+  // un LIEU de Bordeciel est nommé, chaque camp plante son repère sur la carte
+  // parchemin (univers skyrim). Comme la Terre du Milieu : lieux nommés (render=
+  // label en DB), pas de photo. Garde-fou getMinigame → duel générique tant
+  // qu'aucun spot n'existe (seed-skyrim.mjs).
+  skyrim: {
+    engine: 'curioscope', content: { universes: ['skyrim'] },
+    name: 'fight.mg.skyrim.name', rules: 'fight.mg.skyrim.rules', winLabel: 'fight.mg.geographie.winLabel',
+    howto: { demo: 'geo', goal: 'fight.mg.skyrim.goal', steps: ['fight.mg.skyrim.step1', 'fight.mg.skyrim.step2', 'fight.mg.skyrim.step3', 'fight.mg.skyrim.step4'] },
+  },
   // Chroniques de la Terre du Milieu (thème LOTR, surface TACTILE) : un LIEU
   // s'illumine sur la carte parchemin (terre_du_milieu_atlas), chaque camp voit
   // 4 ÉVÉNEMENTS et court à celui qui s'y est déroulé. Auto-suffisant : jouable
@@ -324,14 +335,14 @@ const THEME_MINIGAMES = {
     howto: { demo: 'pkmn', goal: 'fight.mg.pkmn.goal', steps: ['fight.mg.pkmn.step1', 'fight.mg.pkmn.step2', 'fight.mg.pkmn.step3', 'fight.mg.pkmn.step4'] },
   },
 
-  // ── DUEL DE SORCIERS (Priori Incantatem) — thème harrypotter, surface
-  // TACTILE. Deux sorciers face à face, un orbe au centre : une bonne réponse
-  // RAPIDE pousse ton sort vers l'adversaire ; quand l'orbe touche un camp,
-  // l'autre gagne. Contenu = questions TEXTE du thème (fightPickQuestion résout
-  // la catégorie ; harrypotter a 0 question directe mais son enfant hp_livre1
-  // en a → jouable via la cascade). Repli propre géré dans le composant.
+  // ── DUEL DE SORTS (rythme, façon Guitar Hero) — thème harrypotter, 3 surfaces.
+  // Des ÉVÉNEMENTS du lore tombent vers une ligne de tir ; en bas, une « main »
+  // de 4 sorts (renouvelée par vagues). On tape le bon sort AU BON MOMENT. Les
+  // deux camps jouent la MÊME partition en simultané ; le meilleur score pousse
+  // le rai partagé (K.O. possible). Contenu = pack de sorts (spellPacks.js) résolu
+  // par l'hôte ; la CLÉ de réponse reste secrète (strippée à la publication).
   harrypotter: {
-    engine: 'wizard', content: { fromQuestions: 'harrypotter' },
+    engine: 'wizard', content: { spellPack: 'harrypotter' },
     name: 'fight.mg.wizard.name', rules: 'fight.mg.wizard.rules', winLabel: 'fight.mg.wizard.winLabel',
     howto: { demo: 'wizard', goal: 'fight.mg.wizard.goal', steps: ['fight.mg.wizard.step1', 'fight.mg.wizard.step2', 'fight.mg.wizard.step3'] },
   },
@@ -567,6 +578,14 @@ export function hackDuelFor(subject) {
 // l'hôte arbitre les poussées et la victoire.
 export function wizardDuelFor(subject) {
   return resolveEntry(subject)?.engine === 'wizard';
+}
+
+// Pool de SORTS résolu pour le duel de sorts (cascade thème → ancêtres → pack).
+// L'hôte l'appelle au démarrage pour générer la partition. Null si le thème ne
+// résout pas le wizard ou n'a pas de pack (→ repli propre sur le duel éclair).
+export function spellPackFor(subject) {
+  const e = resolveEntry(subject);
+  return e?.engine === 'wizard' ? getSpellPack(e.content?.spellPack) : null;
 }
 
 // Le thème `subject` résout-il (même cascade) le duel « LIEU → ÉVÉNEMENT »
