@@ -139,6 +139,28 @@ export const UNIVERSES = {
     attribution: 'Carte : Jean-Tinland (« middle-earth », GitHub, GPL-3.0)',
     spots: () => CURIO_SPOTS.terre_du_milieu || [],
   },
+
+  // --- Terre du Milieu « ATLAS » — carte parchemin alternative (variante en
+  // test, plus « belle » que la Jean-Tinland) — le thème LOTR pointe ici.
+  // ⚠️ CARTE PLACEHOLDER USAGE PERSO : source Internet Archive
+  // (« ThirdageMiddle-earth.jpg », auteur inconnu, licence NON claire) —
+  // assumée par l'utilisateur pour son usage personnel, À REMPLACER par une
+  // carte proprement licenciée AVANT toute publication. Teinte parchemin +
+  // vignette appliquées en pleine résolution (scripts/curioscope/
+  // tint-arda-atlas.mjs), tuiles dans le bucket (make-tiles.mjs). Spots PROPRES
+  // à ce cadrage (seed-terre-du-milieu-atlas.mjs) — le cadre diffère de la
+  // Jean-Tinland, les spots de terre_du_milieu ne collent PAS ici.
+  // score.k ≈ largeur/8 → À CALIBRER en jouant.
+  terre_du_milieu_atlas: {
+    id: 'terre_du_milieu_atlas',
+    crs: 'flat',
+    map: { type: 'tiles', path: 'maps/terre_du_milieu_atlas', w: 8740, h: 8208, maxNativeZoom: 6 },
+    mapUnits: 100,
+    score: { max: 5000, freeDist: 1.5, k: 18 },
+    unit: 'lieues',
+    attribution: 'Carte placeholder (usage perso, à remplacer avant publication)',
+    spots: () => CURIO_SPOTS.terre_du_milieu_atlas || [],
+  },
 };
 
 export function getUniverse(id) {
