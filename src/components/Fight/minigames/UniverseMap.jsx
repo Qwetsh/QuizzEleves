@@ -87,9 +87,28 @@ function badgeIcon(label, color) {
   });
 }
 
+// Halo PULSANT ancré à un point de la carte (marqueur Leaflet → suit le pan/zoom,
+// contrairement à un overlay CSS positionné en % du conteneur). Les keyframes
+// vivent dans une feuille injectée une seule fois (ensurePulseCss).
+function ensurePulseCss() {
+  if (typeof document === 'undefined' || document.getElementById('um-pulse-css')) return;
+  const s = document.createElement('style');
+  s.id = 'um-pulse-css';
+  s.textContent = '@keyframes umPulse{0%{transform:translate(-50%,-50%) scale(0.6);opacity:1}70%{transform:translate(-50%,-50%) scale(1.55);opacity:0.18}100%{transform:translate(-50%,-50%) scale(0.6);opacity:1}}.um-pulse{border-radius:50%;border:3px solid var(--c,#f3c969);box-shadow:0 0 16px 5px rgba(243,201,105,0.6);animation:umPulse 1.4s ease-out infinite;pointer-events:none}';
+  document.head.appendChild(s);
+}
+function pulseIcon(color, size) {
+  return L.divIcon({
+    className: '',
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    html: `<div class="um-pulse" style="--c:${color};width:${size}px;height:${size}px"></div>`,
+  });
+}
+
 export default function UniverseMap({
   universe, interactive = false, onPlace,
-  pins = [], target = null, lines = [], badges = [], fit = null,
+  pins = [], target = null, lines = [], badges = [], fit = null, pulse = null,
 }) {
   const boxRef = useRef(null);
   const mapRef = useRef(null);
@@ -184,6 +203,14 @@ export default function UniverseMap({
     }
     for (const b of badges) {
       L.marker(space.toLatLng(b.pos), { icon: badgeIcon(b.label, b.color), interactive: false, zIndexOffset: 600 }).addTo(group);
+    }
+    // Halo pulsant ancré (LotrEventMap : marque le lieu SANS dériver au pan).
+    if (pulse && pulse.pos) {
+      ensurePulseCss();
+      L.marker(space.toLatLng(pulse.pos), {
+        icon: pulseIcon(pulse.color || '#f3c969', pulse.size || 42),
+        interactive: false, zIndexOffset: 650,
+      }).addTo(group);
     }
     // Révélation : cadrer la vue sur pins + cible (une fois par jeu de points).
     if (fit && fit.length) {

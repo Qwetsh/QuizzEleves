@@ -16,10 +16,14 @@ import { getUniverse } from '../../../data/universes';
  *   - `x`,`y` : coordonnées normalisées 0..1 du lieu à marquer.
  *   - `compact` : réduit le halo (vue téléphone).
  *
+ * Le marqueur (halo pulsant + étoile) est un VRAI marqueur Leaflet (prop `pulse`
+ * / `target` d'UniverseMap) : il est ANCRÉ à la coordonnée et suit donc le
+ * pan/zoom de la carte. (Un overlay CSS positionné en % du conteneur, lui,
+ * resterait fixe à l'écran et « glisserait » quand on déplace la carte.)
+ *
  * Robustesse : UniverseMap importe Leaflet (DOM requis) → chargé en LAZY et
  * enveloppé dans Suspense pour rester absent des tests node. Si l'univers est
- * introuvable ou la carte tarde, un repli sombre est rendu MAIS le halo CSS
- * reste toujours visible (indépendant de Leaflet).
+ * introuvable ou la carte tarde, un repli sombre est rendu.
  */
 const UniverseMap = lazy(() => import('./UniverseMap.jsx'));
 
@@ -36,7 +40,6 @@ export default function LotrEventMap({ universe, x, y, compact = false }) {
   const py = typeof y === 'number' ? y : 0.5;
 
   const mapFallback = <div style={{ width: '100%', height: '100%', background: '#101c26' }} />;
-  const halo = compact ? 34 : 46;
 
   return (
     <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden' }}>
@@ -46,8 +49,8 @@ export default function LotrEventMap({ universe, x, y, compact = false }) {
             key="lotrevent-map"
             universe={uni}
             pins={[]}
-            badges={[{ pos: { x: px, y: py }, label: '★', color: '#f3c969' }]}
             target={{ x: px, y: py }}
+            pulse={{ pos: { x: px, y: py }, color: '#f3c969', size: compact ? 30 : 44 }}
             fit={[
               { x: Math.max(0, px - 0.12), y: Math.max(0, py - 0.12) },
               { x: Math.min(1, px + 0.12), y: Math.min(1, py + 0.12) },
@@ -55,19 +58,6 @@ export default function LotrEventMap({ universe, x, y, compact = false }) {
           />
         </Suspense>
       ) : mapFallback}
-      {/* Halo pulsant surimposé (indépendant de Leaflet, toujours visible). */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute', left: `${px * 100}%`, top: `${py * 100}%`,
-          width: halo, height: halo, marginLeft: -halo / 2, marginTop: -halo / 2,
-          borderRadius: '50%', border: '3px solid #f3c969',
-          boxShadow: '0 0 18px 6px rgba(243,201,105,0.7)',
-          pointerEvents: 'none', zIndex: 3,
-          animation: 'lotrPulse 1.4s ease-out infinite',
-        }}
-      />
-      <style>{'@keyframes lotrPulse{0%{transform:scale(0.7);opacity:1}70%{transform:scale(1.5);opacity:0.25}100%{transform:scale(0.7);opacity:1}}'}</style>
     </div>
   );
 }
