@@ -47,30 +47,468 @@
 
 <script id="events-data" type="application/json">
 [
-  {"place":"Fondcombe (Imladris)","x":0.458,"y":0.227,"event":"Le Conseil d'Elrond décide de détruire l'Anneau Unique","eventEn":"The Council of Elrond decides to destroy the One Ring"},
-  {"place":"Le Mont Destin (Orodruin)","x":0.729,"y":0.595,"event":"L'Anneau Unique est détruit dans les flammes","eventEn":"The One Ring is destroyed in the fire"},
-  {"place":"Le Gouffre de Helm (Fort-le-Cor)","x":0.451,"y":0.521,"event":"La bataille du Gouffre de Helm contre les Uruk-hai","eventEn":"The Battle of Helm's Deep against the Uruk-hai"},
-  {"place":"Isengard (Orthanc)","x":0.417,"y":0.482,"event":"Les Ents assaillent Saroumane et brisent le barrage","eventEn":"The Ents storm Saruman and break the dam"},
-  {"place":"Minas Tirith","x":0.638,"y":0.597,"event":"La bataille des Champs du Pelennor devant la cité blanche","eventEn":"The Battle of the Pelennor Fields before the white city"},
-  {"place":"La Moria (Khazad-dûm)","x":0.440,"y":0.342,"event":"Gandalf tombe dans l'abîme avec le Balrog","eventEn":"Gandalf falls into the abyss with the Balrog"},
-  {"place":"La Lothlórien","x":0.474,"y":0.352,"event":"Galadriel offre ses présents à la Communauté","eventEn":"Galadriel gives her gifts to the Fellowship"},
-  {"place":"Erebor (Mont Solitaire)","x":0.629,"y":0.168,"event":"La Bataille des Cinq Armées devant la montagne des Nains","eventEn":"The Battle of the Five Armies before the Dwarves' mountain"},
-  {"place":"Esgaroth (Bourg-du-Lac)","x":0.628,"y":0.176,"event":"Bard l'Archer terrasse le dragon Smaug d'une flèche noire","eventEn":"Bard the Bowman slays the dragon Smaug with a black arrow"},
-  {"place":"Barad-dûr","x":0.752,"y":0.581,"event":"L'Œil de Sauron veille au sommet de la Tour Sombre","eventEn":"The Eye of Sauron watches atop the Dark Tower"},
-  {"place":"Minas Morgul","x":0.697,"y":0.594,"event":"L'armée du Roi-Sorcier sort en guerre de la cité maudite","eventEn":"The Witch-king's army marches to war from the cursed city"},
-  {"place":"Osgiliath","x":0.640,"y":0.598,"event":"Faramir défend les ruines de l'ancienne capitale du Gondor","eventEn":"Faramir defends the ruins of Gondor's old capital"},
-  {"place":"Le Mont Venteux (Amon Sûl)","x":0.317,"y":0.261,"event":"Frodon est blessé par la lame du Roi-Sorcier","eventEn":"Frodo is wounded by the Witch-king's blade"},
-  {"place":"Bree","x":0.295,"y":0.259,"event":"Frodon rencontre Grand-Pas à l'auberge du Poney Fringant","eventEn":"Frodo meets Strider at the Prancing Pony inn"},
-  {"place":"La Comté","x":0.245,"y":0.283,"event":"Bilbon disparaît par surprise lors de son anniversaire","eventEn":"Bilbo vanishes by surprise during his birthday party"},
-  {"place":"Edoras","x":0.514,"y":0.528,"event":"Gandalf libère le roi Théoden de l'emprise de Saroumane","eventEn":"Gandalf frees King Théoden from Saruman's hold"},
-  {"place":"Dunharrow (Dunhart)","x":0.514,"y":0.533,"event":"Aragorn s'engage sur le Chemin des Morts","eventEn":"Aragorn takes the Paths of the Dead"},
-  {"place":"La Fangorn","x":0.462,"y":0.372,"event":"Merry et Pippin rencontrent l'Ent Sylvebarbe","eventEn":"Merry and Pippin meet the Ent Treebeard"},
-  {"place":"La Forêt Noire (Mirkwood)","x":0.540,"y":0.345,"event":"Bilbon et les Nains sont piégés par les araignées géantes","eventEn":"Bilbo and the Dwarves are trapped by the giant spiders"},
-  {"place":"Le Palais de Thranduil","x":0.598,"y":0.185,"event":"Les Nains s'évadent des cachots enfermés dans des tonneaux","eventEn":"The Dwarves escape the dungeons hidden inside barrels"},
-  {"place":"Les Havres Gris (Mithlond)","x":0.165,"y":0.276,"event":"Frodon embarque vers les Terres Immortelles","eventEn":"Frodo sails away to the Undying Lands"},
-  {"place":"Les Champs aux Iris (Gladden)","x":0.505,"y":0.298,"event":"Isildur est tué et l'Anneau se perd dans le fleuve","eventEn":"Isildur is slain and the Ring is lost in the river"},
-  {"place":"Dol Amroth","x":0.473,"y":0.664,"event":"Le prince Imrahil mène ses chevaliers au secours du Gondor","eventEn":"Prince Imrahil leads his knights to Gondor's aid"},
-  {"place":"Pelargir","x":0.638,"y":0.655,"event":"Aragorn s'empare de la flotte des corsaires d'Umbar","eventEn":"Aragorn seizes the corsair fleet of Umbar"}
+  {
+    "place": "Fondcombe (Imladris)",
+    "x": 0.458,
+    "y": 0.227,
+    "event": "Le Conseil d'Elrond décide de détruire l'Anneau Unique",
+    "eventEn": "The Council of Elrond decides to destroy the One Ring"
+  },
+  {
+    "place": "Le Mont Destin (Orodruin)",
+    "x": 0.729,
+    "y": 0.595,
+    "event": "L'Anneau Unique est détruit dans les flammes",
+    "eventEn": "The One Ring is destroyed in the fire"
+  },
+  {
+    "place": "Le Gouffre de Helm (Fort-le-Cor)",
+    "x": 0.451,
+    "y": 0.521,
+    "event": "La bataille du Gouffre de Helm contre les Uruk-hai",
+    "eventEn": "The Battle of Helm's Deep against the Uruk-hai"
+  },
+  {
+    "place": "Isengard (Orthanc)",
+    "x": 0.417,
+    "y": 0.482,
+    "event": "Les Ents assaillent Saroumane et brisent le barrage",
+    "eventEn": "The Ents storm Saruman and break the dam"
+  },
+  {
+    "place": "Minas Tirith",
+    "x": 0.638,
+    "y": 0.597,
+    "event": "La bataille des Champs du Pelennor devant la cité blanche",
+    "eventEn": "The Battle of the Pelennor Fields before the white city"
+  },
+  {
+    "place": "La Moria (Khazad-dûm)",
+    "x": 0.44,
+    "y": 0.342,
+    "event": "Gandalf tombe dans l'abîme avec le Balrog",
+    "eventEn": "Gandalf falls into the abyss with the Balrog"
+  },
+  {
+    "place": "La Lothlórien",
+    "x": 0.474,
+    "y": 0.352,
+    "event": "Galadriel offre ses présents à la Communauté",
+    "eventEn": "Galadriel gives her gifts to the Fellowship"
+  },
+  {
+    "place": "Erebor (Mont Solitaire)",
+    "x": 0.629,
+    "y": 0.168,
+    "event": "La Bataille des Cinq Armées devant la montagne des Nains",
+    "eventEn": "The Battle of the Five Armies before the Dwarves' mountain"
+  },
+  {
+    "place": "Esgaroth (Bourg-du-Lac)",
+    "x": 0.628,
+    "y": 0.176,
+    "event": "Bard l'Archer terrasse le dragon Smaug d'une flèche noire",
+    "eventEn": "Bard the Bowman slays the dragon Smaug with a black arrow"
+  },
+  {
+    "place": "Barad-dûr",
+    "x": 0.752,
+    "y": 0.581,
+    "event": "L'Œil de Sauron veille au sommet de la Tour Sombre",
+    "eventEn": "The Eye of Sauron watches atop the Dark Tower"
+  },
+  {
+    "place": "Minas Morgul",
+    "x": 0.697,
+    "y": 0.594,
+    "event": "L'armée du Roi-Sorcier sort en guerre de la cité maudite",
+    "eventEn": "The Witch-king's army marches to war from the cursed city"
+  },
+  {
+    "place": "Osgiliath",
+    "x": 0.64,
+    "y": 0.598,
+    "event": "Faramir défend les ruines de l'ancienne capitale du Gondor",
+    "eventEn": "Faramir defends the ruins of Gondor's old capital"
+  },
+  {
+    "place": "Le Mont Venteux (Amon Sûl)",
+    "x": 0.317,
+    "y": 0.261,
+    "event": "Frodon est blessé par la lame du Roi-Sorcier",
+    "eventEn": "Frodo is wounded by the Witch-king's blade"
+  },
+  {
+    "place": "Bree",
+    "x": 0.295,
+    "y": 0.259,
+    "event": "Frodon rencontre Grand-Pas à l'auberge du Poney Fringant",
+    "eventEn": "Frodo meets Strider at the Prancing Pony inn"
+  },
+  {
+    "place": "La Comté",
+    "x": 0.245,
+    "y": 0.283,
+    "event": "Bilbon disparaît par surprise lors de son anniversaire",
+    "eventEn": "Bilbo vanishes by surprise during his birthday party"
+  },
+  {
+    "place": "Edoras",
+    "x": 0.514,
+    "y": 0.528,
+    "event": "Gandalf libère le roi Théoden de l'emprise de Saroumane",
+    "eventEn": "Gandalf frees King Théoden from Saruman's hold"
+  },
+  {
+    "place": "Dunharrow (Dunhart)",
+    "x": 0.514,
+    "y": 0.533,
+    "event": "Aragorn s'engage sur le Chemin des Morts",
+    "eventEn": "Aragorn takes the Paths of the Dead"
+  },
+  {
+    "place": "La Fangorn",
+    "x": 0.462,
+    "y": 0.372,
+    "event": "Merry et Pippin rencontrent l'Ent Sylvebarbe",
+    "eventEn": "Merry and Pippin meet the Ent Treebeard"
+  },
+  {
+    "place": "La Forêt Noire (Mirkwood)",
+    "x": 0.54,
+    "y": 0.345,
+    "event": "Bilbon et les Nains sont piégés par les araignées géantes",
+    "eventEn": "Bilbo and the Dwarves are trapped by the giant spiders"
+  },
+  {
+    "place": "Le Palais de Thranduil",
+    "x": 0.598,
+    "y": 0.185,
+    "event": "Les Nains s'évadent des cachots enfermés dans des tonneaux",
+    "eventEn": "The Dwarves escape the dungeons hidden inside barrels"
+  },
+  {
+    "place": "Les Havres Gris (Mithlond)",
+    "x": 0.165,
+    "y": 0.276,
+    "event": "Frodon embarque vers les Terres Immortelles",
+    "eventEn": "Frodo sails away to the Undying Lands"
+  },
+  {
+    "place": "Les Champs aux Iris (Gladden)",
+    "x": 0.505,
+    "y": 0.298,
+    "event": "Isildur est tué et l'Anneau se perd dans le fleuve",
+    "eventEn": "Isildur is slain and the Ring is lost in the river"
+  },
+  {
+    "place": "Dol Amroth",
+    "x": 0.473,
+    "y": 0.664,
+    "event": "Le prince Imrahil mène ses chevaliers au secours du Gondor",
+    "eventEn": "Prince Imrahil leads his knights to Gondor's aid"
+  },
+  {
+    "place": "Pelargir",
+    "x": 0.638,
+    "y": 0.655,
+    "event": "Aragorn s'empare de la flotte des corsaires d'Umbar",
+    "eventEn": "Aragorn seizes the corsair fleet of Umbar"
+  },
+  {
+    "place": "Cul-de-Sac (Hobbitebourg)",
+    "x": 0.238,
+    "y": 0.278,
+    "event": "Gandalf trouve la preuve que l'anneau de Bilbon est l'Unique",
+    "eventEn": "Gandalf finds proof that Bilbo's ring is the One"
+  },
+  {
+    "place": "Bac de Châteaubouc (Buckland)",
+    "x": 0.268,
+    "y": 0.284,
+    "event": "Les hobbits traversent le Brandevin et sèment un Cavalier Noir",
+    "eventEn": "The hobbits cross the Brandywine and escape a Black Rider"
+  },
+  {
+    "place": "La Vieille Forêt",
+    "x": 0.285,
+    "y": 0.29,
+    "event": "Le Vieil Homme-Saule engloutit Merry et Pippin dans son tronc",
+    "eventEn": "Old Man Willow swallows Merry and Pippin into his trunk"
+  },
+  {
+    "place": "La maison de Tom Bombadil",
+    "x": 0.3,
+    "y": 0.292,
+    "event": "Tom Bombadil met l'Anneau et ne disparaît pas",
+    "eventEn": "Tom Bombadil puts on the Ring and does not vanish"
+  },
+  {
+    "place": "Les Hauts des Galgals (Tertres)",
+    "x": 0.31,
+    "y": 0.288,
+    "event": "Une Créature des Galgals capture les hobbits dans un tertre",
+    "eventEn": "A Barrow-wight traps the hobbits inside a burial mound"
+  },
+  {
+    "place": "Le Gué de Bruinen",
+    "x": 0.435,
+    "y": 0.235,
+    "event": "Le flot déchaîné par Elrond emporte les Cavaliers Noirs",
+    "eventEn": "The flood raised by Elrond sweeps away the Black Riders"
+  },
+  {
+    "place": "Le Caradhras",
+    "x": 0.432,
+    "y": 0.332,
+    "event": "La montagne repousse la Communauté sous la neige et les avalanches",
+    "eventEn": "The mountain drives back the Fellowship with snow and avalanches"
+  },
+  {
+    "place": "La Porte Ouest de la Moria (Portes de Durin)",
+    "x": 0.428,
+    "y": 0.34,
+    "event": "Le mot « mellon » ouvre les Portes des Nains",
+    "eventEn": "The word 'mellon' opens the Doors of the Dwarves"
+  },
+  {
+    "place": "La Chambre de Mazarbul (Moria)",
+    "x": 0.442,
+    "y": 0.343,
+    "event": "La Communauté trouve la tombe de Balin et est assaillie par un troll",
+    "eventEn": "The Fellowship finds Balin's tomb and is attacked by a troll"
+  },
+  {
+    "place": "Le Pont de Khazad-dûm",
+    "x": 0.444,
+    "y": 0.345,
+    "event": "Gandalf affronte le Balrog : « Vous ne passerez pas ! »",
+    "eventEn": "Gandalf faces the Balrog: 'You shall not pass!'"
+  },
+  {
+    "place": "Le Vallon de Fontgris (Dimrill Dale)",
+    "x": 0.452,
+    "y": 0.336,
+    "event": "La Communauté pleure Gandalf après avoir fui la Moria",
+    "eventEn": "The Fellowship mourns Gandalf after fleeing Moria"
+  },
+  {
+    "place": "L'Argonath (Piliers des Rois)",
+    "x": 0.492,
+    "y": 0.386,
+    "event": "La Communauté passe entre les deux statues géantes des rois",
+    "eventEn": "The Fellowship passes between the two giant statues of the kings"
+  },
+  {
+    "place": "Parth Galen",
+    "x": 0.478,
+    "y": 0.4,
+    "event": "Boromir succombe à la tentation de l'Anneau",
+    "eventEn": "Boromir gives in to the temptation of the Ring"
+  },
+  {
+    "place": "Amon Hen",
+    "x": 0.47,
+    "y": 0.404,
+    "event": "Boromir tombe en défendant Merry et Pippin, percé de flèches",
+    "eventEn": "Boromir falls defending Merry and Pippin, pierced by arrows"
+  },
+  {
+    "place": "Les chutes de Rauros",
+    "x": 0.5,
+    "y": 0.408,
+    "event": "Frodon et Sam partent seuls vers le Mordor en barque",
+    "eventEn": "Frodo and Sam set off alone toward Mordor by boat"
+  },
+  {
+    "place": "L'Emyn Muil",
+    "x": 0.56,
+    "y": 0.43,
+    "event": "Gollum est capturé et juré au service de « son trésor »",
+    "eventEn": "Gollum is caught and sworn to serve 'the precious'"
+  },
+  {
+    "place": "Le Marais des Morts",
+    "x": 0.605,
+    "y": 0.47,
+    "event": "Des visages de morts hantent l'eau et attirent Frodon",
+    "eventEn": "Dead faces haunt the water and lure Frodo in"
+  },
+  {
+    "place": "La Porte Noire (Morannon)",
+    "x": 0.7,
+    "y": 0.548,
+    "event": "Frodon et Sam renoncent à franchir la porte gardée du Mordor",
+    "eventEn": "Frodo and Sam give up crossing Mordor's guarded gate"
+  },
+  {
+    "place": "Henneth Annûn (Ithilien)",
+    "x": 0.65,
+    "y": 0.56,
+    "event": "Faramir capture Frodon et Sam à la fenêtre du couchant",
+    "eventEn": "Faramir captures Frodo and Sam at the window of the sunset"
+  },
+  {
+    "place": "Les Cavernes Étincelantes (Aglarond)",
+    "x": 0.448,
+    "y": 0.525,
+    "event": "Gimli s'émerveille des grottes de cristal de Helm",
+    "eventEn": "Gimli marvels at the crystal caverns of Helm's Deep"
+  },
+  {
+    "place": "La Trouée du Rohan",
+    "x": 0.4,
+    "y": 0.47,
+    "event": "Éomer et ses cavaliers exilés anéantissent la troupe d'Uruk-hai",
+    "eventEn": "Éomer's exiled riders wipe out the band of Uruk-hai"
+  },
+  {
+    "place": "Le Fort de Dol Baran",
+    "x": 0.408,
+    "y": 0.492,
+    "event": "Pippin regarde dans le palantír d'Orthanc",
+    "eventEn": "Pippin looks into the palantír of Orthanc"
+  },
+  {
+    "place": "L'Escalier de Cirith Ungol",
+    "x": 0.708,
+    "y": 0.598,
+    "event": "Gollum trahit et pousse Frodon dans l'antre d'Arachne",
+    "eventEn": "Gollum betrays and leads Frodo into Shelob's lair"
+  },
+  {
+    "place": "L'Antre d'Arachne (Torech Ungol)",
+    "x": 0.712,
+    "y": 0.6,
+    "event": "Sam blesse l'araignée Arachne pour sauver Frodon",
+    "eventEn": "Sam wounds the spider Shelob to save Frodo"
+  },
+  {
+    "place": "La Tour de Cirith Ungol",
+    "x": 0.716,
+    "y": 0.596,
+    "event": "Sam délivre Frodon des orques et récupère l'Anneau",
+    "eventEn": "Sam frees Frodo from the orcs and recovers the Ring"
+  },
+  {
+    "place": "Le Carrefour (Cross-roads)",
+    "x": 0.665,
+    "y": 0.598,
+    "event": "Frodon voit la tête décapitée du roi couronnée de fleurs",
+    "eventEn": "Frodo sees the fallen king's head crowned with flowers"
+  },
+  {
+    "place": "La Pierre d'Erech",
+    "x": 0.47,
+    "y": 0.6,
+    "event": "Aragorn convoque l'Armée des Morts sous la pierre noire",
+    "eventEn": "Aragorn summons the Army of the Dead beneath the black stone"
+  },
+  {
+    "place": "Le Rammas Echor",
+    "x": 0.618,
+    "y": 0.59,
+    "event": "Les orques du Mordor brisent le mur d'enceinte du Pelennor",
+    "eventEn": "Mordor's orcs breach the outer wall of the Pelennor"
+  },
+  {
+    "place": "Le Champ de Cormallen",
+    "x": 0.672,
+    "y": 0.56,
+    "event": "Frodon et Sam sont acclamés en héros par toute l'armée",
+    "eventEn": "Frodo and Sam are hailed as heroes by the whole host"
+  },
+  {
+    "place": "La Prairie de Cerin Amroth",
+    "x": 0.478,
+    "y": 0.346,
+    "event": "Aragorn et Arwen sont unis, les amants d'antan",
+    "eventEn": "Aragorn and Arwen are bound, the lovers of old"
+  },
+  {
+    "place": "Le Grattoir (Cul-de-Sac saccagé)",
+    "x": 0.242,
+    "y": 0.272,
+    "event": "Les hobbits chassent Saroumane et libèrent la Comté",
+    "eventEn": "The hobbits drive out Saruman and free the Shire"
+  },
+  {
+    "place": "Le Mont Mindolluin",
+    "x": 0.63,
+    "y": 0.602,
+    "event": "Aragorn trouve le rejeton de l'Arbre Blanc du Gondor",
+    "eventEn": "Aragorn finds the sapling of the White Tree of Gondor"
+  },
+  {
+    "place": "La Colline aux Trolls",
+    "x": 0.4,
+    "y": 0.24,
+    "event": "Trois trolls veulent manger la Compagnie avant l'aube",
+    "eventEn": "Three trolls try to eat the Company before dawn"
+  },
+  {
+    "place": "La Cité gobeline des Monts Brumeux",
+    "x": 0.46,
+    "y": 0.32,
+    "event": "Bilbon trouve l'Anneau perdu par Gollum",
+    "eventEn": "Bilbo finds the Ring lost by Gollum"
+  },
+  {
+    "place": "Le lac souterrain de Gollum",
+    "x": 0.464,
+    "y": 0.325,
+    "event": "Bilbon gagne au jeu des énigmes contre Gollum",
+    "eventEn": "Bilbo wins the riddle game against Gollum"
+  },
+  {
+    "place": "Le Carrock",
+    "x": 0.505,
+    "y": 0.31,
+    "event": "Les Aigles déposent la Compagnie sur le grand rocher",
+    "eventEn": "The Eagles set the Company down on the great rock"
+  },
+  {
+    "place": "La maison de Beorn",
+    "x": 0.512,
+    "y": 0.318,
+    "event": "La Compagnie est hébergée par l'homme-ours changeur de peau",
+    "eventEn": "The Company is sheltered by the skin-changing bear-man"
+  },
+  {
+    "place": "La Vieille Route de la Forêt (Mirkwood)",
+    "x": 0.548,
+    "y": 0.352,
+    "event": "La Compagnie enchantée sombre dans le sommeil du ruisseau noir",
+    "eventEn": "The enchanted Company falls into the sleep of the black stream"
+  },
+  {
+    "place": "Dol Guldur",
+    "x": 0.52,
+    "y": 0.4,
+    "event": "Le Conseil Blanc chasse le Nécromancien de sa forteresse",
+    "eventEn": "The White Council drives the Necromancer from his stronghold"
+  },
+  {
+    "place": "La Porte de Derrière (Erebor)",
+    "x": 0.622,
+    "y": 0.164,
+    "event": "La clé ouvre la porte secrète au dernier rayon de Durin",
+    "eventEn": "The key opens the hidden door at the last light of Durin's Day"
+  },
+  {
+    "place": "La Salle du Trésor de Smaug",
+    "x": 0.626,
+    "y": 0.172,
+    "event": "Bilbon dérobe une coupe et éveille le dragon endormi",
+    "eventEn": "Bilbo steals a cup and wakes the sleeping dragon"
+  },
+  {
+    "place": "Ravenhill (la Colline du Corbeau)",
+    "x": 0.636,
+    "y": 0.174,
+    "event": "Thorin tue Azog et tombe mortellement blessé",
+    "eventEn": "Thorin slays Azog and falls mortally wounded"
+  }
 ]
 </script>
 
