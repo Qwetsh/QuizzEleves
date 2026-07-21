@@ -14,6 +14,8 @@ import chessData from '../../../data/chessPuzzles.json';
 import HackDuel from './HackDuel.jsx';
 import hackData from '../../../data/hackPuzzles.json';
 import WizardDuel from './WizardDuel.jsx';
+import LotrEventDuel from './LotrEventDuel.jsx';
+import { LOTR_EVENTS } from '../../../data/lotrEvents.js';
 import { getUniverse } from '../../../data/universes.js';
 import { THEMES } from '../../../data/themes.js';
 import { useGameStore } from '../../../store/gameStore.js';
@@ -88,6 +90,11 @@ const ENGINES = {
   // quand l'orbe touche un camp). Contenu = questions TEXTE du thème (le
   // composant tire via fightPickQuestion, repli propre si le pool est vide).
   wizard: { Component: WizardDuel, persistent: true, pointsBased: true },
+  // Chroniques de la Terre du Milieu (thème LOTR, surface TACTILE) : un LIEU
+  // s'illumine sur la carte parchemin, chaque camp voit 4 ÉVÉNEMENTS et court au
+  // bon. Auto-suffisant (LOTR_EVENTS bundlé), best-of-3 NORMAL (remonté par
+  // manche, PAS pointsBased) — victoire par onRoundWin.
+  mapevent: { Component: LotrEventDuel, persistent: false },
 };
 
 // Contenu « bubble » de l'anglais (chasse aux verbes irréguliers).
@@ -191,15 +198,16 @@ const THEME_MINIGAMES = {
     name: 'fight.mg.wow.name', rules: 'fight.mg.wow.rules', winLabel: 'fight.mg.geographie.winLabel',
     howto: { demo: 'geo', goal: 'fight.mg.wow.goal', steps: ['fight.mg.wow.step1', 'fight.mg.wow.step2', 'fight.mg.wow.step3', 'fight.mg.wow.step4'] },
   },
-  // Curioscope sur la carte parchemin de la Terre du Milieu. « Où se trouve ce
-  // lieu ? » : le nom s'affiche, on le pointe sur la carte. Clé = subject du
-  // thème LOTR. Univers ACTIF = terre_du_milieu_atlas (variante « atlas », carte
-  // placeholder en test) ; l'ancienne carte Jean-Tinland (univers
-  // terre_du_milieu, 175 lieux) est MISE DE CÔTÉ (spots + tuiles conservés).
+  // Chroniques de la Terre du Milieu (thème LOTR, surface TACTILE) : un LIEU
+  // s'illumine sur la carte parchemin (terre_du_milieu_atlas), chaque camp voit
+  // 4 ÉVÉNEMENTS et court à celui qui s'y est déroulé. Auto-suffisant : jouable
+  // dès que LOTR_EVENTS a ≥4 lieux (données bundlées).
+  //   Le guessr Curioscope sur cet univers reste disponible si on veut y
+  //   revenir : { engine:'curioscope', content:{ universes:['terre_du_milieu_atlas'] } }.
   seigneur_des_anneaux: {
-    engine: 'curioscope', content: { universes: ['terre_du_milieu_atlas'] },
-    name: 'fight.mg.lotr.name', rules: 'fight.mg.lotr.rules', winLabel: 'fight.mg.geographie.winLabel',
-    howto: { demo: 'geo', goal: 'fight.mg.lotr.goal', steps: ['fight.mg.lotr.step1', 'fight.mg.lotr.step2', 'fight.mg.lotr.step3', 'fight.mg.lotr.step4'] },
+    engine: 'mapevent',
+    name: 'fight.mg.lotrevent.name', rules: 'fight.mg.lotrevent.rules',
+    howto: { demo: 'lotrevent', goal: 'fight.mg.lotrevent.goal', steps: ['fight.mg.lotrevent.step1', 'fight.mg.lotrevent.step2', 'fight.mg.lotrevent.step3'] },
   },
 
   // ── « Qui est ce Pokémon ?! » : reconstitution du plateau TV de l'anime ──
@@ -438,6 +446,9 @@ function isPlayable(theme) {
   // Cyber-duel : auto-suffisant (données bundlées), jouable s'il existe au moins
   // une énigme (sinon cascade vers l'ancêtre/générique).
   if (theme.engine === 'hack') return (hackData?.puzzles || []).length > 0;
+  // Chroniques de la Terre du Milieu : auto-suffisant (LOTR_EVENTS bundlé),
+  // jouable dès qu'il y a ≥4 lieux (il faut la cible + 3 distracteurs).
+  if (theme.engine === 'mapevent') return (LOTR_EVENTS || []).length >= 4;
   if (theme.engine === 'curioscope') {
     return (theme.content?.universes || []).some((id) => (getUniverse(id)?.spots() || []).length > 0);
   }

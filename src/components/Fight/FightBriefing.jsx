@@ -672,8 +672,52 @@ function DemoWizard() {
   );
 }
 
+// Chroniques de la Terre du Milieu : une mini-carte parchemin, un lieu qui
+// pulse, « Que s'est-il passé ici ? » + 3 puces d'événements dont une se coche.
+function DemoLotrEvent() {
+  const T = useT();
+  const events = [
+    { txt: 'Le Conseil d\'Elrond', ok: true },
+    { txt: 'La bataille des Cinq Armées', ok: false },
+    { txt: 'La chute de Barad-dûr', ok: false },
+  ];
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 20%, #2a2416, #17130a)' }}>
+      {/* mini-carte parchemin stylisée */}
+      <div style={{ position: 'absolute', left: 16, top: 14, right: 16, height: 92, borderRadius: 10, background: 'linear-gradient(180deg,#d9c199,#c4a96f)', border: '2px solid #7a5e3a', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: '18%', top: '30%', width: 46, height: 34, background: '#a9c48a', borderRadius: '45% 55% 50% 50%' }} />
+        <div style={{ position: 'absolute', right: '20%', top: '18%', width: 52, height: 40, background: '#a9c48a', borderRadius: '55% 45% 50% 45%' }} />
+        {/* lieu qui pulse */}
+        <motion.div
+          style={{ position: 'absolute', left: '46%', top: '52%', width: 16, height: 16, marginLeft: -8, marginTop: -8, borderRadius: '50%', border: '3px solid #f3c969', boxShadow: '0 0 12px 4px rgba(243,201,105,0.7)' }}
+          animate={{ scale: [0.7, 1.5, 0.7], opacity: [1, 0.3, 1] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+        />
+      </div>
+      {/* énoncé */}
+      <div style={{ position: 'absolute', top: 112, left: '50%', transform: 'translateX(-50%)', padding: '3px 12px', borderRadius: 8, background: 'rgba(255,254,251,0.95)', fontFamily: 'var(--font-display)', fontSize: 13, color: 'var(--ink-900)', whiteSpace: 'nowrap' }}>
+        {T('fight.lotrevent.prompt')}
+      </div>
+      {/* puces d'événements */}
+      <div style={{ position: 'absolute', left: 20, right: 20, top: 138, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {events.map((e, i) => (
+          <motion.div key={i}
+            style={{ padding: '5px 10px', borderRadius: 8, fontFamily: 'var(--font-ui)', fontSize: 12, color: '#25303a', background: '#fffefb', border: '2px solid rgba(122,94,58,0.3)' }}
+            animate={e.ok ? { background: ['#fffefb', '#fffefb', '#d1f0b8', '#d1f0b8'], borderColor: ['rgba(122,94,58,0.3)', 'rgba(122,94,58,0.3)', '#5b8c3a', '#5b8c3a'] } : {}}
+            transition={{ duration: 3, repeat: Infinity, times: [0, 0.5, 0.6, 1] }}
+          >
+            {e.ok ? '✓ ' : ''}{e.txt}
+          </motion.div>
+        ))}
+      </div>
+      <TapCursor x={30} y={148} period={3} />
+    </div>
+  );
+}
+
 const DEMOS = {
   tapBubbles: DemoTapBubbles,
+  lotrevent: DemoLotrEvent,
   wizard: DemoWizard,
   chess: DemoChess,
   hack: DemoHack,

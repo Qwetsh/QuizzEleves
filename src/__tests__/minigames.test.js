@@ -108,6 +108,20 @@ describe('mini-jeux — Tableau de Mendeleïev', () => {
     resetThemesData();
   });
 
+  it('le thème seigneur_des_anneaux résout le moteur mapevent (lieu → événement)', async () => {
+    const { default: LotrEventDuel } = await import('../components/Fight/minigames/LotrEventDuel.jsx');
+    const mg = getMinigame('seigneur_des_anneaux');
+    expect(mg.Component).toBe(LotrEventDuel);
+    expect(mg.name).toBe('fight.mg.lotrevent.name');
+    expect(mg.rules).toBe('fight.mg.lotrevent.rules');
+    expect(mg.content).toBeUndefined(); // données bundlées (LOTR_EVENTS)
+    expect(mg.persistent).toBe(false); // remonté à chaque manche (best-of-3 normal)
+    expect(mg.pointsBased).toBeFalsy(); // victoire par onRoundWin, pas de points cumulés
+    expect(mg.howto.demo).toBe('lotrevent');
+    // jouable (≥4 lieux bundlés) → jamais le duel générique
+    expect(mg.Component).not.toBe(getDefaultMinigame().Component);
+  });
+
   it('le thème chimie résout le moteur mendeleiev (auto-suffisant)', () => {
     const mg = getMinigame('chimie');
     expect(typeof mg.Component).toBe('function');

@@ -112,6 +112,19 @@ export default {
   'fight.mg.lotr.step3': { fr: 'Valide — révélation quand les deux équipes ont joué', en: 'Confirm — reveal once both teams have played' },
   'fight.mg.lotr.step4': { fr: 'Points selon la distance : le plus précis gagne !', en: 'Points by distance: the most precise wins!' },
 
+  // Chroniques de la Terre du Milieu (moteur mapevent) — « lieu → événement ».
+  'fight.mg.lotrevent.name': { fr: 'Chroniques de la Terre du Milieu', en: 'Chronicles of Middle-earth' },
+  'fight.mg.lotrevent.rules': { fr: "Un lieu s'illumine sur la carte de la Terre du Milieu. Parmi 4 événements, touche le plus vite celui qui s'y est déroulé. Premier à répondre juste gagne la manche !", en: 'A place lights up on the map of Middle-earth. Among 4 events, tap the one that happened there — fastest wins. First correct answer wins the round!' },
+  'fight.mg.lotrevent.goal': { fr: "Reconnais le lieu et trouve l'événement qui s'y est passé !", en: 'Recognize the place and find the event that happened there!' },
+  'fight.mg.lotrevent.step1': { fr: 'Repère le lieu qui pulse sur la carte', en: 'Spot the pulsing place on the map' },
+  'fight.mg.lotrevent.step2': { fr: "Lis les 4 événements de ton côté", en: 'Read the 4 events on your side' },
+  'fight.mg.lotrevent.step3': { fr: "Touche le bon en premier pour gagner la manche !", en: 'Tap the right one first to win the round!' },
+  // Runtime (LotrEventDuel)
+  'fight.lotrevent.prompt': { fr: "Que s'est-il passé ICI ?", en: 'What happened HERE?' },
+  'fight.lotrevent.wrong': { fr: 'Raté !', en: 'Missed!' },
+  'fight.lotrevent.hint': { fr: "Premier à toucher le bon événement ! Une erreur = court verrouillage.", en: 'First to tap the right event! A mistake = short lock.' },
+  'fight.lotrevent.empty': { fr: 'Pas assez de lieux pour jouer…', en: 'Not enough places to play…' },
+
   // --- MotLePlusLong (Le Mot le Plus Long) ---
   'fight.mot.wordValidated': { fr: 'Mot validé — {n} lettres ✔', en: 'Word confirmed — {n} letters ✔' },
   'fight.mot.revealAtEnd': { fr: 'Révélation à la fin du temps…', en: "Reveal when time's up…" },
