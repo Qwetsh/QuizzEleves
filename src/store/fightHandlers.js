@@ -11,13 +11,14 @@ import { saveGame } from './persistence.js';
 import { tg, tgPlural } from '../i18n';
 import { locName } from '../i18n/content';
 import { raceOutcomeOnAnswer, otherSide } from '../logic/duelRace.js';
-import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor, chessDuelFor, hackDuelFor, wizardDuelFor } from '../components/Fight/minigames/index.js';
+import { curioUniverses, silhouetteKey, memoryPairs, pkmnDuelFor, chessDuelFor, hackDuelFor, wizardDuelFor, mapeventDuelFor } from '../components/Fight/minigames/index.js';
 import { startCurioDuel } from './curioFightHandlers.js';
 import { startMemoryDuel } from './memoryFightHandlers.js';
 import { startPkmnDuel } from './pokemonFightHandlers.js';
 import { startChessDuel } from './chessFightHandlers.js';
 import { startHackDuel } from './hackFightHandlers.js';
 import { startWizardDuel } from './wizardFightHandlers.js';
+import { startMapeventDuel } from './mapeventFightHandlers.js';
 
 // « Duel éclair » (mode en ligne) : durée d'une question de course, en secondes.
 export const RACE_DURATION = 20;
@@ -171,6 +172,13 @@ export function fightBegin(set, get) {
     // leur appareil, l'hôte arbitre les poussées et la victoire
     // (wizardFightHandlers). Route AVANT le bloc phoneController-only memory/pkmn.
     if (wizardDuelFor(f.subject)) { startWizardDuel(set, get); return; }
+    // Duel « LIEU → ÉVÉNEMENT » (Chroniques de la Terre du Milieu, thème
+    // seigneur_des_anneaux) « course au bon événement » piloté par le store —
+    // surfaces téléphone ET en ligne (comme les échecs / le hacking / les
+    // sorciers) : les DEUX camps voient la MÊME cible marquée sur la carte et
+    // courent au bon événement depuis leur appareil, l'hôte arbitre
+    // (mapeventFightHandlers). Route AVANT le bloc phoneController-only memory/pkmn.
+    if (mapeventDuelFor(f.subject)) { startMapeventDuel(set, get); return; }
     // Duel Memory (paires) piloté par le store — surface « écran + téléphones »
     // UNIQUEMENT : plateau TV en lecture seule sur l'écran partagé, retournements
     // depuis le téléphone du camp actif. En ligne, pas de plateau partagé → repli

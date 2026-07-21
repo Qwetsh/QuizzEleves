@@ -22,6 +22,7 @@ import PkmnGameboyView from '../Fight/PkmnGameboyView';
 import ChessDuelView from '../Fight/ChessDuelView';
 import HackDuelView from '../Fight/HackDuelView';
 import WizardDuelView from '../Fight/WizardDuelView';
+import MapeventDuelView from '../Fight/MapeventDuelView';
 import { extOn } from '../../extensions/registry';
 import { craftEnabledFor, metierPending, METIERS, metierName, metierDesc } from '../../logic/metier';
 import { WEATHER_KEYS, weatherName, weatherIcon } from '../../data/weather';
@@ -2671,7 +2672,7 @@ export default function MobileApp() {
             // vit dans CurioPlaceView) — zéro tap sur la TV.
             || (session.turn?.fight?.curio && ['reward', 'result'].includes(session.turn.fight.phase))
           )
-          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory && !session.turn?.fight?.chess && !session.turn?.fight?.hack && !session.turn?.fight?.wizard
+          && !session.turn?.fight?.pkmn && !session.turn?.fight?.memory && !session.turn?.fight?.chess && !session.turn?.fight?.hack && !session.turn?.fight?.wizard && !session.turn?.fight?.mapevent
           && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
           && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
           && !team.hacked
@@ -2755,6 +2756,24 @@ export default function MobileApp() {
               teams={session.teams}
               myTeamIdx={teamIdx}
               onAnswer={(index) => sendIntent(code, token, 'turnWizardAnswer', { index }).catch(() => {})}
+              onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+              onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+            />
+          )}
+        {/* Duel « Chroniques de la Terre du Milieu » (lieu → événement) : la carte
+            partagée sur l'écran partagé, les DEUX duellistes répondent à la carte
+            ICI (le défenseur n'est pas l'équipe active). Reward/close au téléphone. */}
+        {owned && !!token && session.controller && session.status === 'playing'
+          && session.turn?.fight?.mapevent
+          && ['minigame', 'reward', 'result'].includes(session.turn.fight.phase)
+          && (session.turn.fight.attackerIndex === teamIdx || session.turn.fight.defenderIndex === teamIdx)
+          && !team.hacked
+          && (
+            <MapeventDuelView
+              fight={session.turn.fight}
+              teams={session.teams}
+              myTeamIdx={teamIdx}
+              onAnswer={(choiceId) => sendIntent(code, token, 'turnMapeventAnswer', { choiceId }).catch(() => {})}
               onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
               onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
             />

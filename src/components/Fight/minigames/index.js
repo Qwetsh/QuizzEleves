@@ -569,6 +569,15 @@ export function wizardDuelFor(subject) {
   return resolveEntry(subject)?.engine === 'wizard';
 }
 
+// Le thème `subject` résout-il (même cascade) le duel « LIEU → ÉVÉNEMENT »
+// (Chroniques de la Terre du Milieu) ? Utilisé par fightBegin pour router les
+// surfaces téléphone ET en ligne vers le duel piloté par le store
+// (mapeventFightHandlers) — les DEUX camps voient la MÊME cible marquée sur la
+// carte (course au bon événement) depuis leur appareil, l'hôte arbitre.
+export function mapeventDuelFor(subject) {
+  return resolveEntry(subject)?.engine === 'mapevent';
+}
+
 // Exposé pour les tests / le simulateur : liste des thèmes câblés.
 export const MINIGAME_THEMES = Object.keys(THEME_MINIGAMES);
 

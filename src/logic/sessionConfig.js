@@ -311,6 +311,20 @@ export function buildTurnPayload(s) {
         hit: sf.wizard.hit || null,
         winner: sf.wizard.winner || null,
       } : null,
+      // Duel « LIEU → ÉVÉNEMENT » (Terre du Milieu, surfaces téléphone ET en
+      // ligne) — ANTI-TRICHE : `target` (le lieu marqué) et `choices` (4 events
+      // mélangés, SANS flag du bon) sont l'ÉNONCÉ, donc publics. Le secret =
+      // `correctId` de la manche en cours — il vit module-level dans
+      // mapeventFightHandlers et n'apparaît QU'À la révélation (reveal.correctId,
+      // manche finie). Rien à stripper ici : `choices` ne porte aucun indice.
+      mapevent: sf.mapevent ? {
+        roundNo: sf.mapevent.roundNo,
+        universe: sf.mapevent.universe,
+        target: sf.mapevent.target,
+        choices: sf.mapevent.choices,
+        locked: sf.mapevent.locked,
+        reveal: sf.mapevent.reveal || null,
+      } : null,
       // Combat Pokémon (surface « écran + téléphones ») — ANTI-TRICHE : le
       // CONTENU des choix secrets d'un tour ne part jamais, seulement des
       // accusés `chosen` (le téléphone adverse voit juste « a choisi »). Le

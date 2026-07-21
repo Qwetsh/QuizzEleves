@@ -104,6 +104,11 @@ function stripFightSecret(showFight) {
   // showFight.hack ne publie que les `choices` de chaque trou (les 4 tokens
   // visibles), jamais les `answer` (la réponse + l'état de remplissage vivent
   // module-level dans hackFightHandlers).
+  // De même le duel « LIEU → ÉVÉNEMENT » (mapevent) tourne en ligne : on NE le
+  // strippe PAS — `target` (le lieu marqué) et `choices` (4 events sans indiquer
+  // le bon) sont l'énoncé, et le `correctId` de la manche vit module-level dans
+  // mapeventFightHandlers (jamais dans showFight avant reveal). Aucun secret à
+  // diffuser : le miroir peut recevoir showFight.mapevent tel quel.
   if (out.memory || out.pkmn) {
     const { memory, pkmn, ...rest } = out;
     out = rest;

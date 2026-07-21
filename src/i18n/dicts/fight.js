@@ -124,6 +124,11 @@ export default {
   'fight.lotrevent.wrong': { fr: 'Raté !', en: 'Missed!' },
   'fight.lotrevent.hint': { fr: "Premier à toucher le bon événement ! Une erreur = court verrouillage.", en: 'First to tap the right event! A mistake = short lock.' },
   'fight.lotrevent.empty': { fr: 'Pas assez de lieux pour jouer…', en: 'Not enough places to play…' },
+  // Runtime multi-surface (MapeventDuelStage / MapeventDuelView) — duel piloté par le store.
+  'fight.mapevent.phonesHint': { fr: 'Répondez sur vos téléphones !', en: 'Answer on your phones!' },
+  'fight.lotrevent.youWin': { fr: 'Tu l\'emportes !', en: 'You win!' },
+  'fight.lotrevent.youLose': { fr: 'Raté…', en: 'Missed…' },
+  'fight.lotrevent.waitNext': { fr: 'Manche suivante…', en: 'Next round…' },
 
   // --- MotLePlusLong (Le Mot le Plus Long) ---
   'fight.mot.wordValidated': { fr: 'Mot validé — {n} lettres ✔', en: 'Word confirmed — {n} letters ✔' },

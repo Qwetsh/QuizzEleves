@@ -13,6 +13,7 @@ import PkmnDuelStage from './PkmnDuelStage';
 import ChessDuelStage from './ChessDuelStage';
 import HackDuelStage from './HackDuelStage';
 import WizardDuelStage from './WizardDuelStage';
+import MapeventDuelStage from './MapeventDuelStage';
 import TeamAvatar from '../TeamAvatar';
 import { RewardCard } from './RewardChoices';
 import DuelRaceView from '../Online/DuelRaceView';
@@ -114,7 +115,13 @@ export default function FightModal() {
         {showFight.phase === 'minigame' && showFight.wizard && (
           <WizardDuelStage fight={showFight} attacker={attacker} defender={defender} />
         )}
-        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && !showFight.chess && !showFight.hack && !showFight.wizard && (
+        {/* Duel « Chroniques de la Terre du Milieu » (lieu → événement) piloté par
+            le store (téléphones / en ligne) : la carte partagée sur l'écran
+            partagé, chaque duelliste répond sur son appareil. */}
+        {showFight.phase === 'minigame' && showFight.mapevent && (
+          <MapeventDuelStage fight={showFight} attacker={attacker} defender={defender} />
+        )}
+        {showFight.phase === 'minigame' && !showFight.race && !showFight.curio && !showFight.memory && !showFight.pkmn && !showFight.chess && !showFight.hack && !showFight.wizard && !showFight.mapevent && (
           <MinigameStage fight={showFight} attacker={attacker} defender={defender} />
         )}
         {(showFight.phase === 'reward' || showFight.phase === 'result') && (

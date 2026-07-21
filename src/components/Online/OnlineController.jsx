@@ -12,6 +12,7 @@ import CurioPlaceView from '../Fight/CurioPlaceView';
 import ChessDuelView from '../Fight/ChessDuelView';
 import HackDuelView from '../Fight/HackDuelView';
 import WizardDuelView from '../Fight/WizardDuelView';
+import MapeventDuelView from '../Fight/MapeventDuelView';
 
 // `host` : monté dans la FENÊTRE DE L'HÔTE (qui est un joueur comme les autres).
 // La vue de duel y est sautée : FightModal (plein écran hôte) la rend déjà via
@@ -83,6 +84,21 @@ export default function OnlineController({ code, ctrl, host = false }) {
         teams={ctrl.teams}
         myTeamIdx={ownedIdx}
         onAnswer={(index) => sendIntent(code, token, 'turnWizardAnswer', { index }).catch(() => {})}
+        onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
+        onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
+      />
+    );
+  }
+  // Duel « Chroniques de la Terre du Milieu » (lieu → événement) : les deux
+  // camps répondent à la carte partagée. L'hôte arbitre justesse/vitesse ;
+  // reward/result gérés par la vue (comme chess/hack/wizard).
+  if (fight.mapevent && ['minigame', 'reward', 'result'].includes(fight.phase)) {
+    return (
+      <MapeventDuelView
+        fight={fight}
+        teams={ctrl.teams}
+        myTeamIdx={ownedIdx}
+        onAnswer={(choiceId) => sendIntent(code, token, 'turnMapeventAnswer', { choiceId }).catch(() => {})}
         onReward={(c) => sendIntent(code, token, 'turnFightReward', { choice: c }).catch(() => {})}
         onClose={() => sendIntent(code, token, 'turnFightClose', {}).catch(() => {})}
       />

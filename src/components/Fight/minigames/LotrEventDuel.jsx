@@ -1,9 +1,10 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { LOTR_EVENTS } from '../../../data/lotrEvents';
 import { getUniverse } from '../../../data/universes';
 import { shuffle } from '../../../data/fightData';
 import { soundCorrect, soundWrong } from '../../../logic/sounds';
 import TeamAvatar from '../../TeamAvatar';
+import LotrEventMap from './LotrEventMap';
 import { useT } from '../../../i18n';
 
 /**
@@ -17,9 +18,6 @@ import { useT } from '../../../i18n';
  * Données : LOTR_EVENTS = [{ place, x, y, event, eventEn }] (x,y normalisés
  * 0..1 sur la carte terre_du_milieu_atlas). Aucune dépendance DB : bundlé.
  */
-
-// Leaflet exige un DOM : chargé en LAZY pour rester absent des tests node.
-const UniverseMap = lazy(() => import('./UniverseMap.jsx'));
 
 const WRONG_LOCK_MS = 1400;
 
@@ -127,9 +125,6 @@ export default function LotrEventDuel({ attacker, defender, round, onRoundWin })
   };
 
   const target = draw.target;
-  // Marqueur PULSANT à la cible + cadrage serré sur ce point (fit = un seul
-  // point → UniverseMap zoome dessus). Halo animé via badge personnalisé ci-bas.
-  const mapFallback = <div style={{ width: '100%', height: '100%', background: '#101c26' }} />;
 
   const renderSide = (side, team) => {
     const isLocked = locked[side];
@@ -190,36 +185,9 @@ export default function LotrEventDuel({ attacker, defender, round, onRoundWin })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
-      {/* Le « spectacle » : la carte avec le lieu qui pulse */}
+      {/* Le « spectacle » : la carte avec le lieu qui pulse (composant réutilisable). */}
       <div style={{ position: 'relative', flex: '1 1 42%', minHeight: 0, borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.35)' }}>
-        {universe ? (
-          <Suspense fallback={mapFallback}>
-            <UniverseMap
-              key="lotrevent-map"
-              universe={universe}
-              pins={[]}
-              badges={[{ pos: { x: target.x, y: target.y }, label: '★', color: '#f3c969' }]}
-              target={{ x: target.x, y: target.y }}
-              fit={[
-                { x: Math.max(0, target.x - 0.12), y: Math.max(0, target.y - 0.12) },
-                { x: Math.min(1, target.x + 0.12), y: Math.min(1, target.y + 0.12) },
-              ]}
-            />
-          </Suspense>
-        ) : mapFallback}
-        {/* Halo pulsant surimposé (indépendant de Leaflet, toujours visible) */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute', left: `${target.x * 100}%`, top: `${target.y * 100}%`,
-            width: 46, height: 46, marginLeft: -23, marginTop: -23,
-            borderRadius: '50%', border: '3px solid #f3c969',
-            boxShadow: '0 0 18px 6px rgba(243,201,105,0.7)',
-            pointerEvents: 'none', zIndex: 3,
-            animation: 'lotrPulse 1.4s ease-out infinite',
-          }}
-        />
-        <style>{'@keyframes lotrPulse{0%{transform:scale(0.7);opacity:1}70%{transform:scale(1.5);opacity:0.25}100%{transform:scale(0.7);opacity:1}}'}</style>
+        <LotrEventMap universe={universe} x={target.x} y={target.y} />
         {/* Bandeau énoncé */}
         <div style={{
           position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
