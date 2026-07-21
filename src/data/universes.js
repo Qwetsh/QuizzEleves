@@ -161,6 +161,27 @@ export const UNIVERSES = {
     attribution: 'Carte placeholder (usage perso, à remplacer avant publication)',
     spots: () => CURIO_SPOTS.terre_du_milieu_atlas || [],
   },
+
+  // --- Skyrim (Bordeciel) — carte parchemin navigable (The Elder Scrolls V) ---
+  // ⚠️ CARTE PLACEHOLDER USAGE PERSO : art de carte de la province de Bordeciel
+  // (source Elder Scrolls Fandom, IP Bethesda) — assumée par l'utilisateur pour
+  // son usage personnel, À REMPLACER par une carte proprement licenciée AVANT
+  // toute publication (comme les autres univers « fan » : la carte reste HORS
+  // dépôt git, seules les tuiles vivent dans le bucket). Les spots sont des LIEUX
+  // NOMMÉS (kind:'label', render:'label' en DB) : le duel affiche « Place : X »
+  // et demande de pointer le lieu sur la carte (pas de photo). Tuiles générées
+  // par make-tiles.mjs (carte parchemin propre 2560×1920, PAS de --ref : cadre = image
+  // → calage direct des x,y normalisés). score.k ≈ largeur/8 → À CALIBRER en jouant.
+  skyrim: {
+    id: 'skyrim',
+    crs: 'flat',
+    map: { type: 'tiles', path: 'maps/skyrim', w: 2560, h: 1920, maxNativeZoom: 4 },
+    mapUnits: 100,
+    score: { max: 5000, freeDist: 1.5, k: 18 },
+    unit: 'lieues',
+    attribution: 'Carte : Bethesda (The Elder Scrolls V: Skyrim), via Elder Scrolls Fandom — placeholder usage perso, à remplacer avant publication',
+    spots: () => CURIO_SPOTS.skyrim || [],
+  },
 };
 
 export function getUniverse(id) {
