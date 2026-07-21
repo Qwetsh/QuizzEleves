@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Calibrage — lieux de la Terre du Milieu (atlas)</title>
+<title>Éditeur d'événements — Terre du Milieu (atlas)</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
@@ -11,111 +11,149 @@
   #panel {
     position: absolute; top: 10px; right: 10px; z-index: 1000; width: 320px;
     background: rgba(255,255,255,0.96); border: 1px solid #b48a55; border-radius: 10px;
-    padding: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); font-size: 13px;
+    padding: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); font-size: 13px; max-height: 92vh; overflow: auto;
   }
   #panel h1 { font-size: 15px; margin: 0 0 6px; color: #5a4a28; }
   #panel p { margin: 6px 0; line-height: 1.4; color: #333; }
   #panel button { padding: 8px 12px; border-radius: 8px; border: none; background: #5a4a28; color: #fff; cursor: pointer; font-weight: 700; }
   #panel button.ghost { background: #ddd; color: #333; }
-  #out { width: 100%; height: 150px; margin-top: 8px; font-family: monospace; font-size: 11px; box-sizing: border-box; display: none; }
+  #panel button.add { background: #2f7a3f; }
+  #panel button.add.on { background: #d9791f; box-shadow: 0 0 0 3px rgba(217,121,31,0.35); }
+  #out { width: 100%; height: 160px; margin-top: 8px; font-family: monospace; font-size: 11px; box-sizing: border-box; display: none; }
   .lbl { background: rgba(255,254,251,0.92); border: 1.5px solid #7a2246; border-radius: 6px; padding: 1px 6px; font-size: 12px; font-weight: 700; color: #3a2c14; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-  #status { position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.7); color: #ffd; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-family: monospace; }
+  .lbl.neuf { border-color: #2f7a3f; }
+  .editor textarea { width: 240px; height: 54px; box-sizing: border-box; font-size: 13px; }
+  .editor .row { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+  .editor .del { background: #b3261e; color: #fff; border: none; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+  .editor small { color: #666; }
+  #status { position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.75); color: #ffd; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-family: monospace; }
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="panel">
-  <h1>🗺️ Calibrage des lieux</h1>
-  <p><b>Glisse chaque étiquette</b> pile sur son lieu (le symbole/point de la carte, pas forcément le texte). Zoome autant que tu veux.</p>
-  <p>Quand tout est bon → <b>Exporter</b>, copie le JSON, et renvoie-le-moi.</p>
-  <p style="display:flex; gap:8px;">
+  <h1>📜 Éditeur d'événements</h1>
+  <p><b>Déplace</b> un marqueur pour corriger sa position. <b>Clique</b> dessus pour éditer/supprimer son événement.</p>
+  <p><b>➕ Ajouter</b> puis clique sur la carte pour poser un nouvel événement, et tape juste son <b>titre</b>.</p>
+  <p style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button id="add" class="add">➕ Ajouter</button>
     <button id="export">📋 Exporter</button>
     <button id="copy" class="ghost">Copier</button>
   </p>
+  <p style="color:#666"><small>Les 4 choix et la bonne réponse sont générés automatiquement : chaque événement sert de leurre aux autres. Il te suffit d'indiquer <b>où</b> et <b>quoi</b> ; je peaufine le texte + l'anglais.</small></p>
   <textarea id="out" readonly></textarea>
 </div>
-<div id="status">Clique sur la carte pour lire des coordonnées.</div>
+<div id="status">Prêt. Clique sur la carte à vide pour lire des coordonnées.</div>
+
+<script id="events-data" type="application/json">
+[
+  {"place":"Fondcombe (Imladris)","x":0.458,"y":0.227,"event":"Le Conseil d'Elrond décide de détruire l'Anneau Unique","eventEn":"The Council of Elrond decides to destroy the One Ring"},
+  {"place":"Le Mont Destin (Orodruin)","x":0.729,"y":0.595,"event":"L'Anneau Unique est détruit dans les flammes","eventEn":"The One Ring is destroyed in the fire"},
+  {"place":"Le Gouffre de Helm (Fort-le-Cor)","x":0.451,"y":0.521,"event":"La bataille du Gouffre de Helm contre les Uruk-hai","eventEn":"The Battle of Helm's Deep against the Uruk-hai"},
+  {"place":"Isengard (Orthanc)","x":0.417,"y":0.482,"event":"Les Ents assaillent Saroumane et brisent le barrage","eventEn":"The Ents storm Saruman and break the dam"},
+  {"place":"Minas Tirith","x":0.638,"y":0.597,"event":"La bataille des Champs du Pelennor devant la cité blanche","eventEn":"The Battle of the Pelennor Fields before the white city"},
+  {"place":"La Moria (Khazad-dûm)","x":0.440,"y":0.342,"event":"Gandalf tombe dans l'abîme avec le Balrog","eventEn":"Gandalf falls into the abyss with the Balrog"},
+  {"place":"La Lothlórien","x":0.474,"y":0.352,"event":"Galadriel offre ses présents à la Communauté","eventEn":"Galadriel gives her gifts to the Fellowship"},
+  {"place":"Erebor (Mont Solitaire)","x":0.629,"y":0.168,"event":"La Bataille des Cinq Armées devant la montagne des Nains","eventEn":"The Battle of the Five Armies before the Dwarves' mountain"},
+  {"place":"Esgaroth (Bourg-du-Lac)","x":0.628,"y":0.176,"event":"Bard l'Archer terrasse le dragon Smaug d'une flèche noire","eventEn":"Bard the Bowman slays the dragon Smaug with a black arrow"},
+  {"place":"Barad-dûr","x":0.752,"y":0.581,"event":"L'Œil de Sauron veille au sommet de la Tour Sombre","eventEn":"The Eye of Sauron watches atop the Dark Tower"},
+  {"place":"Minas Morgul","x":0.697,"y":0.594,"event":"L'armée du Roi-Sorcier sort en guerre de la cité maudite","eventEn":"The Witch-king's army marches to war from the cursed city"},
+  {"place":"Osgiliath","x":0.640,"y":0.598,"event":"Faramir défend les ruines de l'ancienne capitale du Gondor","eventEn":"Faramir defends the ruins of Gondor's old capital"},
+  {"place":"Le Mont Venteux (Amon Sûl)","x":0.317,"y":0.261,"event":"Frodon est blessé par la lame du Roi-Sorcier","eventEn":"Frodo is wounded by the Witch-king's blade"},
+  {"place":"Bree","x":0.295,"y":0.259,"event":"Frodon rencontre Grand-Pas à l'auberge du Poney Fringant","eventEn":"Frodo meets Strider at the Prancing Pony inn"},
+  {"place":"La Comté","x":0.245,"y":0.283,"event":"Bilbon disparaît par surprise lors de son anniversaire","eventEn":"Bilbo vanishes by surprise during his birthday party"},
+  {"place":"Edoras","x":0.514,"y":0.528,"event":"Gandalf libère le roi Théoden de l'emprise de Saroumane","eventEn":"Gandalf frees King Théoden from Saruman's hold"},
+  {"place":"Dunharrow (Dunhart)","x":0.514,"y":0.533,"event":"Aragorn s'engage sur le Chemin des Morts","eventEn":"Aragorn takes the Paths of the Dead"},
+  {"place":"La Fangorn","x":0.462,"y":0.372,"event":"Merry et Pippin rencontrent l'Ent Sylvebarbe","eventEn":"Merry and Pippin meet the Ent Treebeard"},
+  {"place":"La Forêt Noire (Mirkwood)","x":0.540,"y":0.345,"event":"Bilbon et les Nains sont piégés par les araignées géantes","eventEn":"Bilbo and the Dwarves are trapped by the giant spiders"},
+  {"place":"Le Palais de Thranduil","x":0.598,"y":0.185,"event":"Les Nains s'évadent des cachots enfermés dans des tonneaux","eventEn":"The Dwarves escape the dungeons hidden inside barrels"},
+  {"place":"Les Havres Gris (Mithlond)","x":0.165,"y":0.276,"event":"Frodon embarque vers les Terres Immortelles","eventEn":"Frodo sails away to the Undying Lands"},
+  {"place":"Les Champs aux Iris (Gladden)","x":0.505,"y":0.298,"event":"Isildur est tué et l'Anneau se perd dans le fleuve","eventEn":"Isildur is slain and the Ring is lost in the river"},
+  {"place":"Dol Amroth","x":0.473,"y":0.664,"event":"Le prince Imrahil mène ses chevaliers au secours du Gondor","eventEn":"Prince Imrahil leads his knights to Gondor's aid"},
+  {"place":"Pelargir","x":0.638,"y":0.655,"event":"Aragorn s'empare de la flotte des corsaires d'Umbar","eventEn":"Aragorn seizes the corsair fleet of Umbar"}
+]
+</script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Doit correspondre EXACTEMENT à src/data/universes.js (univers terre_du_milieu_atlas)
-// et à makeSpace() de UniverseMap.jsx (mode tuiles).
+// Doit correspondre EXACTEMENT à universes.js (terre_du_milieu_atlas) et à
+// makeSpace() de UniverseMap.jsx (mode tuiles).
 const W = 8740, H = 8208, Z = 6, S = 2 ** Z;
 const TILE_BASE = 'https://tppecozmygtjmbcdqgfc.supabase.co/storage/v1/object/public/quete-spots/maps/terre_du_milieu_atlas';
 const toLatLng = (x, y) => [-(y * H) / S, (x * W) / S];
 const fromLatLng = (ll) => ({ x: (ll.lng * S) / W, y: (-ll.lat * S) / H });
 const r4 = (v) => Math.round(v * 10000) / 10000;
+const short = (t) => { t = (t || '(nouvel événement)').trim(); return t.length > 34 ? t.slice(0, 33) + '…' : t; };
 
-// Lieux actuels (label, x, y) — à repositionner.
-const SPOTS = [
-  { label: 'Barad-dûr', x: 0.752, y: 0.581 },
-  { label: 'Bree', x: 0.295, y: 0.259 },
-  { label: 'Cair Andros', x: 0.632, y: 0.58 },
-  { label: 'Caras Galadhon', x: 0.473, y: 0.356 },
-  { label: 'Dale (Val)', x: 0.632, y: 0.171 },
-  { label: 'Dol Amroth', x: 0.473, y: 0.664 },
-  { label: 'Dunharrow (Dunhart)', x: 0.514, y: 0.533 },
-  { label: 'Edoras', x: 0.514, y: 0.528 },
-  { label: 'Erebor (Mont Solitaire)', x: 0.629, y: 0.168 },
-  { label: 'Esgaroth (Bourg-du-Lac)', x: 0.628, y: 0.176 },
-  { label: 'Fondcombe (Imladris)', x: 0.458, y: 0.227 },
-  { label: 'Forlond', x: 0.058, y: 0.263 },
-  { label: 'Isengard (Orthanc)', x: 0.417, y: 0.482 },
-  { label: 'La Comté', x: 0.245, y: 0.283 },
-  { label: 'La Fangorn', x: 0.462, y: 0.372 },
-  { label: 'La Forêt Noire (Mirkwood)', x: 0.54, y: 0.345 },
-  { label: 'La Lothlórien', x: 0.474, y: 0.352 },
-  { label: 'La Moria (Khazad-dûm)', x: 0.44, y: 0.342 },
-  { label: 'Le Gouffre de Helm (Fort-le-Cor)', x: 0.451, y: 0.521 },
-  { label: 'Le Mont Destin (Orodruin)', x: 0.729, y: 0.595 },
-  { label: 'Le Mont Venteux (Amon Sûl)', x: 0.317, y: 0.261 },
-  { label: 'Le Palais de Thranduil', x: 0.598, y: 0.185 },
-  { label: 'Le Vieux Gué (Old Ford)', x: 0.52, y: 0.243 },
-  { label: 'Les Champs aux Iris (Gladden)', x: 0.505, y: 0.298 },
-  { label: "Les Gués de l'Isen", x: 0.428, y: 0.505 },
-  { label: 'Les Havres Gris (Mithlond)', x: 0.165, y: 0.276 },
-  { label: 'Les Monts de Fer', x: 0.802, y: 0.182 },
-  { label: 'Minas Morgul', x: 0.697, y: 0.594 },
-  { label: 'Minas Tirith', x: 0.638, y: 0.597 },
-  { label: 'Osgiliath', x: 0.64, y: 0.598 },
-  { label: 'Ost-in-Edhil (Eregion)', x: 0.412, y: 0.345 },
-  { label: 'Pelargir', x: 0.638, y: 0.655 },
-  { label: 'Sarn Ford (Gué de Sarn)', x: 0.276, y: 0.293 },
-  { label: 'Tharbad', x: 0.32, y: 0.376 },
-  { label: 'Umbar', x: 0.534, y: 0.87 },
-];
+const EVENTS = JSON.parse(document.getElementById('events-data').textContent);
 
 const bounds = L.latLngBounds([[-H / S, 0], [0, W / S]]);
 const map = L.map('map', { crs: L.CRS.Simple, minZoom: -6, maxZoom: Z + 2, maxBounds: bounds.pad(0.2), attributionControl: false });
 L.tileLayer(TILE_BASE + '/{z}/{x}/{y}.webp', { tileSize: 256, minNativeZoom: 0, maxNativeZoom: Z, bounds, noWrap: true }).addTo(map);
 map.fitBounds(bounds);
 
-const markers = SPOTS.map((sp) => {
-  const m = L.marker(toLatLng(sp.x, sp.y), { draggable: true, autoPan: true }).addTo(map);
-  m.bindTooltip(sp.label, { permanent: true, direction: 'right', className: 'lbl', offset: [8, 0] });
-  m._spot = sp;
-  m.on('dragend', () => {
-    const n = fromLatLng(m.getLatLng());
-    m._spot.x = r4(n.x); m._spot.y = r4(n.y);
-    status(m._spot.label + ' → x=' + m._spot.x + ' y=' + m._spot.y);
-  });
-  return m;
+const status = (t) => { document.getElementById('status').textContent = t; };
+const items = []; // { data, marker }
+
+function makeEditor(item) {
+  const box = document.createElement('div');
+  box.className = 'editor';
+  const ta = document.createElement('textarea');
+  ta.value = item.data.event || '';
+  ta.placeholder = "Titre de l'événement (ex. « Frodon reçoit Dard »)";
+  ta.oninput = () => { item.data.event = ta.value; item.marker.setTooltipContent(short(ta.value)); };
+  const row = document.createElement('div'); row.className = 'row';
+  const small = document.createElement('small');
+  const upd = () => { const n = fromLatLng(item.marker.getLatLng()); small.textContent = 'x=' + r4(n.x) + '  y=' + r4(n.y); };
+  upd();
+  item._updCoord = upd;
+  const del = document.createElement('button'); del.className = 'del'; del.textContent = '🗑 Supprimer';
+  del.onclick = () => { map.removeLayer(item.marker); const i = items.indexOf(item); if (i >= 0) items.splice(i, 1); status('Supprimé.'); };
+  row.appendChild(small); row.appendChild(del);
+  box.appendChild(ta); box.appendChild(row);
+  return box;
+}
+
+function addMarker(data, isNew) {
+  const m = L.marker(toLatLng(data.x, data.y), { draggable: true, autoPan: true }).addTo(map);
+  m.bindTooltip(short(data.event), { permanent: true, direction: 'right', className: 'lbl' + (isNew ? ' neuf' : ''), offset: [8, 0] });
+  const item = { data, marker: m };
+  m.bindPopup(() => makeEditor(item), { minWidth: 260 });
+  m.on('dragend', () => { const n = fromLatLng(m.getLatLng()); data.x = r4(n.x); data.y = r4(n.y); if (item._updCoord) item._updCoord(); status((data.event || 'lieu') + ' → x=' + data.x + ' y=' + data.y); });
+  items.push(item);
+  return item;
+}
+
+EVENTS.forEach((e) => addMarker(e, false));
+
+// Mode ajout : le prochain clic sur la carte crée un événement.
+let addMode = false;
+const addBtn = document.getElementById('add');
+addBtn.onclick = () => { addMode = !addMode; addBtn.classList.toggle('on', addMode); status(addMode ? 'Clique sur la carte pour poser un événement.' : 'Mode ajout désactivé.'); };
+map.on('click', (e) => {
+  const n = fromLatLng(e.latlng);
+  if (addMode) {
+    const item = addMarker({ place: '', x: r4(n.x), y: r4(n.y), event: '', eventEn: '' }, true);
+    addMode = false; addBtn.classList.remove('on');
+    item.marker.openPopup();
+    status('Nouvel événement posé — tape son titre.');
+  } else {
+    status('clic : x=' + r4(n.x) + ' y=' + r4(n.y));
+  }
 });
 
-function status(t) { document.getElementById('status').textContent = t; }
-map.on('click', (e) => { const n = fromLatLng(e.latlng); status('clic : x=' + r4(n.x) + ' y=' + r4(n.y)); });
-
 document.getElementById('export').onclick = () => {
-  const data = SPOTS.map((s) => ({ label: s.label, x: r4(s.x), y: r4(s.y) }));
+  const data = items.map((it) => ({ place: it.data.place || '', x: r4(it.data.x), y: r4(it.data.y), event: (it.data.event || '').trim(), eventEn: it.data.eventEn || '' }));
   const out = document.getElementById('out');
   out.style.display = 'block';
   out.value = JSON.stringify(data, null, 2);
   out.select();
+  status(data.length + ' événements exportés.');
 };
 document.getElementById('copy').onclick = () => {
   const out = document.getElementById('out');
   if (!out.value) document.getElementById('export').click();
-  out.select(); document.execCommand('copy'); status('Copié dans le presse-papier ✓');
+  out.select(); document.execCommand('copy'); status('Copié ✓ — renvoie-le-moi.');
 };
 </script>
 </body>
