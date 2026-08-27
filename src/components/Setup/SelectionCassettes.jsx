@@ -50,6 +50,9 @@ import { THEMES } from '../../data/themes';
 import { tg } from '../../i18n';
 import { EXTENSIONS, extOn } from '../../extensions/registry';
 import { EVENTS } from '../../data/events';
+// Easter egg « Nordlys » (escape game) : indice console + cassette secrète.
+// Autonome — voir nordlys/NordlysShelf.jsx ; aucun impact sur le flux normal.
+import NordlysShelf, { useNordlysEgg, NordlysVoile } from './nordlys/NordlysShelf';
 
 const FONT_DISPLAY = "'Archivo Black', system-ui, sans-serif";
 const FONT_UI = "'Hanken Grotesk', system-ui, sans-serif";
@@ -473,6 +476,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
   // VALIDE la composition dans le store (onlineCompose) et y retourne.
   const onlineMode = main && connectionMode === 'online';
   const itemsOn = extOn(extensions, 'equipment'); // coffre/objets dépendent de l'extension « Objets »
+  // Easter egg Nordlys : indice console au montage + window.lecteur (cet écran
+  // seulement) ; `unlocked` fait apparaître le rayon secret en bas du bac.
+  const nordlys = useNordlysEgg();
 
   // Composition : en ligne, restaurée depuis le store (aller-retour lobby ↔
   // console sans perdre les cassettes insérées) ; sinon state local pur.
@@ -1028,7 +1034,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               création d'équipes ici, téléphones = lobby QR. (En ligne, l'onglet
               n'existe pas : les joueurs vivent dans l'écran LOBBY dédié.) */}
           <div className="qm-console-panel" style={{ flex: 1, minHeight: 0, overflow: 'auto', ...panelInset }}>
-            {phoneMode ? <LobbyPanel /> : soloConfig ? (
+            {phoneMode ? <LobbyPanel getPerimeter={() => (loaded.length ? perimeterFor(levels) : null)} /> : soloConfig ? (
               <>
                 <div style={{ fontFamily: "'VT323', monospace", fontSize: 16, letterSpacing: 2, color: '#5a4023', textTransform: 'uppercase', marginBottom: 8 }}>Ton équipe</div>
                 <TeamCustomization indices={[0]} />
@@ -1131,6 +1137,8 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
   return (
     <div ref={outerRef} className="qm-cassettes" style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#160f08', color: '#241a10', fontFamily: FONT_UI, WebkitFontSmoothing: 'antialiased' }}>
+      {/* La voile (easter egg Nordlys) : à laisser telle quelle, elle se lit au F12. */}
+      <NordlysVoile />
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(130% 130% at 50% 28%,#2a1d0c,#0d0703)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%,-50%) scale(${scale})`, width: 1600, height: 900, display: 'grid', gridTemplateRows: main ? 'auto auto minmax(0,1fr)' : 'auto minmax(0,1fr)', background: '#e3d0aa', overflow: 'hidden', borderRadius: 8, boxShadow: '0 0 0 6px #120c06,0 40px 90px rgba(0,0,0,.7)' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(135deg,rgba(210,98,43,.05) 0 22px,transparent 22px 44px),repeating-linear-gradient(45deg,rgba(22,153,140,.05) 0 22px,transparent 22px 44px)', pointerEvents: 'none' }} />
@@ -1246,7 +1254,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
               <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 1, color: '#5a3a24' }}>LE BAC À CASSETTES — FEUILLETTE ET SURVOLE</div>
               <div style={{ fontFamily: FONT_MONO, fontSize: 16, color: '#8a7656', letterSpacing: 1 }}>GLISSE UNE K7 DANS LE CURIOSCOPE →</div>
             </div>
-            <div style={{ flex: 1, minHeight: 0, position: 'relative', border: '4px solid #4a3019', borderRadius: 12, backgroundColor: '#6e4a2c', backgroundImage: 'repeating-linear-gradient(90deg,rgba(0,0,0,.09) 0 2px,transparent 2px 68px),repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 5px)', boxShadow: 'inset 0 4px 0 #875b36,inset 0 -16px 0 rgba(0,0,0,.28),0 14px 28px rgba(70,40,16,.3)' }}>
+            {/* data-nl-bay : repère de l'easter egg Nordlys — la séquence de
+                déblocage (trou noir) est portée ici, et ne couvre que le bac. */}
+            <div data-nl-bay style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', border: '4px solid #4a3019', borderRadius: 12, backgroundColor: '#6e4a2c', backgroundImage: 'repeating-linear-gradient(90deg,rgba(0,0,0,.09) 0 2px,transparent 2px 68px),repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 5px)', boxShadow: 'inset 0 4px 0 #875b36,inset 0 -16px 0 rgba(0,0,0,.28),0 14px 28px rgba(70,40,16,.3)' }}>
               {/* vis d'angle + filigrane (décor, sous le contenu) */}
               <div style={{ position: 'absolute', top: 9, left: 9, width: 9, height: 9, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#b98d5f,#5a3a20)', boxShadow: '0 1px 0 rgba(0,0,0,.4)', zIndex: 5, pointerEvents: 'none' }} />
               <div style={{ position: 'absolute', top: 9, right: 9, width: 9, height: 9, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%,#b98d5f,#5a3a20)', boxShadow: '0 1px 0 rgba(0,0,0,.4)', zIndex: 5, pointerEvents: 'none' }} />
@@ -1254,7 +1264,7 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
 
               {/* CONTENU — 3 colonnes. Clic sur un séparateur (plaque rétro) =
                   déplie/replie ses cassettes « vue du dessus » à la verticale. */}
-              <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', overflowX: 'hidden', padding: '38px 16px 16px' }}>
+              <div data-nl-rack style={{ position: 'absolute', inset: 0, overflowY: 'auto', overflowX: 'hidden', padding: '38px 16px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'stretch', minHeight: '100%' }}>
                   {(() => {
                     const cols = [[], [], []];
@@ -1365,6 +1375,9 @@ export default function SelectionCassettes({ voies = 6, reperesRatio = true, liv
                     return out;
                   })()}
                 </div>
+                {/* Rayon secret Nordlys (easter egg) — rien tant que la cassette
+                    n'a pas été « insérée » via la console. */}
+                <NordlysShelf unlocked={nordlys.unlocked} />
               </div>
             </div>
           </section>

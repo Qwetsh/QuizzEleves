@@ -91,6 +91,12 @@ export function stopMusic() {
   currentKey = null;
 }
 
+// Piste en cours (ou null) — utilisé par la cassette Nordlys pour couper la
+// musique du Curioscope pendant le mini-jeu et la reprendre à l'éjection.
+export function currentMusic() {
+  return currentKey;
+}
+
 export function setMusicVolume(v) {
   volume = clamp01(v);
   if (!currentKey) return;
