@@ -1430,7 +1430,7 @@ export default function NordlysDrakkar3D({ onWin }) {
           <div className="nl-victory-inscription">
             <div className="nl-victory-runes">ᚹᚨᛚᚲᛃᚱᛁᛖ</div>
             <h2>Terre en vue</h2>
-            <p className="nl-victory-word">60.8631<span>᛭</span>7.1136</p>
+            <p className="nl-victory-word">60.3913<span>᛭</span>5.3221</p>
             <p className="nl-victory-sub">Il n'y a plus qu'à aller voir où nous sommes.</p>
           </div>
         </div>
