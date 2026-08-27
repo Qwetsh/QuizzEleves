@@ -10,6 +10,7 @@ import { SUBJECTS, SUBJECT_KEYS } from '../../data/subjects';
 import { POWERS } from '../../data/powers';
 import { ITEMS } from '../../data/items';
 import { itemImg } from '../../logic/itemAssets';
+import { itemEffectLines } from '../../logic/effectText';
 import { locName, locDesc } from '../../i18n/content';
 import TeamAvatar from '../TeamAvatar';
 import { merchantPrice } from '../../store/eventHandlers';
@@ -32,18 +33,34 @@ function tileLabel(t, en, T) {
   return { name: t.label || t.type || '…', icon: '🎲', color: '#e0a458' };
 }
 
-// Compte à rebours local d'AFFICHAGE depuis la deadline publiée (l'horloge de
-// référence est le TBI : à 0, c'est LUI qui révèle — le téléphone reflète).
-function useCountdown(deadline, frozen) {
-  const calc = () => (deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0);
+// Compte à rebours local d'AFFICHAGE, IMMUNISÉ AU DÉCALAGE D'HORLOGE. `deadline`
+// et `publishedAt` sont deux timestamps de l'HÔTE → leur différence (temps restant
+// à la publication) ne dépend pas de l'horloge du téléphone. On ré-ancre ce restant
+// sur l'horloge LOCALE à chaque réception : un téléphone en avance/retard ne voit
+// plus un timer faux (ni figé à 0). L'HÔTE reste l'autorité du timeout réel.
+function useCountdown(deadline, publishedAt, frozen) {
+  // Restant à la publication (ms). Sans publishedAt : repli sur la deadline absolue.
+  const remainingAtPublish = (deadline && publishedAt)
+    ? Math.max(0, deadline - publishedAt)
+    : null;
+  // Ancre locale = instant limite selon l'horloge du CLIENT. Ré-ancrée quand la
+  // deadline OU la publication change (chaque republication resynchronise).
+  const [localDeadline, setLocalDeadline] = useState(
+    () => (remainingAtPublish != null ? Date.now() + remainingAtPublish : (deadline || 0)),
+  );
+  useEffect(() => {
+    setLocalDeadline(remainingAtPublish != null ? Date.now() + remainingAtPublish : (deadline || 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deadline, publishedAt]);
+  const calc = () => (localDeadline ? Math.max(0, Math.ceil((localDeadline - Date.now()) / 1000)) : 0);
   const [left, setLeft] = useState(calc);
   useEffect(() => {
-    if (!deadline || frozen) return undefined;
+    if (!localDeadline || frozen) return undefined;
     setLeft(calc());
     const iv = setInterval(() => setLeft(calc()), 250);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deadline, frozen]);
+  }, [localDeadline, frozen]);
   return left;
 }
 
@@ -53,6 +70,9 @@ function useCountdown(deadline, frozen) {
 // hors contexte est simplement sans effet.
 function ActionRow({ team, context, busy, act, T }) {
   const [armed, setArmed] = useState(null);
+  // Consommable en attente de CONFIRMATION : on montre son effet avant de l'utiliser
+  // (évite les usages accidentels d'un objet mal compris). null = aucune demande.
+  const [confirmKey, setConfirmKey] = useState(null);
   // Malus « blocage » (météo maudite, effet adverse) : le TBI ignore silencieusement
   // un tap sur un pouvoir/conso bloqué → on grise le bouton ET on affiche pourquoi.
   const powersBlocked = (team?.powersBlockedTurns || 0) > 0;
@@ -98,16 +118,50 @@ function ActionRow({ team, context, busy, act, T }) {
       {consoKeys.map((k) => {
         const it = ITEMS[k];
         return (
-          <button key={`it-${k}`} className={`mob-ctrl-action${armed === `it-${k}` ? ' is-armed' : ''}`} disabled={busy || consoBlocked}
+          <button key={`it-${k}`} className="mob-ctrl-action" disabled={busy || consoBlocked}
             style={{ opacity: consoBlocked ? 0.45 : 1 }}
-            onClick={() => fire(`it-${k}`, 'turnUseConsumable', { key: k }, consoBlocked)}>
+            onClick={() => { if (!consoBlocked) setConfirmKey(k); }}>
             <span className="mob-ctrl-action-ic">
               {consoBlocked ? '🚫' : (itemImg(it) ? <img src={itemImg(it)} alt="" /> : (it.icon || '🎒'))}
             </span>
-            <span>{armed === `it-${k}` ? T('mobile.ctrlConfirm') : locName(it)}</span>
+            <span>{locName(it)}</span>
           </button>
         );
       })}
+      {confirmKey && ITEMS[confirmKey] && (
+        <ConsumableConfirm
+          item={ITEMS[confirmKey]}
+          onCancel={() => setConfirmKey(null)}
+          onConfirm={() => { const k = confirmKey; setConfirmKey(null); act('turnUseConsumable', { key: k }); }}
+          T={T}
+        />
+      )}
+    </div>
+  );
+}
+
+// Fenêtre de confirmation avant d'utiliser un consommable : rappelle l'effet
+// (description SIMPLE + lignes d'effet) pour éviter un usage accidentel.
+function ConsumableConfirm({ item, onCancel, onConfirm, T }) {
+  const fx = itemEffectLines(item);
+  return (
+    <div onClick={onCancel} className="mob-ctrl-confirm-bg">
+      <div onClick={(e) => e.stopPropagation()} className="mob-ctrl-confirm">
+        <div className="mob-ctrl-confirm-head">
+          <span className="mob-ctrl-confirm-ic">{itemImg(item) ? <img src={itemImg(item)} alt="" /> : (item.icon || '🎒')}</span>
+          <span className="mob-ctrl-confirm-name">{locName(item)}</span>
+        </div>
+        {locDesc(item) && <div className="mob-ctrl-confirm-desc">{locDesc(item)}</div>}
+        {fx.length > 0 && (
+          <ul className="mob-ctrl-confirm-fx">
+            {fx.map((l, i) => <li key={i}><span>▸</span>{l}</li>)}
+          </ul>
+        )}
+        <div className="mob-ctrl-confirm-btns">
+          <button className="mob-btn mob-btn--ghost" onClick={onCancel}>{T('mobile.ctrlCancel')}</button>
+          <button className="mob-btn mob-btn--gold" onClick={onConfirm}>{T('mobile.ctrlUseItem')}</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -157,9 +211,9 @@ function TargetPickerPanel({ tp, session, teamIdx, busy, act, T }) {
 
 // Panneau QCM : la question complète se joue sur le téléphone. Anti-triche :
 // la bonne réponse (correctIndex) n'arrive dans le payload qu'APRÈS révélation.
-function QuestionPanel({ q, team, en, busy, act, T }) {
+function QuestionPanel({ q, team, en, busy, act, T, publishedAt }) {
   const revealed = !!q.answerRevealed;
-  const timeLeft = useCountdown(q.deadline, revealed);
+  const timeLeft = useCountdown(q.deadline, publishedAt, revealed);
   // Sélection optimiste : surlignage neutre du choix tapé, en attendant que le
   // TBI confirme (payload avec answerRevealed + correctIndex).
   const [pick, setPick] = useState(null);
@@ -672,7 +726,7 @@ export default function ControllerView({ session, teamIdx, code, token, T, lastS
     }
     case 'question':
       body = turn.question
-        ? <QuestionPanel q={turn.question} team={team} en={en} busy={busy} act={act} T={T} />
+        ? <QuestionPanel q={turn.question} team={team} en={en} busy={busy} act={act} T={T} publishedAt={session.publishedAt} />
         : <div className="mob-ctrl-hint">{T('mobile.ctrlWatchBoard')}</div>;
       break;
     case 'targetPicker':

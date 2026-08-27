@@ -63,7 +63,10 @@ function TitleBar() {
 
 // Lobby du mode TÉLÉPHONE (QR en classe). Le lobby « jeu en ligne » a son
 // propre écran dédié : src/components/Online/OnlineLobby.jsx.
-export default function LobbyPanel() {
+// `getPerimeter` (optionnel) : fourni par l'écran cassettes en mode téléphone —
+// renvoie le périmètre de thèmes composé (ou null) à honorer au démarrage. Absent
+// sur le Setup classique (les thèmes viennent alors des matières cochées).
+export default function LobbyPanel({ getPerimeter = null }) {
   const T = useT();
   const sessionCode = useGameStore((s) => s.sessionCode);
   const setSessionCode = useGameStore((s) => s.setSessionCode);
@@ -104,7 +107,9 @@ export default function LobbyPanel() {
     const byToken = {};
     teamsLive.forEach((r, i) => { byToken[r.token] = i; });
     try { await assignLobbyIndices(sessionCode, byToken); } catch { /* best effort */ }
-    startFromLobby();
+    // Écran cassettes : honore le périmètre de thèmes composé. Sinon (Setup
+    // classique) : startFromLobby retombe sur les matières cochées.
+    startFromLobby(getPerimeter ? getPerimeter() : null);
   };
 
   if (!sessionCode) {

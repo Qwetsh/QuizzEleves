@@ -1013,11 +1013,20 @@ export const useGameStore = create((set, get) => ({
   // les setupTeams (dédoublonnage des noms, token conservé), génère le plateau,
   // puis : si toutes les équipes ont déjà leurs 2 pouvoirs (choisis au téléphone)
   // on lance directement ; sinon on passe par la sélection des pouvoirs au tableau.
-  startFromLobby: () => {
+  // Démarre une partie « mode téléphone » depuis le lobby. `perimeter` (optionnel,
+  // écran cassettes) fournit les thèmes composés → on lance via startGameFromPerimeter
+  // pour les honorer ; sans lui (Setup classique), on retombe sur startGame (matières
+  // cochées). Sans ce relais, le lobby cassette repartait toujours sur les matières
+  // scolaires par défaut (le périmètre composé était ignoré).
+  startFromLobby: (perimeter = null) => {
     const setupTeams = buildLobbySetupTeams(get().lobbyTeams);
     if (!setupTeams.length) return false;
     set({ setupTeams, nbTeams: setupTeams.length });
-    get().startGame();
+    if (perimeter && Array.isArray(perimeter.boardSubjects) && perimeter.boardSubjects.length) {
+      get().startGameFromPerimeter(perimeter);
+    } else {
+      get().startGame();
+    }
     const allHavePowers = setupTeams.every((t) => t.powerDef && t.powerOff);
     if (allHavePowers) get().finalizePowersAndPlay();
     return true;

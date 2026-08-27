@@ -93,6 +93,23 @@ describe('startFromLobby', () => {
     expect(S().phase).toBe('setup');
   });
 
+  it('honore le périmètre de thèmes composé (écran cassettes) au lieu des matières par défaut', () => {
+    useGameStore.setState({
+      phase: 'setup', devSandbox: true, log: [],
+      selectedSubjects: undefined, // défaut = matières scolaires
+      lobbyTeams: [
+        { token: 'a', name: 'Lions', power_def: 'bouclier', power_off: 'foudre' },
+        { token: 'b', name: 'Aigles', power_def: 'indice', power_off: 'sablier' },
+      ],
+      boardParams: { casesParVoie: 4, nbVoies: 3, nbSections: 3, voieFinale: 'court-long', couloirsMix: 2, eventEveryX: 3 },
+      level: ['cycle4'], useBrevet: false,
+    });
+    const perimeter = { level: 'cycle4', boardSubjects: ['maths', 'francais'], categoryPools: {}, displayInject: {} };
+    expect(S().startFromLobby(perimeter)).toBe(true);
+    // Le plateau utilise les thèmes du PÉRIMÈTRE, pas les 6 matières par défaut.
+    expect(S().boardSubjects).toEqual(['maths', 'francais']);
+  });
+
   it('génère le plateau et initialise le sac/équipement', () => {
     useGameStore.setState({
       phase: 'setup', devSandbox: true, log: [],

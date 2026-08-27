@@ -463,6 +463,13 @@ export const ITEMS = {
   },
 };
 
+// Objets INTERNES produits PAR LE MOTEUR (jamais en boutique ni dans l'éditeur) :
+// le catalogue éditable (DB) peut ne pas les contenir, mais le jeu les fabrique à
+// l'exécution → ils DOIVENT toujours exister dans ITEMS, sinon placeItem les prend
+// pour des clés inconnues (« sac plein » trompeur). Ex. le parchemin gravé de
+// l'Autel du Scribe (craftParchment) : lootOnly, absent de la table quete_items.
+export const INTERNAL_ITEM_KEYS = ['parcheminGrave'];
+
 // Remplace le contenu de ITEMS en gardant la MÊME référence (mutée en place),
 // pour que tout le code qui a importé ITEMS voie les nouvelles données.
 // Appelé par la couche de chargement (src/logic/itemsConfig.js).
@@ -472,6 +479,13 @@ export function setItemsData(items) {
   for (const [k, it] of Object.entries(items)) {
     // Normalise effects en tableau (un cache d'un ancien schéma pourrait l'omettre)
     ITEMS[k] = { ...it, effects: Array.isArray(it.effects) ? it.effects : [] };
+  }
+  // Garantit la présence des objets internes du moteur (fallback = code source),
+  // même si le catalogue DB/cache ne les liste pas.
+  for (const k of INTERNAL_ITEM_KEYS) {
+    if (!ITEMS[k] && BASE_ITEMS[k]) {
+      ITEMS[k] = { ...BASE_ITEMS[k], effects: Array.isArray(BASE_ITEMS[k].effects) ? BASE_ITEMS[k].effects : [] };
+    }
   }
 }
 

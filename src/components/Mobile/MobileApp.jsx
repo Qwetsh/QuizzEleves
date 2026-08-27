@@ -2025,7 +2025,7 @@ function AdminPanel({ code, session, onClose }) {
 // fond nocturne .mgc-root. Les DONNÉES viennent du payload session (barre
 // {stored,lastTs,regenPerMin,max} résolue au TBI, codex en clés) ; le cast part
 // en intent `castSpell` — le TBI valide (coût, match, découverte, fizzle).
-function MagicView({ session, teamIdx, code, token }) {
+function MagicView({ session, teamIdx, code, token, bottomReserve = 64 }) {
   const [sub, setSub] = useState('table');
   const team = session.teams[teamIdx];
   const en = !!session.englishMode;
@@ -2033,10 +2033,11 @@ function MagicView({ session, teamIdx, code, token }) {
   // Anti-spam local : le cooldown lit lastCastAt (publié à côté de magic).
   const magic = { ...(team.magic || {}), lastCastAt: team.lastCastAt || 0 };
   return (
-    // bottom = TabBar (≈60px) + encoche iOS. Le conteneur SCROLLE si le contenu
+    // bottom = espace réservé (TabBar ≈64px, ou plus si la manette réduite est
+    // active pour cette équipe) + encoche iOS. Le conteneur SCROLLE si le contenu
     // dépasse (petits écrans) — le bouton « Incanter » reste visible car il est
     // sticky en bas de SpellTableView.
-    <div className="mgc-root" style={{ position: 'fixed', inset: 0, bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
+    <div className="mgc-root" style={{ position: 'fixed', inset: 0, bottom: `calc(${bottomReserve}px + env(safe-area-inset-bottom, 0px))`, display: 'flex', flexDirection: 'column' }}>
       <div className="mgc-seg" style={{ flex: 'none' }}>
         <button className={sub === 'table' ? 'is-on' : ''} onClick={() => setSub('table')}>{'\u{1FA84}'} {T('mobile.magic.table')}</button>
         <button className={sub === 'codex' ? 'is-on' : ''} onClick={() => setSub('codex')}>{'\u{1F4D6}'} {T('mobile.magic.codex')}</button>
@@ -2613,13 +2614,20 @@ export default function MobileApp() {
     // L'onglet « Troc » réunit trocs ouverts et complots : présent si l'une OU
     // l'autre extension est active.
     const hasExchange = hasTrade || hasDiplo;
+    // Manette active pour CETTE équipe (tour en cours) : son bandeau réduit
+    // (.mob-ctrl-banner, fixe ~66px du bas) recouvre la zone des boutons d'action
+    // en pied des onglets Sorts/Scribe. On réserve alors sa hauteur pour que
+    // « Incanter »/« Graver » restent au-dessus (sinon ils passent sous le HUD).
+    const manetteUp = owned && !!token && session.controller && session.status === 'playing'
+      && session.turn?.team === teamIdx && !team?.hacked;
+    const CTRL_BANNER_INSET = 120; // px : bandeau réduit + son décalage au-dessus de la TabBar
     const view = tab === 'powers' ? <PowersView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'shop' && hasShop ? <ShopView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
       : tab === 'trade' && hasExchange ? <TradeView session={session} teamIdx={teamIdx} code={code} token={token} trades={trades} hasTrade={hasTrade} hasDiplo={hasDiplo} />
       : tab === 'alchemy' && hasAlchemy ? <AlchemyView team={session.teams[teamIdx]} en={!!session?.englishMode} onCraft={(keys) => sendIntent(code, token, 'craft', { keys }).catch(() => {})} />
-      : tab === 'scribe' && hasScribe ? <ScribeView team={session.teams[teamIdx]} en={!!session.englishMode} bottomInset={70} onInscribe={(parts) => { sendIntent(code, token, 'craftParchment', { parts }).catch(() => {}); }} />
+      : tab === 'scribe' && hasScribe ? <ScribeView team={session.teams[teamIdx]} en={!!session.englishMode} bottomInset={manetteUp ? CTRL_BANNER_INSET : 70} onInscribe={(parts) => { sendIntent(code, token, 'craftParchment', { parts }).catch(() => {}); }} />
       : tab === 'forge' && hasForge ? <ForgeView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />
-      : tab === 'magic' && hasMagic ? <MagicView session={session} teamIdx={teamIdx} code={code} token={token} />
+      : tab === 'magic' && hasMagic ? <MagicView session={session} teamIdx={teamIdx} code={code} token={token} bottomReserve={manetteUp ? CTRL_BANNER_INSET : 64} />
       : tab === 'history' ? <HistoryView session={session} teamIdx={teamIdx} />
       : <TeamView session={session} teamIdx={teamIdx} owned={owned} code={code} token={token} />;
     // Choix de métier (extension « Métiers ») : overlay bloquant tant que le

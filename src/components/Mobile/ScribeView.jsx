@@ -168,8 +168,15 @@ export default function ScribeView({ team, en = false, onInscribe, bottomInset =
     );
   };
 
+  // Mobile (bottomInset > 0) : conteneur ANCRÉ au viewport (comme l'onglet Magie),
+  // en réservant `bottomInset` + encoche pour la barre d'onglets fixe. Sans ancrage
+  // fiable, le pied « Graver » (height:100% du parent) retombait sous le HUD du bas
+  // sur certains écrans. Sur le TBI (bottomInset = 0) : flux normal dans la modale.
+  const mobileAnchor = bottomInset > 0
+    ? { position: 'fixed', left: 0, right: 0, top: 0, bottom: 'calc(var(--scribe-inset) + env(safe-area-inset-bottom, 0px))', height: 'auto' }
+    : null;
   return (
-    <div className="scribe-root" style={{ '--scribe-inset': `${bottomInset}px` }}>
+    <div className="scribe-root" style={{ '--scribe-inset': `${bottomInset}px`, ...mobileAnchor }}>
       <div className="scribe-body">
         {/* En-tête */}
         <div className="scribe-head">

@@ -602,6 +602,20 @@ export async function fetchSession(code) {
 // `onStatus` (optionnel) reçoit l'état du canal ('SUBSCRIBED', 'CHANNEL_ERROR',
 // 'TIMED_OUT', 'CLOSED') — le mobile s'en sert pour se réabonner (manette).
 export function subscribeSession(code, onData, onStatus) {
+  // Garde-fou ANTI-HORS-ORDRE : les payloads portent un `publishedAt` monotone
+  // (horloge de l'hôte, source unique). Un message Realtime livré en retard, ou
+  // une relecture REST tardive (fetchSession asynchrone) NE DOIT JAMAIS écraser
+  // un snapshot plus récent déjà appliqué — sinon la manette se fige sur un état
+  // périmé (ex. après avoir refusé un événement : le snapshot « question résolue »
+  // en retard réécrase la nouvelle question → timer bloqué à 0, plus rien de jouable).
+  let lastAt = 0;
+  const deliver = (d) => {
+    if (!d) return;
+    const at = typeof d.publishedAt === 'number' ? d.publishedAt : 0;
+    if (at && at < lastAt) return; // snapshot plus vieux que le dernier appliqué : ignoré
+    if (at) lastAt = at;
+    onData(d);
+  };
   // Nom de canal UNIQUE par abonnement : deux `.channel('quete-session-CODE')`
   // renvoient le MÊME canal (dédup Supabase par topic) ; un 2e `.on().subscribe()`
   // (re-montage StrictMode, multi-abonné) lève « cannot add postgres_changes
@@ -616,8 +630,8 @@ export function subscribeSession(code, onData, onStatus) {
         // snapshot complet du jeu en ligne) ou selon la RLS Realtime → on relit
         // alors la ligne complète en REST (SELECT), fiable quelle que soit la taille.
         const inline = payload.new?.data;
-        if (inline) onData(inline);
-        else fetchSession(code).then((d) => { if (d) onData(d); }).catch(() => {});
+        if (inline) deliver(inline);
+        else fetchSession(code).then(deliver).catch(() => {});
       })
     .subscribe((status) => onStatus?.(status));
   return () => { supabase.removeChannel(channel); };

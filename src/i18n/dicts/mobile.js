@@ -357,6 +357,7 @@ export default {
   'mobile.ctrlPact': { fr: 'Pacte en cours', en: 'Active pact' },
   'mobile.ctrlBetray': { fr: '⚠️ Re-tape pour TRAHIR le pacte', en: '⚠️ Tap again to BETRAY the pact' },
   'mobile.ctrlCancel': { fr: 'Annuler', en: 'Cancel' },
+  'mobile.ctrlUseItem': { fr: 'Utiliser', en: 'Use' },
   'mobile.ctrlPickSubject': { fr: 'Choisis un thème', en: 'Pick a subject' },
   'mobile.ctrlPickCharge': { fr: 'Recharge un pouvoir (+{n})', en: 'Recharge a power (+{n})' },
   'mobile.ctrlSkip': { fr: 'Passer', en: 'Skip' },
