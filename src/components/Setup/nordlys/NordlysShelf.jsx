@@ -6,7 +6,7 @@
  * et une commande window.lecteur.inserer('SKÅL') qui fait apparaître un rayon
  * secret ᚾᛟᚱᛞᛚᛇᛊ en bas du bac avec une cassette bleu nuit. La cassette ouvre
  * un mini-jeu autonome (lazy, aucune donnée Supabase ni store) qui se termine
- * sur le mot VALKYRIE — attendu par le site de l'escape game.
+ * sur les coordonnées du lieu d'arrivée — à rapporter au site de l'escape game.
  *
  * Hors de ce fichier (et du mini-jeu qu'il lazy-charge), le jeu n'est pas
  * affecté : pas de matière, pas d'entrée en base, pas d'interaction avec les
@@ -54,6 +54,17 @@ const normalizeWord = (mot) => utf8Repair(String(mot ?? ''))
   .trim()
   .toUpperCase();
 
+// Le mot ne s'écrit plus en clair ici : un `grep SKAL` dans le bundle livré
+// sautait par-dessus toute la chasse. Ce n'est PAS une serrure — `data-voile`
+// porte volontairement le mot en base64, c'est la piste, et elle doit rester
+// déchiffrable. Juste de quoi ne pas le servir tout cuit.
+const empreinte = (s) => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i += 1) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16);
+};
+const MOT_DE_LA_VOILE = '92d157f6';
+
 // `*mot*` souligne le mot : les deux mots soulignés de l'indice SONT la piste
 // (l'onglet Elements du F12, et l'attribut data-voile qui s'y cache).
 const RUNE_STYLE = 'color:#5EE0A0;font-family:monospace;font-size:14px';
@@ -76,7 +87,7 @@ export function useNordlysEgg() {
       + "pour la trouver, il faut être dans son *élément* — et y entrevoir la *voile*.");
     const lecteur = {
       inserer(mot) {
-        if (normalizeWord(mot) === 'SKAL') {
+        if (empreinte(normalizeWord(mot)) === MOT_DE_LA_VOILE) {
           if (isUnlocked()) { logRune("Elle est déjà sur l'étagère."); return; }
           try { localStorage.setItem(NORDLYS_KEY, '1'); } catch { /* quota */ }
           logRune("La cassette s'insère.");
@@ -143,13 +154,18 @@ export default function NordlysShelf({ unlocked }) {
   // le chargement du fichier au retard déjà causé par le silence de tête.
   const insertSfx = useRef(null);
   const insertStop = useRef(null);
+  // NordlysShelf est monté en permanence dans le bac (seul son contenu dépend du
+  // déblocage) : précharger sans condition faisait télécharger 160 ko de clac à
+  // TOUTE classe qui ouvre l'écran des cassettes. On attend que la cassette
+  // existe — au déblocage (`bay`) ou dans une session déjà débloquée.
+  const besoinDuClac = unlocked || !!bay;
   useEffect(() => {
-    if (!INSERT_SFX) return undefined;
+    if (!INSERT_SFX || !besoinDuClac) return undefined;
     const a = new Audio(INSERT_SFX);
     a.preload = 'auto';
     insertSfx.current = a;
     return () => { clearTimeout(insertStop.current); a.pause(); insertSfx.current = null; };
-  }, []);
+  }, [besoinDuClac]);
   const playInsert = () => {
     const a = insertSfx.current;
     if (!a) return;

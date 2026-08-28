@@ -2,8 +2,9 @@
  * Nordlys — le mini-jeu de la cassette secrète (easter egg escape game).
  *
  * 100 % autonome : aucune donnée Supabase, aucun store — juste du state local.
- * Trois écrans : intro (la cassette démarre) → jeu → victoire (le mot VALKYRIE
- * en runes, attendu par le site de l'escape game — NE PAS changer ce mot).
+ * Deux écrans ici : intro (la cassette démarre) → jeu. L'arrivée est rendue
+ * par NordlysDrakkar3D lui-même (« Terre en vue » + les coordonnées à
+ * rapporter au site) ; on sort par ⏏ ou Échap.
  *
  * Le jeu = « La traversée du drakkar », coop à deux sur le même clavier
  * (NordlysDrakkar3D, moteur three.js issu du prototype Claude Design) :
@@ -18,9 +19,6 @@ import NordlysDrakkar3D from './NordlysDrakkar3D';
 const FONT_DISPLAY = "'Archivo Black', system-ui, sans-serif";
 const FONT_MONO = "'VT323', monospace";
 
-// ᚹ ᚨ ᛚ ᚲ ᛃ ᚱ ᛁ ᛖ — VALKYRIE (translittération affichée dessous).
-const VALKYRIE_RUNES = ['ᚹ', 'ᚨ', 'ᛚ', 'ᚲ', 'ᛃ', 'ᚱ', 'ᛁ', 'ᛖ'];
-
 // Étoiles du ciel polaire — positions figées au montage (pas de re-scintillement
 // à chaque rendu).
 const makeStars = () => Array.from({ length: 40 }, () => ({
@@ -32,7 +30,8 @@ const makeStars = () => Array.from({ length: 40 }, () => ({
 
 export default function NordlysMinigame({ onClose }) {
   // 'boot' = prise de contrôle VHS (l'écran « normal » se fait avaler),
-  // puis 'intro' | 'game' | 'won'.
+  // puis 'intro' | 'game'. Le jeu garde la main jusqu'à l'éjection : c'est lui
+  // qui affiche l'arrivée, sur laquelle les joueurs relèvent les coordonnées.
   const [screen, setScreen] = useState('boot');
   const stars = useMemo(makeStars, []);
 
@@ -103,26 +102,7 @@ export default function NordlysMinigame({ onClose }) {
         </div>
       )}
 
-      {screen === 'game' && <NordlysDrakkar3D onWin={() => setScreen('won')} />}
-
-      {screen === 'won' && (
-        <div className="nl-panel" style={{ padding: '0 24px' }}>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 19, letterSpacing: 4, color: '#5EE0A0', marginBottom: 22 }}>
-            LA LUMIÈRE SE LÈVE
-          </div>
-          <div className="nl-rune-word">
-            {VALKYRIE_RUNES.map((r, i) => (
-              <span key={i} style={{ animationDelay: `${i * 0.22}s, ${i * 0.22}s` }}>{r}</span>
-            ))}
-          </div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 30, letterSpacing: 12, color: '#9fd8ff', marginTop: 20, animation: 'nl-rise .5s ease-out 2s both' }}>
-            VALKYRIE
-          </div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 22, color: '#cfe8ff', marginTop: 26, animation: 'nl-rise .5s ease-out 2.6s both' }}>
-            Rapporte ce mot à Amandine.
-          </div>
-        </div>
-      )}
+      {screen === 'game' && <NordlysDrakkar3D />}
     </div>
   );
 }

@@ -94,7 +94,7 @@ const CAM_PRESETS = {
 
 const stripAccents = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
-export default function NordlysDrakkar3D({ onWin }) {
+export default function NordlysDrakkar3D() {
   const canvasRef = useRef(null);
   const [phase, setPhase] = useState('ready'); // 'ready' | 'run' | 'done'
   const [hud, setHud] = useState({
@@ -1422,13 +1422,17 @@ export default function NordlysDrakkar3D({ onWin }) {
         </div>
       )}
 
-      {/* arrivée : l'inscription runique s'allume dans le ciel une fois la
-          brume retirée (style du handoff Claude Design, mot du contrat) */}
+      {/* arrivée : l'inscription s'allume dans le ciel une fois la brume
+          retirée (style du handoff Claude Design). Le seul mot à rapporter est
+          le LIEU que désignent les coordonnées : l'eyebrow ne porte donc que
+          de la ponctuation runique. Y remettre un mot lisible (ce fut le cas
+          de ᚹᚨᛚᚲᛃᚱᛁᛖ) crée une fausse piste — le site attend six runes
+          composées sur la plaque, pas ce qui est écrit ici. */}
       {phase === 'done' && (
         <div className={`nl-victory ${hud.reveal > 0.55 ? 'on' : ''}`}>
           <div className="nl-victory-halo" />
           <div className="nl-victory-inscription">
-            <div className="nl-victory-runes">ᚹᚨᛚᚲᛃᚱᛁᛖ</div>
+            <div className="nl-victory-runes" aria-hidden="true">᛫ ᛬ ᛭ ᛬ ᛫</div>
             <h2>Terre en vue</h2>
             <p className="nl-victory-word">60.3913<span>᛭</span>5.3221</p>
             <p className="nl-victory-sub">Il n'y a plus qu'à aller voir où nous sommes.</p>
