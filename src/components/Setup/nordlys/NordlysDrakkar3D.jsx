@@ -79,8 +79,20 @@ const CTRL = {
   a: { left: ['q', 'a'], right: ['d'], up: ['z'], down: ['s'], action: 'e', name: 'ZQSD', actName: 'E' },
   b: { left: ['arrowleft'], right: ['arrowright'], up: ['arrowup'], down: ['arrowdown'], action: 'enter', name: '←↑↓→', actName: '↵' },
 };
-// le rythme de la voile : ces touches appartiennent au poste, pas au déplacement
-const SAIL_KEYS = ['w', 'x', 'c', 'v'];
+// Le rythme de la voile : ces touches appartiennent au poste, pas au déplacement.
+// Chacun reste sur SA moitié de clavier — W X C V tombe sous la main gauche, donc
+// le clavier droit joue sur le pavé numérique. Repéré par e.code : le NumLock et
+// le layout ne changent rien (Numpad4 sans NumLock enverrait 'ArrowLeft').
+const SAIL_KEYS = {
+  a: ['w', 'x', 'c', 'v'],
+  b: ['Numpad1', 'Numpad2', 'Numpad3', 'Numpad4'],
+};
+const SAIL_LABELS = { a: ['W', 'X', 'C', 'V'], b: ['1', '2', '3', '4'] };
+const SAIL_SLOTS = 4;
+// index (0..3) de la touche de voile jouée par `id`, ou -1
+const sailSlotOf = (e, id) => (id === 'b'
+  ? SAIL_KEYS.b.indexOf(e.code)
+  : SAIL_KEYS.a.indexOf(e.key.toLowerCase()));
 // Qui incarne qui (les GLB amandine.glb / clement.glb sont mappés là-dessus).
 const WHO = { a: 'amandine', b: 'clement' };
 
@@ -520,7 +532,7 @@ export default function NordlysDrakkar3D() {
       day: 1, dayOverride: null,       // 1 = aube, 0 = nuit (override pour debug)
       fjordReveal: 0,                  // la brume se retire sur les crêtes (0..1)
       sailerId: null,                  // 'a' | 'b' | null — qui tient le poste de voile
-      sailQte: { key: null, timer: 0, total: 1, next: 1.6, fb: null, fbUntil: 0 },
+      sailQte: { slot: null, timer: 0, total: 1, next: 1.6, fb: null, fbUntil: 0 },
       // petites conversations du bord (ocean/banter.js)
       chat: { bubbles: [], cd: 0, seen: {}, leakNag: 0, waterNag: 0 },
     };
@@ -557,7 +569,7 @@ export default function NordlysDrakkar3D() {
     // (et la personne à la voile est éjectée de son poste)
     const knockDown = () => {
       for (const c of crew) if (c.id !== S.helmId) c.fallT = 1.2;
-      if (S.sailerId) { S.sailerId = null; S.sailQte.key = null; }
+      if (S.sailerId) { S.sailerId = null; S.sailQte.slot = null; }
     };
     const crewDist = () => Math.hypot(crew[0].lx - crew[1].lx, crew[0].lz - crew[1].lz);
 
@@ -687,12 +699,12 @@ export default function NordlysDrakkar3D() {
         c.lx = HELM_POS.x; c.lz = HELM_POS.z;
       }
     };
-    // entrer / quitter le poste de voile (mini-jeu de rythme W X C V)
+    // entrer / quitter le poste de voile (mini-jeu de rythme, cf. SAIL_KEYS)
     const trySailToggle = (id) => {
       const Q = S.sailQte;
       if (S.sailerId === id) {
         S.sailerId = null;
-        Q.key = null; Q.fb = null;
+        Q.slot = null; Q.fb = null;
         return;
       }
       if (S.sailerId || S.helmId === id) return;
@@ -701,7 +713,7 @@ export default function NordlysDrakkar3D() {
       if (Math.hypot(c.lx - SAIL_POS.x, c.lz - SAIL_POS.z) < 1.8) {
         S.sailerId = id;
         c.lx = SAIL_POS.x; c.lz = SAIL_POS.z;
-        Q.key = null; Q.next = 1.2; Q.fb = null;
+        Q.slot = null; Q.next = 1.2; Q.fb = null;
       }
     };
     const sailResolve = (hit) => {
@@ -709,7 +721,7 @@ export default function NordlysDrakkar3D() {
       S.boost = Math.min(1, Math.max(0, S.boost + (hit ? 0.22 : -0.2)));
       Q.fb = hit ? 'hit' : 'miss';
       Q.fbUntil = performance.now() + 700;
-      Q.key = null;
+      Q.slot = null;
       Q.next = 0.8 + Math.random() * 0.8;
       // on ne commente pas CHAQUE fausse note : le poste en produit beaucoup
       if (!hit && Math.random() < 0.55) say('sailMiss');
@@ -735,14 +747,17 @@ export default function NordlysDrakkar3D() {
         return;
       }
       if (phaseRef.current === 'run') {
-        if (CAM_PRESETS[k]) { applyPreset(CAM_PRESETS[k]); return; }
+        // 1/2/3 de la rangée du haut seulement : le pavé numérique est au poste de voile
+        if (CAM_PRESETS[k] && !e.code.startsWith('Numpad')) { applyPreset(CAM_PRESETS[k]); return; }
         if (S.siren) {
           if (/^[a-z]$/.test(k)) sirenType(k);
           else if (k === 'backspace') S.siren.typed = S.siren.typed.slice(0, -1);
         }
         // le rythme de la voile : bonne touche = accélère, mauvaise = faseye
-        if (!e.repeat && S.sailerId && SAIL_KEYS.includes(k)) {
-          sailResolve(S.sailQte.key === k);
+        if (!e.repeat && S.sailerId) {
+          const slot = sailSlotOf(e, S.sailerId);
+          // la touche est consommée par le poste : elle ne rejoint pas `keys`
+          if (slot >= 0) { e.preventDefault(); sailResolve(S.sailQte.slot === slot); return; }
         }
         // pas d'auto-répétition : maintenir E/↵ sert à écoper, pas à toggler les postes
         if (!e.repeat && k === CTRL.a.action) { tryHelmToggle('a'); trySailToggle('a'); }
@@ -922,18 +937,18 @@ export default function NordlysDrakkar3D() {
       // le rythme de la voile : une touche à jouer, une fenêtre qui se referme
       const Q = S.sailQte;
       if (S.sailerId && !S.done) {
-        if (Q.key) {
+        if (Q.slot !== null) {
           Q.timer -= dt;
           if (Q.timer <= 0) sailResolve(false); // trop tard : la voile faseye
         } else {
           Q.next -= dt;
           if (Q.next <= 0) {
-            Q.key = SAIL_KEYS[Math.floor(Math.random() * SAIL_KEYS.length)];
+            Q.slot = Math.floor(Math.random() * SAIL_SLOTS);
             Q.total = 1.5;
             Q.timer = Q.total;
           }
         }
-      } else if (Q.key) Q.key = null;
+      } else if (Q.slot !== null) Q.slot = null;
       // marqueurs holographiques : pulse doux, visibles seulement quand utiles
       helmMarker.visible = !S.helmId && !S.done;
       sailMarker.visible = !S.sailerId && !S.done;
@@ -1210,8 +1225,9 @@ export default function NordlysDrakkar3D() {
           helmId: S.helmId, sailerId: S.sailerId, hint,
           boost: S.boost, bailPct: S.bailPct,
           qte: S.sailerId ? {
-            key: S.sailQte.key,
-            frac: S.sailQte.key ? S.sailQte.timer / S.sailQte.total : 0,
+            // la touche affichée dépend de la moitié de clavier tenue
+            key: S.sailQte.slot === null ? null : SAIL_LABELS[S.sailerId][S.sailQte.slot],
+            frac: S.sailQte.slot !== null ? S.sailQte.timer / S.sailQte.total : 0,
             fb: performance.now() < S.sailQte.fbUntil ? S.sailQte.fb : null,
           } : null,
           reveal: S.fjordReveal,
@@ -1362,7 +1378,7 @@ export default function NordlysDrakkar3D() {
           </div>
           <div style={{ ...card, position: 'absolute', right: 18, bottom: 16, textAlign: 'right', pointerEvents: 'none' }}>
             {hud.helmId === 'b' ? <>🧭 À LA BARRE<br /><span style={key}>←</span><span style={key}>→</span> vire de bord</>
-              : hud.sailerId === 'b' ? <>⛵ À LA VOILE<br /><span style={key}>W</span><span style={key}>X</span><span style={key}>C</span><span style={key}>V</span> en rythme · <span style={key}>↵</span> quitte</>
+              : hud.sailerId === 'b' ? <>⛵ À LA VOILE<br /><span style={key}>1</span><span style={key}>2</span><span style={key}>3</span><span style={key}>4</span> du pavé num. en rythme · <span style={key}>↵</span> quitte</>
                 : <>🎮 CLAVIER DROIT<br /><span style={key}>←</span><span style={key}>↑</span><span style={key}>↓</span><span style={key}>→</span> bouge · <span style={key}>↵</span> agit</>}
           </div>
         </>
@@ -1399,9 +1415,10 @@ export default function NordlysDrakkar3D() {
                   ⛵ L'ÉQUIPAGE DU PONT
                 </div>
                 <div style={{ fontSize: 18, lineHeight: 1.45 }}>
-                  Au <strong>poste de voile</strong> (action pour entrer / sortir) : appuie sur
-                  {' '}<span style={key}>W</span><span style={key}>X</span><span style={key}>C</span><span style={key}>V</span> au bon
-                  moment — réussi, ça <strong>accélère</strong> ; raté, ça ralentit.<br />
+                  Au <strong>poste de voile</strong> (action pour entrer / sortir) : appuie au bon
+                  moment sur {' '}<span style={key}>W</span><span style={key}>X</span><span style={key}>C</span><span style={key}>V</span> (clavier
+                  gauche) ou <span style={key}>1</span><span style={key}>2</span><span style={key}>3</span><span style={key}>4</span> du
+                  pavé numérique (clavier droit) — réussi, ça <strong>accélère</strong> ; raté, ça ralentit.<br />
                   🔧 <strong>Répare</strong> les avaries (action maintenue), sinon l'eau monte.<br />
                   🪣 <strong>Écope</strong> l'eau embarquée, qui freine le drakkar.
                 </div>
